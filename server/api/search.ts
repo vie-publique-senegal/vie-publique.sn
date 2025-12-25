@@ -68,6 +68,27 @@ export default defineEventHandler(async (event) => {
       max_facet_values: 10,
     };
 
+    // Types valides pour le filtrage (noms dans Typesense)
+    const VALID_TYPES = [
+      'document',
+      'news',
+      'depute',
+      'question',
+      'vote',
+      'commission',
+      'groupe',
+      'budget_entity',
+      'budget_term',
+      'coalition',
+      'nomination',
+      'media',
+    ];
+
+    // Mapping UI → Typesense
+    const TYPE_MAPPING: Record<string, string> = {
+      'actualite': 'news',  
+    };
+
     // Ajouter les filtres par type si spécifiés
     if (types && types.trim() !== '') {
       const typesList = types
@@ -76,13 +97,11 @@ export default defineEventHandler(async (event) => {
         .filter(Boolean);
       if (typesList.length > 0) {
         // Construire le filtre pour Typesense
-        // Format: type:=[document,actualite] ou category.slug:=[actualites,documents]
         const typeFilters = typesList
           .map((type) => {
-            if (type === 'document') {
-              return 'type:=document';
-            } else if (type === 'actualite') {
-              return 'type:!=document'; // Tous sauf documents
+            const typesenseType = TYPE_MAPPING[type] || type;
+            if (VALID_TYPES.includes(typesenseType)) {
+              return `type:=${typesenseType}`;
             }
             return null;
           })
@@ -107,32 +126,83 @@ export default defineEventHandler(async (event) => {
       const article = hit.document;
       if (!article) return hit;
 
-      const id = article.id;
+      const rawId = article.id;
+      const id = rawId.includes('-') ? rawId.split('-').slice(1).join('-') : rawId;
+
       const slug =
         article.slug ||
         (article.title
           ? article.title
               .toLowerCase()
+              .normalize('NFD')
+              .replace(/[\u0300-\u036f]/g, '')
               .replace(/[^a-z0-9]+/g, '-')
               .replace(/(^-|-$)/g, '')
-          : 'actualite');
+          : 'item');
 
-      const categorySlug = article.category?.slug;
-      const documentType = article.type || 'news';
+      const categorySlug = article.category?.slug || article.category;
+      const documentType = article.type || 'actualite';
       let formattedUrl = '/actualites';
 
-      // Handle different types
-      if (documentType === 'documents') {
-        formattedUrl = `/documents/${id}/${slug}`;
-      } else {
-        // Handle news articles
-        if (categorySlug === 'conseil-des-ministres') {
-          formattedUrl = `/conseil-des-ministres/${id}/${slug}`;
-        } else if (categorySlug === 'assemblee-nationale') {
-          formattedUrl = `/assemblee-nationale/actualites/${id}/${slug}`;
-        } else {
-          formattedUrl = `/actualites/${id}/${slug}`;
-        }
+      // Générer l'URL selon le type de contenu
+      switch (documentType) {
+        // Documents officiels
+        case 'document':
+          formattedUrl = `/documents/${id}/${slug}`;
+          break;
+
+        // Assemblée Nationale
+        case 'depute':
+          formattedUrl = `/assemblee-nationale/deputes/${id}/${slug}`;
+          break;
+        case 'question':
+          formattedUrl = `/assemblee-nationale/questions/${id}`;
+          break;
+        case 'vote':
+          formattedUrl = `/assemblee-nationale/votes/${id}`;
+          break;
+        case 'commission':
+          formattedUrl = `/assemblee-nationale/commissions/${id}`;
+          break;
+        case 'groupe':
+          formattedUrl = `/assemblee-nationale/groupes/${id}/${slug}`;
+          break;
+
+        // Budget
+        case 'budget_entity':
+          formattedUrl = `/budget-senegal/${slug}`;
+          break;
+        case 'budget_term':
+          formattedUrl = `/budget-senegal/glossaire#${slug}`;
+          break;
+
+        // Élections
+        case 'coalition':
+          formattedUrl = `/elections/legislatives/resultats/global`;
+          break;
+
+        // Nominations
+        case 'nomination':
+          formattedUrl = `/nominations/${id}`;
+          break;
+
+        // Médias
+        case 'media':
+          formattedUrl = `/medias/${id}`;
+          break;
+
+        // Actualités (par défaut)
+        case 'news':
+        case 'actualite':
+        default:
+          if (categorySlug === 'conseil-des-ministres') {
+            formattedUrl = `/conseil-des-ministres/${id}/${slug}`;
+          } else if (categorySlug === 'assemblee-nationale') {
+            formattedUrl = `/assemblee-nationale/actualites/${id}/${slug}`;
+          } else {
+            formattedUrl = `/actualites/${id}/${slug}`;
+          }
+          break;
       }
 
       return {

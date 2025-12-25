@@ -73,20 +73,23 @@ export const useSearchEnhanced = () => {
     syncWithUrl();
 
     try {
-      const searchParams = {
+      const searchParams: Record<string, string | number> = {
         q: searchQuery.value,
         page: currentPage.value,
         limit: itemsPerPage,
-        types: selectedTypes.value.join(","),
       };
 
-      const { data } = await useFetch("/api/search", {
+      if (selectedTypes.value.length > 0) {
+        searchParams.types = selectedTypes.value.join(",");
+      }
+
+      const data = await $fetch("/api/search", {
         query: searchParams,
       });
 
-      if (data.value) {
+      if (data) {
         // Traiter les résultats avec highlighting (en gardant les données originales)
-        searchResults.value = (data.value.data || []).map((result: any) => ({
+        searchResults.value = (data.data || []).map((result: any) => ({
           ...result,
           highlightedTitle: result.highlights?.title?.[0]?.snippet
             ? result.highlights.title[0].snippet
@@ -99,13 +102,14 @@ export const useSearchEnhanced = () => {
               ),
         }));
 
-        totalResults.value = data.value.total || 0;
-        totalIndexed.value = data.value.totalIndexed || data.value.total || 0;
-        
+        totalResults.value = data.total || 0;
+        totalIndexed.value = data.totalIndexed || data.total || 0;
+
         // Utiliser les comptages par type depuis les facets Typesense
+        // Note: Typesense utilise "news", l'UI utilise "actualite"
         resultCountsByType.value = {
-          document: data.value.typeCounts?.document || 0,
-          actualite: data.value.typeCounts?.news || 0, // Mapper "news" vers "actualite"
+          document: data.typeCounts?.document || 0,
+          actualite: data.typeCounts?.news || 0,
         };
       }
     } catch (error) {
