@@ -34,14 +34,84 @@ const availableTypes = [
     label: "Documents",
     icon: "i-heroicons-document-text",
     color:
-      "bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700",
+      "bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-900/30 dark:text-orange-300 dark:border-orange-700",
   },
   {
     value: "actualite",
     label: "Actualités",
     icon: "i-heroicons-newspaper",
     color:
+      "bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700",
+  },
+  {
+    value: "depute",
+    label: "Députés",
+    icon: "i-heroicons-user-group",
+    color:
+      "bg-green-100 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-700",
+  },
+  {
+    value: "question",
+    label: "Questions",
+    icon: "i-heroicons-chat-bubble-left-right",
+    color:
       "bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-700",
+  },
+  {
+    value: "vote",
+    label: "Votes",
+    icon: "i-heroicons-hand-raised",
+    color:
+      "bg-red-100 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-700",
+  },
+  {
+    value: "commission",
+    label: "Commissions",
+    icon: "i-heroicons-building-library",
+    color:
+      "bg-teal-100 text-teal-700 border-teal-200 dark:bg-teal-900/30 dark:text-teal-300 dark:border-teal-700",
+  },
+  {
+    value: "groupe",
+    label: "Groupes",
+    icon: "i-heroicons-users",
+    color:
+      "bg-indigo-100 text-indigo-700 border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-700",
+  },
+  {
+    value: "budget_entity",
+    label: "Budget",
+    icon: "i-heroicons-banknotes",
+    color:
+      "bg-yellow-100 text-yellow-700 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-300 dark:border-yellow-700",
+  },
+  {
+    value: "budget_term",
+    label: "Glossaire Budget",
+    icon: "i-heroicons-book-open",
+    color:
+      "bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-700",
+  },
+  {
+    value: "coalition",
+    label: "Coalitions",
+    icon: "i-heroicons-flag",
+    color:
+      "bg-pink-100 text-pink-700 border-pink-200 dark:bg-pink-900/30 dark:text-pink-300 dark:border-pink-700",
+  },
+  {
+    value: "nomination",
+    label: "Nominations",
+    icon: "i-heroicons-clipboard-document-check",
+    color:
+      "bg-cyan-100 text-cyan-700 border-cyan-200 dark:bg-cyan-900/30 dark:text-cyan-300 dark:border-cyan-700",
+  },
+  {
+    value: "media",
+    label: "Médias",
+    icon: "i-heroicons-photo",
+    color:
+      "bg-rose-100 text-rose-700 border-rose-200 dark:bg-rose-900/30 dark:text-rose-300 dark:border-rose-700",
   },
 ];
 
@@ -67,10 +137,9 @@ const formatUnixDate = (timestamp: number | string) => {
 
 // Fonction pour obtenir la couleur du badge selon le type
 const getBadgeColor = (type: string) => {
-  if (type === "document") {
-    return "bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700";
-  } else if (type === "actualite") {
-    return "bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-700";
+  const typeConfig = availableTypes.find((t) => t.value === type);
+  if (typeConfig) {
+    return typeConfig.color;
   }
   // Couleur par défaut pour les autres types
   return "bg-gray-100 text-gray-700 border-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600";
@@ -147,12 +216,12 @@ const getBadgeColor = (type: string) => {
 
       <!-- Filtres directement sous la recherche -->
       <div class="mb-4">
-        <div class="flex gap-4">
+        <div class="flex flex-wrap gap-2">
           <div
             v-for="type in availableTypes"
             :key="type.value"
             :class="[
-              'flex cursor-pointer items-center rounded-lg px-4 py-2 transition-all duration-200 hover:scale-105',
+              'flex cursor-pointer items-center rounded-lg px-3 py-1.5 transition-all duration-200 hover:scale-105',
               selectedTypes.includes(type.value)
                 ? type.color
                 : 'bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600',

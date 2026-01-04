@@ -15,10 +15,20 @@ export const useSearchEnhanced = () => {
   );
   const itemsPerPage = 10;
   
-  // Compteurs par type
+  // Compteurs par type (tous les types supportés)
   const resultCountsByType = ref<Record<string, number>>({
     document: 0,
     actualite: 0,
+    depute: 0,
+    question: 0,
+    vote: 0,
+    commission: 0,
+    groupe: 0,
+    budget_entity: 0,
+    budget_term: 0,
+    coalition: 0,
+    nomination: 0,
+    media: 0,
   });
 
   // Fonction pour mettre en surbrillance les termes recherchés
@@ -107,9 +117,20 @@ export const useSearchEnhanced = () => {
 
         // Utiliser les comptages par type depuis les facets Typesense
         // Note: Typesense utilise "news", l'UI utilise "actualite"
+        const counts = (data as any).typeCounts || {};
         resultCountsByType.value = {
-          document: data.typeCounts?.document || 0,
-          actualite: data.typeCounts?.news || 0,
+          document: counts.document || 0,
+          actualite: counts.news || 0,
+          depute: counts.depute || 0,
+          question: counts.question || 0,
+          vote: counts.vote || 0,
+          commission: counts.commission || 0,
+          groupe: counts.groupe || 0,
+          budget_entity: counts.budget_entity || 0,
+          budget_term: counts.budget_term || 0,
+          coalition: counts.coalition || 0,
+          nomination: counts.nomination || 0,
+          media: counts.media || 0,
         };
       }
     } catch (error) {
@@ -159,6 +180,17 @@ export const useSearchEnhanced = () => {
       document: "bg-orange-100 text-orange-800 border-orange-200",
       actualite: "bg-blue-100 text-blue-800 border-blue-200",
       actualités: "bg-blue-100 text-blue-800 border-blue-200",
+      news: "bg-blue-100 text-blue-800 border-blue-200",
+      depute: "bg-green-100 text-green-800 border-green-200",
+      question: "bg-purple-100 text-purple-800 border-purple-200",
+      vote: "bg-red-100 text-red-800 border-red-200",
+      commission: "bg-teal-100 text-teal-800 border-teal-200",
+      groupe: "bg-indigo-100 text-indigo-800 border-indigo-200",
+      budget_entity: "bg-yellow-100 text-yellow-800 border-yellow-200",
+      budget_term: "bg-amber-100 text-amber-800 border-amber-200",
+      coalition: "bg-pink-100 text-pink-800 border-pink-200",
+      nomination: "bg-cyan-100 text-cyan-800 border-cyan-200",
+      media: "bg-rose-100 text-rose-800 border-rose-200",
       default: "bg-gray-100 text-gray-800 border-gray-200",
     };
 
