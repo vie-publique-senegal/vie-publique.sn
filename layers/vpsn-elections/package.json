@@ -1,0 +1,38 @@
+{
+  "name": "@vpsn/elections-layer",
+  "version": "0.1.0",
+  "description": "Nuxt layer for electoral dashboard (reusable across countries)",
+  "type": "module",
+  "main": "./nuxt.config.ts",
+  "keywords": [
+    "nuxt",
+    "layer",
+    "elections",
+    "senegal",
+    "dashboard"
+  ],
+  "author": "Vie Publique Sénégal",
+  "license": "MIT",
+  "scripts": {
+    "dev": "nuxi dev .playground",
+    "dev:prepare": "nuxt prepare .playground",
+    "build": "nuxt build .playground",
+    "generate": "nuxt generate .playground",
+    "preview": "nuxt preview .playground",
+    "lint": "eslint ."
+  },
+  "dependencies": {
+    "@directus/sdk": "^17.0.0"
+  },
+  "devDependencies": {
+    "@nuxt/eslint": "latest",
+    "@types/node": "^24.10.4",
+    "eslint": "^9.39.2",
+    "nuxt": "^4.2.2",
+    "typescript": "^5.9.3",
+    "vue": "latest"
+  },
+  "peerDependencies": {
+    "nuxt": "^3.0.0 || ^4.0.0"
+  }
+}
