@@ -1,7 +1,6 @@
 <!-- components/TableauDepartements.vue -->
 <script setup lang="ts">
-import type { DepartmentStats } from "~~/types/election-map-national";
-// import { useElectionData } from "~/composables/useElectionData";
+import type { DepartmentStats } from "../../../types/election-map-national";
 
 // ✅ Initialisation du composable SSR
 const { fetchDepartmentsStats } = useElectionData();
@@ -204,3 +203,4 @@ watch(search, () => {
     </template>
   </UCard>
 </template>
+

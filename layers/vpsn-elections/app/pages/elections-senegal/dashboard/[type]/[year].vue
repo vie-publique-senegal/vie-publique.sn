@@ -1,9 +1,5 @@
 <script setup lang="ts">
-import { useElectoralCoalitions } from '~/composables/elections/dashboard/useElectoralCoalitions';
-import { useElectoralConstituencies } from '~/composables/elections/dashboard/useElectoralConstituencies';
-import { useElectoralDashboard } from '~/composables/elections/dashboard/useElectoralDashboard';
-import { useElectoralProfessions } from '~/composables/elections/dashboard/useElectoralProfessions';
-import { useElectoralStatsList } from '~/composables/elections/dashboard/useElectoralStatsList';
+
 
 /**
  * Dashboard Électoral - Page Détail [Type]/[Année]
@@ -73,6 +69,7 @@ watch(() => currentElection.value, (election) => {
          }
     }
 }, { immediate: true });
+// --------------------------
 
 // Sync statsType with query params
 if (process.client) {
@@ -372,7 +369,7 @@ const handleMapReady = (map: unknown) => {
           <!-- NIVEAU 3: Detail Coalition (pour tous les types) -->
           <div v-if="selectedCoalitionId" class="animate-in fade-in zoom-in-95 duration-500">
             <ElectionsDashboardCoalitionDetails
-              :coalition-id="`${selectedCoalitionId}`"
+              :coalition-id="selectedCoalitionId"
               :coalition-name="coalitions.find(c => c.id === selectedCoalitionId)?.name"
               :year="selectedYear"
               :type="selectedType"

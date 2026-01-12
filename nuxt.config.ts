@@ -89,6 +89,9 @@ export default defineNuxtConfig({
   future: {
     compatibilityVersion: 4,
   },
+  // extends: [
+  //   './layers/vpsn-elections',
+  // ],
   // Optimisations de build pour réduire le temps
   nitro: {
     prerender: {

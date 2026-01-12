@@ -41,7 +41,7 @@
 </template>
 
 <script setup lang="ts">
-import type { ElectionStatsProfession } from "~~/types/election-stats-profession";
+import type { ElectionStatsProfession } from "~/types/election-stats-profession";
 
 const props = defineProps<{
   professions: ElectionStatsProfession[];
@@ -58,3 +58,4 @@ const calculatePercentage = (count: number) => {
   return total ? ((count / total) * 100).toFixed(1) : '0.0';
 };
 </script>
+

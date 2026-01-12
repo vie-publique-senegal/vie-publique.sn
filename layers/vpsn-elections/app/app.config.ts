@@ -40,7 +40,7 @@ export default defineAppConfig({
       results: 'Résultats',
       statistics: 'Statistiques',
       map: 'Carte Électorale',
-      guide: 'Guide de l\'Électeur',
+      guide: "Guide de l'Électeur",
       legislation: 'Législation',
       documents: 'Documents Officiels',
     },
@@ -71,56 +71,57 @@ export default defineAppConfig({
 
       // Cache duration (en secondes)
       cache: {
-        config: 3600,        // 1h
-        coalitions: 1800,    // 30min
+        config: 3600, // 1h
+        coalitions: 1800, // 30min
         constituencies: 1800, // 30min
-        professions: 3600,   // 1h
-        documents: 3600,     // 1h
-        guide: 3600,         // 1h
+        professions: 3600, // 1h
+        documents: 3600, // 1h
+        guide: 3600, // 1h
       },
     },
 
     // Configuration SEO
     seo: {
-      title: 'Élections Sénégal | Plateforme d\'Information Électorale',
-      description: 'Accédez à toutes les informations sur les élections au Sénégal : guide électoral, législation, cartographie et résultats.',
+      title: "Élections Sénégal | Plateforme d'Information Électorale",
+      description:
+        'Accédez à toutes les informations sur les élections au Sénégal : guide électoral, législation, cartographie et résultats.',
       ogImage: '/images/vpsn-share-elections.png',
     },
   },
-})
+});
 
 // Type safety pour l'AppConfig
 declare module '@nuxt/schema' {
   interface AppConfigInput {
     vpsnElections?: {
       country?: {
-        name?: string
-        code?: string
-      }
+        name?: string;
+        code?: string;
+      };
       api?: {
-        baseUrl?: string
-      }
-      labels?: Record<string, string>
+        baseUrl?: string;
+      };
+      labels?: Record<string, string>;
       features?: {
-        showDiaspora?: boolean
-        showLocalElections?: boolean
-        showGuide?: boolean
-        showLegislation?: boolean
-        showStatistics?: boolean
-        showMaps?: boolean
-        showDocuments?: boolean
-        showNews?: boolean
-      }
+        showDiaspora?: boolean;
+        showLocalElections?: boolean;
+        showGuide?: boolean;
+        showLegislation?: boolean;
+        showStatistics?: boolean;
+        showMaps?: boolean;
+        showDocuments?: boolean;
+        showNews?: boolean;
+      };
       ui?: {
-        primaryColor?: string
-        itemsPerPage?: Record<string, number>
-        cache?: Record<string, number>
-      }
+        primaryColor?: string;
+        itemsPerPage?: Record<string, number>;
+        cache?: Record<string, number>;
+      };
       seo?: {
-        title?: string
-        description?: string
-        ogImage?: string
-      }
-    }
+        title?: string;
+        description?: string;
+        ogImage?: string;
+      };
+    };
   }
 }
