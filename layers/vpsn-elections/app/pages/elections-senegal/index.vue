@@ -1,21 +1,27 @@
 ﻿<script setup lang="ts">
+import { useElectoralCoalitions } from '../../composables/elections/dashboard/useElectoralCoalitions';
+import { useElectoralDashboard } from '../../composables/elections/dashboard/useElectoralDashboard';
+import { useNews } from '../../composables/news/useNews';
+
 
 const { config, loadingConfig } = useElectoralDashboard();
+const appConfig = useAppConfig();
+const { country, seo } = appConfig.vpsnElections
 
 const election = computed(() => {
   if (!config.value?.elections) return null;
 
-  // 1. En cours (PrioritÃ© absolue)
+  // 1. En cours (Priorité absolue)
   const ongoing = config.value.elections.find(e => e.status === 'ongoing');
   if (ongoing) return ongoing;
 
-  // 2. TerminÃ© (Le plus rÃ©cent) - PAR DÃ‰FAUT
+  // 2. Terminé (Le plus récent) - PAR DÉFAUT
   const completed = config.value.elections
     .filter(e => e.status === 'completed')
     .sort((a, b) => new Date(b.election_date).getTime() - new Date(a.election_date).getTime())[0];
   if (completed) return completed;
 
-  // 3. ProgrammÃ© (Le plus proche)
+  // 3. Programmé (Le plus proche)
   const scheduled = config.value.elections
     .filter(e => e.status === 'scheduled')
     .sort((a, b) => new Date(a.election_date).getTime() - new Date(b.election_date).getTime())[0];
@@ -23,8 +29,8 @@ const election = computed(() => {
   return scheduled;
 });
 
-// Chargement des donnÃ©es
-// Charger les coalitions pour les Ã©lections prÃ©sidentielles et lÃ©gislatives
+// Chargement des données
+// Charger les coalitions pour les élections présidentielles et législatives
 const {
   coalitions,
   loading: loadingCoalitions
@@ -65,15 +71,15 @@ const topLegislativeCoalitions = computed(() => {
 
 
 useHead({
-  title: 'Ã‰lections au SÃ©nÃ©gal | Plateforme d\'Information Ã‰lectorale',
+  title: `${seo.title}`,
   meta: [
-    { name: 'description', content: 'AccÃ©dez Ã  toutes les informations sur les Ã©lections au SÃ©nÃ©gal : guide Ã©lectoral, lÃ©gislation, cartographie et rÃ©sultats.' }
+    { name: 'description', content: `${seo.description}` }
   ]
 });
 
 const quickLinks = [
   {
-    title: "Guide Ã‰lectoral",
+    title: "Guide Électoral",
     description: "Comment voter ?",
     icon: "i-heroicons-book-open",
     to: "/elections-senegal/guide-electoral",
@@ -81,15 +87,15 @@ const quickLinks = [
     bg: "bg-blue-50"
   },
   {
-    title: "LÃ©gislation",
-    description: "Textes de lois et dÃ©crets",
+    title: "Législation",
+    description: "Textes de lois et décrets",
     icon: "i-heroicons-scale",
     to: "/elections-senegal/legislation",
     color: "text-emerald-600",
     bg: "bg-emerald-50"
   },
   {
-    title: "Carte Ã‰lectorale",
+    title: "Carte Électorale",
     description: "Lieux et bureaux de vote",
     icon: "i-heroicons-map",
     to: "/elections-senegal/carte-electorale",
@@ -101,18 +107,11 @@ const quickLinks = [
   const getStatusLabel = (status: string) => {
     switch(status) {
         case 'ongoing': return 'En Cours';
-        case 'scheduled': return 'ProgrammÃ©e';
-        case 'completed': return 'TerminÃ©e';
+        case 'scheduled': return 'Programmée';
+        case 'completed': return 'Terminée';
         default: return status;
     }
 };
-
-useHead({
-  title: 'Ã‰lections au SÃ©nÃ©gal | Plateforme d\'Information Ã‰lectorale',
-  meta: [
-    { name: 'description', content: 'AccÃ©dez Ã  toutes les informations sur les Ã©lections au SÃ©nÃ©gal : guide Ã©lectoral, lÃ©gislation, cartographie et rÃ©sultats.' }
-  ]
-});
 </script>
 
 <template>
@@ -124,14 +123,14 @@ useHead({
       <section class="text-center mb-8">
         <div class="mx-auto max-w-4xl">
           <h1 class="mb-4 text-4xl font-bold text-gray-900 md:text-5xl dark:text-white">
-            Ã‰lections SÃ©nÃ©gal
+            Élections {{ country.name }}
           </h1>
           <p class="text-gray-600 dark:text-gray-400">
-            Retrouvez ci-dessous les informations de la derniÃ¨re Ã©lection
+            Retrouvez ci-dessous les informations de la dernière élection
             <span v-if="election" class="font-bold text-primary-600 lowercase">
-              {{ election.type === 'presidential' ? 'prÃ©sidentielle' : election.type === 'legislative' ? 'lÃ©gislative' : election.type === 'locale' ? 'locale' : '' }}
+              {{ election.type === 'presidential' ? 'présidentielle' : election.type === 'legislative' ? 'législative' : election.type === 'locale' ? 'locale' : '' }}
             </span>
-            ainsi que l'ensemble des ressources Ã©lectorales.
+            ainsi que l'ensemble des ressources électorales.
           </p>
         </div>
       </section>
@@ -139,7 +138,7 @@ useHead({
       <!-- Top Section: Overview Card -->
       <div v-if="loadingConfig" class="bg-white dark:bg-gray-900 rounded-3xl p-12 border dark:border-gray-800 shadow-sm text-center animate-pulse">
           <UIcon name="i-heroicons-arrow-path" class="h-10 w-10 animate-spin text-primary-500 mx-auto mb-4" />
-          <p class="text-gray-400 font-bold uppercase tracking-widest text-xs">Synchronisation des donnÃ©es...</p>
+          <p class="text-gray-400 font-bold uppercase tracking-widest text-xs">Synchronisation des données...</p>
       </div>
 
       <template v-else>
@@ -172,21 +171,21 @@ useHead({
               <!-- Title -->
               <div>
                  <h1 class="text-2xl lg:text-3xl font-black uppercase tracking-tighter text-gray-900 dark:text-white leading-tight">
-                    {{ election.name || 'Ã‰lections SÃ©nÃ©gal' }}
+                    {{ election.name || 'Élections Sénégal' }}
                  </h1>
               </div>
 
               <!-- Specific Action Links -->
               <div v-if="election.status === 'completed'" class="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2">
-                 <!-- Actions PrÃ©sidentielle -->
+                 <!-- Actions Présidentielle -->
                  <template v-if="election.type === 'presidential'">
-                    <UButton to="/elections-senegal/legislation?q=resultats" color="gray" variant="solid" size="xs" icon="i-heroicons-document-check" class="justify-start">RÃ©sultats DÃ©finitifs</UButton>
+                    <UButton to="/elections-senegal/legislation?q=resultats" color="gray" variant="solid" size="xs" icon="i-heroicons-document-check" class="justify-start">Résultats Définitifs</UButton>
                  </template>
 
-                 <!-- Actions LÃ©gislative -->
+                 <!-- Actions Législative -->
                  <template v-else-if="election.type === 'legislative'">
-                    <UButton to="/assemblee-nationale/deputes" color="gray" variant="solid" size="xs" icon="i-heroicons-users" class="justify-start">Annuaire des DÃ©putÃ©s</UButton>
-                    <UButton to="/assemblee-nationale" color="gray" variant="solid" size="xs" icon="i-heroicons-building-library" class="justify-start">AssemblÃ©e nationale</UButton>
+                    <UButton to="/assemblee-nationale/deputes" color="gray" variant="solid" size="xs" icon="i-heroicons-users" class="justify-start">Annuaire des Députés</UButton>
+                    <UButton to="/assemblee-nationale" color="gray" variant="solid" size="xs" icon="i-heroicons-building-library" class="justify-start">Assemblée nationale</UButton>
                  </template>
               </div>
             </div>
@@ -206,12 +205,12 @@ useHead({
                       <div v-else class="w-20 h-20 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center ring-4 ring-white dark:ring-gray-900">
                          <UIcon name="i-heroicons-trophy" class="w-10 h-10 text-emerald-600 dark:text-emerald-400" />
                       </div>
-                      <div class="absolute -bottom-1 -right-1 bg-emerald-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-sm uppercase tracking-wider">Ã‰lu</div>
+                      <div class="absolute -bottom-1 -right-1 bg-emerald-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-sm uppercase tracking-wider">Élu</div>
                    </div>
 
                    <!-- Winner Info -->
                    <div class="flex-1 min-w-0">
-                      <p class="text-[9px] font-black uppercase text-gray-400 tracking-widest mb-1">PrÃ©sident de la RÃ©publique</p>
+                      <p class="text-[9px] font-black uppercase text-gray-400 tracking-widest mb-1">Président de la République</p>
                       <h3 class="text-lg font-black text-gray-900 dark:text-white leading-none mb-1.5">
                          {{ winningCoalition.head_of_list?.first_name }} {{ winningCoalition.head_of_list?.last_name }}
                       </h3>
@@ -227,7 +226,7 @@ useHead({
                 <!-- LEGISLATIVE RESULTS -->
                 <div v-if="election.type === 'legislative' && topLegislativeCoalitions.length > 0" class="space-y-4">
                    <p class="text-[9px] font-black uppercase text-gray-400 tracking-widest flex items-center gap-2">
-                      <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Les deux coalitions en tÃªte
+                      <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Les deux coalitions en tête
                    </p>
                    <div class="space-y-3">
                       <div v-for="(coalition, idx) in topLegislativeCoalitions.slice(0, 2)" :key="coalition.id" class="flex items-center justify-between">
@@ -249,7 +248,7 @@ useHead({
                              <p :class="['text-lg font-black', idx === 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-900 dark:text-white']">
                                 {{ (Number(coalition.sieges) || 0) + (Number((coalition as any).sieges_departement) || 0) }}
                              </p>
-                             <p class="text-[8px] font-bold uppercase text-gray-400">SiÃ¨ges</p>
+                             <p class="text-[8px] font-bold uppercase text-gray-400">Sièges</p>
                           </div>
                       </div>
                    </div>
@@ -284,16 +283,16 @@ useHead({
           </NuxtLink>
         </div>
 
-        <!-- Section: DerniÃ¨res actualitÃ©s Ã©lectorales-->
+        <!-- Section: Dernières actualités électorales-->
         <section class="mt-8 mb-12">
           <UCard
             class="border-primary/20 hover:border-primary/30 dark:via-primary/10 dark:to-primary/20 border-1 overflow-hidden bg-white shadow-lg transition hover:shadow-xl dark:bg-gradient-to-br dark:from-gray-800"
             :ui="{ body: { padding: 'p-4 sm:p-6' } }"
           >
             <div class="mb-6">
-              <h3 class="text-xl font-semibold text-gray-900 dark:text-white">ActualitÃ©s Ã‰lectorales</h3>
+              <h3 class="text-xl font-semibold text-gray-900 dark:text-white">Actualités Électorales</h3>
               <p class="mt-2 text-gray-600 dark:text-gray-400">
-                Analyses et mises Ã  jour sur le processus Ã©lectoral
+                Analyses et mises à jour sur le processus électoral
               </p>
             </div>
 
@@ -303,8 +302,8 @@ useHead({
               :error="errorNews"
               :limit="3"
               :show-view-all="true"
-              empty-message="Aucune actualitÃ© Ã©lectorale disponible pour le moment"
-              view-all-text="Voir toutes les actualitÃ©s"
+              empty-message="Aucune actualité électorale disponible pour le moment"
+              view-all-text="Voir toutes les actualités"
               view-all-link="/actualites"
             />
           </UCard>
