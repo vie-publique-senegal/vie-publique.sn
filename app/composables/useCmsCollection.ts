@@ -68,22 +68,10 @@ export const useCmsCollection = <T>(options: CmsCollectionOptions) => {
     }
   });
 
-  // Génération d'une clé de cache unique basée sur la collection et tous les paramètres
+  // Génération d'une clé unique basée sur l'URL et les paramètres
   const cacheKey = computed(() => {
-    const _id = unref(id);
-    const _query = query.value;
-
-    if (_id) {
-      return `cms-${collection}-${_id}`;
-    }
-
-    // Créer une clé unique basée sur tous les paramètres
-    const params = Object.keys(_query)
-      .sort() // Trier pour cohérence
-      .map(key => `${key}=${_query[key]}`)
-      .join('&');
-
-    return `cms-${collection}-${params}`;
+    const params = unref(id) ? {} : query.value;
+    return `${collection}-${unref(url)}-${JSON.stringify(params)}`;
   });
 
   // Appel API
