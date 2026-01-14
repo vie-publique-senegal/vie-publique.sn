@@ -13,7 +13,7 @@ import { readItems } from "@directus/sdk";
  */
 export default defineCachedEventHandler(
   async (event) => {
-    const directus = getLocalCmsClient();
+    const directus = getCmsClient();
     const query = getQuery(event);
     const coalitionId = query.coalition as string | undefined;
     const year = query.year ? parseInt(query.year as string) : null;

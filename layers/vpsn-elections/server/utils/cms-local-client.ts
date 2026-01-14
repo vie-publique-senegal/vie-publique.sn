@@ -7,7 +7,7 @@ let localCmsClient: DirectusClient<any> & RestClient<any>;
  * Client Directus local pour le Dashboard Électoral.
  * Tente de se connecter au CMS local ou repli sur prod si absent.
  */
-export const getLocalCmsClient = () => {
+export const getCmsClient = () => {
   const config = useRuntimeConfig();
 
   // Priorités de recherche de l'URL du CMS
