@@ -1,4 +1,10 @@
 <script setup lang="ts">
+import { useElectoralCoalitions } from '../../../../composables/elections/dashboard/useElectoralCoalitions';
+import { useElectoralConstituencies } from '../../../../composables/elections/dashboard/useElectoralConstituencies';
+import { useElectoralDashboard } from '../../../../composables/elections/dashboard/useElectoralDashboard';
+import { useElectoralProfessions } from '../../../../composables/elections/dashboard/useElectoralProfessions';
+import { useElectoralStatsList } from '../../../../composables/elections/dashboard/useElectoralStatsList';
+
 
 
 /**
