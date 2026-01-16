@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import type { Coalition } from "~~/types/coalition";
+import type { Coalition } from '../../../../types';
+
 
 interface Props {
   coalitions: Coalition[];

@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import type { FilterOption } from '~~/types/electoral-dashboard';
+import type { FilterOption } from '../../../../types/electoral-dashboard';
+
 
 interface Props {
   modelValue: string;

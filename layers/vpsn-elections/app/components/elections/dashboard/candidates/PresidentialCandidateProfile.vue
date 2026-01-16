@@ -1,9 +1,8 @@
 <script setup lang="ts">
-import { useElectoralFormatting } from '~/composables/elections/dashboard/useElectoralFormatting';
-import { useCoalitionVideos } from '~/composables/elections/dashboard/useCoalitionVideos';
-import { useCmsFile, downloadCmsFile } from '~/composables/useCmsFile';
 import { useIntersectionObserver } from '@vueuse/core';
-import type { Candidate } from '~~/types/candidate';
+import { useCoalitionVideos } from '../../../../composables/elections/dashboard/useCoalitionVideos';
+import { useElectoralFormatting } from '../../../../composables/elections/dashboard/useElectoralFormatting';
+import type { Candidate } from '../../../../types';
 
 interface Props {
   candidate: Candidate;
@@ -21,8 +20,8 @@ const isManualClick = ref(false);
 const items = [
   { id: 'portrait', label: 'Portrait', icon: 'i-heroicons-user-circle' },
   { id: 'programme', label: 'Programme', icon: 'i-heroicons-document-text' },
-  { id: 'videos', label: 'Vidéos de Campagne', icon: 'i-heroicons-video-camera' }
-]
+  { id: 'videos', label: 'Vidéos de Campagne', icon: 'i-heroicons-video-camera' },
+];
 
 const { videos, loading: videosLoading } = useCoalitionVideos(computed(() => props.coalitionId));
 
@@ -52,10 +51,10 @@ const scrollToSection = (id: string, index: number) => {
 
     window.scrollTo({
       top: offsetPosition,
-      behavior: 'smooth'
+      behavior: 'smooth',
     });
   }
-  
+
   // Reset manual click after animation
   setTimeout(() => {
     isManualClick.value = false;
@@ -65,7 +64,7 @@ const scrollToSection = (id: string, index: number) => {
 // Intersection Observer for scrollspy
 onMounted(() => {
   const isMobile = window.innerWidth < 768;
-  
+
   items.forEach((item, index) => {
     const el = document.getElementById(item.id);
     if (el) {
@@ -74,87 +73,118 @@ onMounted(() => {
         ([{ isIntersecting, intersectionRatio }]) => {
           // Sur mobile, on est plus souple sur l'intersection
           const minRatio = isMobile ? 0.1 : 0.2;
-          
+
           if (isIntersecting && !isManualClick.value && intersectionRatio >= minRatio) {
             activeTab.value = index;
           }
         },
-        { 
+        {
           // RootMargin: haut, droite, bas, gauche
           // On réduit la zone de capture sur mobile pour éviter les chevauchements
           rootMargin: isMobile ? '-120px 0px -60% 0px' : '-180px 0px -40% 0px',
-          threshold: [0.1, 0.2, 0.3]
-        }
+          threshold: [0.1, 0.2, 0.3],
+        },
       );
     }
   });
 });
+const getAssetUrl = (assetId: string, slug: string) => {
+  return useCmsFile(`${assetId}/${slug}.pdf`);
+};
 </script>
 
 <template>
   <div class="relative">
     <!-- Card Info -->
-    <UCard class="overflow-hidden shadow-xl mb-6" :ui="{ body: { padding: 'p-0' } }">
-      <div class="grid md:grid-cols-5 gap-0">
+    <UCard class="mb-6 overflow-hidden shadow-xl" :ui="{ body: { padding: 'p-0' } }">
+      <div class="grid gap-0 md:grid-cols-5">
         <!-- Photo du candidat -->
-        <div class="md:col-span-2 relative aspect-square md:aspect-auto overflow-hidden bg-gray-100 dark:bg-gray-900 border-r dark:border-gray-800">
+        <div
+          class="relative aspect-square overflow-hidden border-r bg-gray-100 md:col-span-2 md:aspect-auto dark:border-gray-800 dark:bg-gray-900"
+        >
           <img
             v-if="candidate.photo"
             :src="getCmsAsset(candidate.photo)"
             class="h-full w-full object-cover"
             :alt="`${candidate.first_name} ${candidate.last_name}`"
           />
-          <div v-else class="h-full w-full flex items-center justify-center">
+          <div v-else class="flex h-full w-full items-center justify-center">
             <UIcon name="i-heroicons-user" class="h-32 w-32 text-gray-300" />
           </div>
         </div>
 
         <!-- Informations du candidat -->
-        <div class="md:col-span-3 p-8 space-y-8 flex flex-col justify-center">
+        <div class="flex flex-col justify-center space-y-8 p-8 md:col-span-3">
           <div>
-            <p class="text-sm font-bold text-primary-600 dark:text-primary-400 uppercase tracking-widest mb-2">
+            <p
+              class="text-primary-600 dark:text-primary-400 mb-2 text-sm font-bold uppercase tracking-widest"
+            >
               Candidat Présidentiel
             </p>
-            <h2 class="text-5xl font-black text-gray-900 dark:text-white uppercase leading-none">
+            <h2 class="text-5xl font-black uppercase leading-none text-gray-900 dark:text-white">
               {{ candidate.first_name }}<br />{{ candidate.last_name }}
             </h2>
           </div>
 
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
             <div v-if="candidate.profession" class="flex items-start gap-3">
-              <UIcon name="i-heroicons-briefcase" class="h-5 w-5 text-primary-500 mt-0.5" />
+              <UIcon name="i-heroicons-briefcase" class="text-primary-500 mt-0.5 h-5 w-5" />
               <div>
-                <p class="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-wider">Profession</p>
-                <p class="text-sm font-bold text-gray-900 dark:text-white">{{ candidate.profession }}</p>
+                <p
+                  class="text-[10px] font-black uppercase tracking-wider text-gray-400 dark:text-gray-500"
+                >
+                  Profession
+                </p>
+                <p class="text-sm font-bold text-gray-900 dark:text-white">
+                  {{ candidate.profession }}
+                </p>
               </div>
             </div>
 
             <div class="flex items-start gap-3">
-              <UIcon name="i-heroicons-flag" class="h-5 w-5 text-primary-500 mt-0.5" />
+              <UIcon name="i-heroicons-flag" class="text-primary-500 mt-0.5 h-5 w-5" />
               <div>
-                <p class="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-wider">Coalition</p>
+                <p
+                  class="text-[10px] font-black uppercase tracking-wider text-gray-400 dark:text-gray-500"
+                >
+                  Coalition
+                </p>
                 <p class="text-sm font-bold text-gray-900 dark:text-white">{{ coalitionName }}</p>
               </div>
             </div>
 
             <div v-if="candidate.birthdate || candidate.birthplace" class="flex items-start gap-3">
-              <UIcon name="i-heroicons-cake" class="h-5 w-5 text-primary-500 mt-0.5" />
+              <UIcon name="i-heroicons-cake" class="text-primary-500 mt-0.5 h-5 w-5" />
               <div>
-                <p class="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-wider">Naissance</p>
+                <p
+                  class="text-[10px] font-black uppercase tracking-wider text-gray-400 dark:text-gray-500"
+                >
+                  Naissance
+                </p>
                 <p class="text-sm font-bold text-gray-900 dark:text-white">
-                  <template v-if="candidate.birthdate">{{ formatDate(candidate.birthdate) }}</template>
+                  <template v-if="candidate.birthdate">{{
+                    formatDate(candidate.birthdate)
+                  }}</template>
                   <template v-if="candidate.birthdate && candidate.birthplace"> à </template>
                   <template v-if="candidate.birthplace">{{ candidate.birthplace }}</template>
-                  <span v-if="age" class="ml-2 text-primary-600 dark:text-primary-400">({{ age }} ans)</span>
+                  <span v-if="age" class="text-primary-600 dark:text-primary-400 ml-2"
+                    >({{ age }} ans)</span
+                  >
                 </p>
               </div>
             </div>
 
             <div v-if="candidate.voter_number" class="flex items-start gap-3">
-              <UIcon name="i-heroicons-identification" class="h-5 w-5 text-primary-500 mt-0.5" />
+              <UIcon name="i-heroicons-identification" class="text-primary-500 mt-0.5 h-5 w-5" />
               <div>
-                <p class="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-wider">N° Électeur</p>
-                <p class="text-sm font-bold text-gray-900 dark:text-white">{{ candidate.voter_number }}</p>
+                <p
+                  class="text-[10px] font-black uppercase tracking-wider text-gray-400 dark:text-gray-500"
+                >
+                  N° Électeur
+                </p>
+                <p class="text-sm font-bold text-gray-900 dark:text-white">
+                  {{ candidate.voter_number }}
+                </p>
               </div>
             </div>
           </div>
@@ -169,7 +199,7 @@ onMounted(() => {
               size="sm"
               :to="candidate.facebook"
               target="_blank"
-              class="rounded-full h-10 w-10 flex items-center justify-center p-0"
+              class="flex h-10 w-10 items-center justify-center rounded-full p-0"
               title="Facebook"
             />
             <UButton
@@ -180,7 +210,7 @@ onMounted(() => {
               size="sm"
               :to="candidate.twitter"
               target="_blank"
-              class="rounded-full h-10 w-10 flex items-center justify-center p-0"
+              class="flex h-10 w-10 items-center justify-center rounded-full p-0"
               title="Twitter/X"
             />
           </div>
@@ -189,19 +219,25 @@ onMounted(() => {
     </UCard>
 
     <!-- Sticky Tabs Navigation -->
-    <div class="sticky top-[80px] md:top-[124px] z-40 bg-gray-50/95 backdrop-blur-md dark:bg-gray-950/95 py-4 -mx-4 px-4 transition-all duration-300">
-      <div class="bg-white dark:bg-gray-900 p-1 rounded-xl shadow-lg ring-1 ring-gray-200 dark:ring-gray-800 flex gap-1 max-w-2xl mx-auto">
+    <div
+      class="sticky top-[80px] z-40 -mx-4 bg-gray-50/95 px-4 py-4 backdrop-blur-md transition-all duration-300 md:top-[124px] dark:bg-gray-950/95"
+    >
+      <div
+        class="mx-auto flex max-w-2xl gap-1 rounded-xl bg-white p-1 shadow-lg ring-1 ring-gray-200 dark:bg-gray-900 dark:ring-gray-800"
+      >
         <button
           v-for="(item, index) in items"
           :key="index"
+          class="flex flex-1 items-center justify-center gap-2 rounded-lg px-2 py-2.5 text-xs font-bold transition-all duration-300 sm:px-4 sm:text-sm"
+          :class="
+            activeTab === index
+              ? 'bg-primary-600 text-white shadow-md'
+              : 'hover:text-primary-600 dark:hover:text-primary-400 text-gray-500 hover:bg-gray-50 dark:text-gray-400 dark:hover:bg-gray-800'
+          "
           @click="scrollToSection(item.id, index)"
-          class="flex-1 flex items-center justify-center gap-2 px-2 sm:px-4 py-2.5 rounded-lg font-bold text-xs sm:text-sm transition-all duration-300"
-          :class="activeTab === index 
-            ? 'bg-primary-600 text-white shadow-md' 
-            : 'text-gray-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-gray-50 dark:hover:bg-gray-800'"
         >
           <UIcon :name="item.icon" class="h-4 w-4 shrink-0" />
-          <span 
+          <span
             class="truncate transition-all duration-200"
             :class="activeTab === index ? 'inline' : 'hidden sm:inline'"
           >
@@ -215,58 +251,72 @@ onMounted(() => {
     <div class="mt-8 space-y-12 pb-32">
       <!-- Portrait Section -->
       <section :id="items[0].id" class="scroll-mt-40">
-        <UCard :ui="{ body: { padding: 'p-8' } }" class="border-t-4 border-t-primary-500">
-          <div v-if="candidate.biography" class="prose prose-sm dark:prose-invert max-w-none">
-            <div class="flex items-center gap-3 mb-6">
-               <div class="p-2 bg-primary-50 dark:bg-primary-900/20 rounded-lg">
-                 <UIcon :name="items[0].icon" class="h-6 w-6 text-primary-600" />
-               </div>
-               <h3 class="text-2xl font-black uppercase text-gray-900 dark:text-white m-0">Le Portrait</h3>
+        <UCard :ui="{ body: { padding: 'p-8' } }" class="border-t-primary-500 border-t-4">
+          <div v-if="candidate.biography" class="prose prose-sm max-w-none dark:prose-invert">
+            <div class="mb-6 flex items-center gap-3">
+              <div class="bg-primary-50 dark:bg-primary-900/20 rounded-lg p-2">
+                <UIcon :name="items[0].icon" class="text-primary-600 h-6 w-6" />
+              </div>
+              <h3 class="m-0 text-2xl font-black uppercase text-gray-900 dark:text-white">
+                Le Portrait
+              </h3>
             </div>
-            <p class="text-lg leading-relaxed text-gray-700 dark:text-gray-300 italic">
+            <p class="text-lg italic leading-relaxed text-gray-700 dark:text-gray-300">
               "{{ candidate.biography }}"
             </p>
           </div>
-          <div v-else class="text-center py-12">
-            <UIcon name="i-heroicons-user-circle" class="h-12 w-12 text-gray-300 mx-auto mb-4" />
-            <p class="text-gray-500">Le portrait de {{ candidate.first_name }} {{ candidate.last_name }} n'est pas disponible pour le moment.</p>
+          <div v-else class="py-12 text-center">
+            <UIcon name="i-heroicons-user-circle" class="mx-auto mb-4 h-12 w-12 text-gray-300" />
+            <p class="text-gray-500">
+              Le portrait de {{ candidate.first_name }} {{ candidate.last_name }} n'est pas
+              disponible pour le moment.
+            </p>
           </div>
         </UCard>
       </section>
 
       <!-- Programme Section -->
       <section :id="items[1].id" class="scroll-mt-40">
-        <UCard :ui="{ body: { padding: 'p-0' } }" class="overflow-hidden border-t-4 border-t-primary-500">
-          <div class="p-8 border-b dark:border-gray-800 flex items-center justify-between bg-gray-50/50 dark:bg-gray-800/30">
+        <UCard
+          :ui="{ body: { padding: 'p-0' } }"
+          class="border-t-primary-500 overflow-hidden border-t-4"
+        >
+          <div
+            class="flex items-center justify-between border-b bg-gray-50/50 p-8 dark:border-gray-800 dark:bg-gray-800/30"
+          >
             <div class="flex items-center gap-3">
-               <div class="p-2 bg-primary-50 dark:bg-primary-900/20 rounded-lg">
-                 <UIcon :name="items[1].icon" class="h-6 w-6 text-primary-600" />
-               </div>
-               <h3 class="text-2xl font-black uppercase text-gray-900 dark:text-white m-0">Programme Électoral</h3>
+              <div class="bg-primary-50 dark:bg-primary-900/20 rounded-lg p-2">
+                <UIcon :name="items[1].icon" class="text-primary-600 h-6 w-6" />
+              </div>
+              <h3 class="m-0 text-2xl font-black uppercase text-gray-900 dark:text-white">
+                Programme Électoral
+              </h3>
             </div>
           </div>
 
           <div v-if="candidate.documents" class="p-4 md:p-8">
             <div v-if="candidate.documents.file" class="space-y-6">
-
               <!-- PDF Viewer Integration -->
               <ClientOnly>
-                <div class="rounded-2xl border dark:border-gray-800 overflow-hidden shadow-inner bg-gray-100 dark:bg-gray-900">
+                <div
+                  class="overflow-hidden rounded-2xl border bg-gray-100 shadow-inner dark:border-gray-800 dark:bg-gray-900"
+                >
                   <PdfViewer
-                    :source="useCmsFile(candidate.documents.file)"
+                    :source="getAssetUrl(candidate.documents.file.id, candidate.documents.slug)"
                     :download-name="`${candidate.documents.slug}.pdf`"
                   />
                 </div>
               </ClientOnly>
             </div>
           </div>
-          <div v-else class="text-center py-20 flex flex-col items-center justify-center space-y-4">
-            <div class="p-4 bg-orange-50 dark:bg-orange-900/20 rounded-full">
+          <div v-else class="flex flex-col items-center justify-center space-y-4 py-20 text-center">
+            <div class="rounded-full bg-orange-50 p-4 dark:bg-orange-900/20">
               <UIcon name="i-heroicons-document-text" class="h-12 w-12 text-orange-500" />
             </div>
             <h3 class="text-2xl font-black uppercase tracking-tight">Programme Non Disponible</h3>
-            <p class="text-gray-500 dark:text-gray-400 max-w-sm mx-auto">
-              Le programme détaillé de {{ candidate.first_name }} {{ candidate.last_name }} n'est pas disponible pour le moment.
+            <p class="mx-auto max-w-sm text-gray-500 dark:text-gray-400">
+              Le programme détaillé de {{ candidate.first_name }} {{ candidate.last_name }} n'est
+              pas disponible pour le moment.
             </p>
           </div>
         </UCard>
@@ -274,46 +324,73 @@ onMounted(() => {
 
       <!-- Vidéos Section -->
       <section :id="items[2].id" class="scroll-mt-40">
-        <UCard :ui="{ body: { padding: 'p-8' } }" class="border-t-4 border-t-primary-500">
-          <div class="flex items-center gap-3 mb-8">
-             <div class="p-2 bg-primary-50 dark:bg-primary-900/20 rounded-lg">
-               <UIcon :name="items[2].icon" class="h-6 w-6 text-primary-600" />
-             </div>
-             <h3 class="text-2xl font-black uppercase text-gray-900 dark:text-white m-0">Vidéos de Campagne</h3>
+        <UCard :ui="{ body: { padding: 'p-8' } }" class="border-t-primary-500 border-t-4">
+          <div class="mb-8 flex items-center gap-3">
+            <div class="bg-primary-50 dark:bg-primary-900/20 rounded-lg p-2">
+              <UIcon :name="items[2].icon" class="text-primary-600 h-6 w-6" />
+            </div>
+            <h3 class="m-0 text-2xl font-black uppercase text-gray-900 dark:text-white">
+              Vidéos de Campagne
+            </h3>
           </div>
 
-          <div v-if="videosLoading" class="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div v-if="videosLoading" class="grid grid-cols-1 gap-8 md:grid-cols-2">
             <USkeleton v-for="i in 2" :key="i" class="h-64 w-full rounded-2xl" />
           </div>
-          <div v-else-if="videos.length > 0" class="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div v-else-if="videos.length > 0" class="grid grid-cols-1 gap-8 md:grid-cols-2">
             <div v-for="video in videos" :key="video.id" class="group space-y-4">
-              <div class="aspect-video rounded-2xl overflow-hidden shadow-2xl border-2 border-gray-100 dark:border-gray-800 transition-transform duration-500 group-hover:scale-[1.02]">
+              <div
+                class="aspect-video overflow-hidden rounded-2xl border-2 border-gray-100 shadow-2xl transition-transform duration-500 group-hover:scale-[1.02] dark:border-gray-800"
+              >
                 <iframe
                   v-if="getYoutubeEmbedUrl(video.url_youtube)"
                   :src="getYoutubeEmbedUrl(video.url_youtube)"
-                  class="w-full h-full"
+                  class="h-full w-full"
                   frameborder="0"
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                   allowfullscreen
                 ></iframe>
-                <div v-else class="w-full h-full flex items-center justify-center bg-gray-100 dark:bg-gray-800">
-                  <div class="text-center p-4">
-                    <UIcon name="i-heroicons-exclamation-triangle" class="h-12 w-12 text-gray-300 mx-auto mb-2" />
+                <div
+                  v-else
+                  class="flex h-full w-full items-center justify-center bg-gray-100 dark:bg-gray-800"
+                >
+                  <div class="p-4 text-center">
+                    <UIcon
+                      name="i-heroicons-exclamation-triangle"
+                      class="mx-auto mb-2 h-12 w-12 text-gray-300"
+                    />
                     <p class="text-xs text-gray-500">URL vidéo invalide</p>
                   </div>
                 </div>
               </div>
               <div class="px-2">
-                <p v-if="video.title" class="font-bold text-gray-900 dark:text-white line-clamp-1 italic">"{{ video.title }}"</p>
-                <p v-if="video.date" class="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1 uppercase">
+                <p
+                  v-if="video.title"
+                  class="line-clamp-1 font-bold italic text-gray-900 dark:text-white"
+                >
+                  "{{ video.title }}"
+                </p>
+                <p
+                  v-if="video.date"
+                  class="mt-1 text-[10px] font-black uppercase tracking-widest text-gray-400"
+                >
                   Diffusé le {{ formatDate(video.date) }}
                 </p>
               </div>
             </div>
           </div>
-          <div v-else-if="!videosLoading" class="text-center py-20 bg-gray-50/50 dark:bg-gray-800/20 rounded-2xl border-2 border-dashed border-gray-100 dark:border-gray-800">
-            <UIcon name="i-heroicons-video-camera-slash" class="h-16 w-16 text-gray-200 dark:text-gray-800 mx-auto mb-4" />
-            <p class="text-gray-500 font-medium">Aucune vidéo de campagne de {{ candidate.first_name }} {{ candidate.last_name }} pour le moment.</p>
+          <div
+            v-else-if="!videosLoading"
+            class="rounded-2xl border-2 border-dashed border-gray-100 bg-gray-50/50 py-20 text-center dark:border-gray-800 dark:bg-gray-800/20"
+          >
+            <UIcon
+              name="i-heroicons-video-camera-slash"
+              class="mx-auto mb-4 h-16 w-16 text-gray-200 dark:text-gray-800"
+            />
+            <p class="font-medium text-gray-500">
+              Aucune vidéo de campagne de {{ candidate.first_name }} {{ candidate.last_name }} pour
+              le moment.
+            </p>
           </div>
         </UCard>
       </section>

@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { useElectoralFormatting } from '~/composables/elections/dashboard/useElectoralFormatting';
+import { useElectoralFormatting } from '../../../../composables/elections/dashboard/useElectoralFormatting';
+
 
 interface Props {
   coalition: any;
@@ -14,7 +15,7 @@ const { getCmsAsset } = useElectoralFormatting();
 </script>
 
 <template>
-  <div 
+  <div
     class="group relative aspect-[3/4] overflow-hidden rounded-2xl border-4 border-white dark:border-gray-800 shadow-lg hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 cursor-pointer bg-white"
     @click="emit('select', coalition.id)"
   >

@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { useElectoralFormatting } from '~/composables/elections/dashboard/useElectoralFormatting';
-import type { Candidate } from '~~/types/candidate';
+import { useElectoralFormatting } from '../../../../composables/elections/dashboard/useElectoralFormatting';
+import type { Candidate } from '../../../../types';
+
 
 interface Props {
   modelValue: boolean;

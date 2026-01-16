@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { useElectoralFormatting } from '~/composables/elections/dashboard/useElectoralFormatting';
-import type { ElectionDetails } from '~~/types/electoral-dashboard';
-import type { Coalition } from "~~/types/coalition";
-import type { Constituency } from "~/composables/elections/dashboard/useElectoralConstituencies";
+import type { Constituency } from '../../../composables/elections/dashboard/useElectoralConstituencies';
+import { useElectoralFormatting } from '../../../composables/elections/dashboard/useElectoralFormatting';
+import type { Coalition, ElectionDetails } from '../../../types';
+
 
 interface Props {
   election: ElectionDetails;
@@ -23,7 +23,7 @@ const updateTimer = () => {
     const status = props.election.status;
     const now = new Date();
     const electionDate = new Date(props.election.election_date);
-    
+
     let targetTime: Date;
     let prefix = "";
 
@@ -85,24 +85,24 @@ const electionYear = computed(() => {
 const quickLinks = computed(() => {
   const links = [];
   if (props.election.type === 'presidential') {
-    links.push({ 
-      label: 'Résultats définitifs', 
+    links.push({
+      label: 'Résultats définitifs',
       description: 'Proclamés par le Conseil Constitutionnel.',
-      to: `/elections-senegal/legislation?type=${props.election.type}&year=${electionYear.value}&q=resultats`, 
-      icon: 'i-heroicons-document-text' 
+      to: `/elections-senegal/legislation?type=${props.election.type}&year=${electionYear.value}&q=resultats`,
+      icon: 'i-heroicons-document-text'
     });
   } else if (props.election.type === 'legislative') {
-    links.push({ 
-      label: 'Annuaire des députés', 
+    links.push({
+      label: 'Annuaire des députés',
       description: 'Liste et profils des représentants.',
-      to: '/assemblee-nationale/deputes', 
-      icon: 'i-heroicons-users' 
+      to: '/assemblee-nationale/deputes',
+      icon: 'i-heroicons-users'
     });
-    links.push({ 
-      label: 'Assemblée nationale', 
+    links.push({
+      label: 'Assemblée nationale',
       description: 'Dashboard de l\'Assemblée nationale.',
-      to: '/assemblee-nationale', 
-      icon: 'i-heroicons-building-library' 
+      to: '/assemblee-nationale',
+      icon: 'i-heroicons-building-library'
     });
   }
   return links;
@@ -140,8 +140,8 @@ onUnmounted(() => {
 
         <!-- Action Links -->
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
-            <NuxtLink 
-              v-for="link in quickLinks" 
+            <NuxtLink
+              v-for="link in quickLinks"
               :key="link.to"
               :to="link.to"
               class="flex items-center gap-2.5 p-2 bg-gray-50 dark:bg-gray-800/50 rounded-xl border dark:border-gray-800 hover:border-primary-500/50 transition-all group"
@@ -159,11 +159,11 @@ onUnmounted(() => {
 
       <!-- Results Section -->
       <div class="lg:w-[320px] bg-gray-50 dark:bg-gray-900/50 p-5 lg:p-6 border-l dark:border-gray-800 flex flex-col justify-center">
-          
+
           <!-- Presidential Winner -->
           <div v-if="election.type === 'presidential' && winningCoalition" class="flex items-center gap-4">
-              <UAvatar 
-                :src="getCmsAsset(winningCoalition.head_of_list.photo)" 
+              <UAvatar
+                :src="getCmsAsset(winningCoalition.head_of_list.photo)"
                 size="xl"
                 class="ring-2 ring-white dark:ring-gray-800 shadow-lg"
               />
@@ -180,7 +180,7 @@ onUnmounted(() => {
           <div v-else-if="election.type === 'legislative' && topLegislativeCoalitions.length > 0" class="space-y-4">
               <p class="text-[9px] uppercase font-black text-gray-400 tracking-widest">Répartition des sièges</p>
               <div class="grid grid-cols-2 gap-3">
-                  <div v-for="(col, idx) in topLegislativeCoalitions" :key="col.id" 
+                  <div v-for="(col, idx) in topLegislativeCoalitions" :key="col.id"
                     class="bg-white dark:bg-gray-950 p-3 rounded-2xl border dark:border-gray-800 shadow-sm"
                   >
                       <p class="text-[8px] font-black uppercase text-gray-400 truncate">{{ col.acronym || col.name }}</p>
@@ -233,11 +233,11 @@ onUnmounted(() => {
              <p class="text-[9px] uppercase font-black text-gray-400 tracking-widest">Campagne électorale</p>
              <div class="space-y-1">
                 <p class="text-xs font-black dark:text-white flex justify-between">
-                   <span class="text-gray-400 font-bold uppercase text-[8px]">Incipit:</span> 
+                   <span class="text-gray-400 font-bold uppercase text-[8px]">Incipit:</span>
                    {{ formatDate(election.campaign_start_date) || '—' }}
                 </p>
                 <p class="text-xs font-black dark:text-white flex justify-between">
-                   <span class="text-gray-400 font-bold uppercase text-[8px]">Clôture:</span> 
+                   <span class="text-gray-400 font-bold uppercase text-[8px]">Clôture:</span>
                    {{ formatDate(election.campaign_end_date) || '—' }}
                 </p>
              </div>

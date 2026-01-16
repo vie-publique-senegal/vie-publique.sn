@@ -1,4 +1,7 @@
 ﻿<script setup lang="ts">
+import { useElectoralFormatting } from '../composables/elections/dashboard/useElectoralFormatting';
+import type { NewsArticle } from '../types';
+
 
 interface Props {
   articles: NewsArticle[];
@@ -24,7 +27,7 @@ const displayedArticles = computed(() => {
   return props.articles?.slice(0, props.limit) || [];
 });
 
-const { formatDateWithDay } = useElectoralFormatting();
+const { formatDate } = useElectoralFormatting();
 </script>
 
 <template>
@@ -101,7 +104,7 @@ const { formatDateWithDay } = useElectoralFormatting();
               v-if="article.date_published"
               class="mt-1 block text-xs text-gray-500 dark:text-gray-400"
             >
-              {{ formatDateWithDay(article.date_published) }}
+              {{ formatDate(article.date_published) }}
             </time>
           </div>
         </NuxtLink>

@@ -12,6 +12,12 @@ export default defineAppConfig({
       baseUrl: '/api/elections',
     },
 
+    // Configuration des liens
+    links: {
+      home: '/elections-senegal',
+      dashboard: '/elections/dashboard',
+    },
+
     // Labels traduisibles/personnalisables par pays
     labels: {
       // Géographie
@@ -61,6 +67,30 @@ export default defineAppConfig({
     ui: {
       // Couleur primaire (optionnel, utilise la couleur du projet parent par défaut)
       // primaryColor: '#0EA5E9',
+
+      // Textes des tabs
+      mapTab: 'Carte',
+      resultsTab: 'Résultats',
+      documentsTab: 'Documents',
+      statsTab: 'Stats',
+      guideTab: 'Guide',
+
+      // Placeholders de recherche
+      searchPlaceholder: 'Rechercher...',
+      searchDepartmentPlaceholder: 'Rechercher un département...',
+      searchConstituencyPlaceholder: 'Rechercher une circonscription...',
+
+      // Textes divers
+      engaged: 'engagées',
+      home: 'Accueil Élections',
+      backToHome: 'Accueil Élections',
+
+      // Guide électoral
+      guideTitle: 'Guide Électoral - Comment Voter',
+      guideDescription: 'Découvrez comment voter aux élections en vidéo, disponible en plusieurs langues nationales.',
+      allElections: 'Toutes les élections',
+      allLanguages: 'Toutes les langues',
+      noVideosAvailable: 'Aucune vidéo disponible pour cette sélection.',
 
       // Nombre d'items par page
       itemsPerPage: {

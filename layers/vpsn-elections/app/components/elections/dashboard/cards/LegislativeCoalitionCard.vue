@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { useElectoralFormatting } from '~/composables/elections/dashboard/useElectoralFormatting';
+import { useElectoralFormatting } from '../../../../composables/elections/dashboard/useElectoralFormatting';
+
 
 interface Props {
   coalition: any;

@@ -1,29 +1,23 @@
 ﻿<script setup lang="ts">
-import ElectionAgeDistributionChart from '../ElectionAgeDistributionChart.vue';
-import ElectionCandidatProfessionChart from '../ElectionCandidatProfessionChart.vue';
-import ElectionGenderDistributionChart from '../ElectionGenderDistributionChart.vue';
-import ConstituencyCard from './cards/ConstituencyCard.vue';
-import PresidentialCoalitionCard from './cards/PresidentialCoalitionCard.vue';
-import CoalitionDetails from './CoalitionDetails.vue';
-import ConstituencyCoalitions from './ConstituencyCoalitions.vue';
-import DocumentsTab from './DocumentsTab.vue';
-import ElectoralDashboardHeader from './ElectoralDashboardHeader.vue';
-import ElectoralDashboardTabs from './ElectoralDashboardTabs.vue';
-import ElectoralDetailsCard from './ElectoralDetailsCard.vue';
-import EmptyStateCoalitions from './EmptyStateCoalitions.vue';
-import GuideElectoralVideos from './GuideElectoralVideos.vue';
-import ElectionResultatsLocalesTable from './stats/ElectionResultatsLocalesTable.vue';
-import ElectionResultatsStats from './stats/ElectionResultatsStats.vue';
+import { useElectoralCoalitions } from '../../../composables/elections/dashboard/useElectoralCoalitions';
+import { useElectoralConstituencies } from '../../../composables/elections/dashboard/useElectoralConstituencies';
+import { useElectoralDashboard } from '../../../composables/elections/dashboard/useElectoralDashboard';
+import { useElectoralProfessions } from '../../../composables/elections/dashboard/useElectoralProfessions';
+import { useElectoralStatsList } from '../../../composables/elections/dashboard/useElectoralStatsList';
+import { useElectionsConfig } from '../../../composables/useElectionsConfig';
 
 /**
- * ElectoralDashboardView - Composant maÃ®tre pour le rendu du dashboard Ã©lectoral.
- * Ce composant est conÃ§u pour Ãªtre utilisÃ© dans une page dynamique du projet hÃ´te.
+ * ElectoralDashboardView - Composant maÃ®tre pour le rendu du dashboard électoral.
+ * Ce composant est conÃ§u pour Ãªtre utilisé dans une page dynamique du projet hÃ´te.
  */
 
 const props = defineProps<{
   type?: string
   year?: number | string
 }>()
+
+// Configuration dynamique
+const electionsConfig = useElectionsConfig();
 
 // 1. Initialisation du Dashboard via le composable du layer
 const dashboard = useElectoralDashboard();
@@ -40,14 +34,13 @@ const {
   clearConstituency,
   selectCoalition,
   clearCoalition,
-  searchQuery,
-  legislativeViewType
+  searchQuery
 } = dashboard;
 
 const statsTypes = [
   { label: "Profession des candidats", value: "professionCandidat" },
-  { label: "RÃ©partition par sexe", value: "genderDistribution" },
-  { label: "RÃ©partition par Ã¢ge", value: "ageDistribution" },
+  { label: "Répartition par sexe", value: "genderDistribution" },
+  { label: "Répartition par Ã¢ge", value: "ageDistribution" },
 ];
 
 const route = useRoute();
@@ -70,7 +63,7 @@ watch([() => props.type, () => props.year], ([type, year]) => {
     }
 }, { immediate: true, flush: 'sync' });
 
-// Logique d'onglet par dÃ©faut
+// Logique d'onglet par défaut
 watch(() => currentElection.value, (election) => {
     if (route.query.tab) {
         if (activeTab.value !== route.query.tab) {
@@ -109,13 +102,13 @@ const { data: statsDepartmental, pending: loadingDepertmental, error: errorDeper
 
 const isLocalElection = computed(() => selectedType.value === 'locale');
 
-const { constituencies, loading: loadingConstituencies } = useElectoralConstituencies({
+const { constituencies } = useElectoralConstituencies({
   year: selectedYear,
   type: selectedType,
   search: searchQuery
 });
 
-const { coalitions, loading: loadingCoalitions } = useElectoralCoalitions({
+const { coalitions } = useElectoralCoalitions({
   year: selectedYear,
   type: selectedType,
   ranking: true,
@@ -131,14 +124,18 @@ const selectedConstituencyName = computed(() => {
 const tabs = computed(() => [
   {
     id: "candidats",
-    label: selectedType.value === 'presidential' ? 'Candidats' : (selectedType.value === 'locale' ? 'Circonscriptions' : 'Coalitions'),
+    label: selectedType.value === 'presidential'
+      ? electionsConfig.getLabel('candidates')
+      : (selectedType.value === 'locale'
+        ? electionsConfig.getLabel('constituencies')
+        : electionsConfig.getLabel('coalitions')),
     icon: "i-heroicons-user-group"
   },
-  { id: "carte", label: "Carte", icon: "i-heroicons-map" },
-  { id: "resultats", label: "RÃ©sultats", icon: "i-heroicons-chart-bar" },
-  { id: "documents", label: "Documents", icon: "i-heroicons-document-duplicate" },
-  { id: "statistiques", label: "Stats", icon: "i-heroicons-presentation-chart-line" },
-  { id: "guide", label: "Guide", icon: "i-heroicons-play-circle" },
+  { id: "carte", label: electionsConfig.ui.mapTab || "Carte", icon: "i-heroicons-map" },
+  { id: "resultats", label: electionsConfig.ui.resultsTab || "Résultats", icon: "i-heroicons-chart-bar" },
+  { id: "documents", label: electionsConfig.ui.documentsTab || "Documents", icon: "i-heroicons-document-duplicate" },
+  { id: "statistiques", label: electionsConfig.ui.statsTab || "Stats", icon: "i-heroicons-presentation-chart-line" },
+  { id: "guide", label: electionsConfig.ui.guideTab || "Guide", icon: "i-heroicons-play-circle" },
 ]);
 
 const currentTabIndex = computed({
@@ -167,13 +164,13 @@ const mapListOptions = [
 const mapTabs = [
   { label: "Nationale", icon: "i-heroicons-map" },
   { label: "Diaspora", icon: "i-heroicons-globe-europe-africa" },
-  { label: "RÃ©sumÃ©", icon: "i-heroicons-chart-bar" },
+  { label: "Résumé", icon: "i-heroicons-chart-bar" },
 ];
 
 const navigateToElection = (type: string, year: number) => {
    const targetElection = config.value?.elections?.find((e: any) => e.type === type && e.year === year);
    let targetTab = targetElection?.status === 'completed' ? 'resultats' : 'candidats';
-   
+
    const appConfig = useAppConfig();
    const dashboardBaseUrl = appConfig.vpsnElections?.links?.dashboard || '/elections/dashboard';
 
@@ -201,7 +198,7 @@ const onTypeChange = (type: string) => {
 <template>
   <div class="min-h-screen bg-[#f8fafc] dark:bg-gray-950 text-gray-900 dark:text-gray-100 transition-colors duration-300">
     <!-- Header & Navigation Sticky -->
-    <ElectoralDashboardHeader
+    <ElectionsDashboardElectoralDashboardHeader
       :selected-year="selectedYear"
       :selected-type="selectedType"
       :config="config"
@@ -211,12 +208,12 @@ const onTypeChange = (type: string) => {
       @clear-coalition="clearConstituency"
     >
       <template #tabs>
-        <ElectoralDashboardTabs
+        <ElectionsDashboardElectoralDashboardTabs
           v-model="currentTabIndex"
           :selected-type="selectedType"
         />
       </template>
-    </ElectoralDashboardHeader>
+    </ElectionsDashboardElectoralDashboardHeader>
 
     <!-- Main Content -->
     <main class="container mx-auto px-4 py-8">
@@ -225,24 +222,24 @@ const onTypeChange = (type: string) => {
            <div class="bg-primary-50 dark:bg-primary-900/10 p-6 rounded-full mb-6">
               <UIcon name="i-heroicons-face-frown" class="h-20 w-20 text-primary-500" />
            </div>
-           <h1 class="text-4xl font-black mb-4 tracking-tight">Oups ! Ã‰lection introuvable</h1>
+           <h1 class="text-4xl font-black mb-4 tracking-tight">Oups ! Élection introuvable</h1>
            <p class="text-gray-500 text-lg max-w-lg mx-auto mb-8">
-             Aucune Ã©lection <span class="font-bold">{{ selectedType }}</span> enregistrÃ©e pour l'annÃ©e <span class="font-bold">{{ selectedYear }}</span>.
+             Aucune élection <span class="font-bold">{{ selectedType }}</span> enregistrée pour l'année <span class="font-bold">{{ selectedYear }}</span>.
            </p>
       </div>
 
       <div v-else>
       <!-- Breadcrumb / Back Navigation -->
       <nav v-if="!isViewingDetails" class="mb-8">
-        <NuxtLink to="/elections-senegal" class="flex items-center text-sm font-bold text-gray-500 hover:text-primary-600">
+        <NuxtLink :to="electionsConfig.config.links?.home || '/elections-senegal'" class="flex items-center text-sm font-bold text-gray-500 hover:text-primary-600">
           <UIcon name="i-heroicons-arrow-left" class="mr-2" />
-          Accueil Ã‰lections
+          {{ electionsConfig.ui.backToHome }}
         </NuxtLink>
       </nav>
 
       <!-- Details Card -->
       <transition name="fade">
-        <ElectoralDetailsCard
+        <ElectionsDashboardElectoralDetailsCard
           v-if="currentElection && !selectedCoalitionId && !selectedConstituencyId && (currentElection.status !== 'completed' || activeTab === 'candidats')"
           :election="currentElection"
           :coalitions="coalitions"
@@ -254,14 +251,14 @@ const onTypeChange = (type: string) => {
       <!-- Loading State -->
       <div v-if="loadingConfig" class="flex flex-col items-center justify-center py-32">
           <UIcon name="i-heroicons-arrow-path" class="h-10 w-10 animate-spin text-primary-600 mb-4" />
-          <p class="text-sm font-bold text-gray-400">Synchronisation des donnÃ©es...</p>
+          <p class="text-sm font-bold text-gray-400">Synchronisation des données...</p>
       </div>
 
       <div v-else class="max-w-7xl mx-auto">
         <!-- Candidats/Coalitions -->
         <section v-if="activeTab === 'candidats'" class="space-y-8">
           <div v-if="selectedCoalitionId">
-            <CoalitionDetails
+            <ElectionsDashboardCoalitionDetails
               :coalition-id="selectedCoalitionId"
               :coalition-name="coalitions.find(c => String(c.id) === String(selectedCoalitionId))?.name"
               :year="Number(selectedYear)"
@@ -272,7 +269,7 @@ const onTypeChange = (type: string) => {
           </div>
 
           <div v-else-if="isLocalElection && selectedConstituencyId">
-            <ConstituencyCoalitions
+            <ElectionsDashboardConstituencyCoalitions
               :constituency-id="selectedConstituencyId"
               :constituency-name="selectedConstituencyName"
               :year="Number(selectedYear)"
@@ -288,7 +285,7 @@ const onTypeChange = (type: string) => {
               <UInput
                 v-model="searchQuery"
                 icon="i-heroicons-magnifying-glass"
-                :placeholder="isLocalElection ? 'Rechercher un dÃ©partement...' : 'Rechercher...'"
+                :placeholder="isLocalElection ? electionsConfig.ui.value.searchConstituencyPlaceholder : electionsConfig.ui.value.searchPlaceholder"
                 size="xl"
                 class="rounded-2xl shadow-xl"
               />
@@ -296,36 +293,36 @@ const onTypeChange = (type: string) => {
 
             <div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
               <h2 class="text-3xl font-black uppercase tracking-tighter">
-                {{ isLocalElection ? 'Circonscriptions' : 'Coalitions' }}
+                {{ isLocalElection ? electionsConfig.getLabel('constituencies') : electionsConfig.getLabel('coalitions') }}
               </h2>
               <UBadge size="lg" color="white" class="border">
-                <span class="text-primary-600 font-black mr-1">{{ isLocalElection ? constituencies.length : coalitions.length }}</span> engagÃ©es
+                <span class="text-primary-600 font-black mr-1">{{ isLocalElection ? constituencies.length : coalitions.length }}</span> {{ electionsConfig.ui.value.engaged }}
               </UBadge>
             </div>
 
             <!-- Grids -->
             <template v-if="isLocalElection">
                <div v-if="constituencies.length > 0" class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <ConstituencyCard
+                <ElectionsDashboardCardsConstituencyCard
                   v-for="c in constituencies"
                   :key="c.id"
                   :constituency="c"
                   @select="selectConstituency"
                 />
               </div>
-              <EmptyStateCoalitions v-else />
+              <ElectionsDashboardEmptyStateCoalitions v-else />
             </template>
 
             <template v-else>
                <div v-if="coalitions.length > 0" class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <PresidentialCoalitionCard
+                <ElectionsDashboardCardsPresidentialCoalitionCard
                   v-for="c in coalitions"
                   :key="c.id"
                   :coalition="c"
                   @select="selectCoalition"
                 />
               </div>
-              <EmptyStateCoalitions v-else />
+              <ElectionsDashboardEmptyStateCoalitions v-else />
             </template>
           </div>
         </section>
@@ -334,12 +331,12 @@ const onTypeChange = (type: string) => {
         <section v-else-if="activeTab === 'carte'">
              <div class="bg-white dark:bg-gray-900 rounded-3xl overflow-hidden border shadow-xl">
                 <div class="p-6 border-b flex items-center justify-between">
-                    <h2 class="text-2xl font-black uppercase">Carte Ã‰lectorale</h2>
+                    <h2 class="text-2xl font-black uppercase">Carte Électorale</h2>
                 </div>
                 <div class="p-4">
                   <UTabs :items="mapTabs">
                     <template #item="{ item }">
-                      <div v-if="item.label === 'RÃ©sumÃ©'" class="pt-4"><ElectionMapSummary /></div>
+                      <div v-if="item.label === 'Résumé'" class="pt-4"><ElectionMapSummary /></div>
                       <div v-if="item.label === 'Nationale'" class="pt-4">
                         <div v-if="selectedMapOption == optionMap"><ElectionMapComponent4 /></div>
                         <div v-else><ElectionMapNationalDepartment /></div>
@@ -351,15 +348,15 @@ const onTypeChange = (type: string) => {
              </div>
         </section>
 
-        <!-- RÃ©sultats -->
+        <!-- Résultats -->
         <section v-else-if="activeTab === 'resultats'">
             <div class="space-y-6">
-                <h2 class="text-2xl font-black uppercase">RÃ©sultats Globaux</h2>
+                <h2 class="text-2xl font-black uppercase">Résultats Globaux</h2>
                 <div class="bg-white dark:bg-gray-900 rounded-xl p-6 border shadow-sm">
                     <div v-if="selectedType === 'locale'">
-                        <ElectionResultatsLocalesTable :election-type="selectedType" :election-year="Number(selectedYear)" />
+                        <ElectionsDashboardStatsElectionResultatsLocalesTable :election-type="selectedType" :election-year="Number(selectedYear)" />
                     </div>
-                    <ElectionResultatsStats v-else :coalitions="coalitions" :type="selectedType" />
+                    <ElectionsDashboardStatsElectionResultatsStats v-else :coalitions="coalitions" :type="selectedType" />
                 </div>
             </div>
         </section>
@@ -372,16 +369,16 @@ const onTypeChange = (type: string) => {
                     <USelect v-model="statsType" :options="statsTypes" class="w-full md:w-72" />
                 </div>
                 <div class="bg-white dark:bg-gray-900 rounded-xl p-6 border shadow-sm">
-                    <ElectionCandidatProfessionChart v-if="statsType == 'professionCandidat' && professions?.length" :professions="professions" />
-                    <ElectionGenderDistributionChart v-if="statsType == 'genderDistribution'" />
-                    <ElectionAgeDistributionChart v-if="statsType == 'ageDistribution'" />
+                    <ElectionsElectionCandidatProfessionChart v-if="statsType == 'professionCandidat' && professions?.length" :professions="professions" />
+                    <ElectionsElectionGenderDistributionChart v-if="statsType == 'genderDistribution'" />
+                    <ElectionsElectionAgeDistributionChart v-if="statsType == 'ageDistribution'" />
                 </div>
             </div>
         </section>
 
         <!-- Guide -->
         <section v-else-if="activeTab === 'guide'">
-          <GuideElectoralVideos :type-election="selectedType" />
+          <ElectionsDashboardGuideElectoralVideos :type-election="selectedType" />
         </section>
 
         <!-- Documents -->
@@ -389,7 +386,7 @@ const onTypeChange = (type: string) => {
             <div class="space-y-6">
                 <h2 class="text-2xl font-black uppercase">Documents Officiels</h2>
                 <div class="bg-white dark:bg-gray-900 rounded-3xl p-8 border shadow-sm">
-                    <DocumentsTab v-if="currentElection" :election-id="currentElection.id" :election-name="currentElection.name" />
+                    <ElectionsDashboardDocumentsTab v-if="currentElection" :election-id="currentElection.id" :election-name="currentElection.name" />
                 </div>
             </div>
         </section>

@@ -1,4 +1,9 @@
 <script setup lang="ts">
+import { useElectionsConfig } from '../../../composables/elections/useElectionsConfig';
+
+// Configuration dynamique
+const electionsConfig = useElectionsConfig();
+
 interface StatSection {
   title: string;
   color: string;
@@ -23,14 +28,14 @@ const summaryData: StatSection[] = [
         icon: "i-heroicons-building-office",
       },
       {
-        label: "Départements",
+        label: electionsConfig.getLabel('departments'),
         value: "54",
         icon: "i-heroicons-map",
       },
     ],
   },
   {
-    title: "Diaspora",
+    title: electionsConfig.getLabel('diaspora'),
     color: "gray",
     stats: [
       { label: "Électeurs", value: "338 040", icon: "i-heroicons-users" },
@@ -48,7 +53,7 @@ const summaryData: StatSection[] = [
       },
       { label: "Localités", value: "302", icon: "i-heroicons-map" },
       //   {
-      //     label: "Départements",
+      //     label: electionsConfig.getLabel('departments'),
       //     value: "8",
       //     icon: "i-heroicons-building-library",
       //   },
@@ -66,7 +71,7 @@ const summaryData: StatSection[] = [
         icon: "i-heroicons-building-office",
       },
       {
-        label: "Départements",
+        label: electionsConfig.getLabel('departments'),
         value: "46",
         icon: "i-heroicons-map",
       },

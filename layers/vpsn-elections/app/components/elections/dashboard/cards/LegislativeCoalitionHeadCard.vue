@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useElectoralFormatting } from '~/composables/elections/dashboard/useElectoralFormatting';
+import { useElectoralFormatting } from '../../../../composables/elections/dashboard/useElectoralFormatting';
 
 interface Props {
   coalition: any;
@@ -14,7 +14,7 @@ const { getCmsAsset } = useElectoralFormatting();
 </script>
 
 <template>
-  <div 
+  <div
     class="relative flex flex-col overflow-hidden rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 group cursor-pointer bg-white dark:bg-gray-900 border dark:border-gray-800 h-64"
     @click="emit('select', coalition.id)"
   >
@@ -42,7 +42,7 @@ const { getCmsAsset } = useElectoralFormatting();
       <h4 v-else class="text-lg font-black uppercase leading-tight italic opacity-50">
         Non spécifié
       </h4>
-      
+
       <div class="mt-3 pt-3 border-t border-white/20 flex items-center justify-between">
         <span class="text-[10px] font-bold uppercase tracking-widest truncate max-w-[80%]">
           {{ coalition.list_order }}. {{ coalition.name }}

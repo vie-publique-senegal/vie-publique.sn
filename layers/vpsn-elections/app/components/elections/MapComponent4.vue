@@ -1,4 +1,3 @@
-<!-- components/MapComponent.vue -->
 <template>
   <div
     class="relative w-full"

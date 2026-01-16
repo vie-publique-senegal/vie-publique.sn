@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import { useGuideElectoral } from '~/composables/elections/guide/useGuideElectoral';
+import { useGuideElectoral } from '../../../composables/elections/guide/useGuideElectoral';
+import { useElectionsConfig } from '../../../composables/elections/useElectionsConfig';
+
 
 interface Props {
   typeElection?: string;
@@ -8,16 +10,19 @@ interface Props {
 
 const props = defineProps<Props>();
 
+// Configuration dynamique
+const electionsConfig = useElectionsConfig();
+
 const selectedLanguage = ref(props.defaultLanguage || 'all');
 const selectedType = ref('all');
 const route = useRoute();
 const router = useRouter();
 
-const electionTypes = [
-    { label: 'Présidentielles', value: 'presidential' },
-    { label: 'Législatives', value: 'legislative' },
-    { label: 'Locales', value: 'local' }
-];
+const electionTypes = computed(() => [
+    { label: electionsConfig.getElectionTypeLabel('presidential'), value: 'presidential' },
+    { label: electionsConfig.getElectionTypeLabel('legislative'), value: 'legislative' },
+    { label: electionsConfig.getElectionTypeLabel('locale'), value: 'local' }
+]);
 
 if (!props.typeElection) {
     if (route.query.lang) {
@@ -26,7 +31,7 @@ if (!props.typeElection) {
     if (route.query.type) {
         selectedType.value = route.query.type as string;
     }
-    
+
     watch(selectedLanguage, (newLang) => {
         router.replace({ query: { ...route.query, lang: newLang === 'all' ? undefined : newLang } });
     });
@@ -43,13 +48,13 @@ const { videos, loading, languages } = useGuideElectoral({
 
 const filteredVideos = computed(() => {
    if (!videos.value) return [];
-   
+
    let filtered = videos.value;
 
     if (selectedLanguage.value !== 'all') {
         filtered = filtered.filter(v => v.langue === selectedLanguage.value);
     }
-    
+
     // Filter by type (either prop or local state)
     const effectiveType = props.typeElection || selectedType.value;
     if (effectiveType && effectiveType !== 'all') {
@@ -65,10 +70,10 @@ const filteredVideos = computed(() => {
     <!-- Header -->
     <div class="text-center space-y-4">
       <h2 class="text-3xl font-black uppercase tracking-tighter">
-        Guide Électoral - Comment Voter
+        {{ electionsConfig.ui.value.guideTitle }}
       </h2>
       <p class="text-gray-500 dark:text-gray-400 max-w-2xl mx-auto">
-        Découvrez comment voter aux élections en vidéo, disponible en plusieurs langues nationales.
+        {{ electionsConfig.ui.value.guideDescription }}
       </p>
     </div>
 
@@ -90,7 +95,7 @@ const filteredVideos = computed(() => {
                 class="rounded-full px-4"
                 @click="selectedType = 'all'"
             >
-                Toutes les élections
+                {{ electionsConfig.ui.value.allElections }}
             </UButton>
             <UButton
                 v-for="type in electionTypes"
@@ -121,7 +126,7 @@ const filteredVideos = computed(() => {
             class="rounded-full px-4 transition-all duration-200"
             @click="selectedLanguage = 'all'"
         >
-            Toutes les langues
+            {{ electionsConfig.ui.value.allLanguages }}
         </UButton>
 
         <UButton
@@ -144,7 +149,7 @@ const filteredVideos = computed(() => {
         <!-- Empty State -->
         <div v-if="filteredVideos.length === 0" class="text-center py-12">
              <UIcon name="i-heroicons-video-camera-slash" class="w-16 h-16 text-gray-300 mx-auto mb-4" />
-             <p class="text-gray-500">Aucune vidéo disponible pour cette sélection.</p>
+             <p class="text-gray-500">{{ electionsConfig.ui.value.noVideosAvailable }}</p>
         </div>
 
         <!-- Affichage d'une seule vidéo centrée -->

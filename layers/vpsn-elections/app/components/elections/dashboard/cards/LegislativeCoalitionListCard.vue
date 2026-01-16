@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { useElectoralFormatting } from '~/composables/elections/dashboard/useElectoralFormatting';
+import { useElectoralFormatting } from '../../../../composables/elections/dashboard/useElectoralFormatting';
+
 
 interface Props {
   coalition: any;
@@ -14,11 +15,11 @@ const { getCoalitionColor, getCmsAsset } = useElectoralFormatting();
 </script>
 
 <template>
-  <div 
+  <div
     class="flex items-center gap-5 p-4 bg-white dark:bg-gray-900 rounded-2xl border dark:border-gray-800 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all group cursor-pointer"
     @click="emit('select', coalition.id)"
   >
-    <div 
+    <div
       class="w-14 h-14 rounded-xl flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform overflow-hidden border dark:border-gray-700 bg-gray-50 dark:bg-gray-800"
     >
       <img v-if="coalition.logo" :src="getCmsAsset(coalition.logo)" class="max-h-full max-w-full object-contain p-2" :alt="coalition.name" />
@@ -28,7 +29,7 @@ const { getCoalitionColor, getCmsAsset } = useElectoralFormatting();
     </div>
     <div class="min-w-0">
       <h3 class="text-sm font-black uppercase tracking-tight group-hover:text-primary-600 transition-colors line-clamp-1">
-        {{ coalition.list_order }}<span class="mx-1">• </span> 
+        {{ coalition.list_order }}<span class="mx-1">• </span>
         {{ coalition.name }}
       </h3>
       <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-1">

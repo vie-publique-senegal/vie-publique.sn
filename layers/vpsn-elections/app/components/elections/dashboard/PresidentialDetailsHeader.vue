@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import type { Candidate } from '~~/types/candidate';
+import type { Candidate } from '../../../types';
+
 
 interface Props {
   coalitionName?: string;
@@ -27,9 +28,9 @@ const genderText = computed(() => {
         icon="i-heroicons-arrow-left"
         color="gray"
         variant="soft"
-        @click="emit('close')"
         class="rounded-xl shrink-0"
         size="sm"
+        @click="emit('close')"
       >
         <span class="hidden sm:inline">Retour</span>
       </UButton>
