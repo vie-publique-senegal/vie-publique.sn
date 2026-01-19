@@ -73,7 +73,7 @@ const shouldShowSelectors = computed(() => {
         </div>
 
         <!-- Selectors -->
-        <div 
+        <div
           v-if="shouldShowSelectors"
           class="flex items-center gap-2 bg-gray-100 dark:bg-gray-800/50 p-1 rounded-2xl border dark:border-gray-700"
         >
@@ -107,7 +107,7 @@ const shouldShowSelectors = computed(() => {
       </div>
 
       <!-- Tabs Slot -->
-      <div 
+      <div
         v-if="shouldShowSelectors"
         class="mt-6 flex justify-center w-full px-2"
       >

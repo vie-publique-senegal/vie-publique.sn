@@ -1,8 +1,5 @@
 <template>
-  <div
-    class="relative w-full"
-    :class="{ 'h-[600px]': !isMobile, 'h-[400px]': isMobile }"
-  >
+  <div class="relative w-full" :class="{ 'h-[600px]': !isMobile, 'h-[400px]': isMobile }">
     <!-- Loading spinner -->
     <div
       v-if="loading || pending"
@@ -62,10 +59,7 @@
                 className: 'department-label',
               }"
             >
-              <span
-                class="text-xs font-semibold"
-                :class="{ 'text-[8px]': isMobile }"
-              >
+              <span class="text-xs font-semibold" :class="{ 'text-[8px]': isMobile }">
                 {{ region.departement }}
               </span>
             </LTooltip>
@@ -81,27 +75,19 @@
                 </div>
                 <div class="mb-1">
                   Population:
-                  <span class="font-bold text-red-700">{{
-                    formatNumber(region.population)
-                  }}</span>
+                  <span class="font-bold text-red-700">{{ formatNumber(region.population) }}</span>
                 </div>
                 <div>
                   Électeurs:
-                  <span class="font-bold text-red-700">{{
-                    formatNumber(region.voters)
-                  }}</span>
+                  <span class="font-bold text-red-700">{{ formatNumber(region.voters) }}</span>
                 </div>
                 <div>
                   Bureaux de vote:
-                  <span class="font-bold text-red-700">{{
-                    formatNumber(region.offices)
-                  }}</span>
+                  <span class="font-bold text-red-700">{{ formatNumber(region.offices) }}</span>
                 </div>
                 <div>
                   Lieux de vote:
-                  <span class="font-bold text-red-700">{{
-                    formatNumber(region.places)
-                  }}</span>
+                  <span class="font-bold text-red-700">{{ formatNumber(region.places) }}</span>
                 </div>
               </div>
               <NuxtLink
@@ -120,8 +106,8 @@
 </template>
 
 <script setup lang="ts">
-import type { TransformedRegion } from "~~/types/election-map";
-import { useElectionMapData } from "~/composables/useElectionMapJson";
+import type { TransformedRegion } from '../../types/election-map';
+// import { useElectionMapData } from '~/composables/useElectionMapJson';
 
 interface Props {
   initialCenter?: [number, number];
@@ -136,8 +122,8 @@ const props = withDefaults(defineProps<Props>(), {
 });
 
 const emit = defineEmits<{
-  "region-click": [region: TransformedRegion];
-  "map-ready": [map: unknown];
+  'region-click': [region: TransformedRegion];
+  'map-ready': [map: unknown];
 }>();
 
 // État local
@@ -150,28 +136,22 @@ onMounted(() => {
     isMobile.value = window.innerWidth < 768;
   };
   checkMobile();
-  window.addEventListener("resize", checkMobile);
+  window.addEventListener('resize', checkMobile);
 
   // Nettoyage
   onUnmounted(() => {
-    window.removeEventListener("resize", checkMobile);
+    window.removeEventListener('resize', checkMobile);
   });
 });
 
 // Chargement des données via le composable
 const { getMapData, getRegionColor } = useElectionMapData();
-const { data: regions, pending } = await useAsyncData(
-  "map-data",
-  () => getMapData(),
-  {
-    server: false,
-  },
-);
+const { data: regions, pending } = await useAsyncData('map-data', () => getMapData(), {
+  server: false,
+});
 
 // Computed réactifs
-const zoom = computed(() =>
-  isMobile.value ? props.initialZoom - 0.5 : props.initialZoom,
-);
+const zoom = computed(() => (isMobile.value ? props.initialZoom - 0.5 : props.initialZoom));
 const center = computed(() => props.initialCenter);
 
 // Configuration de la carte
@@ -222,10 +202,10 @@ const polygonOptions = computed(() => ({
 
 // Masque pour le Sénégal
 const senegalMask = {
-  type: "Feature",
+  type: 'Feature',
   properties: {},
   geometry: {
-    type: "Polygon",
+    type: 'Polygon',
     coordinates: [
       [
         [-20.0, 18.0],
@@ -241,7 +221,7 @@ const senegalMask = {
 // Gestionnaires d'événements
 const handleMapReady = (map: unknown) => {
   mapInstance.value = map;
-  emit("map-ready", map);
+  emit('map-ready', map);
 
   if (regions.value?.length) {
     const bounds = calculateBounds(regions.value);
@@ -277,7 +257,7 @@ const calculateBounds = (regions: TransformedRegion[]) => {
 };
 
 const formatNumber = (value?: number) => {
-  return value ? value.toLocaleString("fr-FR") : "N/A";
+  return value ? value.toLocaleString('fr-FR') : 'N/A';
 };
 </script>
 

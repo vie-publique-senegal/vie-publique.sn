@@ -285,7 +285,7 @@ const onTypeChange = (type: string) => {
               <UInput
                 v-model="searchQuery"
                 icon="i-heroicons-magnifying-glass"
-                :placeholder="isLocalElection ? electionsConfig.ui.value.searchConstituencyPlaceholder : electionsConfig.ui.value.searchPlaceholder"
+                :placeholder="isLocalElection ? electionsConfig.ui?.searchConstituencyPlaceholder : electionsConfig.ui?.searchPlaceholder"
                 size="xl"
                 class="rounded-2xl shadow-xl"
               />
@@ -296,7 +296,7 @@ const onTypeChange = (type: string) => {
                 {{ isLocalElection ? electionsConfig.getLabel('constituencies') : electionsConfig.getLabel('coalitions') }}
               </h2>
               <UBadge size="lg" color="white" class="border">
-                <span class="text-primary-600 font-black mr-1">{{ isLocalElection ? constituencies.length : coalitions.length }}</span> {{ electionsConfig.ui.value.engaged }}
+                <span class="text-primary-600 font-black mr-1">{{ isLocalElection ? constituencies.length : coalitions.length }}</span> {{ electionsConfig.ui?.engaged }}
               </UBadge>
             </div>
 
@@ -336,12 +336,12 @@ const onTypeChange = (type: string) => {
                 <div class="p-4">
                   <UTabs :items="mapTabs">
                     <template #item="{ item }">
-                      <div v-if="item.label === 'Résumé'" class="pt-4"><ElectionMapSummary /></div>
+                      <div v-if="item.label === 'Résumé'" class="pt-4"><ElectionsElectionMapSummary /></div>
                       <div v-if="item.label === 'Nationale'" class="pt-4">
-                        <div v-if="selectedMapOption == optionMap"><ElectionMapComponent4 /></div>
-                        <div v-else><ElectionMapNationalDepartment /></div>
+                        <div v-if="selectedMapOption == optionMap"><ElectionsElectionMapComponent4 /></div>
+                        <div v-else><ElectionsElectionMapNationalDepartment /></div>
                       </div>
-                      <div v-if="item.label === 'Diaspora'" class="pt-4"><ElectionMapDiasporaCountries /></div>
+                      <div v-if="item.label === 'Diaspora'" class="pt-4"><ElectionsElectionMapDiasporaCountries /></div>
                     </template>
                   </UTabs>
                 </div>
@@ -369,9 +369,9 @@ const onTypeChange = (type: string) => {
                     <USelect v-model="statsType" :options="statsTypes" class="w-full md:w-72" />
                 </div>
                 <div class="bg-white dark:bg-gray-900 rounded-xl p-6 border shadow-sm">
-                    <ElectionsElectionCandidatProfessionChart v-if="statsType == 'professionCandidat' && professions?.length" :professions="professions" />
-                    <ElectionsElectionGenderDistributionChart v-if="statsType == 'genderDistribution'" />
-                    <ElectionsElectionAgeDistributionChart v-if="statsType == 'ageDistribution'" />
+                    <ElectionsCandidatProfessionChart v-if="statsType == 'professionCandidat' && professions?.length" :professions="professions" />
+                    <ElectionsGenderDistributionChart v-if="statsType == 'genderDistribution'" />
+                    <ElectionsAgeDistributionChart v-if="statsType == 'ageDistribution'" />
                 </div>
             </div>
         </section>

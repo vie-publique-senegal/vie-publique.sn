@@ -1,6 +1,7 @@
 <!-- components/TableauDepartements.vue -->
 <script setup lang="ts">
-import type { DepartmentStats } from "../../../types/election-map-national";
+import type { DepartmentStats } from '../../types';
+
 
 // ✅ Initialisation du composable SSR
 const { fetchDepartmentsStats } = useElectionData();
