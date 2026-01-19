@@ -18,6 +18,7 @@ const props = defineProps<{
 
 // Configuration dynamique
 const electionsConfig = useElectionsConfig();
+const electionRoutes = useElectionRoutes();
 
 // 1. Initialisation du Dashboard via le composable du layer
 const dashboard = useElectoralDashboard();
@@ -231,7 +232,7 @@ const onTypeChange = (type: string) => {
       <div v-else>
       <!-- Breadcrumb / Back Navigation -->
       <nav v-if="!isViewingDetails" class="mb-8">
-        <NuxtLink :to="electionsConfig.config.links?.home || '/elections-senegal'" class="flex items-center text-sm font-bold text-gray-500 hover:text-primary-600">
+        <NuxtLink :to="electionsConfig.config.links?.home || electionRoutes.home" class="flex items-center text-sm font-bold text-gray-500 hover:text-primary-600">
           <UIcon name="i-heroicons-arrow-left" class="mr-2" />
           {{ electionsConfig.ui.backToHome }}
         </NuxtLink>

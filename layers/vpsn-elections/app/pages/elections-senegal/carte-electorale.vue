@@ -1,7 +1,11 @@
 <script setup lang="ts">
+import { useElectionRoutes } from '../../composables/useElectionRoutes';
+
 /**
  * Page Carte Électorale - Sénégal
  */
+
+const electionRoutes = useElectionRoutes();
 
 useHead({
   title: 'Carte Électorale | Élections Sénégal',
@@ -50,7 +54,7 @@ const handleMapReady = (map: unknown) => {
   <div class="flex flex-col items-center px-4 py-8 min-h-screen">
     <div class="w-full max-w-7xl mb-4">
       <nav class="mb-6">
-        <NuxtLink to="/elections-senegal" class="inline-flex items-center text-sm font-bold text-gray-400 hover:text-primary-600 transition-colors">
+        <NuxtLink :to="electionRoutes.home" class="inline-flex items-center text-sm font-bold text-gray-400 hover:text-primary-600 transition-colors">
           <UIcon name="i-heroicons-arrow-left" class="mr-2 h-4 w-4" /> Retour Élections
         </NuxtLink>
       </nav>

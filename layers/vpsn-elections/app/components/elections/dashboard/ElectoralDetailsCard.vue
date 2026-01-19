@@ -1,17 +1,19 @@
 <script setup lang="ts">
-import type { Constituency } from '~/composables/elections/dashboard/useElectoralConstituencies';
-import type { Coalition, ElectionDetails } from '~/types';
+import type { Constituency } from '../../../composables/elections/dashboard/useElectoralConstituencies';
 import { useElectoralFormatting } from '../../../composables/elections/dashboard/useElectoralFormatting';
+import { useElectionRoutes } from '../../../composables/useElectionRoutes';
+import type { Coalition, ElectionDetails } from '../../../types';
 
 interface Props {
   election: ElectionDetails;
-  coalitions?: Coalition[]; 
+  coalitions?: Coalition[];
   constituencies?: Constituency[];
 }
 
 const props = defineProps<Props>();
 
 const { formatDate, getStatusColor, getCmsAsset } = useElectoralFormatting();
+const electionRoutes = useElectionRoutes();
 
 const countdown = ref('');
 let timerInterval: NodeJS.Timeout | null = null;
@@ -108,7 +110,7 @@ const quickLinks = computed(() => {
     links.push({
       label: 'Résultats définitifs',
       description: 'Proclamés par le Conseil Constitutionnel.',
-      to: `/elections-senegal/legislation?type=${props.election.type}&year=${electionYear.value}&q=resultats`,
+      to: `${electionRoutes.legislation}?type=${props.election.type}&year=${electionYear.value}&q=resultats`,
       icon: 'i-heroicons-document-text',
     });
   } else if (props.election.type === 'legislative') {

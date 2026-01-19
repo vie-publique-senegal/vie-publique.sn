@@ -7,6 +7,7 @@ const props = defineProps<{
 }>();
 
 const { documents, loading, error } = useElectionDocuments(computed(() => props.electionId));
+const electionRoutes = useElectionRoutes();
 </script>
 
 <template>
@@ -41,7 +42,7 @@ const { documents, loading, error } = useElectionDocuments(computed(() => props.
         Consultez la bibliothèque complète pour les textes généraux.
       </p>
       <UButton
-        to="/elections-senegal/legislation"
+        :to="electionRoutes.legislation"
         class="mt-6 rounded-full"
         color="black"
         variant="soft"

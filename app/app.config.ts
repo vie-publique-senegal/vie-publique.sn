@@ -15,4 +15,11 @@ export default defineAppConfig({
       },
     },
   },
+  // Configuration du layer vpsn-elections
+  vpsnElections: {
+    country: {
+      name: 'Sénégal',
+      code: 'SN',
+    },
+  },
 });

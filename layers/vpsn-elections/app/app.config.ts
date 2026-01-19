@@ -13,9 +13,11 @@ export default defineAppConfig({
     },
 
     // Configuration des liens
+    // Note: Les liens sont générés dynamiquement via useElectionRoutes()
+    // basé sur le nom du pays configuré
     links: {
-      home: '/elections-senegal',
-      dashboard: '/elections/dashboard',
+      // home et autres liens sont générés automatiquement
+      // Vous pouvez les override ici si nécessaire
     },
 
     // Labels traduisibles/personnalisables par pays

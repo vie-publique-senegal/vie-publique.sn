@@ -1,7 +1,11 @@
 <script setup lang="ts">
+import { useElectionRoutes } from '../../composables/useElectionRoutes';
+
 /**
  * Page Guide Électoral - Sénégal
  */
+
+const electionRoutes = useElectionRoutes();
 
 useHead({
   title: 'Guide Électoral | Élections Sénégal',
@@ -16,7 +20,7 @@ useHead({
     <div class="container mx-auto px-4">
       <!-- Breadcrumb / Back Navigation -->
       <nav class="mb-8">
-        <NuxtLink to="/elections-senegal" class="flex items-center text-sm font-bold text-gray-500 hover:text-primary-600 transition-colors">
+        <NuxtLink :to="electionRoutes.home" class="flex items-center text-sm font-bold text-gray-500 hover:text-primary-600 transition-colors">
           <UIcon name="i-heroicons-arrow-left" class="mr-2" />
           Retour à l'accueil Élections
         </NuxtLink>

@@ -2,11 +2,13 @@
 import { useElectoralCoalitions } from '../../composables/elections/dashboard/useElectoralCoalitions';
 import { useElectoralDashboard } from '../../composables/elections/dashboard/useElectoralDashboard';
 import { useNews } from '../../composables/news/useNews';
+import { useElectionRoutes } from '../../composables/useElectionRoutes';
 
 
 const { config, loadingConfig } = useElectoralDashboard();
 const appConfig = useAppConfig();
 const { country, seo } = appConfig.vpsnElections
+const electionRoutes = useElectionRoutes();
 
 const election = computed(() => {
   if (!config.value?.elections) return null;
@@ -77,12 +79,12 @@ useHead({
   ]
 });
 
-const quickLinks = [
+const quickLinks = computed(() => [
   {
     title: "Guide Électoral",
     description: "Comment voter ?",
     icon: "i-heroicons-book-open",
-    to: "/elections-senegal/guide-electoral",
+    to: electionRoutes.guideElectoral,
     color: "text-blue-600",
     bg: "bg-blue-50"
   },
@@ -90,7 +92,7 @@ const quickLinks = [
     title: "Législation",
     description: "Textes de lois et décrets",
     icon: "i-heroicons-scale",
-    to: "/elections-senegal/legislation",
+    to: electionRoutes.legislation,
     color: "text-emerald-600",
     bg: "bg-emerald-50"
   },
@@ -98,11 +100,11 @@ const quickLinks = [
     title: "Carte Électorale",
     description: "Lieux et bureaux de vote",
     icon: "i-heroicons-map",
-    to: "/elections-senegal/carte-electorale",
+    to: electionRoutes.carteElectorale,
     color: "text-purple-600",
     bg: "bg-purple-50"
   }
-];
+]);
 
   const getStatusLabel = (status: string) => {
     switch(status) {
@@ -179,7 +181,7 @@ const quickLinks = [
               <div v-if="election.status === 'completed'" class="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2">
                  <!-- Actions Présidentielle -->
                  <template v-if="election.type === 'presidential'">
-                    <UButton to="/elections-senegal/legislation?q=resultats" color="gray" variant="solid" size="xs" icon="i-heroicons-document-check" class="justify-start">Résultats Définitifs</UButton>
+                    <UButton :to="`${electionRoutes.legislation}?q=resultats`" color="gray" variant="solid" size="xs" icon="i-heroicons-document-check" class="justify-start">Résultats Définitifs</UButton>
                  </template>
 
                  <!-- Actions Législative -->
@@ -191,7 +193,7 @@ const quickLinks = [
             </div>
 
             <!-- Right Panel: Results Highlight -->
-            <div class="lg:w-[380px] bg-gray-50 dark:bg-gray-800/50 border-t lg:border-t-0 lg:border-l dark:border-gray-800 p-6 flex flex-col justify-center relative overflow-hidden">
+            <div class="lg:w-95 bg-gray-50 dark:bg-gray-800/50 border-t lg:border-t-0 lg:border-l dark:border-gray-800 p-6 flex flex-col justify-center relative overflow-hidden">
                 <!-- Background Decoration -->
                 <div class="absolute -right-6 -top-6 w-32 h-32 bg-primary-500/5 rounded-full blur-3xl"></div>
 
@@ -258,7 +260,7 @@ const quickLinks = [
           </div>
           <NuxtLink
             v-if="election"
-            :to="`/elections-senegal/dashboard/${election.type}/${election.year}?tab=resultats`"
+            :to="`${electionRoutes.dashboard(election.type, election.year)}?tab=resultats`"
             class="block p-4 bg-slate-50 dark:bg-gray-800/50 border-t dark:border-gray-800 text-center text-sm font-black uppercase tracking-widest text-gray-500 hover:text-primary-600 hover:bg-slate-100 transition-all"
           >
             Voir le tableau de bord complet <UIcon name="i-heroicons-arrow-right" class="ml-2 inline-block h-4 w-4" />
@@ -286,7 +288,7 @@ const quickLinks = [
         <!-- Section: Dernières actualités électorales-->
         <section class="mt-8 mb-12">
           <UCard
-            class="border-primary/20 hover:border-primary/30 dark:via-primary/10 dark:to-primary/20 border-1 overflow-hidden bg-white shadow-lg transition hover:shadow-xl dark:bg-gradient-to-br dark:from-gray-800"
+            class="border-primary/20 hover:border-primary/30 dark:via-primary/10 dark:to-primary/20 border overflow-hidden bg-white shadow-lg transition hover:shadow-xl dark:bg-linear-to-br dark:from-gray-800"
             :ui="{ body: { padding: 'p-4 sm:p-6' } }"
           >
             <div class="mb-6">

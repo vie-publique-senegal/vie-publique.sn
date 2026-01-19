@@ -4,6 +4,7 @@ import { useElectoralConstituencies } from '../../../../composables/elections/da
 import { useElectoralDashboard } from '../../../../composables/elections/dashboard/useElectoralDashboard';
 import { useElectoralProfessions } from '../../../../composables/elections/dashboard/useElectoralProfessions';
 import { useElectoralStatsList } from '../../../../composables/elections/dashboard/useElectoralStatsList';
+import { useElectionRoutes } from '../../../../composables/useElectionRoutes';
 
 /**
  * Dashboard Électoral - Page Détail [Type]/[Année]
@@ -37,6 +38,7 @@ const statsTypes = [
 const route = useRoute();
 const router = useRouter();
 const statsType = ref<string>('professionCandidat');
+const electionRoutes = useElectionRoutes();
 
 watch(
   [() => route.params.type, () => route.params.year],
@@ -246,7 +248,7 @@ const navigateToElection = (type: string, year: number) => {
   delete query.q;
 
   router.push({
-    path: `/elections-senegal/dashboard/${type}/${year}`,
+    path: electionRoutes.dashboard(type, year),
     query,
   });
 };
@@ -338,7 +340,7 @@ const handleMapReady = (map: unknown) => {
 
         <div class="flex gap-4">
           <UButton
-            to="/elections-senegal"
+            :to="electionRoutes.home"
             size="xl"
             color="gray"
             variant="solid"
@@ -353,7 +355,7 @@ const handleMapReady = (map: unknown) => {
         <!-- Breadcrumb / Back Navigation -->
         <nav v-if="!isViewingDetails" class="mb-8 flex items-center justify-between">
           <NuxtLink
-            to="/elections-senegal"
+            :to="electionRoutes.home"
             class="hover:text-primary-600 flex items-center text-sm font-bold text-gray-500 transition-colors"
           >
             <UIcon name="i-heroicons-arrow-left" class="mr-2" />
@@ -364,7 +366,7 @@ const handleMapReady = (map: unknown) => {
         <!-- Breadcrumb Desktop Only when viewing details -->
         <nav v-if="isViewingDetails" class="mb-8 hidden items-center justify-between md:flex">
           <NuxtLink
-            to="/elections-senegal"
+            :to="electionRoutes.home"
             class="hover:text-primary-600 flex items-center text-sm font-bold text-gray-500 transition-colors"
           >
             <UIcon name="i-heroicons-arrow-left" class="mr-2" />
@@ -840,7 +842,7 @@ const handleMapReady = (map: unknown) => {
                   <p class="text-gray-500">Retrouvez les textes et documents liés à ce scrutin.</p>
                 </div>
                 <UButton
-                  to="/elections-senegal/legislation"
+                  :to="electionRoutes.legislation"
                   variant="ghost"
                   icon="i-heroicons-arrow-top-right-on-square"
                 >

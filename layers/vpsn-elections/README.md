@@ -104,15 +104,125 @@ Toutes les pages et APIs sont automatiquement disponibles !
 
 ---
 
+## 🌍 Routes Dynamiques par Pays
+
+Le layer génère automatiquement les routes en fonction du pays configuré dans votre `app.config.ts`.
+
+### Configuration du Pays
+
+La configuration du pays dans `app/app.config.ts` détermine les URLs des routes :
+
+```typescript
+export default defineAppConfig({
+  vpsnElections: {
+    country: {
+      name: 'Sénégal',  // Détermine l'URL : /elections-senegal
+      code: 'SN',
+    },
+  },
+});
+```
+
+### Routes Générées Automatiquement
+
+Selon le nom du pays configuré :
+
+| Pays | Route de base | Exemple complet |
+|------|--------------|-----------------|
+| Sénégal | `/elections-senegal` | `/elections-senegal/carte-electorale` |
+| Bénin | `/elections-benin` | `/elections-benin/guide-electoral` |
+| Mali | `/elections-mali` | `/elections-mali/legislation` |
+| Côte d'Ivoire | `/elections-cote-d-ivoire` | `/elections-cote-d-ivoire/dashboard/presidential/2024` |
+
+**Note** : Les accents, espaces et apostrophes sont automatiquement supprimés et convertis en format URL-friendly.
+
+### Utilisation du Composable `useElectionRoutes()`
+
+Pour garantir des liens corrects, utilisez toujours le composable `useElectionRoutes()` dans vos composants :
+
+```vue
+<script setup lang="ts">
+const electionRoutes = useElectionRoutes();
+</script>
+
+<template>
+  <div>
+    <!-- Lien vers la page d'accueil -->
+    <NuxtLink :to="electionRoutes.home">
+      Accueil Élections
+    </NuxtLink>
+
+    <!-- Lien vers le guide électoral -->
+    <NuxtLink :to="electionRoutes.guideElectoral">
+      Guide Électoral
+    </NuxtLink>
+
+    <!-- Lien vers la législation -->
+    <NuxtLink :to="electionRoutes.legislation">
+      Législation
+    </NuxtLink>
+
+    <!-- Lien vers la carte électorale -->
+    <NuxtLink :to="electionRoutes.carteElectorale">
+      Carte Électorale
+    </NuxtLink>
+
+    <!-- Lien vers un dashboard spécifique -->
+    <NuxtLink :to="electionRoutes.dashboard('presidential', 2024)">
+      Présidentielle 2024
+    </NuxtLink>
+
+    <!-- Construction d'une route personnalisée -->
+    <NuxtLink :to="electionRoutes.buildRoute('ma-page')">
+      Ma Page Personnalisée
+    </NuxtLink>
+  </div>
+</template>
+```
+
+### API du Composable
+
+```typescript
+const routes = useElectionRoutes();
+
+// Propriétés disponibles :
+routes.baseRoute           // "/elections-{pays}"
+routes.home                // "/elections-{pays}"
+routes.carteElectorale     // "/elections-{pays}/carte-electorale"
+routes.guideElectoral      // "/elections-{pays}/guide-electoral"
+routes.legislation         // "/elections-{pays}/legislation"
+
+// Fonctions :
+routes.dashboard(type, year)   // Retourne "/elections-{pays}/dashboard/{type}/{year}"
+routes.buildRoute(subPath)     // Retourne "/elections-{pays}/{subPath}"
+```
+
+### ⚠️ Important : Ne jamais hardcoder les URLs
+
+```vue
+<!-- ❌ MAUVAIS : URL hardcodée -->
+<NuxtLink to="/elections-senegal/guide">Guide</NuxtLink>
+
+<!-- ✅ BON : Utiliser le composable -->
+<NuxtLink :to="electionRoutes.guideElectoral">Guide</NuxtLink>
+```
+
+---
+
 ## 📊 Utilisation
 
 ### Pages Disponibles
 
-Après installation, ces pages sont accessibles :
+Après installation, ces pages sont accessibles (les URLs s'adaptent automatiquement au pays configuré) :
 
-- `/elections-senegal` - Page principale (nom personnalisable)
-- `/elections-senegal/carte-electorale` - Carte électorale interactive
-- `/elections-senegal/guide` - Guide électoral
+- `/elections-{pays}` - Page principale
+- `/elections-{pays}/carte-electorale` - Carte électorale interactive
+- `/elections-{pays}/guide-electoral` - Guide électoral
+- `/elections-{pays}/legislation` - Législation électorale
+- `/elections-{pays}/dashboard/{type}/{année}` - Dashboard électoral détaillé
+
+**Exemple pour le Sénégal** : `/elections-senegal/carte-electorale`
+**Exemple pour le Bénin** : `/elections-benin/guide-electoral`
 
 ### APIs Disponibles
 
@@ -354,6 +464,14 @@ Pour plus de détails, consultez la documentation dans le projet principal :
 ---
 
 ## 📝 Changelog
+
+### Version 1.1 (2026-01-19)
+
+- ✅ **Routes dynamiques par pays** : Les URLs s'adaptent automatiquement au pays configuré
+- ✅ Nouveau composable `useElectionRoutes()` pour gérer les liens
+- ✅ Hook `pages:extend` pour générer les routes à la volée
+- ✅ Migration complète : aucun lien hardcodé restant
+- ✅ Documentation enrichie avec exemples de routes dynamiques
 
 ### Version 1.0 (2026-01-15)
 

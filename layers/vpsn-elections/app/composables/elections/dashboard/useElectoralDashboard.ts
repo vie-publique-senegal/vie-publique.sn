@@ -1,3 +1,5 @@
+import { useElectionRoutes } from "../../useElectionRoutes";
+
 export interface ElectionConfig {
   years: { label: string; value: number }[];
   types: { label: string; value: string }[];
@@ -64,7 +66,8 @@ export const useElectoralDashboard = () => {
   if (process.client) {
     const route = useRoute();
     const router = useRouter();
-    const isDashboardPage = computed(() => route.path.includes('/elections-senegal/dashboard'));
+    const electionRoutes = useElectionRoutes();
+    const isDashboardPage = computed(() => route.path.includes('/dashboard') && route.path.includes('elections'));
 
     // Initialiser depuis les query params si on est sur le dashboard
     // Note: year and type are in the route path, not query params
@@ -113,7 +116,7 @@ export const useElectoralDashboard = () => {
       // Ensure we don't trigger redundant navigation
       const isDifferent = JSON.stringify(currentQuery) !== JSON.stringify(query);
 
-      const targetPath = `/elections-senegal/dashboard/${selectedType.value}/${selectedYear.value}`;
+      const targetPath = electionRoutes.dashboard(selectedType.value, selectedYear.value);
       const pathChanged = route.path !== targetPath;
 
       if (isDifferent || pathChanged) {

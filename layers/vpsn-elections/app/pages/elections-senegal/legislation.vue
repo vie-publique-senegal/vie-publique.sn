@@ -1,6 +1,7 @@
 ﻿<script setup lang="ts">
 import { useElectionsWithDocuments } from '../../composables/elections/dashboard/useElectionsWithDocuments';
 import { useElectoralDashboard } from '../../composables/elections/dashboard/useElectoralDashboard';
+import { useElectionRoutes } from '../../composables/useElectionRoutes';
 import { useElectionsConfig } from '../../composables/useElectionsConfig';
 
 const route = useRoute();
@@ -10,7 +11,8 @@ const selectedType = ref<string>((route.query.type as string) || 'all');
 const selectedYear = ref<string>((route.query.year as string) || 'all');
 
 const { config } = useElectoralDashboard();
-const { country } = useElectionsConfig()
+const { country } = useElectionsConfig();
+const electionRoutes = useElectionRoutes();
 
 const currentPage = ref(parseInt((route.query.page as string) || '1'));
 const searchQuery = ref((route.query.q as string) || '');
@@ -161,7 +163,7 @@ useHead({
         <!-- Breadcrumb -->
         <nav class="mb-6">
           <NuxtLink
-            to="/elections-senegal"
+            :to="electionRoutes.home"
             class="hover:text-primary-600 inline-flex items-center text-sm font-bold text-gray-400 transition-colors"
           >
             <UIcon name="i-heroicons-arrow-left" class="mr-2 h-4 w-4" /> Retour Élections
