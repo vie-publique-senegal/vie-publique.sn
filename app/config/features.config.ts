@@ -94,6 +94,24 @@ export const DEFAULT_FEATURES: Record<string, FeatureFlag> = {
     environments: ['dev'],
     description: 'Menu Dashboard Conseil des Ministres (dev only)',
   },
+  menu_dashboard_vision2050: {
+    key: 'menu_dashboard_vision2050',
+    enabled: true,
+    environments: ['dev'],
+    description: 'Menu Tableau de Bord Vision 2050 - Suivi des projets publics (dev only)',
+  },
+  menu_dashboard_apexcharts: {
+    key: 'menu_dashboard_apexcharts',
+    enabled: true,
+    environments: ['dev'],
+    description: 'Menu Tableau de Bord ApexCharts - Version alternative avec ApexCharts (dev only)',
+  },
+  menu_dashboard_chartjs: {
+    key: 'menu_dashboard_chartjs',
+    enabled: true,
+    environments: ['dev'],
+    description: 'Menu Tableau de Bord Chart.js - Version alternative avec Chart.js (dev only)',
+  },
   menu_etat_senegal: {
     key: 'menu_etat_senegal',
     enabled: true,

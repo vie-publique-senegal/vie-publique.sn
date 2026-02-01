@@ -178,22 +178,9 @@ export default defineNuxtConfig({
     typeCheck: false,
   },
   ssr: true,
-  modules: [
-    '@nuxt/ui',
-    'nuxt-gtag',
-    '@nuxtjs/seo',
-    // FIXME? Temporairement désactivé - incompatible avec Nuxt 4
-    // '@nuxtjs/web-vitals',
-    '@nuxt/image',
-    '@vueuse/motion/nuxt',
-    '@nuxt/eslint',
-    '@pinia/nuxt',
-    '@nuxtjs/leaflet',
-    '@vite-pwa/nuxt',
-    '@vueuse/nuxt',
-    '@nuxtjs/mdc',
-    'nuxt-security',
-  ],
+  modules: ['@nuxt/ui', 'nuxt-gtag', '@nuxtjs/seo', // FIXME? Temporairement désactivé - incompatible avec Nuxt 4
+  // '@nuxtjs/web-vitals',
+  '@nuxt/image', '@vueuse/motion/nuxt', '@nuxt/eslint', '@pinia/nuxt', '@nuxtjs/leaflet', '@vite-pwa/nuxt', '@vueuse/nuxt', '@nuxtjs/mdc', 'nuxt-security', 'nuxt-charts'],
   devtools: { enabled: true },
   runtimeConfig: {
     // Variables privées (côté serveur uniquement)

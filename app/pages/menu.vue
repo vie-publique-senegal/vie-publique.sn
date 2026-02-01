@@ -220,6 +220,20 @@ const allNavigationCards: NavigationCard[] = [
     featureKey: 'menu_dashboard_conseil',
   },
   {
+    title: 'Tableau de Bord Vision 2050',
+    description: 'Suivi des projets publics du Sénégal',
+    icon: 'i-heroicons-presentation-chart-line',
+    to: '/dashboard/suivi-projets-publics',
+    featureKey: 'menu_dashboard_vision2050',
+  },
+  {
+    title: 'Tableau de Bord Chart.js',
+    description: 'Version Chart.js du tableau de bord',
+    icon: 'i-heroicons-chart-pie',
+    to: '/dashboard/suivi-projets-chartjs',
+    featureKey: 'menu_dashboard_chartjs',
+  },
+  {
     title: 'Etat du Sénégal',
     description: "Fonctionnement de l'état, Guide, Institutions, Budget, Quiz...",
     icon: 'i-heroicons-information-circle',
@@ -313,6 +327,12 @@ const cardConfigs: CardConfigs = {
   },
   'Etat du Sénégal': {
     color: 'text-blue-600',
+  },
+  'Tableau de Bord Vision 2050': {
+    color: 'text-indigo-600',
+  },
+  'Tableau de Bord Chart.js': {
+    color: 'text-teal-600',
   },
   'Don avec Bictorys': {
     color: 'text-red-600',
