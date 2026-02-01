@@ -96,7 +96,6 @@
                 :categories="stackedHorizontalCategories"
                 :height="400"
                 :stacked="true"
-                orientation="horizontal"
                 :yAxis="['desktop', 'mobile']"
                 :yFormatter="stackedYFormatter"
                 xLabel="Revenus (K)"
@@ -207,6 +206,7 @@
                 :data="donutPillarData"
                 :categories="donutPillarCategories"
                 :height="300"
+                :radius="4"
               />
             </ClientOnly>
           </div>
@@ -221,6 +221,7 @@
                 :data="donutRegionData"
                 :categories="donutRegionCategories"
                 :height="300"
+                :radius="4"
               />
             </ClientOnly>
           </div>
@@ -235,6 +236,7 @@
                 :data="donutBudgetData"
                 :categories="donutBudgetCategories"
                 :height="300"
+                :radius="4"
               />
             </ClientOnly>
           </div>
@@ -279,6 +281,366 @@
                 :yAxis="['y']"
               />
             </ClientOnly>
+          </div>
+        </div>
+      </section>
+
+      <!-- Semi-Circle Gauges -->
+      <section class="mb-12">
+        <h2 class="mb-6 text-xl font-bold text-gray-900 dark:text-white">
+          Semi-Circle Gauges (Demi-Jauges)
+        </h2>
+        <div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+          <!-- Gauge 1 -->
+          <div class="rounded-lg bg-white p-6 shadow dark:bg-gray-800">
+            <h3 class="mb-4 text-center text-sm font-semibold text-gray-900 dark:text-white">
+              Performance
+            </h3>
+            <div class="flex flex-col items-center">
+              <svg width="160" height="90" viewBox="0 0 160 90">
+                <defs>
+                  <linearGradient id="gaugeGradient1" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" style="stop-color: #3b82f6; stop-opacity: 1" />
+                    <stop offset="100%" style="stop-color: #60a5fa; stop-opacity: 1" />
+                  </linearGradient>
+                </defs>
+                <!-- Background arc -->
+                <path
+                  d="M 20 80 A 60 60 0 0 1 140 80"
+                  fill="none"
+                  stroke="#e5e7eb"
+                  stroke-width="12"
+                  stroke-linecap="round"
+                />
+                <!-- Progress arc -->
+                <path
+                  :d="getArcPath(75, 60, 20, 80)"
+                  fill="none"
+                  stroke="url(#gaugeGradient1)"
+                  stroke-width="12"
+                  stroke-linecap="round"
+                />
+                <!-- Center text -->
+                <text x="80" y="70" text-anchor="middle" class="fill-gray-900 dark:fill-white">
+                  <tspan font-size="24" font-weight="bold">75%</tspan>
+                </text>
+              </svg>
+              <div class="mt-2 text-xs text-gray-500 dark:text-gray-400">Excellent</div>
+            </div>
+          </div>
+
+          <!-- Gauge 2 -->
+          <div class="rounded-lg bg-white p-6 shadow dark:bg-gray-800">
+            <h3 class="mb-4 text-center text-sm font-semibold text-gray-900 dark:text-white">
+              Disponibilité
+            </h3>
+            <div class="flex flex-col items-center">
+              <svg width="160" height="90" viewBox="0 0 160 90">
+                <defs>
+                  <linearGradient id="gaugeGradient2" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" style="stop-color: #10b981; stop-opacity: 1" />
+                    <stop offset="100%" style="stop-color: #34d399; stop-opacity: 1" />
+                  </linearGradient>
+                </defs>
+                <path
+                  d="M 20 80 A 60 60 0 0 1 140 80"
+                  fill="none"
+                  stroke="#e5e7eb"
+                  stroke-width="12"
+                  stroke-linecap="round"
+                />
+                <path
+                  :d="getArcPath(92, 60, 20, 80)"
+                  fill="none"
+                  stroke="url(#gaugeGradient2)"
+                  stroke-width="12"
+                  stroke-linecap="round"
+                />
+                <text x="80" y="70" text-anchor="middle" class="fill-gray-900 dark:fill-white">
+                  <tspan font-size="24" font-weight="bold">92%</tspan>
+                </text>
+              </svg>
+              <div class="mt-2 text-xs text-gray-500 dark:text-gray-400">Très bon</div>
+            </div>
+          </div>
+
+          <!-- Gauge 3 -->
+          <div class="rounded-lg bg-white p-6 shadow dark:bg-gray-800">
+            <h3 class="mb-4 text-center text-sm font-semibold text-gray-900 dark:text-white">
+              Efficacité
+            </h3>
+            <div class="flex flex-col items-center">
+              <svg width="160" height="90" viewBox="0 0 160 90">
+                <defs>
+                  <linearGradient id="gaugeGradient3" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" style="stop-color: #f59e0b; stop-opacity: 1" />
+                    <stop offset="100%" style="stop-color: #fbbf24; stop-opacity: 1" />
+                  </linearGradient>
+                </defs>
+                <path
+                  d="M 20 80 A 60 60 0 0 1 140 80"
+                  fill="none"
+                  stroke="#e5e7eb"
+                  stroke-width="12"
+                  stroke-linecap="round"
+                />
+                <path
+                  :d="getArcPath(58, 60, 20, 80)"
+                  fill="none"
+                  stroke="url(#gaugeGradient3)"
+                  stroke-width="12"
+                  stroke-linecap="round"
+                />
+                <text x="80" y="70" text-anchor="middle" class="fill-gray-900 dark:fill-white">
+                  <tspan font-size="24" font-weight="bold">58%</tspan>
+                </text>
+              </svg>
+              <div class="mt-2 text-xs text-gray-500 dark:text-gray-400">Moyen</div>
+            </div>
+          </div>
+
+          <!-- Gauge 4 -->
+          <div class="rounded-lg bg-white p-6 shadow dark:bg-gray-800">
+            <h3 class="mb-4 text-center text-sm font-semibold text-gray-900 dark:text-white">
+              Qualité
+            </h3>
+            <div class="flex flex-col items-center">
+              <svg width="160" height="90" viewBox="0 0 160 90">
+                <defs>
+                  <linearGradient id="gaugeGradient4" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" style="stop-color: #8b5cf6; stop-opacity: 1" />
+                    <stop offset="100%" style="stop-color: #a78bfa; stop-opacity: 1" />
+                  </linearGradient>
+                </defs>
+                <path
+                  d="M 20 80 A 60 60 0 0 1 140 80"
+                  fill="none"
+                  stroke="#e5e7eb"
+                  stroke-width="12"
+                  stroke-linecap="round"
+                />
+                <path
+                  :d="getArcPath(85, 60, 20, 80)"
+                  fill="none"
+                  stroke="url(#gaugeGradient4)"
+                  stroke-width="12"
+                  stroke-linecap="round"
+                />
+                <text x="80" y="70" text-anchor="middle" class="fill-gray-900 dark:fill-white">
+                  <tspan font-size="24" font-weight="bold">85%</tspan>
+                </text>
+              </svg>
+              <div class="mt-2 text-xs text-gray-500 dark:text-gray-400">Très bon</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Progress Bars with Mini Gauges -->
+      <section class="mb-12">
+        <h2 class="mb-6 text-xl font-bold text-gray-900 dark:text-white">
+          Barres + Demi-Jauges
+        </h2>
+        <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <div class="rounded-lg bg-white p-6 shadow dark:bg-gray-800">
+            <h3 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">
+              Indicateurs de Performance
+            </h3>
+            <div class="space-y-6">
+              <!-- Indicator 1 -->
+              <div>
+                <div class="mb-2 flex items-center justify-between">
+                  <span class="text-sm font-medium text-gray-700 dark:text-gray-300">CPU Usage</span>
+                  <div class="flex items-center gap-3">
+                    <svg width="60" height="35" viewBox="0 0 60 35">
+                      <path
+                        d="M 10 30 A 20 20 0 0 1 50 30"
+                        fill="none"
+                        stroke="#e5e7eb"
+                        stroke-width="4"
+                      />
+                      <path
+                        :d="getArcPath(72, 20, 10, 30, 60, 35)"
+                        fill="none"
+                        stroke="#3b82f6"
+                        stroke-width="4"
+                        stroke-linecap="round"
+                      />
+                      <text x="30" y="28" text-anchor="middle" font-size="10" font-weight="bold" class="fill-gray-900 dark:fill-white">
+                        72%
+                      </text>
+                    </svg>
+                    <span class="text-sm font-bold text-gray-900 dark:text-white">72%</span>
+                  </div>
+                </div>
+                <div class="h-2 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
+                  <div class="h-full rounded-full bg-blue-600" style="width: 72%"></div>
+                </div>
+              </div>
+
+              <!-- Indicator 2 -->
+              <div>
+                <div class="mb-2 flex items-center justify-between">
+                  <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Memory</span>
+                  <div class="flex items-center gap-3">
+                    <svg width="60" height="35" viewBox="0 0 60 35">
+                      <path
+                        d="M 10 30 A 20 20 0 0 1 50 30"
+                        fill="none"
+                        stroke="#e5e7eb"
+                        stroke-width="4"
+                      />
+                      <path
+                        :d="getArcPath(45, 20, 10, 30, 60, 35)"
+                        fill="none"
+                        stroke="#10b981"
+                        stroke-width="4"
+                        stroke-linecap="round"
+                      />
+                      <text x="30" y="28" text-anchor="middle" font-size="10" font-weight="bold" class="fill-gray-900 dark:fill-white">
+                        45%
+                      </text>
+                    </svg>
+                    <span class="text-sm font-bold text-gray-900 dark:text-white">45%</span>
+                  </div>
+                </div>
+                <div class="h-2 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
+                  <div class="h-full rounded-full bg-green-600" style="width: 45%"></div>
+                </div>
+              </div>
+
+              <!-- Indicator 3 -->
+              <div>
+                <div class="mb-2 flex items-center justify-between">
+                  <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Disk Space</span>
+                  <div class="flex items-center gap-3">
+                    <svg width="60" height="35" viewBox="0 0 60 35">
+                      <path
+                        d="M 10 30 A 20 20 0 0 1 50 30"
+                        fill="none"
+                        stroke="#e5e7eb"
+                        stroke-width="4"
+                      />
+                      <path
+                        :d="getArcPath(88, 20, 10, 30, 60, 35)"
+                        fill="none"
+                        stroke="#ef4444"
+                        stroke-width="4"
+                        stroke-linecap="round"
+                      />
+                      <text x="30" y="28" text-anchor="middle" font-size="10" font-weight="bold" class="fill-gray-900 dark:fill-white">
+                        88%
+                      </text>
+                    </svg>
+                    <span class="text-sm font-bold text-gray-900 dark:text-white">88%</span>
+                  </div>
+                </div>
+                <div class="h-2 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
+                  <div class="h-full rounded-full bg-red-600" style="width: 88%"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Another variant -->
+          <div class="rounded-lg bg-white p-6 shadow dark:bg-gray-800">
+            <h3 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">
+              Objectifs Mensuels
+            </h3>
+            <div class="space-y-6">
+              <!-- Goal 1 -->
+              <div>
+                <div class="mb-2 flex items-center justify-between">
+                  <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Ventes</span>
+                  <div class="flex items-center gap-3">
+                    <svg width="60" height="35" viewBox="0 0 60 35">
+                      <path
+                        d="M 10 30 A 20 20 0 0 1 50 30"
+                        fill="none"
+                        stroke="#e5e7eb"
+                        stroke-width="4"
+                      />
+                      <path
+                        :d="getArcPath(95, 20, 10, 30, 60, 35)"
+                        fill="none"
+                        stroke="#8b5cf6"
+                        stroke-width="4"
+                        stroke-linecap="round"
+                      />
+                      <text x="30" y="28" text-anchor="middle" font-size="10" font-weight="bold" class="fill-gray-900 dark:fill-white">
+                        95%
+                      </text>
+                    </svg>
+                    <span class="text-sm font-bold text-gray-900 dark:text-white">95%</span>
+                  </div>
+                </div>
+                <div class="h-2 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
+                  <div class="h-full rounded-full bg-purple-600" style="width: 95%"></div>
+                </div>
+              </div>
+
+              <!-- Goal 2 -->
+              <div>
+                <div class="mb-2 flex items-center justify-between">
+                  <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Leads</span>
+                  <div class="flex items-center gap-3">
+                    <svg width="60" height="35" viewBox="0 0 60 35">
+                      <path
+                        d="M 10 30 A 20 20 0 0 1 50 30"
+                        fill="none"
+                        stroke="#e5e7eb"
+                        stroke-width="4"
+                      />
+                      <path
+                        :d="getArcPath(67, 20, 10, 30, 60, 35)"
+                        fill="none"
+                        stroke="#f59e0b"
+                        stroke-width="4"
+                        stroke-linecap="round"
+                      />
+                      <text x="30" y="28" text-anchor="middle" font-size="10" font-weight="bold" class="fill-gray-900 dark:fill-white">
+                        67%
+                      </text>
+                    </svg>
+                    <span class="text-sm font-bold text-gray-900 dark:text-white">67%</span>
+                  </div>
+                </div>
+                <div class="h-2 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
+                  <div class="h-full rounded-full bg-yellow-600" style="width: 67%"></div>
+                </div>
+              </div>
+
+              <!-- Goal 3 -->
+              <div>
+                <div class="mb-2 flex items-center justify-between">
+                  <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Conversions</span>
+                  <div class="flex items-center gap-3">
+                    <svg width="60" height="35" viewBox="0 0 60 35">
+                      <path
+                        d="M 10 30 A 20 20 0 0 1 50 30"
+                        fill="none"
+                        stroke="#e5e7eb"
+                        stroke-width="4"
+                      />
+                      <path
+                        :d="getArcPath(82, 20, 10, 30, 60, 35)"
+                        fill="none"
+                        stroke="#06b6d4"
+                        stroke-width="4"
+                        stroke-linecap="round"
+                      />
+                      <text x="30" y="28" text-anchor="middle" font-size="10" font-weight="bold" class="fill-gray-900 dark:fill-white">
+                        82%
+                      </text>
+                    </svg>
+                    <span class="text-sm font-bold text-gray-900 dark:text-white">82%</span>
+                  </div>
+                </div>
+                <div class="h-2 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
+                  <div class="h-full rounded-full bg-cyan-600" style="width: 82%"></div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -551,5 +913,42 @@ const bubbleSectorCategories = {
     name: 'Secteurs',
     color: '#10b981',
   },
+};
+
+// ===== SEMI-CIRCLE GAUGE ARC CALCULATION =====
+
+/**
+ * Génère le chemin SVG pour un arc semi-circulaire basé sur un pourcentage
+ * @param percentage - Pourcentage de remplissage (0-100)
+ * @param radius - Rayon de l'arc
+ * @param startX - Coordonnée X de départ
+ * @param startY - Coordonnée Y de départ
+ */
+const getArcPath = (
+  percentage: number,
+  radius: number,
+  startX: number,
+  startY: number,
+): string => {
+  // Limiter le pourcentage entre 0 et 100
+  const clampedPercentage = Math.max(0, Math.min(100, percentage));
+
+  // Convertir le pourcentage en angle (180 degrés = 100%)
+  // L'angle part de 180° (π) et va vers 0° (0)
+  const startAngle = Math.PI; // 180 degrés (gauche)
+  const endAngle = Math.PI - (clampedPercentage / 100) * Math.PI;
+
+  // Calculer le point final de l'arc
+  const centerX = startX + radius;
+  const centerY = startY;
+  const endX = centerX + radius * Math.cos(endAngle);
+  const endY = centerY - radius * Math.sin(endAngle);
+
+  // Déterminer si l'arc doit être grand (> 50%) ou petit (<= 50%)
+  const largeArcFlag = clampedPercentage > 50 ? 1 : 0;
+
+  // Générer le chemin SVG
+  // Format: M startX startY A radiusX radiusY rotation largeArcFlag sweepFlag endX endY
+  return `M ${startX} ${startY} A ${radius} ${radius} 0 ${largeArcFlag} 1 ${endX.toFixed(2)} ${endY.toFixed(2)}`;
 };
 </script>

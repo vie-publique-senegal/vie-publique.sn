@@ -31,7 +31,7 @@
 
     <div class="container mx-auto px-4 py-6 sm:px-6 sm:py-8">
       <!-- Dashboard Cards -->
-      <div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-2">
         <!-- Suivi des Projets Publics -->
         <NuxtLink
           to="/dashboard/suivi-projets-publics"
@@ -105,6 +105,34 @@
           </p>
           <div class="flex items-center text-sm font-medium text-green-600">
             Voir la démo
+            <UIcon
+              name="i-heroicons-arrow-right"
+              class="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1"
+            />
+          </div>
+        </NuxtLink>
+
+        <!-- Projets Publics -->
+        <NuxtLink
+          to="/dashboard/projets-publics"
+          class="group relative overflow-hidden rounded-lg bg-white p-6 shadow transition-all hover:shadow-lg dark:bg-gray-800"
+        >
+          <div class="mb-4 flex items-center justify-between">
+            <div
+              class="flex h-12 w-12 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/20"
+            >
+              <UIcon name="i-heroicons-clipboard-document-list" class="h-6 w-6 text-blue-600" />
+            </div>
+            <UBadge color="blue" variant="subtle">Dashboard</UBadge>
+          </div>
+          <h3 class="mb-2 text-lg font-semibold text-gray-900 dark:text-white">
+            Projets Publics
+          </h3>
+          <p class="mb-4 text-sm text-gray-600 dark:text-gray-400">
+            Gestion et suivi des projets publics avec filtres, stats et carte régionale
+          </p>
+          <div class="flex items-center text-sm font-medium text-blue-600">
+            Voir le dashboard
             <UIcon
               name="i-heroicons-arrow-right"
               class="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1"
