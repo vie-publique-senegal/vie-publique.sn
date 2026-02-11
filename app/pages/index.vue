@@ -206,8 +206,7 @@ const { navigationCards } = useNavigationCards();
         <HomeSocialNetworks />
       </div>
       <div class="my-8">
-        <!-- <HomeLatestTweets /> -->
-        <HomeTwitterTimeline />
+        <HomeLatestTweets />
       </div>
       <div class="my-8">
         <HomeWhatsAppChannel />
