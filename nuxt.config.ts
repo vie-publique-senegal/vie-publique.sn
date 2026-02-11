@@ -223,6 +223,9 @@ export default defineNuxtConfig({
     // Firebase Admin (server-side only)
     firebaseServiceAccountJson: process.env.NUXT_FIREBASE_SERVICE_ACCOUNT_JSON,
 
+    // Twitter/X API
+    twitterRssFeedUrl: process.env.TWITTER_RSS_FEED_URL,
+
     public: {
       siteUrl: process.env.NUXT_PUBLIC_SITE_URL,
       showPinnedPeoples: process.env.PUBLIC_SHOW_PINNED_PEOLPLES,
