@@ -1,9 +1,8 @@
 <script setup lang="ts">
-import { useElectoralDashboard } from '../../../composables/elections/dashboard/useElectoralDashboard';
-import { useElectoralDashboardLists } from '../../../composables/elections/dashboard/useElectoralDashboardLists';
-import { useElectoralGrouping } from '../../../composables/elections/dashboard/useElectoralGrouping';
-import type { Candidate } from '../../../types';
-
+import { useElectoralDashboard } from "~/composables/elections/dashboard/useElectoralDashboard";
+import { useElectoralDashboardLists } from "~/composables/elections/dashboard/useElectoralDashboardLists";
+import { useElectoralGrouping } from "~/composables/elections/dashboard/useElectoralGrouping";
+import type { Candidate } from "~~/types/candidate";
 
 const props = defineProps<{
   coalitionId: string;

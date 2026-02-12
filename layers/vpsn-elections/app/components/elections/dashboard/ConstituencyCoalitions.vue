@@ -1,7 +1,6 @@
 <script setup lang="ts">
-import { useElectoralDashboardLists } from '../../../composables/elections/dashboard/useElectoralDashboardLists';
-import { useElectoralFormatting } from '../../../composables/elections/dashboard/useElectoralFormatting';
-
+import { useElectoralDashboardLists } from '~/composables/elections/dashboard/useElectoralDashboardLists';
+import { useElectoralFormatting } from '~/composables/elections/dashboard/useElectoralFormatting';
 
 const props = defineProps<{
   constituencyId: string | number;
@@ -11,8 +10,6 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits(['close', 'selectCoalition']);
-
-const { getCmsAsset } = useElectoralFormatting();
 
 const route = useRoute();
 const router = useRouter();
@@ -51,9 +48,9 @@ const searchQuery = ref('');
 
 const filteredLists = computed(() => {
   if (!lists.value) return [];
-
+  
   let result = lists.value.filter((l: any) => {
-      if (l.constituency?.type === 'departement' || l.constituency?.nationale_type === 'departement') return false;
+      if (l.constituency?.type === 'departement' || l.constituency?.nationale_type === 'departement') return false; 
       return true;
   });
 
@@ -63,8 +60,8 @@ const filteredLists = computed(() => {
 
   if (searchQuery.value) {
     const q = searchQuery.value.toLowerCase();
-    result = result.filter((l: any) =>
-      l.coalition?.name?.toLowerCase().includes(q) ||
+    result = result.filter((l: any) => 
+      l.coalition?.name?.toLowerCase().includes(q) || 
       l.coalition?.acronym?.toLowerCase().includes(q)
     );
   }
@@ -74,13 +71,13 @@ const filteredLists = computed(() => {
 
 const uniqueCoalitions = computed(() => {
     if (!filteredLists.value) return [];
-
+    
     const map = new Map();
     filteredLists.value.forEach((list: any) => {
-        const key = selectedCommuneId.value
-            ? list.coalition.id
+        const key = selectedCommuneId.value 
+            ? list.coalition.id 
             : `${list.coalition.id}-${list.constituency?.id}`;
-
+            
         if (list.coalition && !map.has(key)) {
             map.set(key, list);
         }
@@ -95,7 +92,7 @@ watch(() => props.constituencyId, () => {
 const selectCoalition = (list: any) => {
     if (list.coalition?.id) {
         const targetConstituencyId = selectedCommuneId.value || list.constituency?.id || props.constituencyId;
-
+        
         emit('selectCoalition', {
             coalitionId: list.coalition.id,
             constituencyId: targetConstituencyId
@@ -175,15 +172,15 @@ const selectCoalition = (list: any) => {
 
     <!-- Grille des Listes -->
     <div v-else-if="uniqueCoalitions.length > 0" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-      <div
-        v-for="list in uniqueCoalitions"
+      <div 
+        v-for="list in uniqueCoalitions" 
         :key="list.coalition?.id || list.id"
         class="group relative bg-white dark:bg-gray-900 rounded-2xl border dark:border-gray-800 overflow-hidden hover:ring-2 hover:ring-primary-500 transition-all cursor-pointer shadow-sm hover:shadow-lg"
         @click="selectCoalition(list)"
       >
          <div class="p-6 flex items-center gap-5">
              <div class="h-14 w-14 shrink-0 bg-gray-50 dark:bg-gray-800 rounded-xl p-2 border border-gray-100 dark:border-gray-700 flex items-center justify-center overflow-hidden">
-                 <img v-if="list.coalition?.logo" :src="getCmsAsset(list.coalition.logo)" class="max-h-full max-w-full object-contain" :alt="list.coalition?.name" />
+                 <CmsImage v-if="list.coalition?.logo" :src="list.coalition.logo" class="max-h-full max-w-full object-contain" :alt="list.coalition?.name" />
                  <UIcon v-else name="i-heroicons-photo" class="text-gray-200 h-8 w-8" />
              </div>
              <div>

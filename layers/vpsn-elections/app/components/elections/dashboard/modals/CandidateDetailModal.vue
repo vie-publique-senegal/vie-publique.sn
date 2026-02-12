@@ -1,7 +1,6 @@
 <script setup lang="ts">
-import { useElectoralFormatting } from '../../../../composables/elections/dashboard/useElectoralFormatting';
-import type { Candidate } from '../../../../types';
-
+import { useElectoralFormatting } from '~/composables/elections/dashboard/useElectoralFormatting';
+import type { Candidate } from '~~/types/candidate';
 
 interface Props {
   modelValue: boolean;
@@ -12,8 +11,6 @@ const props = defineProps<Props>();
 const emit = defineEmits<{
   (e: 'update:modelValue', value: boolean): void;
 }>();
-
-const { getCmsAsset } = useElectoralFormatting();
 
 const isOpen = computed({
   get: () => props.modelValue,
@@ -47,9 +44,9 @@ const isOpen = computed({
           @click="isOpen = false"
         />
 
-        <img
+        <CmsImage
           v-if="candidate?.photo"
-          :src="getCmsAsset(candidate.photo)"
+          :src="candidate.photo"
           class="h-full w-full object-cover opacity-80"
           :alt="candidate.first_name"
         />

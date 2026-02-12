@@ -85,7 +85,7 @@
                 <h3 class="text-base font-bold md:text-lg">
                   {{ region.departement }}
                 </h3>
-                <div class="text-sm md:text-base">
+                <div v-if="region.region" class="text-sm md:text-base">
                   Région: {{ region.region }}
                 </div>
                 <div class="mt-2 text-sm md:text-base">
@@ -97,6 +97,12 @@
                     {{ region.winnerName }}
                   </span>
                 </div>
+                <div v-if="region.headOfList" class="mt-1 text-sm md:text-base">
+                  Tête de liste: <span class="font-semibold">{{ region.headOfList }}</span>
+                </div>
+                <div v-if="region.voters" class="mt-1 text-sm md:text-base">
+                  Voix: <span class="font-bold">{{ formatNumber(region.voters) }}</span>
+                </div>
               </div>
             </LPopup>
           </LPolygon>
@@ -107,7 +113,8 @@
 </template>
 
 <script setup lang="ts">
-import type { TransformedRegion } from "../../../types/election-map";
+import type { TransformedRegion } from "~~/types/election-map";
+import { useElectionMapDataResult } from "~/composables/useElectionMapJsonResult";
 
 interface Props {
   initialCenter?: [number, number];
@@ -244,6 +251,8 @@ const polygonOptions = computed(() => ({
 }));
 
 // Utilitaires
+const formatNumber = (num: number) => new Intl.NumberFormat('fr-FR').format(num);
+
 const getPolygonBorderColor = (fillColor: string) => "#ffffff";
 
 const getTextColorClass = (backgroundColor: string) => {
@@ -480,4 +489,3 @@ const calculateBounds = (regions: TransformedRegion[]) => {
   z-index: -1;
 }
 </style>
-

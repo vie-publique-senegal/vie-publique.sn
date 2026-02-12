@@ -1,4 +1,5 @@
-// composables/elections/useElectionMapJsonResult.ts
+// composables/useElectionMapDataResult.ts
+import type { DepartmentStats } from "~~/types/election-map-national";
 
 interface GeoData {
   id: number;
@@ -27,10 +28,12 @@ interface GeoData {
     }[];
   };
   voters?: number;
+  // Position is at the root of the 'carte' collection item
   Position?: {
     type: string;
     coordinates: number[][][];
   };
+  // Fallback for legacy fields
   departement?: string;
   region?: string;
 }
@@ -42,7 +45,10 @@ interface TransformedRegion {
   winnerName: string;
   winnerColor: string;
   winnerLogo: string;
+  headOfList: string;
+  voters: number;
   coordinates: [number, number][];
+  stats?: DepartmentStats | null;
   type: "Polygon";
 }
 
@@ -52,9 +58,13 @@ export interface TableResultItem {
   coalition: string;
   headOfList: string;
   votes: number;
+  departement?: string;
+  region?: string;
 }
 
 export function useElectionMapDataResult() {
+  const config = useRuntimeConfig();
+
   // État global pour le cache des données
   const geoData = useState<GeoData[]>("geo-data-result", () => []);
   const loading = useState<boolean>("geo-data-result-loading", () => false);
@@ -126,6 +136,15 @@ export function useElectionMapDataResult() {
             ? coordsRaw.map((coord: any) => [coord[1], coord[0]]) // Flip to [lat, lng]
             : [];
 
+        // Find Head of List
+        let headOfList = "";
+        if (item.liste_gagnante && !item.liste_gagnante.is_substitute && item.liste_gagnante.candidates) {
+            const head = item.liste_gagnante.candidates.find(c => c.position === 1);
+            if (head) {
+                headOfList = `${head.first_name} ${head.last_name}`;
+            }
+        }
+
         return {
           id: item.id,
           departement: constData.name || item.departement || "Inconnu",
@@ -133,6 +152,8 @@ export function useElectionMapDataResult() {
           winnerName: item.coalition_gagnante?.name || "",
           winnerColor: item.coalition_gagnante?.color || "#cccccc",
           winnerLogo: item.coalition_gagnante?.logo || "",
+          headOfList,
+          voters: item.voters || 0,
           coordinates: coordinates,
           type: "Polygon" as const,
         };
@@ -160,7 +181,9 @@ export function useElectionMapDataResult() {
                 commune: constData?.name || "Inconnu",
                 coalition: item.coalition_gagnante?.name || "Sans coalition",
                 headOfList: headOfList,
-                votes: item.voters || 0
+                votes: item.voters || 0,
+                departement: item.departement || "",
+                region: constData?.region || item.region || "",
             };
         });
   }

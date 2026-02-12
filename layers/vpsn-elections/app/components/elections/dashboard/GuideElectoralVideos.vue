@@ -1,7 +1,5 @@
 <script setup lang="ts">
-import { useGuideElectoral } from '../../../composables/elections/guide/useGuideElectoral';
-import { useElectionsConfig } from '../../../composables/elections/useElectionsConfig';
-
+import { useGuideElectoral } from '~/composables/elections/guide/useGuideElectoral';
 
 interface Props {
   typeElection?: string;
@@ -10,19 +8,16 @@ interface Props {
 
 const props = defineProps<Props>();
 
-// Configuration dynamique
-const electionsConfig = useElectionsConfig();
-
 const selectedLanguage = ref(props.defaultLanguage || 'all');
 const selectedType = ref('all');
 const route = useRoute();
 const router = useRouter();
 
-const electionTypes = computed(() => [
-    { label: electionsConfig.getElectionTypeLabel('presidential'), value: 'presidential' },
-    { label: electionsConfig.getElectionTypeLabel('legislative'), value: 'legislative' },
-    { label: electionsConfig.getElectionTypeLabel('locale'), value: 'local' }
-]);
+const electionTypes = [
+    { label: 'Présidentielles', value: 'presidential' },
+    { label: 'Législatives', value: 'legislative' },
+    { label: 'Locales', value: 'local' }
+];
 
 if (!props.typeElection) {
     if (route.query.lang) {
@@ -67,15 +62,6 @@ const filteredVideos = computed(() => {
 
 <template>
   <div class="space-y-8 animate-in fade-in duration-700">
-    <!-- Header -->
-    <div class="text-center space-y-4">
-      <h2 class="text-3xl font-black uppercase tracking-tighter">
-        {{ electionsConfig.ui.value.guideTitle }}
-      </h2>
-      <p class="text-gray-500 dark:text-gray-400 max-w-2xl mx-auto">
-        {{ electionsConfig.ui.value.guideDescription }}
-      </p>
-    </div>
 
     <!-- Loading State -->
     <div v-if="loading" class="flex justify-center items-center py-12">
@@ -95,7 +81,7 @@ const filteredVideos = computed(() => {
                 class="rounded-full px-4"
                 @click="selectedType = 'all'"
             >
-                {{ electionsConfig.ui.value.allElections }}
+                Toutes les élections
             </UButton>
             <UButton
                 v-for="type in electionTypes"
@@ -126,7 +112,7 @@ const filteredVideos = computed(() => {
             class="rounded-full px-4 transition-all duration-200"
             @click="selectedLanguage = 'all'"
         >
-            {{ electionsConfig.ui.value.allLanguages }}
+            Toutes les langues
         </UButton>
 
         <UButton
@@ -149,7 +135,7 @@ const filteredVideos = computed(() => {
         <!-- Empty State -->
         <div v-if="filteredVideos.length === 0" class="text-center py-12">
              <UIcon name="i-heroicons-video-camera-slash" class="w-16 h-16 text-gray-300 mx-auto mb-4" />
-             <p class="text-gray-500">{{ electionsConfig.ui.value.noVideosAvailable }}</p>
+             <p class="text-gray-500">Aucune vidéo disponible pour cette sélection.</p>
         </div>
 
         <!-- Affichage d'une seule vidéo centrée -->

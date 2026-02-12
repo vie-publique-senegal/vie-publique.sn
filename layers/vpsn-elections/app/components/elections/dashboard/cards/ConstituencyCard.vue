@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import type { Constituency } from '../../../../composables/elections/dashboard/useElectoralConstituencies';
-
+import type { Constituency } from '~/composables/elections/dashboard/useElectoralConstituencies';
 
 interface Props {
   constituency: Constituency;
@@ -39,7 +38,7 @@ const badgeColorByType = computed(() => {
 
 const labelByType = computed(() => {
   if (props.constituency.type === 'national' && props.constituency.nationale_type === 'departement') return 'Dépt.';
-
+  
   switch (props.constituency.type) {
     case 'diaspora':
       return 'Diaspora';

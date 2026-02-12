@@ -1,14 +1,9 @@
-﻿<script setup lang="ts">
-import { useElectoralCoalitions } from '../../composables/elections/dashboard/useElectoralCoalitions';
-import { useElectoralDashboard } from '../../composables/elections/dashboard/useElectoralDashboard';
-import { useNews } from '../../composables/news/useNews';
-import { useElectionRoutes } from '../../composables/useElectionRoutes';
-
+<script setup lang="ts">
+import { useElectoralCoalitions } from '~/composables/elections/dashboard/useElectoralCoalitions';
+import { useElectoralDashboard } from '~/composables/elections/dashboard/useElectoralDashboard';
+import { useNews } from '~/composables/news/useNews';
 
 const { config, loadingConfig } = useElectoralDashboard();
-const appConfig = useAppConfig();
-const { country, seo } = appConfig.vpsnElections
-const electionRoutes = useElectionRoutes();
 
 const election = computed(() => {
   if (!config.value?.elections) return null;
@@ -72,11 +67,12 @@ const topLegislativeCoalitions = computed(() => {
 });
 
 
-useHead({
-  title: `${seo.title}`,
-  meta: [
-    { name: 'description', content: `${seo.description}` }
-  ]
+// SEO avec Open Graph
+useSeoMeta({
+  title: 'Élections au Sénégal | Plateforme d\'Information Électorale',
+  description: 'Accédez à toutes les informations sur les élections au Sénégal : guide électoral, législation, cartographie et résultats.',
+  ogTitle: 'Élections au Sénégal',
+  ogDescription: 'Plateforme d\'information électorale du Sénégal : résultats, candidats, carte électorale et guide de l\'électeur.',
 });
 
 const quickLinks = computed(() => [
@@ -84,7 +80,7 @@ const quickLinks = computed(() => [
     title: "Guide Électoral",
     description: "Comment voter ?",
     icon: "i-heroicons-book-open",
-    to: electionRoutes.guideElectoral,
+    to: "/elections-senegal/guide-electoral",
     color: "text-blue-600",
     bg: "bg-blue-50"
   },
@@ -92,7 +88,7 @@ const quickLinks = computed(() => [
     title: "Législation",
     description: "Textes de lois et décrets",
     icon: "i-heroicons-scale",
-    to: electionRoutes.legislation,
+    to: "/elections-senegal/legislation",
     color: "text-emerald-600",
     bg: "bg-emerald-50"
   },
@@ -100,7 +96,9 @@ const quickLinks = computed(() => [
     title: "Carte Électorale",
     description: "Lieux et bureaux de vote",
     icon: "i-heroicons-map",
-    to: electionRoutes.carteElectorale,
+    to: election.value
+      ? `/elections-senegal/carte-electorale?type=${election.value.type}&year=${election.value.year}`
+      : "/elections-senegal/carte-electorale",
     color: "text-purple-600",
     bg: "bg-purple-50"
   }
@@ -114,6 +112,7 @@ const quickLinks = computed(() => [
         default: return status;
     }
 };
+
 </script>
 
 <template>
@@ -125,7 +124,7 @@ const quickLinks = computed(() => [
       <section class="text-center mb-8">
         <div class="mx-auto max-w-4xl">
           <h1 class="mb-4 text-4xl font-bold text-gray-900 md:text-5xl dark:text-white">
-            Élections {{ country.name }}
+            Élections Sénégal
           </h1>
           <p class="text-gray-600 dark:text-gray-400">
             Retrouvez ci-dessous les informations de la dernière élection
@@ -181,7 +180,7 @@ const quickLinks = computed(() => [
               <div v-if="election.status === 'completed'" class="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2">
                  <!-- Actions Présidentielle -->
                  <template v-if="election.type === 'presidential'">
-                    <UButton :to="`${electionRoutes.legislation}?q=resultats`" color="gray" variant="solid" size="xs" icon="i-heroicons-document-check" class="justify-start">Résultats Définitifs</UButton>
+                    <UButton to="/elections-senegal/legislation?q=resultats" color="gray" variant="solid" size="xs" icon="i-heroicons-document-check" class="justify-start">Résultats Définitifs</UButton>
                  </template>
 
                  <!-- Actions Législative -->
@@ -193,7 +192,7 @@ const quickLinks = computed(() => [
             </div>
 
             <!-- Right Panel: Results Highlight -->
-            <div class="lg:w-95 bg-gray-50 dark:bg-gray-800/50 border-t lg:border-t-0 lg:border-l dark:border-gray-800 p-6 flex flex-col justify-center relative overflow-hidden">
+            <div class="lg:w-[380px] bg-gray-50 dark:bg-gray-800/50 border-t lg:border-t-0 lg:border-l dark:border-gray-800 p-6 flex flex-col justify-center relative overflow-hidden">
                 <!-- Background Decoration -->
                 <div class="absolute -right-6 -top-6 w-32 h-32 bg-primary-500/5 rounded-full blur-3xl"></div>
 
@@ -258,12 +257,31 @@ const quickLinks = computed(() => [
 
             </div>
           </div>
+          <!-- Desktop: Link text -->
           <NuxtLink
             v-if="election"
-            :to="`${electionRoutes.dashboard(election.type, election.year)}?tab=resultats`"
-            class="block p-4 bg-slate-50 dark:bg-gray-800/50 border-t dark:border-gray-800 text-center text-sm font-black uppercase tracking-widest text-gray-500 hover:text-primary-600 hover:bg-slate-100 transition-all"
+            :to="`/elections-senegal/dashboard/${election.type}/${election.year}?tab=resultats`"
+            class="hidden md:block p-4 bg-slate-50 dark:bg-gray-800/50 border-t dark:border-gray-800 text-center text-sm font-black uppercase tracking-widest text-gray-500 hover:text-primary-600 hover:bg-slate-100 transition-all"
           >
             Voir le tableau de bord complet <UIcon name="i-heroicons-arrow-right" class="ml-2 inline-block h-4 w-4" />
+          </NuxtLink>
+          <!-- Mobile: Card style CTA -->
+          <NuxtLink
+            v-if="election"
+            :to="`/elections-senegal/dashboard/${election.type}/${election.year}?tab=resultats`"
+            class="md:hidden group flex items-center justify-center gap-3 p-4 bg-gradient-to-br from-primary-50 via-primary-100 to-primary-200 dark:from-primary-900/30 dark:via-primary-800/25 dark:to-primary-900/20 border-t dark:border-gray-800 transition hover:shadow-lg"
+          >
+            <UIcon
+              name="i-heroicons-chart-bar-square"
+              class="h-6 w-6 text-primary-600 transition group-hover:scale-110 dark:text-primary-400"
+            />
+            <span class="text-sm font-bold text-primary-800 dark:text-primary-300">
+              Tableau de bord complet
+            </span>
+            <UIcon
+              name="i-heroicons-arrow-right"
+              class="h-4 w-4 text-primary-600 transition group-hover:translate-x-1 dark:text-primary-400"
+            />
           </NuxtLink>
         </div>
 
@@ -288,7 +306,7 @@ const quickLinks = computed(() => [
         <!-- Section: Dernières actualités électorales-->
         <section class="mt-8 mb-12">
           <UCard
-            class="border-primary/20 hover:border-primary/30 dark:via-primary/10 dark:to-primary/20 border overflow-hidden bg-white shadow-lg transition hover:shadow-xl dark:bg-linear-to-br dark:from-gray-800"
+            class="border-primary/20 hover:border-primary/30 dark:via-primary/10 dark:to-primary/20 border-1 overflow-hidden bg-white shadow-lg transition hover:shadow-xl dark:bg-gradient-to-br dark:from-gray-800"
             :ui="{ body: { padding: 'p-4 sm:p-6' } }"
           >
             <div class="mb-6">
