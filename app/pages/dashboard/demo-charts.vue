@@ -645,6 +645,135 @@
         </div>
       </section>
 
+      <!-- Dotted Map Section (Nuxt Charts) -->
+      <section class="mb-12">
+        <h2 class="mb-6 text-xl font-bold text-gray-900 dark:text-white">Dotted Map</h2>
+        <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <!-- Dotted Map - Sénégal -->
+          <div class="rounded-lg bg-white p-6 shadow dark:bg-gray-800">
+            <h3 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">
+              Villes principales du Sénégal
+            </h3>
+            <ClientOnly>
+              <DottedMap
+                :map-width="120"
+                :map-height="60"
+                :pins="senegalPins"
+                color="var(--ui-bg-accented)"
+                :dot-size="0.5"
+                :region="senegalRegion"
+                grid="diagonal"
+              />
+            </ClientOnly>
+          </div>
+
+          <!-- Dotted Map - Afrique de l'Ouest -->
+          <div class="rounded-lg bg-white p-6 shadow dark:bg-gray-800">
+            <h3 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">
+              Diaspora - Afrique de l'Ouest
+            </h3>
+            <ClientOnly>
+              <DottedMap
+                :map-width="120"
+                :map-height="60"
+                :pins="westAfricaPins"
+                color="var(--ui-bg-accented)"
+                :dot-size="0.5"
+                :countries="westAfricaCountries"
+                country-colors="#e2e8f0"
+                grid="vertical"
+              />
+            </ClientOnly>
+          </div>
+
+          <!-- Dotted Map - Monde -->
+          <div class="col-span-1 rounded-lg bg-white p-6 shadow lg:col-span-2 dark:bg-gray-800">
+            <h3 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">
+              Diaspora sénégalaise dans le monde
+            </h3>
+            <ClientOnly>
+              <DottedMap
+                :map-width="160"
+                :map-height="70"
+                :pins="diasporaPins"
+                color="var(--ui-bg-accented)"
+                :dot-size="0.4"
+                grid="diagonal"
+                shape="circle"
+              />
+            </ClientOnly>
+          </div>
+        </div>
+      </section>
+
+      <!-- TopoJSON Map Section (Nuxt Charts) -->
+      <section class="mb-12">
+        <h2 class="mb-6 text-xl font-bold text-gray-900 dark:text-white">TopoJSON Map</h2>
+        <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <!-- TopoJSON Map - Carte mondiale avec points -->
+          <div class="rounded-lg bg-white p-6 shadow dark:bg-gray-800">
+            <h3 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">
+              Représentations diplomatiques
+            </h3>
+            <ClientOnly>
+              <TopoJSONMap
+                :height="350"
+                map-feature-key="countries"
+                :data="topoMapPointsData"
+                :topo-json="worldTopoJson"
+                :projection="worldProjection"
+                :point-color="(d: any) => d.color || '#3b82f6'"
+                :point-size="(d: any) => d.size || 6"
+                :point-stroke-width="1"
+                area-color="var(--ui-bg-elevated)"
+                :zoom-factor="1.2"
+              />
+            </ClientOnly>
+          </div>
+
+          <!-- TopoJSON Map - Choroplèthe -->
+          <div class="rounded-lg bg-white p-6 shadow dark:bg-gray-800">
+            <h3 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">
+              Diaspora par pays (Choroplèthe)
+            </h3>
+            <ClientOnly>
+              <TopoJSONMap
+                :height="350"
+                map-feature-key="countries"
+                :data="topoMapAreasData"
+                :topo-json="worldTopoJson"
+                :projection="worldProjection"
+                :area-color="diasporaAreaColor"
+                :zoom-factor="1.2"
+              />
+            </ClientOnly>
+          </div>
+
+          <!-- TopoJSON Map - Points + Links -->
+          <div class="col-span-1 rounded-lg bg-white p-6 shadow lg:col-span-2 dark:bg-gray-800">
+            <h3 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">
+              Flux migratoires depuis le Sénégal
+            </h3>
+            <ClientOnly>
+              <TopoJSONMap
+                :height="400"
+                map-feature-key="countries"
+                :data="topoMapLinksData"
+                :topo-json="worldTopoJson"
+                :projection="worldProjection"
+                :point-color="(d: any) => d.color || '#3b82f6'"
+                :point-size="(d: any) => d.size || 5"
+                :point-stroke-width="1"
+                :link-color="() => '#f59e0b'"
+                :link-width="() => 1.5"
+                area-color="var(--ui-bg-elevated)"
+                :zoom-factor="1.2"
+              />
+            </ClientOnly>
+          </div>
+        </div>
+      </section>
+
       <!-- Map Section -->
       <section class="mb-12">
         <h2 class="mb-6 text-xl font-bold text-gray-900 dark:text-white">
@@ -662,6 +791,9 @@
 </template>
 
 <script setup lang="ts">
+import { WorldMapTopoJSON } from '@unovis/ts/maps';
+import { geoNaturalEarth1 } from 'd3-geo';
+
 // SEO: Désindexer la page
 useHead({
   title: 'Démo Nuxt Charts - Vision 2050',
@@ -913,6 +1045,136 @@ const bubbleSectorCategories = {
     name: 'Secteurs',
     color: '#10b981',
   },
+};
+
+// ===== DOTTED MAP =====
+
+// Région du Sénégal (lat/lng bounds) - coordonnées exactes du territoire
+const senegalRegion = {
+  lat: { min: 12.3, max: 16.7 },
+  lng: { min: -17.6, max: -11.3 },
+};
+
+// Pins des villes principales du Sénégal
+const senegalPins = [
+  { lat: 14.6928, lng: -17.4467, svgOptions: { color: '#ef4444', radius: 1.0 } }, // Dakar
+  { lat: 14.7646, lng: -16.9260, svgOptions: { color: '#3b82f6', radius: 0.75 } }, // Thiès
+  { lat: 16.0200, lng: -16.4900, svgOptions: { color: '#3b82f6', radius: 0.75 } }, // Saint-Louis
+  { lat: 14.1652, lng: -16.0758, svgOptions: { color: '#3b82f6', radius: 0.75 } }, // Kaolack
+  { lat: 12.5681, lng: -16.2719, svgOptions: { color: '#3b82f6', radius: 0.75 } }, // Ziguinchor
+  { lat: 13.4531, lng: -15.6244, svgOptions: { color: '#10b981', radius: 0.6 } }, // Kolda
+  { lat: 14.3884, lng: -14.6592, svgOptions: { color: '#10b981', radius: 0.6 } }, // Tambacounda
+  { lat: 15.6167, lng: -13.2500, svgOptions: { color: '#10b981', radius: 0.6 } }, // Matam
+  { lat: 14.7500, lng: -12.8500, svgOptions: { color: '#10b981', radius: 0.6 } }, // Kédougou
+  { lat: 13.7700, lng: -15.1600, svgOptions: { color: '#10b981', radius: 0.6 } }, // Sédhiou
+  { lat: 14.1500, lng: -15.4700, svgOptions: { color: '#10b981', radius: 0.6 } }, // Kaffrine
+  { lat: 15.4600, lng: -16.0700, svgOptions: { color: '#10b981', radius: 0.6 } }, // Louga
+  { lat: 14.7000, lng: -17.1700, svgOptions: { color: '#10b981', radius: 0.6 } }, // Mbour
+  { lat: 15.8800, lng: -15.1600, svgOptions: { color: '#10b981', radius: 0.6 } }, // Podor
+];
+
+// Pays d'Afrique de l'Ouest (codes ISO 3166-1 alpha-3)
+const westAfricaCountries = ['SEN', 'GMB', 'GNB', 'GIN', 'MLI', 'MRT', 'CIV', 'BFA', 'GHA', 'TGO', 'BEN', 'NER', 'NGA', 'SLE', 'LBR', 'CPV'];
+
+// Pins Afrique de l'Ouest - présence diaspora
+const westAfricaPins = [
+  { lat: 14.6928, lng: -17.4467, svgOptions: { color: '#ef4444', radius: 1.0 } }, // Dakar
+  { lat: 5.3600, lng: -4.0083, svgOptions: { color: '#f59e0b', radius: 0.75 } }, // Abidjan
+  { lat: 6.5244, lng: 3.3792, svgOptions: { color: '#f59e0b', radius: 0.75 } }, // Lagos
+  { lat: 5.6037, lng: -0.1870, svgOptions: { color: '#f59e0b', radius: 0.6 } }, // Accra
+  { lat: 12.6392, lng: -8.0029, svgOptions: { color: '#f59e0b', radius: 0.6 } }, // Bamako
+  { lat: 13.4549, lng: -16.5790, svgOptions: { color: '#10b981', radius: 0.6 } }, // Banjul
+  { lat: 9.5370, lng: -13.6785, svgOptions: { color: '#10b981', radius: 0.6 } }, // Conakry
+  { lat: 18.0735, lng: -15.9582, svgOptions: { color: '#10b981', radius: 0.6 } }, // Nouakchott
+];
+
+// Pins diaspora dans le monde
+const diasporaPins = [
+  { lat: 14.6928, lng: -17.4467, svgOptions: { color: '#ef4444', radius: 1.0 } }, // Dakar
+  { lat: 48.8566, lng: 2.3522, svgOptions: { color: '#3b82f6', radius: 0.85 } }, // Paris
+  { lat: 40.7128, lng: -74.0060, svgOptions: { color: '#3b82f6', radius: 0.75 } }, // New York
+  { lat: 41.3851, lng: 2.1734, svgOptions: { color: '#3b82f6', radius: 0.7 } }, // Barcelone
+  { lat: 45.4642, lng: 9.1900, svgOptions: { color: '#3b82f6', radius: 0.75 } }, // Milan
+  { lat: 51.5074, lng: -0.1278, svgOptions: { color: '#3b82f6', radius: 0.65 } }, // Londres
+  { lat: 50.8503, lng: 4.3517, svgOptions: { color: '#10b981', radius: 0.6 } }, // Bruxelles
+  { lat: 5.3600, lng: -4.0083, svgOptions: { color: '#f59e0b', radius: 0.7 } }, // Abidjan
+  { lat: 12.6392, lng: -8.0029, svgOptions: { color: '#f59e0b', radius: 0.6 } }, // Bamako
+  { lat: 25.2048, lng: 55.2708, svgOptions: { color: '#8b5cf6', radius: 0.6 } }, // Dubaï
+  { lat: 39.9042, lng: 116.4074, svgOptions: { color: '#8b5cf6', radius: 0.6 } }, // Pékin
+  { lat: 45.5017, lng: -73.5673, svgOptions: { color: '#10b981', radius: 0.6 } }, // Montréal
+  { lat: -23.5505, lng: -46.6333, svgOptions: { color: '#10b981', radius: 0.55 } }, // São Paulo
+];
+
+// ===== TOPOJSON MAP =====
+
+// TopoJSON world map
+const worldTopoJson = WorldMapTopoJSON;
+
+// Projection
+const worldProjection = geoNaturalEarth1();
+
+// Map avec points - Représentations diplomatiques
+const topoMapPointsData = {
+  points: [
+    { id: 'dakar', latitude: 14.6928, longitude: -17.4467, color: '#ef4444', size: 8, label: 'Dakar' },
+    { id: 'paris', latitude: 48.8566, longitude: 2.3522, color: '#3b82f6', size: 7, label: 'Paris' },
+    { id: 'washington', latitude: 38.9072, longitude: -77.0369, color: '#3b82f6', size: 6, label: 'Washington' },
+    { id: 'beijing', latitude: 39.9042, longitude: 116.4074, color: '#8b5cf6', size: 6, label: 'Pékin' },
+    { id: 'abidjan', latitude: 5.3600, longitude: -4.0083, color: '#f59e0b', size: 6, label: 'Abidjan' },
+    { id: 'rabat', latitude: 33.9716, longitude: -6.8498, color: '#f59e0b', size: 5, label: 'Rabat' },
+    { id: 'riyadh', latitude: 24.7136, longitude: 46.6753, color: '#8b5cf6', size: 5, label: 'Riyad' },
+    { id: 'brasilia', latitude: -15.7975, longitude: -47.8919, color: '#10b981', size: 5, label: 'Brasília' },
+    { id: 'tokyo', latitude: 35.6762, longitude: 139.6503, color: '#8b5cf6', size: 5, label: 'Tokyo' },
+    { id: 'addis', latitude: 9.0250, longitude: 38.7469, color: '#f59e0b', size: 5, label: 'Addis-Abeba' },
+  ],
+};
+
+// Map choroplèthe - Diaspora par pays
+const diasporaCountries: Record<string, number> = {
+  FRA: 120000, ITA: 95000, ESP: 65000, USA: 45000, GMB: 30000,
+  MRT: 25000, CIV: 40000, GIN: 20000, MLI: 18000, GBR: 15000,
+  BEL: 12000, DEU: 10000, CHN: 8000, BRA: 7000, CAN: 9000,
+  MAR: 11000, SAU: 6000, ARE: 5000, JPN: 3000, TUR: 4000,
+};
+
+const maxDiaspora = Math.max(...Object.values(diasporaCountries));
+
+const diasporaAreaColor = (d: any) => {
+  const count = diasporaCountries[d.id];
+  if (!count) return 'var(--ui-bg-elevated)';
+  const intensity = Math.round((count / maxDiaspora) * 255);
+  return `rgb(${255 - intensity}, ${255 - Math.round(intensity * 0.6)}, ${255 - Math.round(intensity * 0.2)})`;
+};
+
+const topoMapAreasData = {
+  areas: Object.entries(diasporaCountries).map(([id, count]) => ({
+    id,
+    count,
+    name: id,
+  })),
+};
+
+// Map avec liens - Flux migratoires
+const topoMapLinksData = {
+  points: [
+    { id: 'dakar', latitude: 14.6928, longitude: -17.4467, color: '#ef4444', size: 8 },
+    { id: 'paris', latitude: 48.8566, longitude: 2.3522, color: '#3b82f6', size: 6 },
+    { id: 'milan', latitude: 45.4642, longitude: 9.1900, color: '#3b82f6', size: 6 },
+    { id: 'madrid', latitude: 40.4168, longitude: -3.7038, color: '#3b82f6', size: 5 },
+    { id: 'nyc', latitude: 40.7128, longitude: -74.0060, color: '#3b82f6', size: 5 },
+    { id: 'abidjan', latitude: 5.3600, longitude: -4.0083, color: '#f59e0b', size: 5 },
+    { id: 'montreal', latitude: 45.5017, longitude: -73.5673, color: '#10b981', size: 4 },
+    { id: 'brussels', latitude: 50.8503, longitude: 4.3517, color: '#10b981', size: 4 },
+  ],
+  links: [
+    { source: 'dakar', target: 'paris' },
+    { source: 'dakar', target: 'milan' },
+    { source: 'dakar', target: 'madrid' },
+    { source: 'dakar', target: 'nyc' },
+    { source: 'dakar', target: 'abidjan' },
+    { source: 'dakar', target: 'montreal' },
+    { source: 'dakar', target: 'brussels' },
+  ],
 };
 
 // ===== SEMI-CIRCLE GAUGE ARC CALCULATION =====
