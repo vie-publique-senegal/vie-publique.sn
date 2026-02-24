@@ -29,7 +29,7 @@ export function useNavigationCards() {
       icon: 'i-heroicons-book-open',
       to: '/annuaires',
       count: 89,
-      display: true,
+      display: false,
     },
     {
       title: 'Assemblée',
@@ -53,7 +53,7 @@ export function useNavigationCards() {
       icon: 'i-heroicons-briefcase',
       to: '/conseil-des-ministres',
       count: 54,
-      display: false,
+      display: true,
     },
     {
       title: 'Budget',
@@ -68,7 +68,7 @@ export function useNavigationCards() {
       description: 'Scrutins, Listes, Résultats',
       icon: 'i-heroicons-user-group',
       to: '/elections-senegal',
-      display: true,
+      display: false,
     },
   ];
 

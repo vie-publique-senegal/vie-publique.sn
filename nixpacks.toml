@@ -1,15 +1,24 @@
 # Nixpacks configuration for Coolify deployment
 # See: https://nixpacks.com/docs/configuration/file
 
+[variables]
+NODE_ENV = "production"
+HOST = "0.0.0.0"
+PORT = "3000"
+# Ensure npm installs all deps including devDependencies needed for build
+NPM_CONFIG_PRODUCTION = "false"
+
+[phases.setup]
+# Install apt packages needed for sharp (@nuxt/image) and healthcheck
+aptPkgs = ["curl", "wget"]
+
 [phases.install]
 cmds = ["npm ci"]
 
 [phases.build]
-# timeout force-kills nuxt build if it hangs after "Build complete!"
-# (known issue: open handles from PWA/Firebase prevent Node.js from exiting)
-# The fallback "test -d .output/server" ensures success if build output exists
-cmds = ["timeout --signal=KILL 300 npm run build || test -d .output/server"]
+# Build completes normally - nuxt.config.ts close hook handles process.exit()
+cmds = ["npm run build"]
 
 [start]
-# HOST=0.0.0.0 ensures Nitro listens on all interfaces (required in Docker)
-cmd = "HOST=0.0.0.0 node .output/server/index.mjs"
+# Start directly with node for faster and more reliable startup
+cmd = "node .output/server/index.mjs"

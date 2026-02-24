@@ -4,11 +4,13 @@
  *
  * Query params:
  * - type (optionnel) : Filtrer par type de document
+ * - family (optionnel) : Filtrer par famille de documents
  */
 export default defineCachedEventHandler(
   async (event) => {
     const query = getQuery(event);
     const type = query.type as string;
+    const family = query.family as string;
 
     try {
       const config = useRuntimeConfig();
@@ -21,6 +23,10 @@ export default defineCachedEventHandler(
 
       if (type && type !== 'all') {
         params.append('filter[type][_eq]', type);
+      }
+
+      if (family && family !== 'all') {
+        params.append('filter[family][_eq]', family);
       }
 
       const response = await $fetch<{ data: any[] }>(
@@ -50,11 +56,11 @@ export default defineCachedEventHandler(
     }
   },
   {
-    maxAge: 60 * 60 * 6, // 6 heures
+    maxAge: 60 * 5 * 1, // 5 minutes
     name: 'documents-years',
     getKey: (event) => {
       const query = getQuery(event);
-      return `documents-years-${query.type || 'all'}`;
+      return `documents-years-${query.type || 'all'}-${query.family || 'all'}`;
     },
   },
 );

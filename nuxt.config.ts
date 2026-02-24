@@ -92,6 +92,17 @@ const securityConfig =
       };
 
 export default defineNuxtConfig({
+  // Force process exit after build to prevent hanging due to open handles
+  // (Firebase, Typesense, PWA service worker keep Node.js alive)
+  hooks: {
+    close: () => {
+      setTimeout(() => {
+        console.log('\n[build] Forcing process exit (open handles detected)');
+        process.exit(0);
+      }, 5000);
+    },
+  },
+
   future: {
     compatibilityVersion: 4,
   },
@@ -142,7 +153,7 @@ export default defineNuxtConfig({
       headers: { 'cache-control': 'no-cache' },
     },
     // Redirections SEO
-    '/budget': { redirect: { to: '/budget-senegal', statusCode: 301 }, prerender: true },
+    '/budget/**': { redirect: { to: '/budget-senegal', statusCode: 301 }, prerender: true },
     '/publications/**': { redirect: { to: '/actualites', statusCode: 301 }, prerender: true },
     // Redirections des anciennes URLs anglaises vers françaises
     '/about/privacy': { redirect: '/a-propos/confidentialite', prerender: true },

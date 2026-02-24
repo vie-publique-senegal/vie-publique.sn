@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { DOC_TYPE_LABELS, AUDIT_INSTITUTIONS } from '~~/types/document';
+import { DOC_TYPE_LABELS, DOC_FAMILY_LABELS, AUDIT_INSTITUTIONS } from '~~/types/document';
 
 const router = useRouter();
 
@@ -26,14 +26,19 @@ const {
   setSortBy,
   setFilterValue,
   setAuditInstitutionFilter,
+  familyFilter,
+  setFamilyFilter,
   hasActiveFilters,
   resetFilters,
 } = useDocuments({
   limit: 20,
 });
 
-// Types dynamiques depuis le composable
-const { types: availableTypes, loading: typesLoading } = useAvailableTypes();
+// Types dynamiques depuis le composable (filtrés par famille sélectionnée)
+const { types: availableTypes, loading: typesLoading } = useAvailableTypes(familyFilter);
+
+// Familles dynamiques depuis le composable
+const { families: availableFamilies, loading: familiesLoading } = useAvailableDocumentFamilies();
 
 const typeOptions = computed(() => {
   const options = [{ label: 'Tous les types', value: 'all' }];
@@ -44,9 +49,19 @@ const typeOptions = computed(() => {
   return options;
 });
 
-// Années dynamiques depuis l'API (filtrées par type sélectionné)
+const familyOptions = computed(() => {
+  const options = [{ label: 'Toutes les catégories', value: 'all' }];
+  for (const f of availableFamilies.value) {
+    const label = DOC_FAMILY_LABELS[f.family] || f.family;
+    options.push({ label: `${label} (${f.count})`, value: f.family });
+  }
+  return options;
+});
+
+// Années dynamiques depuis l'API (filtrées par type et famille sélectionnés)
 const { years: availableYears, loading: yearsLoading } = useAvailableYears(
   computed(() => (filterValue.value && filterValue.value !== 'all' ? filterValue.value : '')),
+  familyFilter,
 );
 
 const yearOptions = computed(() => {
@@ -96,6 +111,17 @@ const selectedYearUI = computed({
   },
 });
 
+const selectedFamilyUI = computed({
+  get: () => familyFilter.value || 'all',
+  set: (value) => {
+    setFamilyFilter(value);
+    // Réinitialiser type et année quand on change de famille
+    setFilterValue('all');
+    yearFilter.value = 'all';
+    setAuditInstitutionFilter('');
+  },
+});
+
 const sortByUI = computed({
   get: () => sortBy.value,
   set: (value) => {
@@ -138,8 +164,7 @@ const seoTitle = computed(() => {
 
 const seoDescription = computed(() => {
   if (activeTypeLabel.value) {
-    const year =
-      yearFilter.value && yearFilter.value !== 'all' ? ` de ${yearFilter.value}` : '';
+    const year = yearFilter.value && yearFilter.value !== 'all' ? ` de ${yearFilter.value}` : '';
     return `Consultez les ${activeTypeLabel.value.toLowerCase()}${year} du Sénégal. Accédez aux documents officiels en toute transparence.`;
   }
   return "Accédez à l'ensemble des documents officiels du Sénégal : Journal officiel, rapports d'audit, codes généraux, lois, décrets et stratégies nationales.";
@@ -147,9 +172,7 @@ const seoDescription = computed(() => {
 
 useHead({
   title: seoTitle,
-  meta: [
-    { name: 'description', content: seoDescription },
-  ],
+  meta: [{ name: 'description', content: seoDescription }],
 });
 
 useSeoMeta({
@@ -163,31 +186,29 @@ const handleReset = () => {
   resetFilters();
   yearFilter.value = 'all';
   setAuditInstitutionFilter('');
+  setFamilyFilter('all');
 };
 </script>
 
 <template>
   <div class="container mx-auto min-h-screen px-4 py-4 pb-16">
-    <AppBreadcrumb :items="[
-      { label: 'Documents', to: '/documents' },
-      { label: 'Tous les documents' }
-    ]" />
+    <AppBreadcrumb
+      :items="[{ label: 'Documents', to: '/documents' }, { label: 'Tous les documents' }]"
+    />
 
     <!-- En-tête -->
     <div class="mb-4">
       <h1 class="text-2xl font-bold text-gray-900 md:text-3xl dark:text-white">
         Documents publics du Sénégal
       </h1>
-      <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+      <!-- <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
         Journal officiel, lois, décrets, arrêtés, rapports d'audit, codes généraux
-      </p>
+      </p> -->
     </div>
 
     <ClientOnly>
       <!-- Recherche et filtres (sticky) -->
-      <div
-        class="sticky top-0 z-40 -mx-4 space-y-3 bg-white px-4 py-3 shadow-sm dark:bg-gray-900"
-      >
+      <div class="sticky top-0 z-40 -mx-4 space-y-3 bg-white px-4 py-3 shadow-sm dark:bg-gray-900">
         <!-- Barre de recherche -->
         <UInput
           v-model="searchQueryUI"
@@ -211,6 +232,16 @@ const handleReset = () => {
         <!-- Filtres et toggle vue -->
         <div class="flex flex-wrap items-center justify-between gap-3">
           <div class="flex flex-wrap items-center gap-2">
+            <!-- Filtre famille -->
+            <USelect
+              v-model="selectedFamilyUI"
+              :options="familyOptions"
+              option-attribute="label"
+              value-attribute="value"
+              size="sm"
+              :loading="familiesLoading"
+              class="w-auto min-w-[140px]"
+            />
             <!-- Filtre type -->
             <USelect
               v-model="selectedTypeUI"
@@ -374,8 +405,8 @@ const handleReset = () => {
           Impossible de charger les documents
         </h3>
         <p class="mt-1 text-sm text-red-600 dark:text-red-400">
-          Vérifiez votre connexion internet et réessayez. Si le problème persiste,
-          rechargez la page.
+          Vérifiez votre connexion internet et réessayez. Si le problème persiste, rechargez la
+          page.
         </p>
         <div class="mt-4 flex justify-center gap-3">
           <UButton
@@ -435,6 +466,13 @@ const handleReset = () => {
                 class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                 loading="lazy"
               />
+              <img
+                v-else-if="doc.type === 'official_journal'"
+                src="/images/default-journal-officiel.webp"
+                :alt="`Aperçu ${doc.title}`"
+                class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                loading="lazy"
+              />
               <div
                 v-else
                 class="flex h-full w-full items-center justify-center bg-gray-100 dark:bg-gray-700"
@@ -484,6 +522,13 @@ const handleReset = () => {
                 class="h-full w-full object-cover"
                 loading="lazy"
               />
+              <img
+                v-else-if="doc.type === 'official_journal'"
+                src="/images/default-journal-officiel.webp"
+                :alt="doc.title"
+                class="h-full w-full object-cover"
+                loading="lazy"
+              />
               <div v-else class="flex h-full w-full items-center justify-center">
                 <UIcon
                   name="i-heroicons-document-text"
@@ -507,10 +552,7 @@ const handleReset = () => {
             </div>
 
             <!-- Chevron -->
-            <UIcon
-              name="i-heroicons-chevron-right"
-              class="h-5 w-5 flex-shrink-0 text-gray-400"
-            />
+            <UIcon name="i-heroicons-chevron-right" class="h-5 w-5 flex-shrink-0 text-gray-400" />
           </NuxtLink>
         </div>
 
