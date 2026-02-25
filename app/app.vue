@@ -71,48 +71,64 @@ const links = [
 onMounted(() => {
   if (!import.meta.client || !('serviceWorker' in navigator)) return;
 
-  // Service Worker update handling (production only)
-  if (config.public.nodeEnv === 'test') {
-    navigator.serviceWorker.addEventListener('controllerchange', () => {});
-
-    navigator.serviceWorker.ready.then((registration) => {
-      if (registration.waiting) {
-        toast('Nouvelle version trouvée. Actualiser pour mettre à jour.', {
-          action: {
-            label: 'Recharger',
-            onClick: () => location.reload(),
-          },
-        });
-      }
-
-      registration.addEventListener('updatefound', () => {
-        const newWorker = registration.installing;
-        if (newWorker) {
-          newWorker.addEventListener('statechange', () => {
-            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-              toast('Nouvelle version trouvée. Actualiser pour mettre à jour.', {
-                action: {
-                  label: 'Recharger',
-                  onClick: () => location.reload(),
-                },
-              });
-            }
-          });
-        }
-      });
-    });
-  }
-
   // Initialize push notification state (synchronous, no SW needed)
   initState();
 
   // Setup foreground handler (waits for SW internally via async initMessaging)
   setupForegroundHandler();
 
-  // Listen for push subscription changes from service worker (P15)
+  // Protection anti-boucle de reload : max 1 reload automatique toutes les 10s
+  const RELOAD_GUARD_KEY = 'vpsn-last-reload';
+  const canAutoReload = () => {
+    const last = sessionStorage.getItem(RELOAD_GUARD_KEY);
+    if (last && Date.now() - Number(last) < 10_000) return false;
+    sessionStorage.setItem(RELOAD_GUARD_KEY, String(Date.now()));
+    return true;
+  };
+
+  // Handle chunk loading errors (404 after deployment) — force reload avec garde
+  window.addEventListener('error', (event) => {
+    if (event.message?.includes('Loading chunk') ||
+        event.message?.includes('Failed to fetch dynamically imported module') ||
+        event.message?.includes('Importing a module script failed')) {
+      console.warn('[PWA] Chunk loading failed');
+      if (canAutoReload()) {
+        window.location.reload();
+      }
+    }
+  });
+
+  // Also catch unhandled promise rejections for dynamic imports
+  window.addEventListener('unhandledrejection', (event) => {
+    const reason = event.reason?.message || String(event.reason);
+    if (reason?.includes('Failed to fetch dynamically imported module') ||
+        reason?.includes('Importing a module script failed') ||
+        reason?.includes('Loading chunk')) {
+      console.warn('[PWA] Dynamic import failed');
+      event.preventDefault();
+      if (canAutoReload()) {
+        window.location.reload();
+      }
+    }
+  });
+
+  // Listen for service worker messages
   navigator.serviceWorker.addEventListener('message', (event) => {
+    // Push subscription changed (P15)
     if (event.data?.type === 'PUSH_SUBSCRIPTION_CHANGED') {
       validateAndRefreshToken();
+    }
+    // SW mis à jour après déploiement — notifier l'utilisateur au lieu de forcer un reload
+    // Le reload immédiat peut afficher un 500 si le serveur est encore en cours de déploiement
+    if (event.data?.type === 'SW_UPDATED') {
+      toast('Mise à jour disponible', {
+        description: 'Une nouvelle version est disponible.',
+        action: {
+          label: 'Rafraîchir',
+          onClick: () => window.location.reload(),
+        },
+        duration: 30_000,
+      });
     }
   });
 });

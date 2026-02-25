@@ -4,63 +4,115 @@ import {
   cleanupOutdatedCaches,
   precacheAndRoute,
 } from "workbox-precaching";
-import { NavigationRoute, registerRoute } from "workbox-routing";
+import { NavigationRoute, registerRoute, setCatchHandler } from "workbox-routing";
 import { NetworkFirst, CacheFirst, StaleWhileRevalidate } from "workbox-strategies";
 import { CacheableResponsePlugin } from "workbox-cacheable-response";
 import { ExpirationPlugin } from "workbox-expiration";
 
 declare let self: ServiceWorkerGlobalScope;
 
-const WORKBOX_CACHES = [
-  'html-cache',
-  'vpsn-webmanifest',
-  'api-cache',
-  'images-cache',
-  'cms-assets-images',
-  'workbox-precache',
-  'google-fonts',
-  'static-assets',
-  'pages-cache',
-];
+// Noms des caches connus — utilisés pour le nettoyage à l'activation
+const CACHE_NAMES = {
+  HTML: 'html-cache',
+  MANIFEST: 'vpsn-webmanifest',
+  API: 'api-cache',
+  IMAGES: 'images-cache',
+  CMS_ASSETS: 'cms-assets-images',
+  FONTS: 'google-fonts',
+  STATIC: 'static-assets',
+} as const;
 
-// Routes principales à précacher pour un accès offline
-const CRITICAL_ROUTES = [
-  '/',
-  '/actualites',
-  '/budget-senegal',
-  '/assemblee-nationale',
-  '/documents',
-  '/gouvernement',
-];
+const KNOWN_CACHES = new Set(Object.values(CACHE_NAMES));
+
+// Page offline inline — servie quand réseau ET cache échouent
+const OFFLINE_HTML = `<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hors ligne — Vie Publique Sénégal</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: system-ui, -apple-system, sans-serif; background: #f9fafb; color: #111827; display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 1.5rem; }
+    .card { background: white; border-radius: 1rem; padding: 2.5rem; max-width: 420px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+    .icon { font-size: 3rem; margin-bottom: 1rem; }
+    h1 { font-size: 1.25rem; margin-bottom: 0.75rem; }
+    p { color: #6b7280; margin-bottom: 1.5rem; line-height: 1.5; font-size: 0.95rem; }
+    button { background: #047857; color: white; border: none; padding: 0.75rem 2rem; border-radius: 0.5rem; font-size: 1rem; cursor: pointer; transition: background 0.2s; }
+    button:active { background: #065f46; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon">📡</div>
+    <h1>Connexion indisponible</h1>
+    <p>Impossible de charger la page. Vérifiez votre connexion internet ou réessayez dans quelques instants.</p>
+    <button onclick="location.reload()">Réessayer</button>
+  </div>
+</body>
+</html>`;
 
 // self.__WB_MANIFEST est le point d'injection par défaut
-const entries = self.__WB_MANIFEST;
+precacheAndRoute(self.__WB_MANIFEST);
 
-// Assurer que la route racine est incluse dans le précache
-const rootEntry = { url: '/', revision: null };
-const hasRoot = entries.some(entry =>
-  typeof entry === 'string' ? entry === '/' : entry.url === '/'
-);
-if (!hasRoot) {
-  entries.push(rootEntry);
-}
-
-// Précacher les routes essentielles
-precacheAndRoute(entries);
-
-// Nettoyer les anciens caches
+// Nettoyer les anciens caches de workbox-precache (supprime les entrées périmées)
 cleanupOutdatedCaches();
 
-// Définir les routes à mettre en cache (toutes les routes)
-const allowlist: RegExp[] = [/.*/];
+// Force le nouveau SW à prendre le contrôle immédiatement
+// Crucial pour les déploiements : tous les utilisateurs reçoivent les nouveaux assets
+self.addEventListener('install', (event) => {
+  event.waitUntil(self.skipWaiting());
+});
 
-// Configuration pour le offline
+// Configuration des routes en production uniquement
 if (import.meta.env.PROD) {
+  // Plugin custom : quand le serveur renvoie une erreur (4xx/5xx) sur une navigation,
+  // on tente de servir la version en cache plutôt que l'erreur brute.
+  // Cela protège les utilisateurs PWA pendant les déploiements ou les pannes temporaires.
+  const navigationErrorFallbackPlugin = {
+    fetchDidSucceed: async ({ request, response }: { request: Request; response: Response }) => {
+      // Laisser passer les réponses OK
+      if (response.ok) return response;
+
+      // Seulement pour les navigations (pages HTML)
+      if (request.mode !== 'navigate') return response;
+
+      console.warn(`[SW] Serveur a renvoyé ${response.status} pour ${request.url}`);
+
+      try {
+        const cache = await caches.open(CACHE_NAMES.HTML);
+
+        // Essayer la même URL (ignoreSearch pour gérer les query params UTM de la PWA)
+        const cached = await cache.match(request, { ignoreSearch: true });
+        if (cached) {
+          console.log('[SW] Fallback : page cachée servie');
+          return cached;
+        }
+
+        // Essayer la racine comme dernier recours (couvre start_url avec params)
+        const root = await cache.match(new Request('/'));
+        if (root) {
+          console.log('[SW] Fallback : page racine cachée servie');
+          return root;
+        }
+      } catch (err) {
+        console.error('[SW] Erreur fallback cache:', err);
+      }
+
+      // Aucun cache disponible — retourner une page d'erreur propre au lieu du 500 brut
+      return new Response(OFFLINE_HTML, {
+        status: 503,
+        statusText: 'Service Unavailable',
+        headers: { 'Content-Type': 'text/html; charset=utf-8' },
+      });
+    },
+  };
+
   // Cache du manifest
   registerRoute(
     ({ request, sameOrigin }) => sameOrigin && request.destination === 'manifest',
     new NetworkFirst({
-      cacheName: 'vpsn-webmanifest',
+      cacheName: CACHE_NAMES.MANIFEST,
       plugins: [
         new CacheableResponsePlugin({ statuses: [200] }),
         new ExpirationPlugin({ maxEntries: 100 }),
@@ -68,13 +120,13 @@ if (import.meta.env.PROD) {
     })
   );
 
-  // Cache des API avec timeout - étendu pour plus de routes
+  // Cache des API avec timeout
   registerRoute(
     ({ url }) =>
       url.pathname.startsWith('/items/') ||
       (url.pathname.startsWith('/api/') && !url.pathname.includes('sitemap')),
     new NetworkFirst({
-      cacheName: 'api-cache',
+      cacheName: CACHE_NAMES.API,
       plugins: [
         new CacheableResponsePlugin({ statuses: [200] }),
         new ExpirationPlugin({ maxEntries: 150, maxAgeSeconds: 3600 }),
@@ -83,28 +135,11 @@ if (import.meta.env.PROD) {
     })
   );
 
-  // Cache des pages principales (pour accès offline rapide)
-  registerRoute(
-    ({ url, request }) =>
-      request.destination === 'document' &&
-      CRITICAL_ROUTES.some(route => url.pathname === route || url.pathname.startsWith(route + '/')),
-    new StaleWhileRevalidate({
-      cacheName: 'pages-cache',
-      plugins: [
-        new CacheableResponsePlugin({ statuses: [200] }),
-        new ExpirationPlugin({
-          maxEntries: 50,
-          maxAgeSeconds: 24 * 60 * 60, // 24 heures
-        }),
-      ],
-    })
-  );
-
   // Cache des images locales
   registerRoute(
     ({ request }) => request.destination === 'image',
     new CacheFirst({
-      cacheName: 'images-cache',
+      cacheName: CACHE_NAMES.IMAGES,
       plugins: [
         new CacheableResponsePlugin({ statuses: [200] }),
         new ExpirationPlugin({
@@ -115,30 +150,33 @@ if (import.meta.env.PROD) {
     })
   );
 
-  // Cache des assets statiques (JS, CSS)
+  // Assets statiques (JS, CSS) — CacheFirst car hashés par Nuxt (/_nuxt/BxOFP-3D.js)
+  // Le hash = la version. Même URL = même contenu, pour toujours.
+  // Cache HIT → sert en < 1ms. Cache MISS (nouveau hash après déploiement) → réseau → cache.
+  // C'est la stratégie correcte pour les fichiers immuables : pas de requête réseau inutile.
   registerRoute(
     ({ request }) =>
       request.destination === 'script' ||
       request.destination === 'style',
-    new StaleWhileRevalidate({
-      cacheName: 'static-assets',
+    new CacheFirst({
+      cacheName: CACHE_NAMES.STATIC,
       plugins: [
         new CacheableResponsePlugin({ statuses: [200] }),
         new ExpirationPlugin({
-          maxEntries: 100,
-          maxAgeSeconds: 7 * 24 * 60 * 60, // 7 jours
+          maxEntries: 200,
+          maxAgeSeconds: 30 * 24 * 60 * 60, // 30 jours — assets hashés, jamais périmés
         }),
       ],
     })
   );
 
-  // Cache des assets du CMS (images et médias)
+  // Cache des assets du CMS (images et médias externes)
   registerRoute(
     ({ url }) =>
       url.origin === 'https://cms.vie-publique.sn' &&
       url.pathname.startsWith('/assets'),
     new StaleWhileRevalidate({
-      cacheName: 'cms-assets-images',
+      cacheName: CACHE_NAMES.CMS_ASSETS,
       plugins: [
         new CacheableResponsePlugin({ statuses: [200] }),
         new ExpirationPlugin({
@@ -150,33 +188,48 @@ if (import.meta.env.PROD) {
   );
 
   // Cache des assets via proxy local (/cms/ et /medias/)
+  // IMPORTANT : exclure les navigations (request.mode === 'navigate')
+  // sinon les pages Nuxt /medias/* seraient cachées avec CacheFirst au lieu de NetworkFirst.
+  // Les images CMS sont déjà capturées par la route images (destination: 'image') plus haut.
+  // Cette route ne capture donc que les fichiers non-image : PDFs, docs, vidéos, etc.
+  // → NetworkFirst pour éviter de stocker des Go de PDFs en cache.
   registerRoute(
-    ({ url }) =>
-      url.pathname.startsWith('/cms/') ||
-      url.pathname.startsWith('/medias/'),
-    new CacheFirst({
-      cacheName: 'cms-assets-images',
+    ({ url, request }) =>
+      request.mode !== 'navigate' &&
+      request.destination !== 'image' &&
+      (url.pathname.startsWith('/cms/') ||
+       url.pathname.startsWith('/medias/')),
+    new NetworkFirst({
+      cacheName: CACHE_NAMES.CMS_ASSETS,
       plugins: [
         new CacheableResponsePlugin({ statuses: [200] }),
         new ExpirationPlugin({
-          maxEntries: 250,
-          maxAgeSeconds: 30 * 24 * 60 * 60, // 30 jours
+          maxEntries: 50,
+          maxAgeSeconds: 7 * 24 * 60 * 60, // 7 jours — les docs changent plus souvent
         }),
       ],
+      networkTimeoutSeconds: 10, // Timeout généreux pour les gros fichiers
     })
   );
 
-  // Navigation principale avec fallback
+  // Navigation principale — NetworkFirst avec fallback intelligent
+  // Le plugin navigationErrorFallbackPlugin intercepte les erreurs serveur (4xx/5xx)
+  // et sert la version cachée au lieu d'afficher l'erreur brute à l'utilisateur.
   registerRoute(
     new NavigationRoute(
       new NetworkFirst({
-        cacheName: 'html-cache',
+        cacheName: CACHE_NAMES.HTML,
         plugins: [
+          navigationErrorFallbackPlugin,
           new CacheableResponsePlugin({ statuses: [200] }),
+          new ExpirationPlugin({
+            maxEntries: 50,
+            maxAgeSeconds: 24 * 60 * 60, // 24h max pour le HTML
+          }),
         ],
-        networkTimeoutSeconds: 3,
+        networkTimeoutSeconds: 8,
       }),
-      { allowlist }
+      { allowlist: [/.*/] }
     )
   );
 
@@ -184,7 +237,7 @@ if (import.meta.env.PROD) {
   registerRoute(
     ({url}) => url.host.startsWith('fonts.g'),
     new CacheFirst({
-      cacheName: 'google-fonts',
+      cacheName: CACHE_NAMES.FONTS,
       plugins: [
         new ExpirationPlugin({
           maxEntries: 30,
@@ -210,30 +263,55 @@ if (import.meta.env.PROD) {
       ],
     })
   );
+
+  // Handler global de dernier recours — quand réseau ET cache échouent totalement
+  setCatchHandler(async ({ request }) => {
+    if (request.destination === 'document') {
+      return new Response(OFFLINE_HTML, {
+        status: 503,
+        statusText: 'Service Unavailable',
+        headers: { 'Content-Type': 'text/html; charset=utf-8' },
+      });
+    }
+    return Response.error();
+  });
 }
 
-// Gestion des mises à jour
+// Nettoyage à l'activation — supprimer UNIQUEMENT les caches inconnus (anciens SW)
+// IMPORTANT : On ne purge PAS html-cache ni static-assets.
+// NetworkFirst garantit la fraîcheur quand le serveur est disponible.
+// Les caches servent de filet de sécurité pendant les déploiements :
+// si le serveur renvoie 500, l'utilisateur voit la dernière version fonctionnelle
+// plutôt qu'une page d'erreur.
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then(cacheNames => Promise.all(
-      cacheNames.map(cacheName => {
-        if (!WORKBOX_CACHES.includes(cacheName)) {
-          return caches.delete(cacheName);
-        }
+    caches.keys()
+      .then(cacheNames =>
+        Promise.all(
+          cacheNames
+            .filter(name => !KNOWN_CACHES.has(name) && !name.startsWith('workbox-precache'))
+            .map(name => {
+              console.log(`[SW] Purge ancien cache inconnu : ${name}`);
+              return caches.delete(name);
+            })
+        )
+      )
+      .then(() => self.clients.claim())
+      .then(() => {
+        // Notifier les clients qu'une mise à jour est active
+        self.clients.matchAll({ type: 'window' }).then(clients => {
+          clients.forEach(client => {
+            client.postMessage({ type: 'SW_UPDATED' });
+          });
+        });
       })
-    )).then(() => self.clients.claim())
   );
 });
 
-// Communication avec le client
+// Communication avec le client — gestion propre du skipWaiting
 self.addEventListener('message', (event) => {
   if (event.data === 'skipWaiting') {
     self.skipWaiting();
-    self.clients.claim().then(() => {
-      self.clients.matchAll().then(clients => {
-        Array.from(clients).forEach(client => client.postMessage('reload'));
-      });
-    });
   }
 });
 
