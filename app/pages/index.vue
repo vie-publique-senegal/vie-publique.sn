@@ -184,6 +184,9 @@ const { navigationCards } = useNavigationCards();
 
     <div class="">
       <div class="my-8">
+        <HomeMobileAppHighlight />
+      </div>
+      <div class="my-8">
         <HomeLatestDocuments />
       </div>
       <div class="my-8">
