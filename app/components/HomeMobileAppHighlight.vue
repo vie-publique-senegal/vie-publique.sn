@@ -1,64 +1,63 @@
 <template>
-  <div class="relative overflow-hidden rounded-3xl bg-gray-100 p-8 dark:bg-gray-800 sm:p-12">
-    <div
-      class="relative flex flex-col items-center gap-10 lg:flex-row lg:justify-between lg:gap-20"
-    >
-      <div class="flex-1 space-y-8 text-center lg:text-left">
+  <UCard :ui="{ body: { padding: 'p-4 sm:p-6' } }" class="relative overflow-hidden border-0 bg-white shadow-sm rounded-lg dark:bg-gray-700">
+    <div class="relative flex flex-col lg:flex-row lg:items-end">
+      <!-- Texte + boutons -->
+      <div class="flex-1 space-y-6 text-center lg:text-left">
         <div
-          class="inline-flex items-center gap-2 rounded-full bg-blue-100 px-4 py-1.5 text-sm font-semibold text-blue-700 transition-all hover:bg-blue-200 dark:bg-blue-900/40 dark:text-blue-300 dark:hover:bg-blue-800/60"
+          class="inline-flex items-center gap-2 rounded-full bg-blue-100 px-4 py-1.5 text-sm font-semibold text-blue-700 dark:bg-white/10 dark:text-white/80"
         >
           <UIcon name="i-heroicons-device-phone-mobile" class="h-4 w-4" />
           Disponible sur iOS et Android
         </div>
 
-        <div class="min-h-[140px] sm:min-h-0">
-          <h2
-            class="text-3xl font-bold leading-tight tracking-tight text-gray-900 dark:text-white sm:text-5xl"
-          >
-            Vie Publique <br class="hidden sm:block" />
+        <div>
+          <h2 class="text-3xl font-semibold leading-tight tracking-tight text-gray-900 dark:text-white sm:text-5xl">
+            Vie Publique<br />
             <span class="text-blue-600 dark:text-blue-400">dans votre poche</span>
           </h2>
-          <p class="mx-auto mt-6 max-w-xl text-lg text-gray-600 dark:text-gray-400 lg:mx-0">
+          <p class="mx-auto mt-6 max-w-xl text-base text-gray-600 dark:text-white/60 sm:text-lg lg:mx-0">
             Accédez instantanément à des milliers de documents officiels, actualités, activités
             parlementaires... du Sénégal. Une expérience optimisée, même hors-ligne.
           </p>
         </div>
 
-        <div class="flex flex-col items-center justify-center gap-6 sm:flex-row lg:justify-start">
-          <UButton
-            to="https://onelink.to/a3jrac"
+        <!-- Badges stores -->
+        <div class="flex flex-col items-center gap-3 sm:flex-row lg:justify-start">
+          <a
+            href="https://apps.apple.com/ai/app/vie-publique-sénégal/id6757257552"
             target="_blank"
-            size="xl"
-            color="primary"
-            class="group w-full justify-center rounded-full px-5 py-4 shadow-xl hover:shadow-2xl sm:w-auto sm:px-10"
+            rel="noopener noreferrer"
+            class="transition-transform hover:opacity-90 active:scale-95"
           >
-            <template #leading>
-              <UIcon name="i-heroicons-arrow-down-tray" class="h-5 w-5 sm:h-6 sm:w-6" />
-            </template>
-            Installer l'application
-          </UButton>
+            <img
+              src="/images/app-store-badge.svg"
+              alt="Télécharger sur l'App Store"
+              class="h-12 w-auto sm:h-14"
+            />
+          </a>
+          <a
+            href="https://play.google.com/store/apps/details?id=sn.viepublique.app"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="transition-transform hover:opacity-90 active:scale-95"
+          >
+            <img
+              src="/images/google-play-badge.png"
+              alt="Disponible sur Google Play"
+              class="h-12 w-auto sm:h-14"
+            />
+          </a>
         </div>
       </div>
 
-      <div class="group relative flex-shrink-0 lg:mr-8">
-        <div
-          class="relative overflow-hidden rounded-[2rem] border border-white bg-white p-6 shadow-2xl dark:border-gray-700 dark:bg-gray-800"
-        >
-          <img
-            src="/images/onelink_to_a3jrac.svg"
-            alt="QR Code Application Vie Publique Sénégal"
-            class="h-44 w-44 transition-opacity duration-300 sm:h-52 sm:w-52"
-          />
-
-          <div class="mt-4 text-center">
-            <span
-              class="text-[11px] font-bold uppercase tracking-[0.2em] text-gray-400 dark:text-gray-500"
-            >
-              Scannez le code
-            </span>
-          </div>
-        </div>
+      <!-- Image du téléphone -->
+      <div class="hidden items-end justify-center lg:flex lg:w-auto">
+        <img
+          src="/images/homepage.png"
+          alt="Application Vie Publique Sénégal"
+          class="h-auto w-auto object-contain drop-shadow-2xl lg:h-[380px]"
+        />
       </div>
     </div>
-  </div>
+  </UCard>
 </template>

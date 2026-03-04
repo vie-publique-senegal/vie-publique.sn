@@ -125,11 +125,6 @@ onMounted(() => {
     <!-- Header consolidé avec navigation -->
     <AppHeader :links="links" />
 
-    <!-- Banner mobile App -->
-    <ClientOnly>
-      <AppMobileAppBanner />
-    </ClientOnly>
-
     <!-- App alert online and offline -->
     <ClientOnly>
       <AppLineAlert />

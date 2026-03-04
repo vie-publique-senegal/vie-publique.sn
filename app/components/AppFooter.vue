@@ -52,6 +52,34 @@ const links = [
 <template>
   <div class="mt-5 h-px w-full bg-gray-200 dark:bg-gray-800"></div>
 
+  <!-- Badges stores -->
+  <div class="flex flex-wrap items-center justify-center gap-3 py-5">
+    <a
+      href="https://apps.apple.com/ai/app/vie-publique-sénégal/id6757257552"
+      target="_blank"
+      rel="noopener noreferrer"
+      class="transition-transform hover:opacity-80 active:scale-95"
+    >
+      <img
+        src="/images/app-store-badge.svg"
+        alt="Télécharger sur l'App Store"
+        class="h-9 w-auto sm:h-10"
+      />
+    </a>
+    <a
+      href="https://play.google.com/store/apps/details?id=sn.viepublique.app"
+      target="_blank"
+      rel="noopener noreferrer"
+      class="transition-transform hover:opacity-80 active:scale-95"
+    >
+      <img
+        src="/images/google-play-badge.png"
+        alt="Disponible sur Google Play"
+        class="h-9 w-auto sm:h-10"
+      />
+    </a>
+  </div>
+
   <footer class="relative mx-auto hidden py-8 sm:px-6 md:block lg:px-8 lg:py-4">
     <!-- Social Links Row -->
     <div class="flex items-center justify-center gap-6 pb-4">
