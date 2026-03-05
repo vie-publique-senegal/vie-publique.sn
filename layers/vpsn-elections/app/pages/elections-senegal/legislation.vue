@@ -14,25 +14,37 @@ const currentPage = ref(parseInt((route.query.page as string) || '1'));
 const searchQuery = ref((route.query.q as string) || '');
 const sortBy = ref((route.query.sort as string) || '-publish_date');
 
-const selectedElectionId = computed(() => {
+// Retourne tous les IDs d'élections correspondants au type et/ou à l'année sélectionnés
+const selectedElectionIds = computed(() => {
   if (selectedType.value === 'all' && selectedYear.value === 'all') return null;
   if (!config.value?.elections) return null;
 
-  const matchingElection = config.value.elections.find(e => {
+  // Filtrer pour les élections qui ont des documents
+  const electionsWithDocsIds = new Set(config.value?.election_ids_with_documents || []);
+
+  // Trouver TOUTES les élections correspondantes (pas seulement la première)
+  const matchingElections = config.value.elections.filter(e => {
+    // Ne garder que les élections qui ont des documents
+    if (!electionsWithDocsIds.has(e.id)) return false;
     if (selectedType.value !== 'all' && e.type !== selectedType.value) return false;
     if (selectedYear.value !== 'all' && e.year !== parseInt(selectedYear.value)) return false;
     return true;
   });
 
-  return matchingElection?.id || null;
+  if (matchingElections.length === 0) return null;
+
+  // Retourner les IDs séparés par des virgules
+  return matchingElections.map(e => e.id).join(',');
 });
 
 const { items: documents, loading, pagination } = useCmsCollection<Document>({
   collection: 'documents',
   filters: computed(() => {
-    const filters: any = {};
-    if (selectedElectionId.value) {
-      filters.election_id = selectedElectionId.value;
+    const filters: any = {
+      type: 'election'
+    };
+    if (selectedElectionIds.value) {
+      filters.election_ids = selectedElectionIds.value;
     }
     return filters;
   }),
@@ -148,17 +160,16 @@ useSeoMeta({
 </script>
 
 <template>
-  <div class="min-h-screen pb-20">
+  <div class="min-h-screen pb-16">
     <!-- Header Compact -->
     <div class="bg-white dark:bg-gray-900 border-b dark:border-gray-800 pt-8 pb-6 shadow-sm">
       <div class="container mx-auto px-4 max-w-6xl">
         <!-- Breadcrumb -->
-        <UBreadcrumb
+        <AppBreadcrumb
           class="mb-6"
-          :links="[
-            { label: 'Accueil', to: '/' },
+          :items="[
             { label: 'Élections', to: '/elections-senegal' },
-            { label: 'Législation' },
+            { label: 'Législation' }
           ]"
         />
 
@@ -205,10 +216,18 @@ useSeoMeta({
       </div>
 
       <!-- Results Grid -->
-      <div v-if="loading" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <UCard v-for="n in 6" :key="n" class="animate-pulse rounded-2xl border dark:border-gray-800">
-           <div class="h-32 bg-slate-100 dark:bg-gray-800 rounded-xl"></div>
-        </UCard>
+      <div v-if="loading" class="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4">
+        <div
+          v-for="n in 8"
+          :key="n"
+          class="animate-pulse overflow-hidden rounded-lg bg-gray-200 dark:bg-gray-700"
+        >
+          <div class="aspect-[3/2] bg-gray-300 dark:bg-gray-600" />
+          <div class="space-y-2 p-2 sm:p-3">
+            <div class="h-3 w-3/4 rounded bg-gray-300 dark:bg-gray-600" />
+            <div class="h-2 w-1/2 rounded bg-gray-200 dark:bg-gray-600" />
+          </div>
+        </div>
       </div>
 
       <div v-else-if="documents.length === 0" class="text-center py-32 bg-white dark:bg-gray-900 rounded-[2rem] border-2 border-dashed border-gray-100 dark:border-gray-800">
@@ -226,39 +245,50 @@ useSeoMeta({
       </div>
 
       <div v-else>
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <UCard
+        <div class="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4">
+          <NuxtLink
             v-for="doc in documents"
             :key="doc.id"
-            class="group hover:shadow-xl transition-all duration-300 rounded-2xl border dark:border-gray-800 overflow-hidden flex flex-col"
-            :ui="{ body: { padding: 'p-0' } }"
+            :to="`/documents/${doc.id}/${doc.slug}`"
+            class="group overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm transition-shadow hover:shadow-lg dark:border-gray-700 dark:bg-gray-800"
           >
-            <NuxtLink :to="`/documents/${doc.id}/${doc.slug}`" class="flex flex-col h-full">
-              <div class="p-5 flex-1 space-y-3">
-                <div class="flex items-start justify-between">
-                  <div class="p-2 bg-primary-50 dark:bg-primary-900/10 rounded-lg">
-                    <UIcon name="i-heroicons-document-text" class="h-5 w-5 text-primary-600" />
-                  </div>
-                  <UBadge v-if="doc.publish_date" color="gray" variant="soft" class="text-[9px] uppercase font-bold tracking-widest px-2 py-0.5 rounded-full">
-                    {{ new Date(doc.publish_date).toLocaleDateString('fr-FR', { year: 'numeric' }) }}
-                  </UBadge>
-                </div>
-
-                <h3 class="text-sm font-black text-gray-900 dark:text-white leading-tight line-clamp-2 min-h-[2.5rem] group-hover:text-primary-600 transition-colors uppercase">
-                  {{ doc.title }}
-                </h3>
-
-                <p class="text-[11px] text-gray-500 line-clamp-3 leading-relaxed">
-                  {{ doc.description || 'Aucune description disponible pour ce document.' }}
-                </p>
+            <!-- Image de couverture -->
+            <div class="aspect-[3/2] overflow-hidden bg-gray-100 dark:bg-gray-700">
+              <CmsImage
+                v-if="doc.cover_image"
+                :src="doc.cover_image"
+                :quality="40"
+                :alt="`Aperçu ${doc.title}`"
+                class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                loading="lazy"
+              />
+              <div
+                v-else
+                class="flex h-full w-full items-center justify-center bg-gray-100 dark:bg-gray-700"
+              >
+                <UIcon
+                  name="i-heroicons-document-text"
+                  class="h-8 w-8 text-gray-300 sm:h-10 sm:w-10 dark:text-gray-500"
+                />
               </div>
+            </div>
 
-              <div class="px-5 py-3 border-t dark:border-gray-800 bg-slate-50/50 dark:bg-gray-800/30 flex items-center justify-between">
-                <span class="text-[10px] font-black uppercase text-gray-400">PDF • Officiel</span>
-                <UIcon name="i-heroicons-arrow-down-tray" class="h-4 w-4 text-gray-400 group-hover:text-primary-600" />
-              </div>
-            </NuxtLink>
-          </UCard>
+            <!-- Contenu -->
+            <div class="p-2 sm:p-3">
+              <h3
+                class="line-clamp-2 text-xs font-semibold leading-tight text-gray-900 sm:text-sm dark:text-white"
+              >
+                {{ doc.title }}
+              </h3>
+              <time
+                v-if="doc.publish_date"
+                :datetime="doc.publish_date"
+                class="mt-1 block text-[10px] text-gray-400 sm:text-xs dark:text-gray-500"
+              >
+                {{ new Date(doc.publish_date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }) }}
+              </time>
+            </div>
+          </NuxtLink>
         </div>
 
         <!-- Pagination -->

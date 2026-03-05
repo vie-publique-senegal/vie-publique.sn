@@ -15,7 +15,6 @@ interface GeoData {
   municipality: number;
   population: number;
   id: number;
-  // Support both formats: Position (old) and coordinates (new)
   Position?: {
     type: string;
     coordinates: number[][][];
@@ -50,11 +49,9 @@ interface TransformedRegion {
 }
 
 export function useElectionMapData(electionId?: Ref<string | number | null> | string | number | null) {
-  // État global pour le cache des données (avec clé basée sur electionId)
   const currentElectionId = computed(() => {
     const value = isRef(electionId) ? electionId.value : electionId;
     if (value === null || value === undefined) return null;
-    // Convertir en number si c'est un string
     const numValue = typeof value === 'string' ? parseInt(value) : value;
     return isNaN(numValue) ? null : numValue;
   });
@@ -63,35 +60,27 @@ export function useElectionMapData(electionId?: Ref<string | number | null> | st
   const geoData = useState<GeoData[]>(cacheKey.value, () => []);
   const isGeoDataLoaded = useState<boolean>(`geo-data-loaded-${currentElectionId.value || 'all'}`, () => false);
 
-  // Charger les données géographiques depuis l'API serveur Nuxt
   const loadGeoData = async (forceReload = false) => {
     if (isGeoDataLoaded.value && !forceReload) return geoData.value;
 
     try {
-      // Construire l'URL avec le paramètre election si défini
       const params = new URLSearchParams();
       if (currentElectionId.value) {
         params.set('election', currentElectionId.value.toString());
       }
       const url = `/api/carte${params.toString() ? `?${params.toString()}` : ''}`;
 
-      // Appel via l'API serveur Nuxt (sécurisé, avec cache serveur)
       const response = await $fetch<GeoData[] | { data: GeoData[] }>(url);
 
-      // Stocker les données dans le state
       geoData.value = Array.isArray(response) ? response : (response.data || []);
       isGeoDataLoaded.value = true;
       return geoData.value;
     } catch (error) {
-      console.error(
-        "Erreur lors du chargement des données géographiques:",
-        error,
-      );
+      console.error("Erreur lors du chargement des données géographiques:", error);
       return [];
     }
   };
 
-  // Obtenir les données géographiques
   const getGeoData = async () => {
     if (!isGeoDataLoaded.value) {
       await loadGeoData();
@@ -99,7 +88,6 @@ export function useElectionMapData(electionId?: Ref<string | number | null> | st
     return geoData.value;
   };
 
-  // Recharger les données quand l'élection change
   watch(currentElectionId, async (newId, oldId) => {
     if (newId !== oldId) {
       isGeoDataLoaded.value = false;
@@ -107,25 +95,20 @@ export function useElectionMapData(electionId?: Ref<string | number | null> | st
     }
   });
 
-  // Extraire les coordonnées depuis les différents formats possibles
   const extractCoordinates = (item: GeoData): number[][][] | null => {
-    // Format Position (ancien)
     if (item.Position?.coordinates?.[0]?.length > 0) {
       return item.Position.coordinates;
     }
-    // Format coordinates (nouveau) - objet avec type et coordinates
     if (item.coordinates && typeof item.coordinates === 'object' && 'coordinates' in item.coordinates) {
       const coords = (item.coordinates as { coordinates: number[][][] }).coordinates;
       if (coords?.[0]?.length > 0) return coords;
     }
-    // Format coordinates - tableau direct
     if (Array.isArray(item.coordinates) && item.coordinates[0]?.length > 0) {
       return item.coordinates as number[][][];
     }
     return null;
   };
 
-  // Transformer les coordonnées pour Leaflet
   const transformCoordinates = (geoData: GeoData[]): TransformedRegion[] => {
     return geoData
       .filter((item) => extractCoordinates(item) !== null)
@@ -140,17 +123,12 @@ export function useElectionMapData(electionId?: Ref<string | number | null> | st
           places: item.places,
           municipality: item.municipality,
           population: item.population,
-          coordinates: coords[0].map((coord) => [
-            coord[1],
-            coord[0],
-          ]) as [number, number][], // Inverser lat/lng pour Leaflet
+          coordinates: coords[0].map((coord) => [coord[1], coord[0]]) as [number, number][],
         };
       });
   };
 
-  // Obtenir les statistiques des départements
   const getDepartmentStats = (department?: string) => {
-    // ✅ Utilisation de l'endpoint serveur Nuxt (sécurisé, avec cache serveur)
     const url = "/api/elections/map/department-stats";
     const params = department ? { department } : {};
 
@@ -158,18 +136,15 @@ export function useElectionMapData(electionId?: Ref<string | number | null> | st
       key: department ? `department-stats-${department}` : "departments-stats",
       params,
       transform: (response) => {
-        // Si département spécifique, on retourne directement l'objet
         if (department && response && !Array.isArray(response)) {
           return response;
         }
-        // Sinon on retourne le tableau
         return Array.isArray(response) ? response : response.data;
       },
       server: true,
     });
   };
 
-  // Obtenir les données complètes de la carte
   const getMapData = async () => {
     const [geoDataResult, { data: stats }] = await Promise.all([
       getGeoData(),
@@ -184,15 +159,9 @@ export function useElectionMapData(electionId?: Ref<string | number | null> | st
     }));
   };
 
-  // Cache des couleurs
   const colorCache = new Map();
 
-  // Calculer la couleur d'une région
-  const getRegionColor = (
-    regionId: number,
-    baseHue: number = 150,
-    saturation: number = 0.5,
-  ) => {
+  const getRegionColor = (regionId: number, baseHue: number = 150, saturation: number = 0.5) => {
     const cacheKey = `${regionId}-${baseHue}-${saturation}`;
 
     if (colorCache.has(cacheKey)) {
@@ -207,9 +176,7 @@ export function useElectionMapData(electionId?: Ref<string | number | null> | st
     return color;
   };
 
-  // Fonction pour obtenir les détails d'un département
   const getDepartmentDetails = (department: string) => {
-    // ✅ Utilisation de l'endpoint serveur Nuxt (sécurisé, avec cache serveur)
     const url = `/api/elections/map/department-details/${encodeURIComponent(department)}`;
 
     return useFetch<{ data: PollingStation[] }>(url, {
@@ -219,8 +186,6 @@ export function useElectionMapData(electionId?: Ref<string | number | null> | st
     });
   };
 
-  // Charger les polygones de département (sans filtre élection = entrées département-level)
-  // Pour les élections locales, on a besoin des polygones de département, pas des communes
   const loadDepartmentPolygons = async (): Promise<TransformedRegion[]> => {
     const deptCacheKey = 'department-polygons';
     const cachedPolygons = useState<TransformedRegion[]>(deptCacheKey, () => []);
@@ -231,23 +196,16 @@ export function useElectionMapData(electionId?: Ref<string | number | null> | st
     }
 
     try {
-      // Charger TOUTES les entrées carte (sans filtre élection)
       const response = await $fetch<GeoData[] | { data: GeoData[] }>('/api/carte');
       const allData = Array.isArray(response) ? response : (response.data || []);
 
-      // Filtrer : garder uniquement les entrées d'élections nationales (pas locales)
-      // Les élections nationales ont 1 entrée par département avec les polygones corrects
       const nationalEntries = allData.filter(item => {
-        // Exclure les entrées d'élections locales (qui sont au niveau commune)
         if (item.election?.type === 'locale') return false;
-        // Ignorer les entrées sans coordonnées
         if (!extractCoordinates(item)) return false;
-        // Ignorer les entrées sans nom de département
         if (!item.departement?.trim()) return false;
         return true;
       });
 
-      // Dédupliquer par département (clé normalisée, garder l'entrée avec le plus d'électeurs)
       const deptMap = new Map<string, GeoData>();
       for (const item of nationalEntries) {
         const key = item.departement.trim().toLowerCase();
@@ -270,7 +228,6 @@ export function useElectionMapData(electionId?: Ref<string | number | null> | st
     }
   };
 
-  // Calculer le centroïde d'un ensemble de régions (moyenne de tous les points)
   const calculateCentroid = (regions: TransformedRegion[]): [number, number] => {
     let totalLat = 0;
     let totalLng = 0;
@@ -286,10 +243,9 @@ export function useElectionMapData(electionId?: Ref<string | number | null> | st
 
     return count > 0
       ? [totalLat / count, totalLng / count]
-      : [14.4974, -14.4524]; // Fallback centre Sénégal
+      : [14.4974, -14.4524];
   };
 
-  // Grouper les régions (communes) par département pour les élections locales
   const groupByDepartment = (regions: TransformedRegion[]): DepartmentGroup[] => {
     const deptMap = new Map<string, TransformedRegion[]>();
 
@@ -310,7 +266,6 @@ export function useElectionMapData(electionId?: Ref<string | number | null> | st
       const totalPopulation = municipalities.reduce((s, m) => s + (m.population || 0), 0);
       const centroid = calculateCentroid(municipalities);
 
-      // Couleur unique par département (variation de vert)
       const lightness = 0.35 + (0.3 * colorIndex) / totalDepts;
       const color = hslToHex(150, 0.5, lightness);
       colorIndex++;
@@ -354,14 +309,11 @@ export function useElectionMapData(electionId?: Ref<string | number | null> | st
   };
 }
 
-// Utilitaire pour convertir HSL en Hex
 function hslToHex(h: number, s: number, l: number): string {
   const c = (1 - Math.abs(2 * l - 1)) * s;
   const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
   const m = l - c / 2;
-  let r = 0,
-    g = 0,
-    b = 0;
+  let r = 0, g = 0, b = 0;
 
   if (0 <= h && h < 60) [r, g, b] = [c, x, 0];
   else if (60 <= h && h < 120) [r, g, b] = [x, c, 0];

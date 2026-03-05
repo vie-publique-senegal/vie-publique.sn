@@ -19,7 +19,6 @@ interface UseElectionDataOptions {
 export function useElectionData(options: UseElectionDataOptions = {}) {
   const { electionId } = options;
 
-  // Computed pour obtenir la valeur de l'election ID
   const currentElectionId = computed(() => {
     if (!electionId) return null;
     const value = isRef(electionId) ? electionId.value : electionId;
@@ -27,7 +26,6 @@ export function useElectionData(options: UseElectionDataOptions = {}) {
     return typeof value === 'string' ? value : String(value);
   });
 
-  // Récupération de la liste des départements avec statistiques
   const fetchDepartmentsStats = () => {
     const queryParams = computed(() => {
       const params: Record<string, string> = { groupBy: "department" };
@@ -45,7 +43,6 @@ export function useElectionData(options: UseElectionDataOptions = {}) {
     });
   };
 
-  // Récupération des détails d'un département spécifique
   const fetchDepartmentDetails = (department: string) => {
     const queryParams = computed(() => {
       const params: Record<string, string> = { department };
@@ -63,7 +60,6 @@ export function useElectionData(options: UseElectionDataOptions = {}) {
     });
   };
 
-  // Stats en temps réel pour un département
   const getDepartmentStats = (department: string) => {
     const queryParams = computed(() => {
       const params: Record<string, string> = { department, groupBy: "department" };

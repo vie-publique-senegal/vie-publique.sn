@@ -5,7 +5,7 @@ import { useElectoralDashboard } from '~/composables/elections/dashboard/useElec
 import { useElectoralProfessions } from '~/composables/elections/dashboard/useElectoralProfessions';
 import { useElectoralStatsList } from '~/composables/elections/dashboard/useElectoralStatsList';
 import { useElectionMapDataResult, type TableResultItem } from '~/composables/useElectionMapJsonResult';
-import ElectionResultClassement from '~/components/elections/ElectionResultClassement.vue';
+
 
 /**
  * Dashboard Électoral - Page Détail [Type]/[Année]
@@ -85,8 +85,31 @@ if (process.client) {
         if (found) statsType.value = found.value;
     }
 
+    // Mettre à jour l'URL uniquement quand on est sur l'onglet statistiques
     watch(statsType, (newType) => {
-        router.replace({ query: { ...route.query, stats_type: newType } });
+        if (activeTab.value === 'statistiques') {
+            router.replace({ query: { ...route.query, stats_type: newType } });
+        }
+    });
+
+    // Nettoyer stats_type de l'URL quand on quitte l'onglet statistiques
+    // Nettoyer view de l'URL quand on quitte l'onglet resultats
+    watch(activeTab, (newTab) => {
+        const newQuery = { ...route.query };
+        let shouldReplace = false;
+
+        if (newTab !== 'statistiques' && route.query.stats_type) {
+            delete newQuery.stats_type;
+            shouldReplace = true;
+        }
+        if (newTab !== 'resultats' && route.query.view) {
+            delete newQuery.view;
+            shouldReplace = true;
+        }
+
+        if (shouldReplace) {
+            router.replace({ query: newQuery });
+        }
     });
 }
 
@@ -142,18 +165,33 @@ const selectedConstituencyName = computed(() => {
 });
 
 // 6. Configuration des Onglets (Architecture scalable)
-const tabs = computed(() => [
+// Note: Must match the filtering logic in ElectoralDashboardTabs.vue
+const allTabs = [
   {
     id: "candidats",
-    label: selectedType.value === 'presidential' ? 'Candidats' : (selectedType.value === 'locale' ? 'Circonscriptions' : 'Coalitions'),
     icon: "i-heroicons-user-group"
   },
   { id: "carte", label: "Carte", icon: "i-heroicons-map" },
   { id: "resultats", label: "Résultats", icon: "i-heroicons-chart-bar" },
   { id: "documents", label: "Documents", icon: "i-heroicons-document-duplicate" },
-  { id: "statistiques", label: "Stats", icon: "i-heroicons-presentation-chart-line" },
+  { id: "statistiques", label: "Stats", icon: "i-heroicons-presentation-chart-line", hidden: true },
   { id: "guide", label: "Guide", icon: "i-heroicons-play-circle" },
-]);
+];
+
+const tabs = computed(() => {
+  const visibleTypes: Record<string, string[]> = {
+    legislative: ['statistiques'],
+  };
+
+  return allTabs
+    .filter(tab => !tab.hidden || visibleTypes[selectedType.value ?? '']?.includes(tab.id))
+    .map(tab => ({
+      ...tab,
+      label: tab.id === 'candidats'
+        ? selectedType.value === 'presidential' ? 'Candidats' : (selectedType.value === 'locale' ? 'Circonscriptions' : 'Coalitions')
+        : tab.label,
+    }));
+});
 
 const currentTabIndex = computed({
   get: () => {
@@ -187,6 +225,16 @@ useHead({
 
 // 5. Visibilité UI Mobile
 const isViewingDetails = computed(() => !!selectedCoalitionId.value || !!selectedConstituencyId.value);
+
+// 6. Vérifier si l'élection a des statistiques KPI à afficher
+const hasElectionStats = computed(() => {
+  const e = currentElection.value;
+  if (!e) return false;
+  return !!(e.registered_voters || e.voters_count || e.null_ballots ||
+         e.valid_votes || e.participation_rate ||
+         (e.absolute_majority && e.type === 'presidential') ||
+         (e.national_quotient && e.type === 'legislative'));
+});
 
 // --- MAP CONFIGURATION ---
 const optionMap = "Vue Carte";
@@ -292,6 +340,18 @@ const handleMapReady = (map: unknown) => {
   console.log("Carte chargée et prête");
 };
 
+// --- États pour gérer l'absence de données des cartes ---
+const mapCarteHasNoData = ref(false);
+const mapResultHasNoData = ref(false);
+
+const handleMapCarteError = () => {
+  mapCarteHasNoData.value = true;
+};
+
+const handleMapResultError = () => {
+  mapResultHasNoData.value = true;
+};
+
 // --- RÉSULTAT LOCALE : Panel département ---
 const resultDeptPanelOpen = ref(false);
 const resultDeptPanelData = ref<any>(null);
@@ -319,13 +379,12 @@ watch([selectedType, selectedYear], () => {
   resultCommunesByDept.value = [];
   resultDeptPanelOpen.value = false;
   resultDeptPanelData.value = null;
+  // Reset des états d'absence de données
+  mapCarteHasNoData.value = false;
+  mapResultHasNoData.value = false;
 });
 
 const handleResultDeptSelected = async (dept: any) => {
-  // S'assurer que les données sont chargées
-  if (resultCommunesByDept.value.length === 0) {
-    await loadLocaleResultsData();
-  }
   resultDeptPanelData.value = dept;
   resultDeptPanelOpen.value = true;
 };
@@ -338,8 +397,17 @@ const closeResultDeptPanel = () => {
 };
 
 // Communes filtrées pour le département sélectionné
+// Utilise les données directement passées par le composant carte ou filtre depuis les données globales
 const resultCommunesForDept = computed(() => {
-  if (!resultDeptPanelData.value || !resultCommunesByDept.value.length) return [];
+  if (!resultDeptPanelData.value) return [];
+
+  // Si le composant carte passe directement les communes
+  if (resultDeptPanelData.value.communes?.length > 0) {
+    return resultDeptPanelData.value.communes;
+  }
+
+  // Fallback: filtrer depuis les données globales
+  if (!resultCommunesByDept.value.length) return [];
   const deptKey = resultDeptPanelData.value.departement.trim().toLowerCase();
   return resultCommunesByDept.value.filter(r =>
     r.departement && r.departement.trim().toLowerCase() === deptKey
@@ -348,7 +416,7 @@ const resultCommunesForDept = computed(() => {
 </script>
 
 <template>
-  <div class="min-h-screen text-gray-900 dark:text-gray-100 transition-colors duration-300">
+  <div class="min-h-screen pb-16 text-gray-900 dark:text-gray-100 transition-colors duration-300">
     <!-- Header & Navigation Sticky -->
     <ElectionsDashboardElectoralDashboardHeader
       :selected-year="selectedYear"
@@ -360,13 +428,12 @@ const resultCommunesForDept = computed(() => {
       @clear-coalition="clearConstituency"
     >
       <template #breadcrumb>
-        <UBreadcrumb
+        <AppBreadcrumb
           v-if="currentElection"
           class="mb-3 text-xs"
-          :links="[
-            { label: 'Accueil', to: '/' },
+          :items="[
             { label: 'Élections', to: '/elections-senegal' },
-            { label: 'Dashboard' },
+            { label: 'Dashboard' }
           ]"
         />
       </template>
@@ -413,7 +480,16 @@ const resultCommunesForDept = computed(() => {
           :election="currentElection"
           :coalitions="coalitions"
           :constituencies="constituencies"
-          class="mb-10 animate-in fade-in slide-in-from-top-4 duration-700"
+          class="mb-6 animate-in fade-in slide-in-from-top-4 duration-700"
+        />
+      </transition>
+
+      <!-- Section: Statistiques KPI de l'élection (visible si election terminée ET données disponibles) -->
+      <transition name="fade">
+        <ElectionsDashboardElectionStatsKPI
+          v-if="currentElection?.status === 'completed' && hasElectionStats && !selectedCoalitionId && !selectedConstituencyId && activeTab === 'candidats'"
+          :election="currentElection"
+          class="mb-8 animate-in fade-in slide-in-from-top-4 duration-500"
         />
       </transition>
 
@@ -462,50 +538,58 @@ const resultCommunesForDept = computed(() => {
           </div>
 
           <!-- NIVEAU 1: Grille principale -->
-          <div v-else class="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <!-- Search Bar -->
-            <div class="max-w-3xl mx-auto w-full mb-12 group">
-              <UInput
-                v-model="searchQuery"
-                icon="i-heroicons-magnifying-glass"
-                :placeholder="selectedType === 'presidential' ? 'Rechercher un candidat...' : (selectedType === 'locale' ? 'Rechercher un département ou une commune...' : 'Rechercher une coalition, un acronyme ou tête de liste...')"
-                size="xl"
-                class="transition-all duration-300"
-                :ui="{
-                  rounded: 'rounded-2xl',
-                  wrapper: 'relative rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.1)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.3)]',
-                  base: 'h-16 bg-white dark:bg-gray-950 border-2 border-transparent focus:border-primary-500 text-lg px-6 transition-all ring-0 focus:ring-4 focus:ring-primary-500/10',
-                  icon: {
-                    leading: { wrapper: 'left-4' },
-                    trailing: { pointer: 'pointer-events-auto' }
-                  }
-                }"
-              >
-                <template #trailing v-if="searchQuery">
-                  <UButton
-                    color="gray"
-                    variant="ghost"
-                    icon="i-heroicons-x-mark"
-                    class="mr-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                    @click="searchQuery = ''"
-                  />
-                </template>
-              </UInput>
-            </div>
-
-            <div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
+          <div v-else class="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <!-- Header avec titre, recherche et badge alignés -->
+            <div class="flex flex-col gap-4">
+              <!-- Ligne titre -->
               <div>
-                <h2 class="text-3xl font-black uppercase tracking-tighter">
+                <h2 class="text-2xl sm:text-3xl font-black uppercase tracking-tighter">
                   {{ isLocalElection ? 'Les Circonscriptions' : (selectedType === 'presidential' ? 'Les Candidats' : 'Les Coalitions') }}
                 </h2>
-                <p class="text-gray-500">
+                <p class="text-sm text-gray-500">
                   {{ isLocalElection ? 'Sélectionnez une circonscription pour voir les coalitions en lice.' : (selectedType === 'presidential' ? 'Sélectionnez un candidat pour voir son programme et ses informations.' : 'Sélectionnez une plateforme pour voir ses listes et candidats.') }}
                 </p>
               </div>
-              <UBadge size="lg" color="white" class="shadow-sm border dark:border-gray-800">
-                <span class="text-primary-600 font-black mr-1">{{ isLocalElection ? constituencies.length : coalitions.length }}</span>
-                {{ isLocalElection ? 'circonscriptions' : (selectedType === 'presidential' ? 'candidats' : 'plateformes engagées') }}
-              </UBadge>
+
+              <!-- Ligne recherche + badge alignés -->
+              <div class="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+                <!-- Search Bar compact (hidden for presidential) -->
+                <div v-if="selectedType !== 'presidential'" class="flex-1 max-w-md">
+                  <UInput
+                    v-model="searchQuery"
+                    icon="i-heroicons-magnifying-glass"
+                    :placeholder="selectedType === 'locale' ? 'Rechercher...' : 'Rechercher une coalition...'"
+                    size="md"
+                    class="transition-all duration-300"
+                    :ui="{
+                      rounded: 'rounded-xl',
+                      wrapper: 'relative rounded-xl shadow-sm',
+                      base: 'h-10 bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 focus:border-primary-500 text-sm px-4 transition-all ring-0 focus:ring-2 focus:ring-primary-500/20',
+                      icon: {
+                        leading: { wrapper: 'left-3' },
+                        trailing: { pointer: 'pointer-events-auto' }
+                      }
+                    }"
+                  >
+                    <template #trailing v-if="searchQuery">
+                      <UButton
+                        color="gray"
+                        variant="ghost"
+                        icon="i-heroicons-x-mark"
+                        size="xs"
+                        class="rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                        @click="searchQuery = ''"
+                      />
+                    </template>
+                  </UInput>
+                </div>
+
+                <!-- Badge count -->
+                <UBadge size="md" color="white" class="shadow-sm border dark:border-gray-800 shrink-0 self-start sm:self-center">
+                  <span class="text-primary-600 font-black mr-1">{{ isLocalElection ? constituencies.length : coalitions.length }}</span>
+                  {{ isLocalElection ? 'circonscriptions' : (selectedType === 'presidential' ? 'candidats' : 'plateformes engagées') }}
+                </UBadge>
+              </div>
             </div>
 
             <!-- Legislative View Switcher -->
@@ -556,7 +640,7 @@ const resultCommunesForDept = computed(() => {
 
               <!-- Grille PRÉSIDENTIELLE : Candidat en avant -->
               <div v-else-if="coalitions.length > 0 && selectedType === 'presidential'" class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                <ElectionsDashboardCardsPresidentialCoalitionCard
+                <ElectionsDashboardCardsLegislativeCoalitionHeadCard
                   v-for="coalition in coalitions"
                   :key="coalition.id"
                   :coalition="coalition"
@@ -615,7 +699,17 @@ const resultCommunesForDept = computed(() => {
                 </div>
 
                 <div class="p-4">
-                  <ClientOnly>
+                  <!-- Empty state when no election data or no map data -->
+                  <div v-if="!currentElection?.id || mapCarteHasNoData" class="flex flex-col items-center justify-center py-20 text-center">
+                    <div class="bg-gray-100 dark:bg-gray-800 p-6 rounded-full mb-6">
+                      <UIcon name="i-heroicons-map" class="h-16 w-16 text-gray-300 dark:text-gray-600" />
+                    </div>
+                    <h3 class="text-lg font-bold text-gray-500 dark:text-gray-400 mb-2">Carte non disponible</h3>
+                    <p class="text-sm text-gray-400 dark:text-gray-500 max-w-md">
+                      Les données cartographiques pour cette élection ne sont pas encore disponibles.
+                    </p>
+                  </div>
+                  <ClientOnly v-else>
                     <UTabs :items="mapTabs" class="w-full">
                       <!-- NATIONALE -->
                       <template #nationale>
@@ -644,6 +738,7 @@ const resultCommunesForDept = computed(() => {
                               :election-id="currentElection?.id"
                               :is-local-election="isLocalElection"
                               @map-ready="handleMapReady"
+                              @map-error="handleMapCarteError"
                             />
                           </div>
 
@@ -720,31 +815,56 @@ const resultCommunesForDept = computed(() => {
                             />
                         </div>
                         <template v-else>
-                            <div v-if="!coalitions || coalitions.length === 0" class="flex flex-col items-center justify-center h-64 text-center px-4">
+                            <!-- Loading state -->
+                            <div v-if="loadingCoalitions" class="space-y-3">
+                              <USkeleton v-for="i in 6" :key="i" class="h-16 w-full rounded-xl" />
+                            </div>
+                            <!-- Empty state -->
+                            <div v-else-if="!coalitions || coalitions.length === 0" class="flex flex-col items-center justify-center h-64 text-center px-4">
                                 <UIcon name="i-heroicons-chart-bar" class="w-12 h-12 sm:w-16 sm:h-16 text-gray-200 dark:text-gray-800 mb-4" />
                                 <h3 class="text-base sm:text-lg font-bold text-gray-400">Aucun résultat disponible</h3>
                                 <p class="text-xs sm:text-sm text-gray-500">Les résultats ne sont pas encore publiés.</p>
                             </div>
-                            <!-- Composant mobile-first pour les résultats -->
-                            <ElectionResultClassement
-                              v-else
-                              :coalitions="coalitions"
-                              :loading="loadingCoalitions"
-                              :type="selectedType"
-                            />
+                            <div v-else>
+                                <!-- GRAPHIQUE DES RÉSULTATS (Présidentielle & Législatives) -->
+                                <ElectionsDashboardResultChart
+                                   v-if="['presidential', 'legislative'].includes(selectedType)"
+                                   :results="coalitions"
+                                   :type="selectedType"
+                                   class="mb-6"
+                                />
+
+                                <!-- Composant pour les résultats -->
+                                <ElectionsDashboardResultClassement
+                                  :coalitions="coalitions"
+                                  :loading="loadingCoalitions"
+                                  :type="selectedType"
+                                />
+                            </div>
                         </template>
                     </div>
 
                     <div v-else-if="resultViewType === 'map'" class="w-full h-full min-h-[400px] sm:min-h-[500px]">
-                         <ClientOnly>
-                            <!-- Élections locales : carte départements + panel résultat -->
+                         <!-- Empty state when no election data or no result map data -->
+                         <div v-if="!currentElection?.id || mapResultHasNoData" class="flex flex-col items-center justify-center py-20 text-center">
+                           <div class="bg-gray-100 dark:bg-gray-800 p-6 rounded-full mb-6">
+                             <UIcon name="i-heroicons-map" class="h-16 w-16 text-gray-300 dark:text-gray-600" />
+                           </div>
+                           <h3 class="text-lg font-bold text-gray-500 dark:text-gray-400 mb-2">Carte des résultats non disponible</h3>
+                           <p class="text-sm text-gray-400 dark:text-gray-500 max-w-md">
+                             Les données cartographiques des résultats pour cette élection ne sont pas encore disponibles.
+                           </p>
+                         </div>
+                         <ClientOnly v-else>
+                            <!-- Élections locales : carte résultats par département -->
                             <template v-if="isLocalElection">
-                              <ElectionMapComponent4
+                              <ElectionMapComponentResultLocale
                                 :key="`result-map-locale-${selectedYear}`"
-                                :election-id="currentElection?.id"
-                                :is-local-election="true"
+                                :election-type="selectedType"
+                                :election-year="selectedYear"
                                 @map-ready="handleMapReady"
                                 @department-selected="handleResultDeptSelected"
+                                @map-error="handleMapResultError"
                               />
                             </template>
                             <!-- Autres types : carte résultats classique -->
@@ -752,6 +872,7 @@ const resultCommunesForDept = computed(() => {
                               v-else
                                :election-type="selectedType"
                                :election-year="selectedYear"
+                               @map-error="handleMapResultError"
                             />
                              <template #fallback>
                                 <div class="flex h-[500px] w-full items-center justify-center">

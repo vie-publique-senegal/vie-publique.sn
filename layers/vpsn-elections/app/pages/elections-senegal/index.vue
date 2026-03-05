@@ -116,9 +116,13 @@ const quickLinks = computed(() => [
 </script>
 
 <template>
-  <div class="min-h-screen pb-20">
+  <div class="min-h-screen pb-16">
     <!-- Main Container -->
     <div class="container mx-auto px-4 max-w-5xl py-12 space-y-8">
+      <AppBreadcrumb
+        :links="[]"
+        last-text="Élections"
+      />
 
       <!-- Hero Section -->
       <section class="text-center mb-8">
@@ -144,7 +148,7 @@ const quickLinks = computed(() => [
 
       <template v-else>
         <!-- Featured Election Card -->
-        <div class="bg-white dark:bg-gray-900 rounded-3xl border dark:border-gray-800 shadow-sm overflow-hidden transition-all hover:shadow-md group">
+        <div v-if="election" class="bg-white dark:bg-gray-900 rounded-3xl border dark:border-gray-800 shadow-sm overflow-hidden transition-all hover:shadow-md group">
           <div class="flex flex-col lg:flex-row">
 
             <!-- Left Panel: Election Info & Quick Actions -->

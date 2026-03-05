@@ -58,4 +58,3 @@ const calculatePercentage = (count: number) => {
   return total ? ((count / total) * 100).toFixed(1) : '0.0';
 };
 </script>
-
