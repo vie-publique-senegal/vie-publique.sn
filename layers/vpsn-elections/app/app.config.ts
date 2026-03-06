@@ -53,16 +53,17 @@ export default defineAppConfig({
       documents: 'Documents Officiels',
     },
 
-    // Features toggles (activer/désactiver des fonctionnalités)
+    // Types d'élections actifs dans l'interface
+    // Valeurs possibles : 'presidential', 'legislative', 'locale'
+    // Retirer un type pour le masquer partout (sélecteur, liste d'années, élection par défaut)
     features: {
-      showDiaspora: true,
-      showLocalElections: true,
-      showGuide: true,
-      showLegislation: true,
-      showStatistics: true,
-      showMaps: true,
-      showDocuments: true,
-      showNews: true,
+      // enabledTypes: ['presidential', 'legislative', 'locale'] as string[],
+      enabledTypes: ['presidential'] as string[],
+
+      // Masquer le sélecteur de type d'élection sur toutes les pages
+      // Utile quand enabledTypes ne contient qu'un seul type : l'interface affiche
+      // uniquement les données de ce type sans proposer de filtre à l'utilisateur
+      hideTypeFilter: true,
     },
 
     // Configuration UI
@@ -135,14 +136,8 @@ declare module '@nuxt/schema' {
       };
       labels?: Record<string, string>;
       features?: {
-        showDiaspora?: boolean;
-        showLocalElections?: boolean;
-        showGuide?: boolean;
-        showLegislation?: boolean;
-        showStatistics?: boolean;
-        showMaps?: boolean;
-        showDocuments?: boolean;
-        showNews?: boolean;
+        enabledTypes?: string[];
+        hideTypeFilter?: boolean;
       };
       ui?: {
         primaryColor?: string;

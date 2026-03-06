@@ -20,7 +20,7 @@ const electionType = computed(() => route.query.type as string | undefined);
 const electionYear = computed(() => route.query.year as string | undefined);
 
 // Récupérer le nom de l'élection depuis la config
-const { config } = useElectoralDashboard();
+const { filteredConfig: config } = useElectoralDashboard();
 const electionName = computed(() => {
   if (!config.value?.elections || !electionId.value) return null;
   const election = config.value.elections.find(e => String(e.id) === electionId.value);

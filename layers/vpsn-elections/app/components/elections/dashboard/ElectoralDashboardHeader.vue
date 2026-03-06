@@ -17,6 +17,9 @@ const emit = defineEmits<{
   (e: 'clear-coalition'): void;
 }>();
 
+const appConfig = useAppConfig();
+const showTypeFilter = !(appConfig.vpsnElections?.features?.hideTypeFilter ?? false);
+
 // Filter years based on selected election type
 const filteredYears = computed(() => {
   if (!props.config?.elections || props.config.elections.length === 0) {
@@ -81,6 +84,7 @@ const shouldShowSelectors = computed(() => {
           class="flex items-center gap-2 bg-gray-100 dark:bg-gray-800/50 p-1 rounded-2xl border dark:border-gray-700"
         >
           <USelectMenu
+            v-if="showTypeFilter"
             :model-value="selectedType"
             :options="config?.types || []"
             value-attribute="value"

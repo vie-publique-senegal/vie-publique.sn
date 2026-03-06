@@ -11,7 +11,7 @@ const router = useRouter();
 // Sélecteurs d'élection
 const selectedType = ref<string>((route.query.type as string) || '');
 const selectedYear = ref<string>((route.query.year as string) || '');
-const { config } = useElectoralDashboard();
+const { filteredConfig: config, showTypeFilter } = useElectoralDashboard();
 
 // Calcul de l'élection sélectionnée
 const selectedElection = computed(() => {
@@ -285,6 +285,7 @@ watch(selectedElectionId, (newId, oldId) => {
         <!-- Sélecteurs d'élection -->
         <div class="flex flex-col md:flex-row items-stretch md:items-center gap-3">
           <USelect
+            v-if="showTypeFilter"
             v-model="selectedType"
             :options="typeOptions"
             size="md"

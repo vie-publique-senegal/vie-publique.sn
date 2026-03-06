@@ -19,7 +19,7 @@ const {
   activeTab,
   selectedConstituencyId,
   selectedCoalitionId,
-  config,
+  filteredConfig: config,
   currentElection,
   currentElectionDocuments,
   loadingConfig,

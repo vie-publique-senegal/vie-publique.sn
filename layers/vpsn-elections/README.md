@@ -1,505 +1,396 @@
 # Layer VPSN Elections
 
-Layer Nuxt réutilisable pour les systèmes d'information électoraux en Afrique de l'Ouest.
+Layer Nuxt réutilisable pour les systèmes d'information électoraux.
 
 ---
 
-## 📋 Description
+## Contenu
 
-Ce layer contient toute la logique, les composants et les APIs nécessaires pour afficher les informations électorales (résultats, candidats, coalitions, carte électorale, etc.) pour différents pays.
-
-**Pays supportés** :
-- 🇸🇳 Sénégal (par défaut)
-- 🇨🇮 Côte d'Ivoire (avec configuration personnalisée)
-- Extensible à d'autres pays d'Afrique de l'Ouest
-
----
-
-## 📦 Contenu du Layer
-
-### Composants (42)
-- Dashboard électoral
-- Cartes électorales
-- Statistiques et graphiques
-- Listes de candidats et coalitions
-- Guide électoral
-
-### Composables (17)
-- Gestion des données électorales
-- Formatage et calculs
-- Utilitaires dashboard
-
-### Routes API (18)
-- Configuration dashboard
-- Données coalitions
-- Statistiques par département
-- Données diaspora
-- Résultats nationaux
-
-### Pages (5)
-- Page principale élections
-- Carte électorale
-- Guide électoral
-- Vue résultats
+| Catégorie | Nb | Détail |
+|---|---|---|
+| Pages | 5 | Accueil, carte électorale, guide, législation, dashboard |
+| Composants | 42+ | Dashboard, cartes, résultats, statistiques, guide |
+| Composables | 17+ | Données électorales, formatage, carte, dashboard |
+| Routes API | 18+ | Config, coalitions, carte nationale, diaspora, résultats |
 
 ---
 
-## 🚀 Installation
+## Installation
 
-### 1. Ajouter le Layer
+### 1. Déclarer le layer
 
-Dans votre `nuxt.config.ts` :
-
-```typescript
+```ts
+// nuxt.config.ts (projet parent)
 export default defineNuxtConfig({
-  extends: [
-    './layers/vpsn-elections',
-  ],
+  extends: ['./layers/vpsn-elections'],
 });
 ```
 
-### 2. Configurer pour votre Pays
+### 2. Configurer via `app.config.ts`
 
-Créer ou modifier `app/app.config.ts` :
+Créer ou compléter `app/app.config.ts` dans le projet parent. Toutes les clés sont optionnelles — elles surchargent les valeurs par défaut du layer.
 
-```typescript
+```ts
+// app/app.config.ts (projet parent)
 export default defineAppConfig({
   vpsnElections: {
-    country: {
-      name: 'Votre Pays',
-      code: 'XX',
-    },
-    labels: {
-      // Types d'élections
-      presidential: 'Présidentielle',
-      legislative: 'Législatives',
-
-      // Entités géographiques
-      departments: 'Départements', // ou 'Districts', 'Régions', etc.
-      regions: 'Régions',
-      constituencies: 'Circonscriptions',
-
-      // Autres labels
-      coalitions: 'Coalitions',
-      candidates: 'Candidats',
-      discover: 'Découvrez les',
-    },
+    country: { name: 'Sénégal', code: 'SN' },
     features: {
-      showDiaspora: true,
-      showMaps: true,
-      showVideos: true,
-      showGuide: true,
+      enabledTypes: ['presidential', 'legislative', 'locale'],
     },
   },
 });
 ```
 
-### 3. Démarrer
+### 3. Variables d'environnement
 
-```bash
-npm run dev
-```
-
-Toutes les pages et APIs sont automatiquement disponibles !
-
----
-
-## 🌍 Routes Dynamiques par Pays
-
-Le layer génère automatiquement les routes en fonction du pays configuré dans votre `app.config.ts`.
-
-### Configuration du Pays
-
-La configuration du pays dans `app/app.config.ts` détermine les URLs des routes :
-
-```typescript
-export default defineAppConfig({
-  vpsnElections: {
-    country: {
-      name: 'Sénégal',  // Détermine l'URL : /elections-senegal
-      code: 'SN',
-    },
-  },
-});
-```
-
-### Routes Générées Automatiquement
-
-Selon le nom du pays configuré :
-
-| Pays | Route de base | Exemple complet |
-|------|--------------|-----------------|
-| Sénégal | `/elections-senegal` | `/elections-senegal/carte-electorale` |
-| Bénin | `/elections-benin` | `/elections-benin/guide-electoral` |
-| Mali | `/elections-mali` | `/elections-mali/legislation` |
-| Côte d'Ivoire | `/elections-cote-d-ivoire` | `/elections-cote-d-ivoire/dashboard/presidential/2024` |
-
-**Note** : Les accents, espaces et apostrophes sont automatiquement supprimés et convertis en format URL-friendly.
-
-### Utilisation du Composable `useElectionRoutes()`
-
-Pour garantir des liens corrects, utilisez toujours le composable `useElectionRoutes()` dans vos composants :
-
-```vue
-<script setup lang="ts">
-const electionRoutes = useElectionRoutes();
-</script>
-
-<template>
-  <div>
-    <!-- Lien vers la page d'accueil -->
-    <NuxtLink :to="electionRoutes.home">
-      Accueil Élections
-    </NuxtLink>
-
-    <!-- Lien vers le guide électoral -->
-    <NuxtLink :to="electionRoutes.guideElectoral">
-      Guide Électoral
-    </NuxtLink>
-
-    <!-- Lien vers la législation -->
-    <NuxtLink :to="electionRoutes.legislation">
-      Législation
-    </NuxtLink>
-
-    <!-- Lien vers la carte électorale -->
-    <NuxtLink :to="electionRoutes.carteElectorale">
-      Carte Électorale
-    </NuxtLink>
-
-    <!-- Lien vers un dashboard spécifique -->
-    <NuxtLink :to="electionRoutes.dashboard('presidential', 2024)">
-      Présidentielle 2024
-    </NuxtLink>
-
-    <!-- Construction d'une route personnalisée -->
-    <NuxtLink :to="electionRoutes.buildRoute('ma-page')">
-      Ma Page Personnalisée
-    </NuxtLink>
-  </div>
-</template>
-```
-
-### API du Composable
-
-```typescript
-const routes = useElectionRoutes();
-
-// Propriétés disponibles :
-routes.baseRoute           // "/elections-{pays}"
-routes.home                // "/elections-{pays}"
-routes.carteElectorale     // "/elections-{pays}/carte-electorale"
-routes.guideElectoral      // "/elections-{pays}/guide-electoral"
-routes.legislation         // "/elections-{pays}/legislation"
-
-// Fonctions :
-routes.dashboard(type, year)   // Retourne "/elections-{pays}/dashboard/{type}/{year}"
-routes.buildRoute(subPath)     // Retourne "/elections-{pays}/{subPath}"
-```
-
-### ⚠️ Important : Ne jamais hardcoder les URLs
-
-```vue
-<!-- ❌ MAUVAIS : URL hardcodée -->
-<NuxtLink to="/elections-senegal/guide">Guide</NuxtLink>
-
-<!-- ✅ BON : Utiliser le composable -->
-<NuxtLink :to="electionRoutes.guideElectoral">Guide</NuxtLink>
-```
-
----
-
-## 📊 Utilisation
-
-### Pages Disponibles
-
-Après installation, ces pages sont accessibles (les URLs s'adaptent automatiquement au pays configuré) :
-
-- `/elections-{pays}` - Page principale
-- `/elections-{pays}/carte-electorale` - Carte électorale interactive
-- `/elections-{pays}/guide-electoral` - Guide électoral
-- `/elections-{pays}/legislation` - Législation électorale
-- `/elections-{pays}/dashboard/{type}/{année}` - Dashboard électoral détaillé
-
-**Exemple pour le Sénégal** : `/elections-senegal/carte-electorale`
-**Exemple pour le Bénin** : `/elections-benin/guide-electoral`
-
-### APIs Disponibles
-
-- `/api/elections/dashboard/config` - Configuration et métadonnées
-- `/api/elections/dashboard/coalitions` - Liste des coalitions
-- `/api/elections/dashboard/stats/lists` - Statistiques par liste
-- `/api/elections/map/national` - Résultats nationaux
-- `/api/elections/diaspora/countries` - Pays de diaspora
-- ... et 13 autres routes
-
-### Composants Disponibles
-
-Tous les composants sont auto-importés grâce à Nuxt :
-
-```vue
-<template>
-  <ElectionsDashboardHeader
-    :election-type="'legislative'"
-    :year="2024"
-  />
-
-  <ElectionsDashboardCoalitions
-    :coalitions="coalitions"
-  />
-</template>
-```
-
----
-
-## ⚙️ Configuration
-
-### Structure de app.config.ts
-
-```typescript
-{
-  vpsnElections: {
-    // Informations du pays
-    country: {
-      name: string,      // "Sénégal", "Côte d'Ivoire", etc.
-      code: string,      // "SN", "CI", etc.
-    },
-
-    // Labels traduits/adaptés
-    labels: {
-      presidential: string,
-      legislative: string,
-      departments: string,
-      regions: string,
-      constituencies: string,
-      coalitions: string,
-      candidates: string,
-      discover: string,
-    },
-
-    // Fonctionnalités activées
-    features: {
-      showDiaspora: boolean,
-      showMaps: boolean,
-      showVideos: boolean,
-      showGuide: boolean,
-    },
-
-    // Textes UI
-    ui: {
-      selectYear: string,
-      selectType: string,
-      allDepartments: string,
-      viewMap: string,
-      viewTable: string,
-    },
-  }
-}
-```
-
-### Exemple : Configuration Côte d'Ivoire
-
-```typescript
-export default defineAppConfig({
-  vpsnElections: {
-    country: {
-      name: 'Côte d\'Ivoire',
-      code: 'CI',
-    },
-    labels: {
-      presidential: 'Présidentielle',
-      legislative: 'Législatives',
-      departments: 'Districts',        // Terminologie ivoirienne
-      regions: 'Régions',
-      constituencies: 'Circonscriptions',
-      coalitions: 'Listes',            // Différent du Sénégal
-      candidates: 'Candidats',
-      discover: 'Consultez les',
-    },
-    features: {
-      showDiaspora: false,             // Pas de vote diaspora
-      showMaps: true,
-      showVideos: false,
-      showGuide: true,
-    },
-  },
-});
-```
-
----
-
-## 🔧 Développement
-
-### Prérequis
-
-- Node.js 18+
-- npm 9+
-- Accès à un CMS Directus pour les données
-
-### Variables d'Environnement
-
-Le layer utilise le client CMS du projet principal. Configurez dans `.env` :
+Le layer utilise le client CMS du projet principal.
 
 ```env
-CMS_API_URL=https://votre-cms.com
-CMS_API_URL_ASSETS=https://votre-cms.com
+CMS_API_URL=https://votre-cms.com          # sans trailing slash
+CMS_API_URL_ASSETS=https://votre-cms.com   # sans trailing slash
 ```
 
-### Structure du Layer
+---
 
+## Configuration — `app.config.ts`
+
+### Structure complète
+
+```ts
+export default defineAppConfig({
+  vpsnElections: {
+
+    // 1. Pays
+    country: {
+      name: 'Sénégal',   // Détermine l'URL : /elections-senegal
+      code: 'SN',        // Code ISO (affiché dans certains composants)
+    },
+
+    // 2. Types d'élections actifs
+    features: {
+      enabledTypes: ['presidential', 'legislative', 'locale'],
+      // Retirer un type pour le masquer dans toute l'interface :
+      //   sélecteur de type, sélecteur d'année, élection affichée par défaut
+    },
+
+    // 3. Labels (tous surchargeable)
+    labels: {
+      // Géographie
+      departments:    'Départements',
+      regions:        'Régions',
+      constituencies: 'Circonscriptions',
+      communes:       'Communes',
+      diaspora:       'Diaspora',
+
+      // Types d'élections (affichés dans les sélecteurs)
+      presidential: 'Présidentielle',
+      legislative:  'Législatives',
+      locale:       'Locales',
+
+      // Entités politiques
+      coalitions: 'Coalitions',
+      candidates: 'Candidats',
+      lists:      'Listes électorales',
+
+      // Statuts d'élection
+      ongoing:   'En Cours',
+      scheduled: 'Programmée',
+      completed: 'Terminée',
+
+      // Navigation
+      results:     'Résultats',
+      statistics:  'Statistiques',
+      map:         'Carte Électorale',
+      guide:       "Guide de l'Électeur",
+      legislation: 'Législation',
+      documents:   'Documents Officiels',
+    },
+
+    // 4. Textes UI
+    ui: {
+      // Libellés des onglets du dashboard
+      mapTab:       'Carte',
+      resultsTab:   'Résultats',
+      documentsTab: 'Documents',
+      statsTab:     'Stats',
+      guideTab:     'Guide',
+
+      // Placeholders de recherche
+      searchPlaceholder:             'Rechercher...',
+      searchDepartmentPlaceholder:   'Rechercher un département...',
+      searchConstituencyPlaceholder: 'Rechercher une circonscription...',
+
+      // Textes divers
+      engaged:    'engagées',
+      home:       'Accueil Élections',
+      backToHome: 'Accueil Élections',
+
+      // Guide électoral
+      guideTitle:        'Guide Électoral - Comment Voter',
+      guideDescription:  'Découvrez comment voter aux élections...',
+      allElections:      'Toutes les élections',
+      allLanguages:      'Toutes les langues',
+      noVideosAvailable: 'Aucune vidéo disponible pour cette sélection.',
+
+      // Pagination
+      itemsPerPage: {
+        coalitions: 12,
+        documents:  12,
+        news:       3,
+      },
+
+      // Cache en secondes (serveur)
+      cache: {
+        config:         3600,  // 1h
+        coalitions:     1800,  // 30min
+        constituencies: 1800,  // 30min
+        professions:    3600,
+        documents:      3600,
+        guide:          3600,
+      },
+    },
+
+    // 5. SEO
+    seo: {
+      title:       "Élections | Plateforme d'Information Électorale",
+      description: 'Accédez à toutes les informations sur les élections...',
+      ogImage:     '/images/elections-share.png',
+    },
+
+  },
+});
 ```
-layers/vpsn-elections/
-├── app/
-│   ├── components/
-│   │   └── elections/           # Composants Vue
-│   ├── composables/
-│   │   └── elections/           # Composables
-│   ├── pages/
-│   │   └── elections-senegal/   # Pages
-│   ├── types/                   # Types TypeScript
-│   └── app.config.ts            # Config par défaut
-│
-├── server/
-│   ├── api/
-│   │   └── elections/           # Routes API
-│   └── utils/                   # VIDE (utilise utils du projet principal)
-│
-├── nuxt.config.ts               # Config du layer
-└── README.md                    # Ce fichier
+
+---
+
+### `enabledTypes` — filtrer les types d'élections
+
+La seule option `features` actuellement câblée dans l'interface.
+
+```ts
+// Afficher uniquement la présidentielle
+features: { enabledTypes: ['presidential'] }
+
+// Afficher présidentielle + législatives
+features: { enabledTypes: ['presidential', 'legislative'] }
+
+// Tout afficher (défaut)
+features: { enabledTypes: ['presidential', 'legislative', 'locale'] }
 ```
 
-### Ajouter un Nouveau Composant
+**Ce que ça contrôle automatiquement :**
 
-1. Créer le fichier dans `app/components/elections/`
-2. Le composant est auto-importé
-3. Utiliser `useAppConfig()` pour les données dynamiques :
+| Élément | Comportement |
+|---|---|
+| Sélecteur de type | Seuls les types listés apparaissent |
+| Sélecteur d'année | Seules les années ayant un type actif apparaissent |
+| Élection par défaut | Choisie parmi les types actifs uniquement |
+| Page d'accueil élections | N'affiche que des élections des types actifs |
+| Carte électorale | Filtrée |
+| Page législation | Filtrée |
 
-```vue
-<script setup lang="ts">
+---
+
+### Routes dynamiques par pays
+
+Le nom du pays dans `country.name` détermine l'URL de base.
+
+| `country.name` | URL de base générée |
+|---|---|
+| `'Sénégal'` | `/elections-senegal` |
+| `'Côte d\'Ivoire'` | `/elections-cote-d-ivoire` |
+| `'Bénin'` | `/elections-benin` |
+
+**Ne jamais hardcoder les URLs.** Utiliser le composable `useElectionRoutes()` :
+
+```ts
+const routes = useElectionRoutes();
+
+// Propriétés disponibles
+routes.baseRoute        // "/elections-senegal"
+routes.home             // "/elections-senegal"
+routes.carteElectorale  // "/elections-senegal/carte-electorale"
+routes.guideElectoral   // "/elections-senegal/guide-electoral"
+routes.legislation      // "/elections-senegal/legislation"
+
+// Fonctions
+routes.dashboard('presidential', 2024)  // "/elections-senegal/dashboard/presidential/2024"
+routes.buildRoute('ma-page')            // "/elections-senegal/ma-page"
+```
+
+---
+
+## Pages disponibles
+
+Après installation, accessibles automatiquement (URL adaptée au pays) :
+
+| Page | URL |
+|---|---|
+| Accueil élections | `/elections-{pays}` |
+| Carte électorale | `/elections-{pays}/carte-electorale` |
+| Guide électoral | `/elections-{pays}/guide-electoral` |
+| Législation | `/elections-{pays}/legislation` |
+| Dashboard | `/elections-{pays}/dashboard/{type}/{année}` |
+
+---
+
+## APIs disponibles
+
+| Endpoint | Description |
+|---|---|
+| `GET /api/elections/dashboard/config` | Années, types, liste des élections |
+| `GET /api/elections/dashboard/coalitions` | Coalitions/candidats |
+| `GET /api/elections/dashboard/stats/lists` | Statistiques par liste |
+| `GET /api/elections/dashboard/guide/videos` | Vidéos du guide électoral |
+| `GET /api/elections/dashboard/guide/languages` | Langues disponibles |
+| `GET /api/elections/map/national` | Résultats nationaux par dépt |
+| `GET /api/elections/map/summary` | Résumé carte nationale |
+| `GET /api/elections/map/department-details/[dept]` | Détails d'un département |
+| `GET /api/elections/diaspora/countries` | Pays de la diaspora |
+| `GET /api/elections/diaspora/country-details/[country]` | Détails d'un pays diaspora |
+| `GET /api/elections/diaspora/country-stats/[country]` | Stats d'un pays diaspora |
+
+---
+
+## Composables principaux
+
+### `useElectoralDashboard()`
+
+État central du dashboard. À utiliser dans les pages/composants du dashboard.
+
+```ts
+const {
+  selectedYear,      // Année actuellement sélectionnée
+  selectedType,      // Type d'élection sélectionné ('presidential', etc.)
+  activeTab,         // Onglet actif du dashboard
+  config,            // Données brutes de l'API config
+  filteredConfig,    // config filtrée par enabledTypes (à préférer)
+  filteredTypes,     // Types filtrés
+  filteredElections, // Élections filtrées
+  currentElection,   // Élection actuellement affichée
+  loadingConfig,     // Boolean chargement
+} = useElectoralDashboard();
+```
+
+**Utiliser `filteredConfig` plutôt que `config`** pour respecter `enabledTypes`.
+
+### `useElectionsConfig()`
+
+Accès à la configuration `app.config.ts` avec helpers.
+
+```ts
+const {
+  getElectionTypeLabel,  // ('presidential') => 'Présidentielle'
+  isElectionTypeEnabled, // ('locale') => boolean
+  config,                // Objet complet vpsnElections
+} = useElectionsConfig();
+```
+
+### `useElectionRoutes()`
+
+Génération des URLs adaptées au pays configuré.
+
+### `useElectoralCoalitions()`
+
+Chargement paginé des coalitions/candidats avec filtres.
+
+### `useElectionMapJson()`
+
+Données géographiques (polygones GeoJSON) pour la carte.
+
+### `useElectionMapNational()`
+
+Résultats nationaux par département pour la carte.
+
+---
+
+## Ajouter un composant
+
+```ts
+// layers/vpsn-elections/app/components/elections/MonComposant.vue
 const appConfig = useAppConfig();
 const config = appConfig.vpsnElections;
 
-const countryName = config.country.name;
-const departmentLabel = config.labels.departments;
-</script>
+const label = config.labels.departments;  // 'Départements'
+const country = config.country.name;      // 'Sénégal'
 ```
 
-### Ajouter une Nouvelle API
+Le composant est auto-importé par Nuxt sous le nom `ElectionsMonComposant`.
 
-1. Créer le fichier dans `server/api/elections/`
-2. Utiliser `getCmsClient()` pour accéder au CMS :
+---
 
-```typescript
-export default defineEventHandler(async (event) => {
-  const directus = getCmsClient();
+## Ajouter une route API
+
+```ts
+// layers/vpsn-elections/server/api/elections/mon-endpoint.get.ts
+export default defineCachedEventHandler(async (event) => {
+  const directus = getCmsClient();   // client CMS du projet principal
 
   const data = await directus.request(
-    readItems('collection_name', {
+    readItems('ma_collection', {
       fields: ['id', 'name'],
+      filter: { status: { _eq: 'published' } },
     })
   );
 
   return data;
+}, { maxAge: 60 * 60, name: 'mon-endpoint' });
+```
+
+---
+
+## Structure du layer
+
+```
+layers/vpsn-elections/
+├── app/
+│   ├── app.config.ts              Configuration par défaut (surcharger dans le projet parent)
+│   ├── components/elections/      Composants auto-importés
+│   ├── composables/elections/     Composables auto-importés
+│   └── pages/elections-senegal/   Pages (routes dynamiques via nuxt.config.ts)
+│
+├── server/
+│   └── api/elections/             Routes API serveur
+│
+├── nuxt.config.ts                 Config technique du layer
+└── README.md                      Ce fichier
+```
+
+---
+
+## Exemple : adapter pour un autre pays
+
+```ts
+// app/app.config.ts (projet parent, ex: Bénin)
+export default defineAppConfig({
+  vpsnElections: {
+    country: { name: 'Bénin', code: 'BJ' },
+
+    features: {
+      enabledTypes: ['presidential', 'legislative'],
+      // Pas d'élection locale pour l'instant
+    },
+
+    labels: {
+      departments:    'Départements',
+      constituencies: 'Circonscriptions',
+      coalitions:     'Partis',           // Terminologie béninoise
+      presidential:   'Élection Présidentielle',
+      legislative:    'Élections Législatives',
+    },
+
+    seo: {
+      title: "Élections Bénin | Information Électorale",
+      description: 'Résultats et informations électorales du Bénin.',
+      ogImage: '/images/benin-elections-share.png',
+    },
+  },
 });
 ```
 
----
-
-## 🧪 Tests
-
-### Script de Vérification
-
-Un script PowerShell est disponible dans le projet principal :
-
-```powershell
-.\verify-layer.ps1
-```
-
-Ce script vérifie :
-- Existence du layer
-- Absence de duplications
-- Configuration correcte
-- État du serveur
-
-### Tests Manuels
-
-```bash
-# Tester une API
-curl http://localhost:3001/api/elections/dashboard/config
-
-# Vérifier une page
-curl -I http://localhost:3001/elections-senegal
-```
+Les URLs seront automatiquement `/elections-benin/*`.
 
 ---
 
-## 📚 Documentation
-
-Pour plus de détails, consultez la documentation dans le projet principal :
-
-- **[DOCUMENTATION_LAYER_INDEX.md](../../DOCUMENTATION_LAYER_INDEX.md)** - Index de toute la documentation
-- **[RÉSUMÉ_FINAL_LAYER.md](../../RÉSUMÉ_FINAL_LAYER.md)** - Vue d'ensemble
-- **[ARCHITECTURE_LAYER.md](../../ARCHITECTURE_LAYER.md)** - Principes d'architecture
-- **[EXEMPLE_CONFIG_DYNAMIQUE.md](../../EXEMPLE_CONFIG_DYNAMIQUE.md)** - Exemples de configuration
-- **[EXEMPLE_MIGRATION_COMPOSANT_DYNAMIQUE.md](../../EXEMPLE_MIGRATION_COMPOSANT_DYNAMIQUE.md)** - Tutoriel migration
-
----
-
-## 🤝 Contribution
-
-### Bonnes Pratiques
-
-1. **Toujours utiliser `useAppConfig()`** pour les données configurables
-2. **Jamais de valeurs hard-codées** spécifiques à un pays
-3. **Documenter les exports publics**
-4. **Préfixer les fonctions** si risque de conflit
-
-### Ne Pas Faire
-
-❌ Hard-coder des valeurs spécifiques à un pays
-❌ Dupliquer du code entre projet et layer
-❌ Utiliser des noms de fonctions génériques qui peuvent entrer en conflit
-❌ Oublier de mettre à jour `app.config.ts` avec les nouveaux labels
-
----
-
-## 📝 Changelog
-
-### Version 1.1 (2026-01-19)
-
-- ✅ **Routes dynamiques par pays** : Les URLs s'adaptent automatiquement au pays configuré
-- ✅ Nouveau composable `useElectionRoutes()` pour gérer les liens
-- ✅ Hook `pages:extend` pour générer les routes à la volée
-- ✅ Migration complète : aucun lien hardcodé restant
-- ✅ Documentation enrichie avec exemples de routes dynamiques
-
-### Version 1.0 (2026-01-15)
-
-- ✅ Layer créé et testé
-- ✅ 42 composants, 17 composables, 18 APIs, 5 pages
-- ✅ Configuration dynamique via app.config.ts
-- ✅ Suppression de toutes les duplications
-- ✅ Résolution du conflit getCmsClient
-- ✅ Documentation complète créée
-
----
-
-## 📄 Licence
-
-Propriétaire - Vie Publique Sénégal
-
----
-
-## 👥 Support
-
-Pour toute question ou problème :
-
-1. Consulter la documentation dans le projet principal
-2. Exécuter le script de vérification
-3. Vérifier les logs du serveur Nuxt
-
----
-
-**Créé par** : Vie Publique Sénégal
-**Validé** : 2026-01-15
-**Version** : 1.0
+**Version** : 1.2 — Mars 2026

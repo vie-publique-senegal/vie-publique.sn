@@ -1,23 +1,45 @@
 <script setup lang="ts">
+import { useElectoralDashboard } from '~/composables/elections/dashboard/useElectoralDashboard';
+
 /**
  * Page Guide Électoral - Sénégal
  */
 
 const route = useRoute();
 const router = useRouter();
+const electionRoutes = useElectionRoutes();
+
+const { filteredTypes, showTypeFilter } = useElectoralDashboard();
 
 const selectedType = ref<string>((route.query.type as string) || 'all');
 
-const electionTypes = [
-    { label: 'Toutes les élections', value: 'all' },
-    { label: 'Présidentielles', value: 'presidential' },
-    { label: 'Législatives', value: 'legislative' },
-    { label: 'Locales', value: 'local' }
-];
+// Correspondance type élection → valeur attendue par GuideElectoralVideos (CMS guide_videos.type_election)
+// Le type 'locale' (élection) correspond à 'local' dans le CMS guide_videos
+const toGuideType = (t: string) => t === 'locale' ? 'local' : t;
+
+// Types disponibles dérivés de enabledTypes — respecte la config app.config.ts
+const electionTypes = computed(() => {
+  const all = [{ label: 'Toutes les élections', value: 'all' }];
+  if (!filteredTypes.value.length) return all;
+
+  const mapped = filteredTypes.value.map(t => ({
+    label: t.label,
+    value: toGuideType(t.value),
+  }));
+
+  return [...all, ...mapped];
+});
 
 watch(selectedType, (newType) => {
-    router.replace({ query: { ...route.query, type: newType === 'all' ? undefined : newType } });
+  router.replace({ query: { ...route.query, type: newType === 'all' ? undefined : newType } });
 });
+
+// Quand le filtre est masqué, forcer le type au premier enabledType dès que la config est chargée
+watch(filteredTypes, (types) => {
+  if (!showTypeFilter && types.length > 0) {
+    selectedType.value = toGuideType(types[0].value);
+  }
+}, { immediate: true });
 
 // SEO avec Open Graph
 useSeoMeta({
@@ -36,10 +58,8 @@ useSeoMeta({
         <!-- Breadcrumb -->
         <AppBreadcrumb
           class="mb-6"
-          :items="[
-            { label: 'Élections', to: '/elections-senegal' },
-            { label: 'Guide Électoral' }
-          ]"
+          :links="[{ label: 'Élections', to: electionRoutes.home }]"
+          last-text="Guide Électoral"
         />
 
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -48,7 +68,7 @@ useSeoMeta({
             <p class="text-xs text-gray-500 font-bold uppercase tracking-wider italic">Apprenez comment voter et découvrez les étapes du scrutin</p>
           </div>
 
-          <div class="flex flex-wrap items-center gap-3">
+          <div v-if="showTypeFilter" class="flex flex-wrap items-center gap-3">
              <USelect
                 v-model="selectedType"
                 :options="electionTypes"

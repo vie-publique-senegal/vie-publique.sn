@@ -6,6 +6,10 @@ export interface ElectionConfig {
 }
 
 export const useElectoralDashboard = () => {
+  const appConfig = useAppConfig();
+  const enabledTypes: string[] = appConfig.vpsnElections?.features?.enabledTypes ?? ['presidential', 'legislative', 'locale'];
+  const showTypeFilter = !(appConfig.vpsnElections?.features?.hideTypeFilter ?? false);
+
   const selectedYear = useState<number>('election-selected-year');
   const selectedType = useState<string>('election-selected-type');
   const activeTab = useState<string>('election-active-tab', () => 'candidats');
@@ -20,15 +24,37 @@ export const useElectoralDashboard = () => {
       server: true
   });
 
+  // Types et élections filtrés selon enabledTypes
+  const filteredTypes = computed(() =>
+    (config.value?.types ?? []).filter(t => enabledTypes.includes(t.value))
+  );
+
+  const filteredElections = computed(() =>
+    (config.value?.elections ?? []).filter(e => enabledTypes.includes(e.type))
+  );
+
+  // Config filtrée — même structure que config mais avec types/elections restreints aux enabledTypes
+  const filteredConfig = computed(() => {
+    if (!config.value) return null;
+    const electionsFiltered = filteredElections.value;
+    const enabledYears = new Set(electionsFiltered.map(e => e.year));
+    return {
+      ...config.value,
+      types: filteredTypes.value,
+      elections: electionsFiltered,
+      years: (config.value.years ?? []).filter(y => enabledYears.has(y.value)),
+    };
+  });
+
   // Initialiser avec la dernière élection "completed" par défaut SEULEMENT si pas déjà défini
   watch(config, (newConfig) => {
     if (newConfig && newConfig.elections && newConfig.elections.length > 0) {
-      // Si pas encore de sélection, prendre la dernière élection "completed"
+      // Si pas encore de sélection, prendre la dernière élection "completed" parmi les types actifs
       if (!selectedYear.value || !selectedType.value) {
-        const completedElections = newConfig.elections.filter(e => e.status === 'completed');
+        const completedElections = filteredElections.value.filter(e => e.status === 'completed');
         const defaultElection = completedElections.length > 0
           ? completedElections[0] // Déjà trié par année desc dans config.get.ts
-          : newConfig.elections[0];
+          : filteredElections.value[0];
 
         if (defaultElection) {
           selectedYear.value = defaultElection.year;
@@ -57,8 +83,8 @@ export const useElectoralDashboard = () => {
   };
 
   const currentElection = computed(() => {
-    if (!config.value?.elections) return null;
-    return config.value.elections.find(e => e.year === selectedYear.value && e.type === selectedType.value) || null;
+    if (!filteredElections.value.length) return null;
+    return filteredElections.value.find(e => e.year === selectedYear.value && e.type === selectedType.value) || null;
   });
 
   // Documents de l'élection actuelle
@@ -141,10 +167,14 @@ export const useElectoralDashboard = () => {
     searchQuery,
     legislativeViewType,
     config,
+    filteredConfig,
+    filteredTypes,
+    filteredElections,
     currentElection,
     currentElectionDocuments,
     loadingConfig,
     configError,
+    showTypeFilter,
     selectConstituency,
     clearConstituency,
     selectCoalition,

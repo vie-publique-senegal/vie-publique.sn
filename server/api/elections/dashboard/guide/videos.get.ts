@@ -21,7 +21,7 @@ export default defineCachedEventHandler(
 
     try {
       const guides = await directus.request(
-        (readItems as any)("guide_electorale", {
+        (readItems as any)("election_electoral_guide", {
           fields: [
             "id",
             "titre",
@@ -40,7 +40,7 @@ export default defineCachedEventHandler(
         data: guides,
       };
     } catch (error: any) {
-      console.error("Error in guide-electoral.get:", error);
+      console.error("Error in videos-electoral.get:", error);
       return {
         data: [],
         error: error.message
@@ -49,7 +49,7 @@ export default defineCachedEventHandler(
   },
   {
     maxAge: 60 * 60, // 1 hour cache
-    name: "elections-guide",
+    name: "videos-electoral-guide",
     getKey: (event) => {
       const query = getQuery(event);
       return `guide-${query.type || 'all'}-${query.language || 'all'}`;

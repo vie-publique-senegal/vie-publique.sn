@@ -10,7 +10,7 @@ import { useNews } from '../../../composables/news/useNews';
  */
 
 const dashboard = useElectoralDashboard();
-const { config, loadingConfig } = dashboard;
+const { filteredConfig: config, loadingConfig } = dashboard;
 
 const election = computed(() => {
   if (!config.value?.elections) return null;

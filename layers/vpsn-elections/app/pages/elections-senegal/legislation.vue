@@ -4,11 +4,12 @@ import type { Document } from '~~/types/document';
 
 const route = useRoute();
 const router = useRouter();
+const electionRoutes = useElectionRoutes();
 
 const selectedType = ref<string>((route.query.type as string) || 'all');
 const selectedYear = ref<string>((route.query.year as string) || 'all');
 
-const { config } = useElectoralDashboard();
+const { filteredConfig: config, showTypeFilter } = useElectoralDashboard();
 
 const currentPage = ref(parseInt((route.query.page as string) || '1'));
 const searchQuery = ref((route.query.q as string) || '');
@@ -22,9 +23,8 @@ const selectedElectionIds = computed(() => {
   // Filtrer pour les élections qui ont des documents
   const electionsWithDocsIds = new Set(config.value?.election_ids_with_documents || []);
 
-  // Trouver TOUTES les élections correspondantes (pas seulement la première)
+  // Trouver TOUTES les élections correspondantes
   const matchingElections = config.value.elections.filter(e => {
-    // Ne garder que les élections qui ont des documents
     if (!electionsWithDocsIds.has(e.id)) return false;
     if (selectedType.value !== 'all' && e.type !== selectedType.value) return false;
     if (selectedYear.value !== 'all' && e.year !== parseInt(selectedYear.value)) return false;
@@ -33,7 +33,6 @@ const selectedElectionIds = computed(() => {
 
   if (matchingElections.length === 0) return null;
 
-  // Retourner les IDs séparés par des virgules
   return matchingElections.map(e => e.id).join(',');
 });
 
@@ -167,10 +166,8 @@ useSeoMeta({
         <!-- Breadcrumb -->
         <AppBreadcrumb
           class="mb-6"
-          :items="[
-            { label: 'Élections', to: '/elections-senegal' },
-            { label: 'Législation' }
-          ]"
+          :links="[{ label: 'Élections', to: electionRoutes.home }]"
+          last-text="Législation"
         />
 
         <div class="flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -181,6 +178,7 @@ useSeoMeta({
 
           <div class="flex flex-wrap items-center gap-3">
             <USelect
+              v-if="showTypeFilter"
               v-model="selectedType"
               :options="typeOptions"
               size="md"

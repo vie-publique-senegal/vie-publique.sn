@@ -3,7 +3,7 @@ import { useElectoralCoalitions } from '~/composables/elections/dashboard/useEle
 import { useElectoralDashboard } from '~/composables/elections/dashboard/useElectoralDashboard';
 import { useNews } from '~/composables/news/useNews';
 
-const { config, loadingConfig } = useElectoralDashboard();
+const { filteredConfig: config, loadingConfig } = useElectoralDashboard();
 
 const election = computed(() => {
   if (!config.value?.elections) return null;
