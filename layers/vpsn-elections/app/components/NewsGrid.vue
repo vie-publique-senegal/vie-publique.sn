@@ -1,4 +1,4 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import { useElectoralFormatting } from '../composables/elections/dashboard/useElectoralFormatting';
 import type { NewsArticle } from '../types';
 
@@ -19,7 +19,7 @@ const props = withDefaults(defineProps<Props>(), {
   error: null,
   limit: 3,
   showViewAll: true,
-  viewAllText: 'Voir toutes les actualitÃ©s',
+  viewAllText: 'Voir toutes les actualités',
   emptyMessage: 'Aucun article disponible pour le moment'
 });
 

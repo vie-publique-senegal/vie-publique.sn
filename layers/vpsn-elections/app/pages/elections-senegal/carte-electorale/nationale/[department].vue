@@ -1,7 +1,8 @@
 <!-- pages/elections-senegal/carte-electorale/nationale/[department].vue -->
 <script setup lang="ts">
 import type { PollingStation } from "~~/types/election-map-national";
-import { useElectoralDashboard } from '~/composables/elections/dashboard/useElectoralDashboard';
+import { useElectoralDashboard } from '../../../../composables/elections/dashboard/useElectoralDashboard';
+import { useElectionRoutes } from '../../../../composables/useElectionRoutes';
 
 const route = useRoute();
 const router = useRouter();
@@ -181,7 +182,7 @@ const backUrl = computed(() => {
   if (electionYear.value) query.year = electionYear.value;
 
   return {
-    path: "/elections-senegal/carte-electorale",
+    path: electionRoutes.carteElectorale,
     query,
   };
 });
@@ -220,8 +221,12 @@ watch(
 );
 
 // SEO avec Open Graph
+const appConfig = useAppConfig();
+const countryName = appConfig.vpsnElections?.country?.name || 'Sénégal';
+const electionRoutes = useElectionRoutes();
+
 useSeoMeta({
-  title: () => `${pageTitle.value} | Carte Électorale Sénégal`,
+  title: () => `${pageTitle.value} | Carte Électorale ${countryName}`,
   description: () => electionName.value
     ? `Carte électorale du département ${department} pour ${electionName.value} - Liste des bureaux de vote, communes et électeurs.`
     : `Carte électorale du département ${department} - Liste des bureaux de vote, communes et électeurs.`,

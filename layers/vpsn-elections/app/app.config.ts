@@ -54,23 +54,31 @@ export default defineAppConfig({
     },
 
     // Types d'élections actifs dans l'interface
-    // Valeurs possibles : 'presidential', 'legislative', 'locale'
-    // Retirer un type pour le masquer partout (sélecteur, liste d'années, élection par défaut)
+    // Mettre à false pour masquer un type partout (sélecteur, liste d'années, élection par défaut)
     features: {
-      // enabledTypes: ['presidential', 'legislative', 'locale'] as string[],
-      enabledTypes: ['presidential'] as string[],
+      showPresidential: true,
+      showLegislative: true,
+      showLocale: true,
 
       // Masquer le sélecteur de type d'élection sur toutes les pages
-      // Utile quand enabledTypes ne contient qu'un seul type : l'interface affiche
-      // uniquement les données de ce type sans proposer de filtre à l'utilisateur
-      hideTypeFilter: true,
+      // Utile quand un seul type est actif (showPresidential/showLegislative/showLocale)
+      // hideTypeFilter: true,
+
+      // Masquer le sélecteur d'année sur toutes les pages de /elections-senegal
+      // Quand il n'y a qu'une seule élection par type, le sélecteur d'année devient superflu
+      // hideYearFilter: true,
+    },
+
+    // Personnalisation du thème visuel du dashboard
+    // primaryColor : couleur hex qui remplace la couleur primaire de Nuxt UI sur tout
+    // le dashboard électoral (boutons, accents, icônes, textes colorés, etc.)
+    // Exemple : '#E63946' pour rouge, '#0EA5E9' pour bleu ciel, '#16A34A' pour vert
+    theme: {
+      // primaryColor: '#2563EB',
     },
 
     // Configuration UI
     ui: {
-      // Couleur primaire (optionnel, utilise la couleur du projet parent par défaut)
-      // primaryColor: '#0EA5E9',
-
       // Textes des tabs
       mapTab: 'Carte',
       resultsTab: 'Résultats',
@@ -94,6 +102,9 @@ export default defineAppConfig({
       allElections: 'Toutes les élections',
       allLanguages: 'Toutes les langues',
       noVideosAvailable: 'Aucune vidéo disponible pour cette sélection.',
+
+      // Note de bas de page sur les sources officielles des données
+      officialSourcesNote: 'Toutes les informations sont issues de sources officielles : DGE, Conseil Constitutionnel.',
 
       // Nombre d'items par page
       itemsPerPage: {
@@ -136,11 +147,17 @@ declare module '@nuxt/schema' {
       };
       labels?: Record<string, string>;
       features?: {
-        enabledTypes?: string[];
+        showPresidential?: boolean;
+        showLegislative?: boolean;
+        showLocale?: boolean;
         hideTypeFilter?: boolean;
+        hideYearFilter?: boolean;
+      };
+      theme?: {
+        primaryColor?: string;
       };
       ui?: {
-        primaryColor?: string;
+        officialSourcesNote?: string;
         itemsPerPage?: Record<string, number>;
         cache?: Record<string, number>;
       };

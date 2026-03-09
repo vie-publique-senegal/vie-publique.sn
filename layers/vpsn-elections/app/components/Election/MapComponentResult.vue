@@ -43,8 +43,9 @@
           }"
         />
 
-        <!-- Masque pour le Sénégal (Délimiteur Visuel) -->
+        <!-- Masque pour le Pays -->
         <LGeoJson
+          v-if="countryName === 'Sénégal'"
           :geojson="senegalMask"
           :options="{
             style: {
@@ -114,7 +115,10 @@
 
 <script setup lang="ts">
 import type { TransformedRegion } from "~~/types/election-map";
-import { useElectionMapDataResult } from "~/composables/useElectionMapJsonResult";
+import { useElectionMapDataResult } from "../../composables/elections/useElectionMapJsonResult";
+
+const appConfig = useAppConfig();
+const countryName = appConfig.vpsnElections?.country?.name || 'Sénégal';
 
 interface Props {
   initialCenter?: [number, number];
@@ -125,8 +129,11 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  initialCenter: () => [14.4974, -14.4524],
-  initialZoom: 10,
+  initialCenter: () => {
+    const config = useAppConfig();
+    return config.vpsnElections?.country?.name === 'Bénin' ? [9.3077, 2.3158] : [14.4974, -14.4524];
+  },
+  initialZoom: 7,
   loading: false,
   electionType: 'legislative',
   electionYear: 2024
@@ -208,10 +215,9 @@ const center = computed(() => props.initialCenter);
 const mapOptions = computed(() => ({
   minZoom: isMobile.value ? 5 : 6,
   maxZoom: isMobile.value ? 10 : 12,
-  maxBounds: [
-    [11.8, -17.9],
-    [17.0, -11.2],
-  ],
+  maxBounds: countryName === 'Bénin'
+    ? [[6.2, 0.5], [12.5, 4.0]]
+    : [[11.8, -17.9], [17.0, -11.2]],
   zoomControl: !isMobile.value,
   attributionControl: false,
   zoomSnap: isMobile.value ? 1 : 0.5,
@@ -235,10 +241,9 @@ const tileLayerOptions = computed(() => ({
   keepBuffer: isMobile.value ? 1 : 2,
   updateWhenIdle: true,
   updateWhenZooming: false,
-  bounds: [
-    [11.8, -17.9],
-    [17.0, -11.2],
-  ],
+  bounds: countryName === 'Bénin'
+    ? [[6.2, 0.5], [12.5, 4.0]]
+    : [[11.8, -17.9], [17.0, -11.2]],
   crossOrigin: true,
 }));
 

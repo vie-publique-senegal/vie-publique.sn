@@ -1,4 +1,4 @@
-<!-- components/MapComponent.vue -->
+// components/MapComponent.vue
 <template>
   <div class="w-full overflow-hidden" :class="isMobile ? 'h-[400px]' : 'h-[600px]'">
     <!-- Conteneur carte -->
@@ -32,8 +32,9 @@
             :options="tileLayerOptions"
           />
 
-          <!-- Masque pour le Sénégal -->
+          <!-- Masque pour le Pays (Sénégal par défaut) -->
           <LGeoJson
+            v-if="countryName === 'Sénégal'"
             :geojson="senegalMask"
             :options="{
               style: {
@@ -76,7 +77,7 @@
                 <LPopup>
                   <div class="p-2">
                     <h3 class="text-lg font-bold">{{ region.departement }}</h3>
-                    <div>Région: {{ region.region }}</div>
+                    <div>{{ region.region ? `Région: ${region.region}` : '' }}</div>
                     <div>
                       Communes:
                       <span class="font-bold text-red-700">{{ formatNumber(region.municipality) }}</span>
@@ -139,7 +140,7 @@
                 <LPopup>
                   <div class="p-2">
                     <h3 class="text-lg font-bold">{{ dept.departement }}</h3>
-                    <div>Région: {{ dept.region }}</div>
+                    <div>{{ dept.region ? `Région: ${dept.region}` : '' }}</div>
                     <div>
                       Communes:
                       <span class="font-bold text-green-700">{{ dept.municipalityCount }}</span>
@@ -153,7 +154,7 @@
                       <span class="font-bold text-green-700">{{ formatNumber(dept.totalOffices) }}</span>
                     </div>
                     <div class="mb-2">
-                      Lieux de vote:
+                       Lieux de vote:
                       <span class="font-bold text-green-700">{{ formatNumber(dept.totalPlaces) }}</span>
                     </div>
                     <NuxtLink
@@ -175,9 +176,13 @@
 
 <script setup lang="ts">
 import type { TransformedRegion, DepartmentGroup } from "~~/types/election-map";
-import { useElectionMapData } from "~/composables/useElectionMapJson";
+import { useElectionMapData } from "../../composables/useElectionMapJson";
+import { useElectionRoutes } from "../../composables/useElectionRoutes";
 
 const route = useRoute();
+const electionRoutes = useElectionRoutes();
+const appConfig = useAppConfig();
+const countryName = appConfig.vpsnElections?.country?.name || 'Sénégal';
 
 // Type local pour le rendu des départements en mode local
 interface LocalDepartmentView {
@@ -202,8 +207,11 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  initialCenter: () => [14.4974, -14.4524],
-  initialZoom: 8,
+  initialCenter: () => {
+    const config = useAppConfig();
+    return config.vpsnElections?.country?.name === 'Bénin' ? [9.3077, 2.3158] : [14.4974, -14.4524];
+  },
+  initialZoom: 7,
   loading: false,
   electionId: null,
   isLocalElection: false,
@@ -327,13 +335,12 @@ const zoom = computed(() =>
 const center = computed(() => props.initialCenter);
 
 // Configuration de la carte
-const mapOptions = {
-  minZoom: 6,
+const mapOptions = computed(() => ({
+  minZoom: isMobile.value ? 5 : 6,
   maxZoom: 11,
-  maxBounds: [
-    [11.8, -17.9],
-    [17.0, -11.2],
-  ],
+  maxBounds: countryName === 'Bénin'
+    ? [[6.2, 0.5], [12.5, 4.0]]
+    : [[11.8, -17.9], [17.0, -11.2]],
   zoomControl: true,
   attributionControl: false,
   zoomSnap: 0.5,
@@ -341,11 +348,11 @@ const mapOptions = {
   boxZoom: false,
   doubleClickZoom: false,
   dragging: true,
-};
+}));
 
-const tileLayerOptions = {
+const tileLayerOptions = computed(() => ({
   maxZoom: 11,
-  minZoom: 6,
+  minZoom: 5,
   opacity: 0.3,
   tileSize: 512,
   zoomOffset: -1,
@@ -353,12 +360,11 @@ const tileLayerOptions = {
   keepBuffer: 2,
   updateWhenIdle: true,
   updateWhenZooming: false,
-  bounds: [
-    [11.8, -17.9],
-    [17.0, -11.2],
-  ],
+  bounds: countryName === 'Bénin'
+    ? [[6.2, 0.5], [12.5, 4.0]]
+    : [[11.8, -17.9], [17.0, -11.2]],
   crossOrigin: true,
-};
+}));
 
 const polygonOptions = computed(() => ({
   smoothFactor: 2,
@@ -475,7 +481,7 @@ const getDepartmentDetailUrl = (departement: string) => {
   }
 
   return {
-    path: `/elections-senegal/carte-electorale/nationale/${encodeURIComponent(departement)}`,
+    path: `${electionRoutes.carteElectorale}/nationale/${encodeURIComponent(departement)}`,
     query,
   };
 };

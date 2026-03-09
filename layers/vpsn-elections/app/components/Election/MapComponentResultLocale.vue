@@ -31,8 +31,9 @@
             :options="tileLayerOptions"
           />
 
-          <!-- Masque pour le Sénégal -->
+          <!-- Masque pour le Pays -->
           <LGeoJson
+            v-if="countryName === 'Sénégal'"
             :geojson="senegalMask"
             :options="{
               style: {
@@ -87,8 +88,13 @@
 </template>
 
 <script setup lang="ts">
-import { useElectionMapData } from "~/composables/useElectionMapJson";
-import { useElectionMapDataResult, type TableResultItem } from "~/composables/useElectionMapJsonResult";
+import { useElectionMapData } from "../../composables/useElectionMapJson";
+import { useElectionMapDataResult, type TableResultItem } from "../../composables/elections/useElectionMapJsonResult";
+import { useElectionRoutes } from "../../composables/useElectionRoutes";
+
+const appConfig = useAppConfig();
+const countryName = appConfig.vpsnElections?.country?.name || 'Sénégal';
+const electionRoutes = useElectionRoutes();
 
 interface DepartmentResultView {
   departement: string;
@@ -110,8 +116,11 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  initialCenter: () => [14.4974, -14.4524],
-  initialZoom: 8,
+  initialCenter: () => {
+    const config = useAppConfig();
+    return config.vpsnElections?.country?.name === 'Bénin' ? [9.3077, 2.3158] : [14.4974, -14.4524];
+  },
+  initialZoom: 7,
   loading: false,
 });
 
@@ -299,13 +308,12 @@ watch([() => departmentResults.value, pending], ([results, isPending]) => {
 const zoom = computed(() => isMobile.value ? props.initialZoom - 0.5 : props.initialZoom);
 const center = computed(() => props.initialCenter);
 
-const mapOptions = {
-  minZoom: 6,
+const mapOptions = computed(() => ({
+  minZoom: isMobile.value ? 5 : 6,
   maxZoom: 11,
-  maxBounds: [
-    [11.8, -17.9],
-    [17.0, -11.2],
-  ],
+  maxBounds: countryName === 'Bénin'
+    ? [[6.2, 0.5], [12.5, 4.0]]
+    : [[11.8, -17.9], [17.0, -11.2]],
   zoomControl: true,
   attributionControl: false,
   zoomSnap: 0.5,
@@ -313,11 +321,11 @@ const mapOptions = {
   boxZoom: false,
   doubleClickZoom: false,
   dragging: true,
-};
+}));
 
-const tileLayerOptions = {
+const tileLayerOptions = computed(() => ({
   maxZoom: 11,
-  minZoom: 6,
+  minZoom: 5,
   opacity: 0.3,
   tileSize: 512,
   zoomOffset: -1,
@@ -325,12 +333,11 @@ const tileLayerOptions = {
   keepBuffer: 2,
   updateWhenIdle: true,
   updateWhenZooming: false,
-  bounds: [
-    [11.8, -17.9],
-    [17.0, -11.2],
-  ],
+  bounds: countryName === 'Bénin'
+    ? [[6.2, 0.5], [12.5, 4.0]]
+    : [[11.8, -17.9], [17.0, -11.2]],
   crossOrigin: true,
-};
+}));
 
 const polygonOptions = computed(() => ({
   smoothFactor: 2,

@@ -1,9 +1,15 @@
 <script setup lang="ts">
-import { useElectoralCoalitions } from '~/composables/elections/dashboard/useElectoralCoalitions';
-import { useElectoralDashboard } from '~/composables/elections/dashboard/useElectoralDashboard';
-import { useNews } from '~/composables/news/useNews';
+import { useElectoralCoalitions } from '../../composables/elections/dashboard/useElectoralCoalitions';
+import { useElectoralDashboard } from '../../composables/elections/dashboard/useElectoralDashboard';
+import { useNews } from '../../composables/news/useNews';
+import { useElectionRoutes } from '../../composables/useElectionRoutes';
 
 const { filteredConfig: config, loadingConfig } = useElectoralDashboard();
+const electionRoutes = useElectionRoutes();
+const appConfig = useAppConfig();
+const countryName = appConfig.vpsnElections?.country?.name ?? 'Sénégal';
+const labels = appConfig.vpsnElections?.labels ?? {};
+const uiConfig = (appConfig.vpsnElections as any)?.ui ?? {};
 
 const election = computed(() => {
   if (!config.value?.elections) return null;
@@ -68,37 +74,38 @@ const topLegislativeCoalitions = computed(() => {
 
 
 // SEO avec Open Graph
+const seoConfig = appConfig.vpsnElections?.seo;
 useSeoMeta({
-  title: 'Élections au Sénégal | Plateforme d\'Information Électorale',
-  description: 'Accédez à toutes les informations sur les élections au Sénégal : guide électoral, législation, cartographie et résultats.',
-  ogTitle: 'Élections au Sénégal',
-  ogDescription: 'Plateforme d\'information électorale du Sénégal : résultats, candidats, carte électorale et guide de l\'électeur.',
+  title: seoConfig?.title ?? `Élections ${countryName} | Plateforme d'Information Électorale`,
+  description: seoConfig?.description ?? `Accédez à toutes les informations sur les élections au ${countryName}.`,
+  ogTitle: `Élections au ${countryName}`,
+  ogDescription: `Plateforme d'information électorale du ${countryName} : résultats, candidats, carte électorale et guide de l'électeur.`,
 });
 
 const quickLinks = computed(() => [
   {
-    title: "Guide Électoral",
+    title: labels.guide ?? "Guide Électoral",
     description: "Comment voter ?",
     icon: "i-heroicons-book-open",
-    to: "/elections-senegal/guide-electoral",
+    to: electionRoutes.guideElectoral,
     color: "text-blue-600",
     bg: "bg-blue-50"
   },
   {
-    title: "Législation",
+    title: labels.legislation ?? "Législation",
     description: "Textes de lois et décrets",
     icon: "i-heroicons-scale",
-    to: "/elections-senegal/legislation",
+    to: electionRoutes.legislation,
     color: "text-emerald-600",
     bg: "bg-emerald-50"
   },
   {
-    title: "Carte Électorale",
+    title: labels.map ?? "Carte Électorale",
     description: "Lieux et bureaux de vote",
     icon: "i-heroicons-map",
     to: election.value
-      ? `/elections-senegal/carte-electorale?type=${election.value.type}&year=${election.value.year}`
-      : "/elections-senegal/carte-electorale",
+      ? `${electionRoutes.carteElectorale}?type=${election.value.type}&year=${election.value.year}`
+      : electionRoutes.carteElectorale,
     color: "text-purple-600",
     bg: "bg-purple-50"
   }
@@ -106,9 +113,9 @@ const quickLinks = computed(() => [
 
   const getStatusLabel = (status: string) => {
     switch(status) {
-        case 'ongoing': return 'En Cours';
-        case 'scheduled': return 'Programmée';
-        case 'completed': return 'Terminée';
+        case 'ongoing': return labels.ongoing ?? 'En Cours';
+        case 'scheduled': return labels.scheduled ?? 'Programmée';
+        case 'completed': return labels.completed ?? 'Terminée';
         default: return status;
     }
 };
@@ -128,7 +135,7 @@ const quickLinks = computed(() => [
       <section class="text-center mb-8">
         <div class="mx-auto max-w-4xl">
           <h1 class="mb-4 text-4xl font-bold text-gray-900 md:text-5xl dark:text-white">
-            Élections Sénégal
+            Élections {{ countryName }}
           </h1>
           <p class="text-gray-600 dark:text-gray-400">
             Retrouvez ci-dessous les informations de la dernière élection
@@ -176,7 +183,7 @@ const quickLinks = computed(() => [
               <!-- Title -->
               <div>
                  <h1 class="text-2xl lg:text-3xl font-black uppercase tracking-tighter text-gray-900 dark:text-white leading-tight">
-                    {{ election.name || 'Élections Sénégal' }}
+                    {{ election.name || `Élections ${countryName}` }}
                  </h1>
               </div>
 
@@ -184,7 +191,7 @@ const quickLinks = computed(() => [
               <div v-if="election.status === 'completed'" class="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2">
                  <!-- Actions Présidentielle -->
                  <template v-if="election.type === 'presidential'">
-                    <UButton to="/elections-senegal/legislation?q=resultats" color="gray" variant="solid" size="xs" icon="i-heroicons-document-check" class="justify-start">Résultats Définitifs</UButton>
+                    <UButton :to="`${electionRoutes.legislation}?q=resultats`" color="gray" variant="solid" size="xs" icon="i-heroicons-document-check" class="justify-start">Résultats Définitifs</UButton>
                  </template>
 
                  <!-- Actions Législative -->
@@ -264,7 +271,7 @@ const quickLinks = computed(() => [
           <!-- Desktop: Link text -->
           <NuxtLink
             v-if="election"
-            :to="`/elections-senegal/dashboard/${election.type}/${election.year}?tab=resultats`"
+            :to="`${electionRoutes.dashboard(election.type, election.year)}?tab=resultats`"
             class="hidden md:block p-4 bg-slate-50 dark:bg-gray-800/50 border-t dark:border-gray-800 text-center text-sm font-black uppercase tracking-widest text-gray-500 hover:text-primary-600 hover:bg-slate-100 transition-all"
           >
             Voir le tableau de bord complet <UIcon name="i-heroicons-arrow-right" class="ml-2 inline-block h-4 w-4" />
@@ -272,7 +279,7 @@ const quickLinks = computed(() => [
           <!-- Mobile: Card style CTA -->
           <NuxtLink
             v-if="election"
-            :to="`/elections-senegal/dashboard/${election.type}/${election.year}?tab=resultats`"
+            :to="`${electionRoutes.dashboard(election.type, election.year)}?tab=resultats`"
             class="md:hidden group flex items-center justify-center gap-3 p-4 bg-gradient-to-br from-primary-50 via-primary-100 to-primary-200 dark:from-primary-900/30 dark:via-primary-800/25 dark:to-primary-900/20 border-t dark:border-gray-800 transition hover:shadow-lg"
           >
             <UIcon
@@ -336,7 +343,7 @@ const quickLinks = computed(() => [
 
       <!-- Footer Simplified -->
       <div class="text-center pt-10 border-t dark:border-gray-800">
-        <p class="text-[10px] text-gray-500 mt-2">Toutes les informations sont issues de sources officielles : DGE, Conseil Constitutionnel.</p>
+        <p class="text-[10px] text-gray-500 mt-2">{{ uiConfig.officialSourcesNote }}</p>
       </div>
 
     </div>

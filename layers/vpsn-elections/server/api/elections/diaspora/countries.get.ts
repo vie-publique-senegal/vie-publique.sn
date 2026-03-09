@@ -38,12 +38,9 @@ export default defineCachedEventHandler(
       return {
         countries: countriesData,
       };
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error fetching diaspora countries:", error);
-      throw createError({
-        statusCode: 500,
-        statusMessage: "Erreur lors de la récupération des pays de la diaspora",
-      });
+      return { countries: [] };
     }
   },
   {

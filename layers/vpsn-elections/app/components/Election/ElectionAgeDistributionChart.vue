@@ -54,7 +54,7 @@
 
 <script setup lang="ts">
 import * as d3 from "d3";
-import type { AgeGroupData } from "~/types/statistics";
+import type { AgeGroupData } from "../../types/election-stats-elector";
 
 const ageData: AgeGroupData[] = [
   { tranche: "18-25", nombre: 783084, pourcentage: 11 },

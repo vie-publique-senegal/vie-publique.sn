@@ -90,8 +90,9 @@ const getNestedValue = (obj: any, path: string) => {
   return path.split(".").reduce((acc, part) => acc && acc[part], obj);
 };
 
-const router = useRouter();
 const route = useRoute();
+const router = useRouter();
+const electionRoutes = useElectionRoutes();
 
 // Fonction de navigation
 const handleRowClick = (row: CountryStats) => {
@@ -109,7 +110,7 @@ const handleRowClick = (row: CountryStats) => {
   }
 
   router.push({
-    path: `/elections-senegal/carte-electorale/diaspora/${row.country}`,
+    path: `${electionRoutes.carteElectorale}/diaspora/${row.country}`,
     query,
   });
 };

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useElectionRoutes } from '../../composables/useElectionRoutes';
 interface MunicipalityInfo {
   municipality: string;
   voters: number;
@@ -26,7 +27,10 @@ interface Props {
 
 const props = defineProps<Props>();
 const emit = defineEmits<{ close: [] }>();
+// Navigation
 const route = useRoute();
+const router = useRouter();
+const electionRoutes = useElectionRoutes();
 
 // Détection responsive
 const isMobile = ref(false);
@@ -78,7 +82,7 @@ const formatNumber = (value?: number) => {
   return value.toLocaleString('fr-FR');
 };
 
-// Construire l'URL de détail du département
+// URLs
 const getDepartmentDetailUrl = () => {
   if (!props.department) return '/';
   const query: Record<string, string> = {};
@@ -91,10 +95,12 @@ const getDepartmentDetailUrl = () => {
   }
 
   return {
-    path: `/elections-senegal/carte-electorale/nationale/${encodeURIComponent(props.department.departement.toUpperCase())}`,
+    path: `${electionRoutes.carteElectorale}/nationale/${encodeURIComponent(props.department.departement.toUpperCase())}`,
     query,
   };
 };
+
+// Imports and instance hooks at the top are already there (or added below)
 
 
 </script>

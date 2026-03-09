@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { useElectoralDashboard } from '~/composables/elections/dashboard/useElectoralDashboard';
+import { useElectoralDashboard } from '../../../composables/elections/dashboard/useElectoralDashboard';
+import { useElectionRoutes } from '../../../composables/useElectionRoutes';
 
 /**
  * Page Carte Électorale - Sénégal
@@ -11,7 +12,7 @@ const router = useRouter();
 // Sélecteurs d'élection
 const selectedType = ref<string>((route.query.type as string) || '');
 const selectedYear = ref<string>((route.query.year as string) || '');
-const { filteredConfig: config, showTypeFilter } = useElectoralDashboard();
+const { filteredConfig: config, showTypeFilter, showYearFilter } = useElectoralDashboard();
 
 // Calcul de l'élection sélectionnée
 const selectedElection = computed(() => {
@@ -23,19 +24,23 @@ const selectedElection = computed(() => {
 });
 
 // SEO dynamique avec le nom de l'élection
+const appConfig = useAppConfig();
+const countryName = appConfig.vpsnElections?.country?.name || 'Sénégal';
+const electionRoutes = useElectionRoutes();
+
 useSeoMeta({
   title: () => selectedElection.value
-    ? `Carte Électorale - ${selectedElection.value.name} | Élections Sénégal`
-    : 'Carte Électorale | Élections Sénégal',
+    ? `Carte Électorale - ${selectedElection.value.name} | Élections ${countryName}`
+    : `Carte Électorale | Élections ${countryName}`,
   description: () => selectedElection.value
     ? `Explorez la cartographie électorale pour ${selectedElection.value.name} : lieux de vote, bureaux et statistiques par département et diaspora.`
-    : 'Explorez la cartographie électorale du Sénégal : lieux de vote, répartition géographique et statistiques.',
+    : `Explorez la cartographie électorale du ${countryName === 'Sénégal' ? 'Sénégal' : 'Bénin'} : lieux de vote, répartition géographique et statistiques.`,
   ogTitle: () => selectedElection.value
     ? `Carte Électorale - ${selectedElection.value.name}`
-    : 'Carte Électorale | Élections Sénégal',
+    : `Carte Électorale | Élections ${countryName}`,
   ogDescription: () => selectedElection.value
     ? `Visualisez les données électorales pour ${selectedElection.value.name} à travers le territoire national et la diaspora.`
-    : 'Visualisez les données électorales du Sénégal.',
+    : `Visualisez les données électorales du ${countryName === 'Sénégal' ? 'Sénégal' : 'Bénin'}.`,
 });
 
 
@@ -263,7 +268,7 @@ watch(selectedElectionId, (newId, oldId) => {
         class="mb-6"
         :links="[
           { label: 'Accueil', to: '/' },
-          { label: 'Élections', to: '/elections-senegal' },
+          { label: 'Élections', to: electionRoutes.home },
           { label: 'Carte Électorale' },
         ]"
       />
@@ -293,6 +298,7 @@ watch(selectedElectionId, (newId, oldId) => {
             placeholder="Type d'élection"
           />
           <USelect
+            v-if="showYearFilter"
             v-model="selectedYear"
             :options="yearOptions"
             size="md"

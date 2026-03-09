@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import { useElectoralDashboard } from '~/composables/elections/dashboard/useElectoralDashboard';
+import { useElectoralDashboard } from '../../composables/elections/dashboard/useElectoralDashboard';
+import { useElectionRoutes } from '../../composables/useElectionRoutes';
+
 
 /**
  * Page Guide Électoral - Sénégal
@@ -84,7 +86,7 @@ useSeoMeta({
 
     <div class="container mx-auto px-4 max-w-6xl py-12">
       <!-- Component reusing existing guide logic -->
-      <ElectionsDashboardGuideElectoralVideos :type-election="selectedType" />
+      <ElectionDashboardGuideElectoralVideos :type-election="selectedType" />
     </div>
   </div>
 </template>

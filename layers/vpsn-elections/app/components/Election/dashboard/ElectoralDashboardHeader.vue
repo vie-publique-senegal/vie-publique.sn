@@ -19,6 +19,7 @@ const emit = defineEmits<{
 
 const appConfig = useAppConfig();
 const showTypeFilter = !(appConfig.vpsnElections?.features?.hideTypeFilter ?? false);
+const showYearFilter = !(appConfig.vpsnElections?.features?.hideYearFilter ?? false);
 
 // Filter years based on selected election type
 const filteredYears = computed(() => {
@@ -53,6 +54,8 @@ const shouldShowSelectors = computed(() => {
   if (!props.hideTabsMobile) return true;
   return !isMobile.value;
 });
+// La pastille sélecteurs (type + année) n'apparaît que si au moins un sélecteur est actif
+const showSelectorsPill = computed(() => (showTypeFilter || showYearFilter) && shouldShowSelectors.value);
 </script>
 
 <template>
@@ -80,7 +83,7 @@ const shouldShowSelectors = computed(() => {
 
         <!-- Selectors -->
         <div
-          v-if="shouldShowSelectors"
+          v-if="showSelectorsPill"
           class="flex items-center gap-2 bg-gray-100 dark:bg-gray-800/50 p-1 rounded-2xl border dark:border-gray-700"
         >
           <USelectMenu
@@ -99,6 +102,7 @@ const shouldShowSelectors = computed(() => {
           </USelectMenu>
 
           <USelectMenu
+            v-if="showYearFilter"
             :model-value="selectedYear"
             :options="filteredYears"
             value-attribute="value"

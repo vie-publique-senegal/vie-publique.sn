@@ -94,7 +94,7 @@ function openCandidateModal(candidate: Candidate) {
 <template>
   <div class="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
     <!-- Header with Back Button -->
-    <ElectionsDashboardPresidentialDetailsHeader
+    <ElectionDashboardPresidentialDetailsHeader
       :coalition-name="coalitionName"
       :list-count="lists.length"
       :type="type"
@@ -105,11 +105,11 @@ function openCandidateModal(candidate: Candidate) {
     <!-- Filters & Search (seulement pour législatives et locales) -->
     <div v-if="!isPresidential" class="flex flex-col gap-4 sticky top-[80px] md:top-[124px] z-40 bg-gray-50/95 backdrop-blur-md pb-4 pt-2 -mx-4 px-4 border-b md:border-none border-gray-200 dark:border-gray-800 dark:bg-gray-950/95 transition-all duration-300">
       <div class="max-w-3xl mx-auto w-full">
-        <ElectionsDashboardFiltersCandidateSearchBar v-model="searchQuery" />
+        <ElectionDashboardFiltersCandidateSearchBar v-model="searchQuery" />
       </div>
 
       <div v-if="!isLocal" class="w-full flex justify-center overflow-x-auto no-scrollbar">
-        <ElectionsDashboardFiltersCandidateFilterTabs
+        <ElectionDashboardFiltersCandidateFilterTabs
           v-if="!searchQuery"
           v-model="filterType"
           :options="filterOptions"
@@ -118,7 +118,7 @@ function openCandidateModal(candidate: Candidate) {
     </div>
 
     <!-- Info candidat présidentiel -->
-    <ElectionsDashboardCandidatesPresidentialCandidateProfile
+    <ElectionDashboardCandidatesPresidentialCandidateProfile
       v-if="isPresidential && lists.length > 0 && lists[0].candidates.length > 0"
       :candidate="lists[0].candidates[0]"
       :coalition-name="coalitionName"
@@ -126,7 +126,7 @@ function openCandidateModal(candidate: Candidate) {
     />
 
     <!-- Loading State -->
-    <ElectionsDashboardCandidatesCandidateLoadingSkeleton v-if="loading" />
+    <ElectionDashboardCandidatesCandidateLoadingSkeleton v-if="loading" />
 
     <!-- Error State -->
     <UAlert
@@ -161,7 +161,7 @@ function openCandidateModal(candidate: Candidate) {
 
             <!-- Candidates Grid (Titulaires) -->
             <div v-if="!list.is_substitute" class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-4">
-               <ElectionsDashboardCandidatesCandidateGridCard
+               <ElectionDashboardCandidatesCandidateGridCard
                  v-for="candidate in list.candidates"
                  :key="candidate.id"
                  :candidate="candidate"
@@ -171,7 +171,7 @@ function openCandidateModal(candidate: Candidate) {
 
             <!-- Candidates List (Suppleants) -->
             <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-2">
-                <ElectionsDashboardCandidatesCandidateListItem
+                <ElectionDashboardCandidatesCandidateListItem
                   v-for="candidate in list.candidates"
                   :key="candidate.id"
                   :candidate="candidate"
@@ -217,7 +217,7 @@ function openCandidateModal(candidate: Candidate) {
 
             <template #titulaires>
               <div v-if="group.titulaires" class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-4 p-4 bg-gray-50 dark:bg-gray-950 rounded-xl border dark:border-gray-800">
-                <ElectionsDashboardCandidatesCandidateGridCard
+                <ElectionDashboardCandidatesCandidateGridCard
                  v-for="candidate in group.titulaires.candidates"
                  :key="candidate.id"
                  :candidate="candidate"
@@ -228,7 +228,7 @@ function openCandidateModal(candidate: Candidate) {
 
             <template #suppleants>
               <div v-if="group.suppleants" class="grid grid-cols-1 md:grid-cols-2 gap-2 p-4 bg-gray-50 dark:bg-gray-950 rounded-xl border dark:border-gray-800">
-                <ElectionsDashboardCandidatesCandidateListItem
+                <ElectionDashboardCandidatesCandidateListItem
                   v-for="candidate in group.suppleants.candidates"
                   :key="candidate.id"
                   :candidate="candidate"
@@ -249,7 +249,7 @@ function openCandidateModal(candidate: Candidate) {
     </div>
 
     <!-- Candidate Detail Modal -->
-    <ElectionsDashboardModalsCandidateDetailModal
+    <ElectionDashboardModalsCandidateDetailModal
       v-model="isModalOpen"
       :candidate="selectedCandidate"
     />

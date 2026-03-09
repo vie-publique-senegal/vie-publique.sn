@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { useElectionMapDataResult } from '~/composables/useElectionMapJsonResult';
+import { useElectionMapDataResult } from '../../../../composables/elections/useElectionMapJsonResult';
+
 
 interface Props {
   electionType: string;

@@ -100,12 +100,16 @@ export default defineCachedEventHandler(
           ),
         },
       };
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching election map summary:', error);
-      throw createError({
-        statusCode: 500,
-        statusMessage: 'Erreur lors de la récupération du résumé de la carte électorale',
-      });
+      
+      // Si les tables n'existent pas ou erreur de permission, on retourne des zéros
+      // au lieu de bloquer l'interface avec une 500
+      return {
+        total: { voters: 0, offices: 0, places: 0, departments: 0 },
+        national: { voters: 0, offices: 0, places: 0, departments: 0, municipalities: 0 },
+        diaspora: { voters: 0, offices: 0, places: 0, countries: 0, localities: 0, diplomaticRepresentations: 0 },
+      };
     }
   },
   {

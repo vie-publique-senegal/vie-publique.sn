@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { TableResultItem } from '~/composables/useElectionMapJsonResult';
+import type { TableResultItem } from '../../composables/elections/useElectionMapJsonResult';
 
 interface DepartmentInfo {
   departement: string;

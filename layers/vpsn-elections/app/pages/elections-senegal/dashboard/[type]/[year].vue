@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { useElectoralCoalitions } from '~/composables/elections/dashboard/useElectoralCoalitions';
-import { useElectoralConstituencies } from '~/composables/elections/dashboard/useElectoralConstituencies';
-import { useElectoralDashboard } from '~/composables/elections/dashboard/useElectoralDashboard';
-import { useElectoralProfessions } from '~/composables/elections/dashboard/useElectoralProfessions';
-import { useElectoralStatsList } from '~/composables/elections/dashboard/useElectoralStatsList';
-import { useElectionMapDataResult, type TableResultItem } from '~/composables/useElectionMapJsonResult';
+import { useElectoralCoalitions } from '../../../../composables/elections/dashboard/useElectoralCoalitions';
+import { useElectoralConstituencies } from '../../../../composables/elections/dashboard/useElectoralConstituencies';
+import { useElectoralDashboard } from '../../../../composables/elections/dashboard/useElectoralDashboard';
+import { useElectoralProfessions } from '../../../../composables/elections/dashboard/useElectoralProfessions';
+import { useElectoralStatsList } from '../../../../composables/elections/dashboard/useElectoralStatsList';
+import { type TableResultItem, useElectionMapDataResult } from '../../../../composables/elections/useElectionMapJsonResult';
+
 
 
 /**
@@ -418,7 +419,7 @@ const resultCommunesForDept = computed(() => {
 <template>
   <div class="min-h-screen pb-16 text-gray-900 dark:text-gray-100 transition-colors duration-300">
     <!-- Header & Navigation Sticky -->
-    <ElectionsDashboardElectoralDashboardHeader
+    <ElectionDashboardElectoralDashboardHeader
       :selected-year="selectedYear"
       :selected-type="selectedType"
       :config="config"
@@ -438,12 +439,12 @@ const resultCommunesForDept = computed(() => {
         />
       </template>
       <template #tabs>
-        <ElectionsDashboardElectoralDashboardTabs
+        <ElectionDashboardElectoralDashboardTabs
           v-model="currentTabIndex"
           :selected-type="selectedType"
         />
       </template>
-    </ElectionsDashboardElectoralDashboardHeader>
+    </ElectionDashboardElectoralDashboardHeader>
 
     <!-- Main Content -->
     <main class="container mx-auto px-4 py-8">
@@ -473,7 +474,7 @@ const resultCommunesForDept = computed(() => {
       <div v-else>
       <!-- Section: Détails de l'élection -->
       <transition name="fade">
-        <ElectionsDashboardElectoralDetailsCard
+        <ElectionDashboardElectoralDetailsCard
           v-if="currentElection && !selectedCoalitionId && !selectedConstituencyId && (
             currentElection.status !== 'completed' || activeTab === 'candidats'
           )"
@@ -486,7 +487,7 @@ const resultCommunesForDept = computed(() => {
 
       <!-- Section: Statistiques KPI de l'élection (visible si election terminée ET données disponibles) -->
       <transition name="fade">
-        <ElectionsDashboardElectionStatsKPI
+        <ElectionDashboardElectionStatsKPI
           v-if="currentElection?.status === 'completed' && hasElectionStats && !selectedCoalitionId && !selectedConstituencyId && activeTab === 'candidats'"
           :election="currentElection"
           class="mb-8 animate-in fade-in slide-in-from-top-4 duration-500"
@@ -508,7 +509,7 @@ const resultCommunesForDept = computed(() => {
 
           <!-- NIVEAU 3: Detail Coalition (pour tous les types) -->
           <div v-if="selectedCoalitionId" class="animate-in fade-in zoom-in-95 duration-500">
-            <ElectionsDashboardCoalitionDetails
+            <ElectionDashboardCoalitionDetails
               :coalition-id="selectedCoalitionId"
               :coalition-name="coalitions.find(c => c.id === selectedCoalitionId)?.name"
               :year="selectedYear"
@@ -520,7 +521,7 @@ const resultCommunesForDept = computed(() => {
 
           <!-- NIVEAU 2: Coalitions d'une circonscription (élections locales seulement) -->
           <div v-else-if="isLocalElection && selectedConstituencyId" class="animate-in fade-in zoom-in-95 duration-500">
-            <ElectionsDashboardConstituencyCoalitions
+            <ElectionDashboardConstituencyCoalitions
               :constituency-id="selectedConstituencyId"
               :constituency-name="selectedConstituencyName"
               :year="selectedYear"
@@ -617,11 +618,11 @@ const resultCommunesForDept = computed(() => {
             <!-- ÉLECTIONS LOCALES: Grille des circonscriptions -->
             <template v-if="isLocalElection">
               <!-- Loading -->
-              <ElectionsDashboardCoalitionGridLoadingState v-if="loadingConstituencies" />
+              <ElectionDashboardCoalitionGridLoadingState v-if="loadingConstituencies" />
 
               <!-- Grille circonscriptions -->
               <div v-else-if="constituencies.length > 0" class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                <ElectionsDashboardCardsConstituencyCard
+                <ElectionDashboardCardsConstituencyCard
                   v-for="constituency in constituencies"
                   :key="constituency.id"
                   :constituency="constituency"
@@ -630,17 +631,17 @@ const resultCommunesForDept = computed(() => {
               </div>
 
               <!-- Empty State -->
-              <ElectionsDashboardEmptyStateCoalitions v-else />
+              <ElectionDashboardEmptyStateCoalitions v-else />
             </template>
 
             <!-- ÉLECTIONS PRÉSIDENTIELLES & LÉGISLATIVES: Grille des coalitions -->
             <template v-else>
               <!-- Loading -->
-              <ElectionsDashboardCoalitionGridLoadingState v-if="loadingCoalitions" />
+              <ElectionDashboardCoalitionGridLoadingState v-if="loadingCoalitions" />
 
               <!-- Grille PRÉSIDENTIELLE : Candidat en avant -->
               <div v-else-if="coalitions.length > 0 && selectedType === 'presidential'" class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                <ElectionsDashboardCardsLegislativeCoalitionHeadCard
+                <ElectionDashboardCardsLegislativeCoalitionHeadCard
                   v-for="coalition in coalitions"
                   :key="coalition.id"
                   :coalition="coalition"
@@ -655,7 +656,7 @@ const resultCommunesForDept = computed(() => {
                 ]"
               >
                 <template v-if="legislativeViewType === 'list'">
-                  <ElectionsDashboardCardsLegislativeCoalitionListCard
+                  <ElectionDashboardCardsLegislativeCoalitionListCard
                     v-for="coalition in coalitions"
                     :key="coalition.id"
                     :coalition="coalition"
@@ -664,7 +665,7 @@ const resultCommunesForDept = computed(() => {
                 </template>
 
                 <template v-else-if="legislativeViewType === 'head'">
-                  <ElectionsDashboardCardsLegislativeCoalitionHeadCard
+                  <ElectionDashboardCardsLegislativeCoalitionHeadCard
                     v-for="coalition in coalitions"
                     :key="coalition.id"
                     :coalition="coalition"
@@ -673,7 +674,7 @@ const resultCommunesForDept = computed(() => {
                 </template>
 
                 <template v-else-if="legislativeViewType === 'ballot'">
-                  <ElectionsDashboardCardsLegislativeCoalitionBallotCard
+                  <ElectionDashboardCardsLegislativeCoalitionBallotCard
                     v-for="coalition in coalitions"
                     :key="coalition.id"
                     :coalition="coalition"
@@ -683,7 +684,7 @@ const resultCommunesForDept = computed(() => {
               </div>
 
               <!-- Empty State -->
-              <ElectionsDashboardEmptyStateCoalitions v-else />
+              <ElectionDashboardEmptyStateCoalitions v-else />
             </template>
           </div>
         </section>
@@ -809,7 +810,7 @@ const resultCommunesForDept = computed(() => {
                 <div class="min-h-[400px]">
                     <div v-if="resultViewType === 'list'">
                         <div v-if="selectedType === 'locale'">
-                            <ElectionsDashboardStatsElectionResultatsLocalesTable
+                            <ElectionDashboardStatsElectionResultatsLocalesTable
                               :election-type="selectedType"
                               :election-year="selectedYear"
                             />
@@ -827,7 +828,7 @@ const resultCommunesForDept = computed(() => {
                             </div>
                             <div v-else>
                                 <!-- GRAPHIQUE DES RÉSULTATS (Présidentielle & Législatives) -->
-                                <ElectionsDashboardResultChart
+                                <ElectionDashboardResultChart
                                    v-if="['presidential', 'legislative'].includes(selectedType)"
                                    :results="coalitions"
                                    :type="selectedType"
@@ -835,7 +836,7 @@ const resultCommunesForDept = computed(() => {
                                 />
 
                                 <!-- Composant pour les résultats -->
-                                <ElectionsDashboardResultClassement
+                                <ElectionDashboardResultClassement
                                   :coalitions="coalitions"
                                   :loading="loadingCoalitions"
                                   :type="selectedType"
@@ -933,7 +934,7 @@ const resultCommunesForDept = computed(() => {
 
         <!-- Dashboard Section: Guide de vote (Tab ID: guide) -->
         <section v-else-if="activeTab === 'guide'" class="animate-in fade-in duration-700">
-          <ElectionsDashboardGuideElectoralVideos :type-election="selectedType" />
+          <ElectionDashboardGuideElectoralVideos :type-election="selectedType" />
         </section>
 
         <!-- Dashboard Section: Documents (Tab ID: documents) -->
@@ -951,7 +952,7 @@ const resultCommunesForDept = computed(() => {
 
               <div class="min-h-[300px]">
                  <!-- Documents rattachés à l'élection actuelle -->
-                 <ElectionsDashboardDocumentsTab
+                 <ElectionDashboardDocumentsTab
                    :documents="currentElectionDocuments"
                    :election-name="currentElection?.name"
                    :loading="loadingConfig"

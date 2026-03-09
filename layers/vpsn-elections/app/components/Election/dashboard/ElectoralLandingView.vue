@@ -1,12 +1,12 @@
-ï»¿<script setup lang="ts">
+<script setup lang="ts">
 import { useElectoralCoalitions } from '../../../composables/elections/dashboard/useElectoralCoalitions';
 import { useElectoralDashboard } from '../../../composables/elections/dashboard/useElectoralDashboard';
 import { useNews } from '../../../composables/news/useNews';
 
 
 /**
- * ElectoralLandingView - Vue d'accueil des Ã©lections (Landing page).
- * Affiche l'Ã©lection en cours ou la plus rÃ©cente et les liens d'accÃ¨s rapide.
+ * ElectoralLandingView - Vue d'accueil des élections (Landing page).
+ * Affiche l'élection en cours ou la plus récente et les liens d'accès rapide.
  */
 
 const dashboard = useElectoralDashboard();
@@ -15,17 +15,17 @@ const { filteredConfig: config, loadingConfig } = dashboard;
 const election = computed(() => {
   if (!config.value?.elections) return null;
 
-  // 1. En cours (PrioritÃ© absolue)
+  // 1. En cours (Priorité absolue)
   const ongoing = config.value.elections.find(e => e.status === 'ongoing');
   if (ongoing) return ongoing;
 
-  // 2. TerminÃ© (Le plus rÃ©cent) - PAR DÃ‰FAUT
+  // 2. Terminé (Le plus récent) - PAR DÉFAUT
   const completed = config.value.elections
     .filter(e => e.status === 'completed')
     .sort((a, b) => new Date(b.election_date).getTime() - new Date(a.election_date).getTime())[0];
   if (completed) return completed;
 
-  // 3. ProgrammÃ© (Le plus proche)
+  // 3. Programmé (Le plus proche)
   const scheduled = config.value.elections
     .filter(e => e.status === 'scheduled')
     .sort((a, b) => new Date(a.election_date).getTime() - new Date(b.election_date).getTime())[0];
@@ -62,12 +62,12 @@ const topLegislativeCoalitions = computed(() => {
 });
 
 const appConfig = useAppConfig();
-const country = appConfig.vpsnElections?.country || 'SÃ©nÃ©gal';
+const country = appConfig.vpsnElections?.country || 'Sénégal';
 const links = appConfig.vpsnElections?.links;
 
 const quickLinks = [
   {
-    title: "Guide Ã‰lectoral",
+    title: "Guide Électoral",
     description: "Comment voter ?",
     icon: "i-heroicons-book-open",
     to: links?.guide || "/elections/guide",
@@ -75,15 +75,15 @@ const quickLinks = [
     bg: "bg-blue-50"
   },
   {
-    title: "LÃ©gislation",
-    description: "Textes de lois et dÃ©crets",
+    title: "Législation",
+    description: "Textes de lois et décrets",
     icon: "i-heroicons-scale",
     to: links?.legislation || "/elections/legislation",
     color: "text-emerald-600",
     bg: "bg-emerald-50"
   },
   {
-    title: "Carte Ã‰lectorale",
+    title: "Carte Électorale",
     description: "Lieux et bureaux de vote",
     icon: "i-heroicons-map",
     to: links?.map || "/elections/carte",
@@ -95,8 +95,8 @@ const quickLinks = [
 const getStatusLabel = (status: string) => {
     switch(status) {
         case 'ongoing': return 'En Cours';
-        case 'scheduled': return 'ProgrammÃ©e';
-        case 'completed': return 'TerminÃ©e';
+        case 'scheduled': return 'Programmée';
+        case 'completed': return 'Terminée';
         default: return status;
     }
 };
@@ -109,14 +109,14 @@ const getStatusLabel = (status: string) => {
       <section class="text-center mb-8">
         <div class="mx-auto max-w-4xl">
           <h1 class="mb-4 text-4xl font-bold text-gray-900 md:text-5xl dark:text-white">
-            Ã‰lections {{ country }}
+            Élections {{ country }}
           </h1>
           <p class="text-gray-600 dark:text-gray-400">
-            Retrouvez ci-dessous les informations de la derniÃ¨re Ã©lection
+            Retrouvez ci-dessous les informations de la dernière élection
             <span v-if="election" class="font-bold text-primary-600 lowercase">
-              {{ election.type === 'presidential' ? 'prÃ©sidentielle' : election.type === 'legislative' ? 'lÃ©gislative' : election.type === 'locale' ? 'locale' : '' }}
+              {{ election.type === 'presidential' ? 'présidentielle' : election.type === 'legislative' ? 'législative' : election.type === 'locale' ? 'locale' : '' }}
             </span>
-            ainsi que l'ensemble des ressources Ã©lectorales.
+            ainsi que l'ensemble des ressources électorales.
           </p>
         </div>
       </section>
@@ -124,7 +124,7 @@ const getStatusLabel = (status: string) => {
       <!-- Featured Election Card -->
       <div v-if="loadingConfig" class="bg-white dark:bg-gray-900 rounded-3xl p-12 border shadow-sm text-center animate-pulse">
           <UIcon name="i-heroicons-arrow-path" class="h-10 w-10 animate-spin text-primary-500 mx-auto mb-4" />
-          <p class="text-gray-400 font-bold uppercase tracking-widest text-xs">Synchronisation des donnÃ©es...</p>
+          <p class="text-gray-400 font-bold uppercase tracking-widest text-xs">Synchronisation des données...</p>
       </div>
 
       <template v-else-if="election">
@@ -153,10 +153,10 @@ const getStatusLabel = (status: string) => {
                       <div v-if="winningCoalition?.head_of_list?.photo" class="w-20 h-20 rounded-full overflow-hidden ring-4 ring-white shadow-md">
                          <CmsImage :src="winningCoalition.head_of_list.photo" class="w-full h-full object-cover" />
                       </div>
-                      <div class="absolute -bottom-1 -right-1 bg-emerald-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-sm uppercase">Ã‰lu</div>
+                      <div class="absolute -bottom-1 -right-1 bg-emerald-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-sm uppercase">Élu</div>
                    </div>
                    <div class="flex-1 min-w-0">
-                      <p class="text-[9px] font-black uppercase text-gray-400 mb-1">Candidat Ã©lu</p>
+                      <p class="text-[9px] font-black uppercase text-gray-400 mb-1">Candidat élu</p>
                       <h3 class="text-lg font-black text-gray-900 dark:text-white leading-none mb-1.5">
                          {{ winningCoalition.head_of_list?.first_name }} {{ winningCoalition.head_of_list?.last_name }}
                       </h3>
@@ -165,10 +165,10 @@ const getStatusLabel = (status: string) => {
                 </div>
 
                 <div v-if="election.type === 'legislative' && topLegislativeCoalitions.length > 0" class="space-y-4">
-                   <p class="text-[9px] font-black uppercase text-gray-400">Coalitions en tÃƒÂªte</p>
+                   <p class="text-[9px] font-black uppercase text-gray-400">Coalitions en tÃªte</p>
                    <div v-for="(c, idx) in topLegislativeCoalitions" :key="c.id" class="flex items-center justify-between">
                       <span class="text-xs font-bold truncate">{{ c.name }}</span>
-                      <span class="text-lg font-black">{{ (Number(c.sieges) || 0) + (Number((c as any).sieges_departement) || 0) }} siÃ¨ges</span>
+                      <span class="text-lg font-black">{{ (Number(c.sieges) || 0) + (Number((c as any).sieges_departement) || 0) }} sièges</span>
                    </div>
                 </div>
             </div>
@@ -193,7 +193,7 @@ const getStatusLabel = (status: string) => {
 
         <!-- News Integration -->
         <section v-if="electionNews?.length" class="mt-8">
-            <h3 class="text-xl font-semibold mb-6">ActualitÃ©s Ã‰lectorales</h3>
+            <h3 class="text-xl font-semibold mb-6">Actualités Électorales</h3>
             <NewsGrid :articles="electionNews" :loading="loadingNews" :error="errorNews" :limit="3" :show-view-all="true" view-all-link="/actualites" />
         </section>
       </template>

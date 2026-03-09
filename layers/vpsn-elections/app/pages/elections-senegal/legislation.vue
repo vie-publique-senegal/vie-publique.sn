@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { useElectoralDashboard } from '~/composables/elections/dashboard/useElectoralDashboard';
-import type { Document } from '~~/types/document';
+import { useElectoralDashboard } from '../../composables/elections/dashboard/useElectoralDashboard';
+import { useElectionRoutes } from '../../composables/useElectionRoutes';
+
 
 const route = useRoute();
 const router = useRouter();
@@ -9,7 +10,7 @@ const electionRoutes = useElectionRoutes();
 const selectedType = ref<string>((route.query.type as string) || 'all');
 const selectedYear = ref<string>((route.query.year as string) || 'all');
 
-const { filteredConfig: config, showTypeFilter } = useElectoralDashboard();
+const { filteredConfig: config, showTypeFilter, showYearFilter } = useElectoralDashboard();
 
 const currentPage = ref(parseInt((route.query.page as string) || '1'));
 const searchQuery = ref((route.query.q as string) || '');
@@ -186,6 +187,7 @@ useSeoMeta({
               placeholder="Type d'élection"
             />
             <USelect
+              v-if="showYearFilter"
               v-model="selectedYear"
               :options="yearOptions"
               size="md"

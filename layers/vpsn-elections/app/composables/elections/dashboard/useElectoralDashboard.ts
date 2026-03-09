@@ -1,3 +1,5 @@
+import { useElectoralTheme } from "../useElectoralTheme";
+
 export interface ElectionConfig {
   years: { label: string; value: number }[];
   types: { label: string; value: string }[];
@@ -7,8 +9,18 @@ export interface ElectionConfig {
 
 export const useElectoralDashboard = () => {
   const appConfig = useAppConfig();
-  const enabledTypes: string[] = appConfig.vpsnElections?.features?.enabledTypes ?? ['presidential', 'legislative', 'locale'];
-  const showTypeFilter = !(appConfig.vpsnElections?.features?.hideTypeFilter ?? false);
+  const features = appConfig.vpsnElections?.features;
+  // Derive enabledTypes from individual boolean flags (avoids defu array concatenation issue)
+  const enabledTypes: string[] = [
+    (features?.showPresidential ?? true) ? 'presidential' : null,
+    (features?.showLegislative ?? true) ? 'legislative' : null,
+    (features?.showLocale ?? true) ? 'locale' : null,
+  ].filter((t): t is string => t !== null);
+  const showTypeFilter = !(features?.hideTypeFilter ?? false);
+  const showYearFilter = !(features?.hideYearFilter ?? false);
+
+  // Injection du thème de couleur primaire si configuré
+  useElectoralTheme();
 
   const selectedYear = useState<number>('election-selected-year');
   const selectedType = useState<string>('election-selected-type');
@@ -175,6 +187,7 @@ export const useElectoralDashboard = () => {
     loadingConfig,
     configError,
     showTypeFilter,
+    showYearFilter,
     selectConstituency,
     clearConstituency,
     selectCoalition,

@@ -73,7 +73,7 @@
 
 <script setup lang="ts">
 import * as d3 from "d3";
-import type { GenderData } from "~/types/election-stats-elector";
+import type { GenderData } from "../../types/election-stats-elector";
 
 const genderData: GenderData[] = [
   { sexe: "HOMME", nombre: 3708224 },

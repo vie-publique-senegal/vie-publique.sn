@@ -168,7 +168,7 @@ const selectCoalition = (list: any) => {
     </div>
 
     <!-- Loading -->
-    <ElectionsDashboardCoalitionGridLoadingState v-if="loading" />
+    <ElectionDashboardCoalitionGridLoadingState v-if="loading" />
 
     <!-- Grille des Listes -->
     <div v-else-if="uniqueCoalitions.length > 0" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
