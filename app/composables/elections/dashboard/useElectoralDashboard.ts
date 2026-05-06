@@ -75,12 +75,19 @@ export const useElectoralDashboard = () => {
     const route = useRoute();
     const router = useRouter();
     const isDashboardPage = computed(() => route.path.includes('/elections-senegal/dashboard'));
+    const getRouteTab = () => {
+      const routeTab = route.params.tab;
+      if (typeof routeTab === 'string' && routeTab) return routeTab;
+      if (route.query.tab) return String(route.query.tab);
+      return null;
+    };
 
     // Initialiser depuis les query params si on est sur le dashboard
     // Note: year and type are in the route path, not query params
     watch(isDashboardPage, (isDashboard) => {
       if (isDashboard) {
-        if (route.query.tab) activeTab.value = route.query.tab as string;
+        const currentTab = getRouteTab();
+        if (currentTab) activeTab.value = currentTab;
         if (route.query.coalition) {
           const coalitionId = parseInt(route.query.coalition as string);
           if (!isNaN(coalitionId)) selectedCoalitionId.value = coalitionId;
@@ -98,12 +105,13 @@ export const useElectoralDashboard = () => {
     // Note: year et type sont dans le path, pas dans les query params
     watch([activeTab, searchQuery, selectedCoalitionId, selectedConstituencyId, legislativeViewType], ([tab, search, coal, consti, view]) => {
       if (!isDashboardPage.value) return;
+      if (!selectedType.value || !selectedYear.value) return;
 
       const currentQuery = route.query;
       const query: any = { ...currentQuery };
 
-      // Update logic
-      if (tab) query.tab = tab;
+      // Legacy cleanup: tab is now part of the path
+      delete query.tab;
 
       if (view && selectedType.value === 'legislative') query.view = view;
       else delete query.view;
@@ -123,7 +131,8 @@ export const useElectoralDashboard = () => {
       // Ensure we don't trigger redundant navigation
       const isDifferent = JSON.stringify(currentQuery) !== JSON.stringify(query);
 
-      const targetPath = `/elections-senegal/dashboard/${selectedType.value}/${selectedYear.value}`;
+      const currentTab = tab || 'candidats';
+      const targetPath = `/elections-senegal/dashboard/${selectedType.value}/${selectedYear.value}/${currentTab}`;
       const pathChanged = route.path !== targetPath;
 
       if (isDifferent || pathChanged) {

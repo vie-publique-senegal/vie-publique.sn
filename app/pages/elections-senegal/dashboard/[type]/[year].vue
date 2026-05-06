@@ -41,6 +41,33 @@ const statsTypes = [
 const route = useRoute();
 const router = useRouter();
 const statsType = ref<string>("professionCandidat");
+const VALID_TABS = new Set(['candidats', 'carte', 'resultats', 'documents', 'statistiques', 'guide']);
+
+const getRouteTab = () => {
+  const tabFromParam = route.params.tab;
+  if (typeof tabFromParam === 'string' && tabFromParam) {
+    return tabFromParam;
+  }
+  if (route.query.tab) {
+    return String(route.query.tab);
+  }
+  return null;
+};
+
+const getDefaultTab = (election: any) => {
+  if (election?.status === 'completed') return 'resultats';
+  return 'candidats';
+};
+
+const normalizeTabForElection = (rawTab: string | null, election: any) => {
+  if (!rawTab || !VALID_TABS.has(rawTab)) {
+    return getDefaultTab(election);
+  }
+  if (rawTab === 'statistiques' && selectedType.value !== 'legislative') {
+    return getDefaultTab(election);
+  }
+  return rawTab;
+};
 
 watch([() => route.params.type, () => route.params.year], ([type, year]) => {
     if (type && year) {
@@ -62,18 +89,12 @@ watch([() => route.params.type, () => route.params.year], ([type, year]) => {
 
 // Default Tab Logic based on Election Status
 watch(() => currentElection.value, (election) => {
-    // Determine the tab based on query param OR default logic
-    if (route.query.tab) {
-        if (activeTab.value !== route.query.tab) {
-            activeTab.value = route.query.tab as string;
-        }
-    } else if (election) {
-         if (election.status === 'completed') {
-             activeTab.value = 'resultats';
-         } else {
-             // For others: 'candidats', 'coalitions', 'circonscriptions' -> all mapped to 'candidats' tab ID in UI
-             activeTab.value = 'candidats';
-         }
+  if (election) {
+    const routeTab = getRouteTab();
+    const normalizedTab = normalizeTabForElection(routeTab, election);
+    if (activeTab.value !== normalizedTab) {
+      activeTab.value = normalizedTab;
+    }
     }
 }, { immediate: true });
 // --------------------------
@@ -285,8 +306,8 @@ const navigateToElection = (type: string, year: number) => {
        targetTab = 'candidats';
    }
 
-   // Preserve existing query params except tab (which we override)
-   const query: any = { ...route.query, tab: targetTab };
+  // Preserve existing query params; tab is now in the path
+  const query: any = { ...route.query };
 
    // Clear selection-specific params when navigating to a new election
    delete query.coalition;
@@ -294,7 +315,7 @@ const navigateToElection = (type: string, year: number) => {
    delete query.q;
 
    router.push({
-       path: `/elections-senegal/dashboard/${type}/${year}`,
+       path: `/elections-senegal/dashboard/${type}/${year}/${targetTab}`,
        query
    });
 };

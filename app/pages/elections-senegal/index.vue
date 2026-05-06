@@ -265,7 +265,7 @@ const quickLinks = computed(() => [
           <!-- Desktop: Link text -->
           <NuxtLink
             v-if="election"
-            :to="`/elections-senegal/dashboard/${election.type}/${election.year}?tab=resultats`"
+            :to="`/elections-senegal/dashboard/${election.type}/${election.year}/resultats`"
             class="hidden md:block p-4 bg-slate-50 dark:bg-gray-800/50 border-t dark:border-gray-800 text-center text-sm font-black uppercase tracking-widest text-gray-500 hover:text-primary-600 hover:bg-slate-100 transition-all"
           >
             Voir le tableau de bord complet <UIcon name="i-heroicons-arrow-right" class="ml-2 inline-block h-4 w-4" />
@@ -273,7 +273,7 @@ const quickLinks = computed(() => [
           <!-- Mobile: Card style CTA -->
           <NuxtLink
             v-if="election"
-            :to="`/elections-senegal/dashboard/${election.type}/${election.year}?tab=resultats`"
+            :to="`/elections-senegal/dashboard/${election.type}/${election.year}/resultats`"
             class="md:hidden group flex items-center justify-center gap-3 p-4 bg-gradient-to-br from-primary-50 via-primary-100 to-primary-200 dark:from-primary-900/30 dark:via-primary-800/25 dark:to-primary-900/20 border-t dark:border-gray-800 transition hover:shadow-lg"
           >
             <UIcon
