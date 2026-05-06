@@ -82,24 +82,36 @@ export const useElectoralDashboard = () => {
       return null;
     };
 
-    // Initialiser depuis les query params si on est sur le dashboard
+    // Initialiser depuis l'URL si on est sur le dashboard
     // Note: year and type are in the route path, not query params
-    watch(isDashboardPage, (isDashboard) => {
-      if (isDashboard) {
-        const currentTab = getRouteTab();
-        if (currentTab) activeTab.value = currentTab;
-        if (route.query.coalition) {
-          const coalitionId = parseInt(route.query.coalition as string);
-          if (!isNaN(coalitionId)) selectedCoalitionId.value = coalitionId;
-        }
-        if (route.query.constituency) {
-          const constituencyId = parseInt(route.query.constituency as string);
-          if (!isNaN(constituencyId)) selectedConstituencyId.value = constituencyId;
-        }
-        if (route.query.q) searchQuery.value = route.query.q as string;
-        if (route.query.view) legislativeViewType.value = route.query.view as string;
+    const syncFromRoute = () => {
+      if (!isDashboardPage.value) return;
+
+      const currentTab = getRouteTab();
+      if (currentTab) activeTab.value = currentTab;
+
+      if (route.query.coalition) {
+        const coalitionId = parseInt(route.query.coalition as string);
+        selectedCoalitionId.value = Number.isNaN(coalitionId) ? null : coalitionId;
+      } else {
+        selectedCoalitionId.value = null;
       }
-    }, { immediate: true });
+
+      if (route.query.constituency) {
+        const constituencyId = parseInt(route.query.constituency as string);
+        selectedConstituencyId.value = Number.isNaN(constituencyId) ? null : constituencyId;
+      } else {
+        selectedConstituencyId.value = null;
+      }
+
+      searchQuery.value = route.query.q ? String(route.query.q) : '';
+
+      if (route.query.view) {
+        legislativeViewType.value = String(route.query.view);
+      }
+    };
+
+    watch(() => route.fullPath, syncFromRoute, { immediate: true });
 
     // Mettre à jour l'URL quand les filtres changent (uniquement sur le dashboard)
     // Note: year et type sont dans le path, pas dans les query params
@@ -113,7 +125,11 @@ export const useElectoralDashboard = () => {
       // Legacy cleanup: tab is now part of the path
       delete query.tab;
 
-      if (view && selectedType.value === 'legislative') query.view = view;
+      const isLegislativeMainListView = selectedType.value === 'legislative'
+        && tab === 'candidats'
+        && (coal === null || coal === undefined)
+        && (consti === null || consti === undefined);
+      if (view && isLegislativeMainListView) query.view = view;
       else delete query.view;
 
       if (coal !== null && coal !== undefined) query.coalition = String(coal);

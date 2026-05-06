@@ -114,7 +114,7 @@ if (process.client) {
     });
 
     // Nettoyer stats_type de l'URL quand on quitte l'onglet statistiques
-    // Nettoyer view de l'URL quand on quitte l'onglet resultats
+    // Nettoyer view de l'URL quand on quitte l'onglet candidats
     watch(activeTab, (newTab) => {
         const newQuery = { ...route.query };
         let shouldReplace = false;
@@ -123,7 +123,7 @@ if (process.client) {
             delete newQuery.stats_type;
             shouldReplace = true;
         }
-        if (newTab !== 'resultats' && route.query.view) {
+        if (newTab !== 'candidats' && route.query.view) {
             delete newQuery.view;
             shouldReplace = true;
         }
