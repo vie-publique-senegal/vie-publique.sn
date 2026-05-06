@@ -2,6 +2,7 @@
 interface Props {
   modelValue: number;
   selectedType?: string;
+  electionStatus?: string;
 }
 
 const props = defineProps<Props>();
@@ -23,12 +24,19 @@ const allTabs = [
 ];
 
 const tabs = computed(() => {
-  const visibleTypes: Record<string, string[]> = {
-    legislative: ['statistiques'],
-  };
+  const allowedTabs = props.electionStatus === 'completed'
+    ? new Set(['candidats', 'resultats', 'documents', 'statistiques'])
+    : new Set([
+      'candidats',
+      'carte',
+      'resultats',
+      'documents',
+      'guide',
+      ...(props.selectedType === 'legislative' ? ['statistiques'] : [])
+    ]);
 
   return allTabs
-    .filter(tab => !tab.hidden || visibleTypes[props.selectedType ?? '']?.includes(tab.id))
+    .filter(tab => allowedTabs.has(tab.id))
     .map(tab => ({
       ...tab,
       label: tab.id === 'candidats'

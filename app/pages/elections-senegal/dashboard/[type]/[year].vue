@@ -59,13 +59,28 @@ const getDefaultTab = (election: any) => {
   return 'candidats';
 };
 
+const getAllowedTabsForElection = (election: any) => {
+  if (election?.status === 'completed') {
+    return new Set(['candidats', 'resultats', 'documents', 'statistiques']);
+  }
+
+  const allowedTabs = new Set(['candidats', 'carte', 'resultats', 'documents', 'guide']);
+  if (selectedType.value === 'legislative') {
+    allowedTabs.add('statistiques');
+  }
+  return allowedTabs;
+};
+
 const normalizeTabForElection = (rawTab: string | null, election: any) => {
   if (!rawTab || !VALID_TABS.has(rawTab)) {
     return getDefaultTab(election);
   }
-  if (rawTab === 'statistiques' && selectedType.value !== 'legislative') {
+
+  const allowedTabs = getAllowedTabsForElection(election);
+  if (!allowedTabs.has(rawTab)) {
     return getDefaultTab(election);
   }
+
   return rawTab;
 };
 
@@ -200,12 +215,10 @@ const allTabs = [
 ];
 
 const tabs = computed(() => {
-  const visibleTypes: Record<string, string[]> = {
-    legislative: ['statistiques'],
-  };
+  const allowedTabs = getAllowedTabsForElection(currentElection.value);
 
   return allTabs
-    .filter(tab => !tab.hidden || visibleTypes[selectedType.value ?? '']?.includes(tab.id))
+    .filter(tab => allowedTabs.has(tab.id))
     .map(tab => ({
       ...tab,
       label: tab.id === 'candidats'
@@ -462,6 +475,7 @@ const resultCommunesForDept = computed(() => {
         <ElectionsDashboardElectoralDashboardTabs
           v-model="currentTabIndex"
           :selected-type="selectedType"
+          :election-status="currentElection?.status"
         />
       </template>
     </ElectionsDashboardElectoralDashboardHeader>
