@@ -1,5 +1,29 @@
 import { readItems } from "@directus/sdk";
 
+const toSlug = (value: string) =>
+  value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, "-")
+    .replace(/[^a-z0-9-]/g, "")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+
+const normalizeCandidate = (candidate: any) => {
+  const fallbackSlug = toSlug(`${candidate?.first_name || ""} ${candidate?.last_name || ""}`) || `candidat-${candidate?.id || "inconnu"}`;
+  const shortBio = typeof candidate?.short_bio === "string" ? candidate.short_bio : (typeof candidate?.biography === "string" ? candidate.biography : null);
+  const longBio = typeof candidate?.long_bio === "string" ? candidate.long_bio : null;
+
+  return {
+    ...candidate,
+    slug: typeof candidate?.slug === "string" && candidate.slug ? candidate.slug : fallbackSlug,
+    short_bio: shortBio,
+    long_bio: longBio,
+  };
+};
+
 export default defineCachedEventHandler(
   async (event) => {
     const directus = getCmsClient() as any;
@@ -68,51 +92,55 @@ export default defineCachedEventHandler(
           filter.constituency = { _in: targetConstituencyIds };
       }
 
-      const lists = await directus.request(
-        (readItems as any)("election_electoral_lists", {
-          fields: [
-            "id",
-            "name",
-            "type",
-            "is_substitute",
-            "constituency.id",
-            "constituency.name",
-            "constituency.type",
-            "constituency.nationale_type",
-            "coalition.id",
-            "coalition.name",
-            "coalition.color",
-            "coalition.logo",
-            {
-              candidates: [
-                "id",
-                "first_name",
-                "last_name",
-                "photo",
-                "profession",
-                "gender",
-                "position",
-                "biography",
-                "birthdate",
-                "birthplace",
-                "voter_number",
-                "facebook",
-                "twitter",
-                "documents.id",
-                "documents.file",
-                "documents.title",
-                "documents.slug",
-              ],
-            },
-          ],
-          filter,
-          sort: ["type", "is_substitute", "name"],
-          limit: -1,
-        })
-      );
+      const listFieldsBase = [
+        "id",
+        "name",
+        "type",
+        "is_substitute",
+        "constituency.id",
+        "constituency.name",
+        "constituency.type",
+        "constituency.nationale_type",
+        "coalition.id",
+        "coalition.name",
+        "coalition.color",
+        "coalition.logo",
+      ];
+
+      const candidateFields = [
+        "*",
+        "documents.id",
+        "documents.file",
+        "documents.title",
+        "documents.slug",
+      ];
+
+      const readLists = async () =>
+        directus.request(
+          (readItems as any)("election_electoral_lists", {
+            fields: [
+              ...listFieldsBase,
+              { candidates: candidateFields },
+            ],
+            filter,
+            sort: ["type", "is_substitute", "name"],
+            limit: -1,
+          })
+        );
+
+      let lists: any[] = [];
+
+      lists = await readLists();
+
+      const normalizedLists = (lists || []).map((list: any) => ({
+        ...list,
+        candidates: Array.isArray(list?.candidates)
+          ? list.candidates.map(normalizeCandidate)
+          : [],
+      }));
 
       return {
-        data: lists,
+        data: normalizedLists,
       };
     } catch (error: any) {
       console.error("Error in dashboard lists.get:", error);

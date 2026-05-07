@@ -544,7 +544,7 @@ const resultCommunesForDept = computed(() => {
           <!-- NIVEAU 3: Detail Coalition (pour tous les types) -->
           <div v-if="selectedCoalitionId" class="animate-in fade-in zoom-in-95 duration-500">
             <ElectionsDashboardCoalitionDetails
-              :coalition-id="selectedCoalitionId"
+              :coalition-id="String(selectedCoalitionId)"
               :coalition-name="coalitions.find(c => c.id === selectedCoalitionId)?.name"
               :year="selectedYear"
               :type="selectedType"

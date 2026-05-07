@@ -13,6 +13,7 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits(['close']);
+const router = useRouter();
 
 const isPresidential = computed(() => props.type === 'presidential');
 const isLocal = computed(() => ['locale', 'locales', 'local'].includes(props.type));
@@ -85,7 +86,32 @@ const groupedLists = computed(() => {
 const selectedCandidate = ref<Candidate | null>(null);
 const isModalOpen = ref(false);
 
-function openCandidateModal(candidate: Candidate) {
+const candidateSlug = (candidate: Candidate) => {
+  const rawSlug = (candidate as any)?.slug;
+  if (typeof rawSlug === 'string' && rawSlug.trim()) {
+    return rawSlug.trim().toLowerCase();
+  }
+
+  return `${candidate?.first_name || ''} ${candidate?.last_name || ''}`
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9-]/g, '')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+};
+
+function openCandidateProfile(candidate: Candidate) {
+  const slug = candidateSlug(candidate);
+  if (!slug) return;
+
+  if (props.type === 'presidential' || props.type === 'legislative') {
+    router.push(`/elections-senegal/dashboard/${props.type}/${props.year}/candidats/${slug}`);
+    return;
+  }
+
   selectedCandidate.value = candidate;
   isModalOpen.value = true;
 }
@@ -123,6 +149,8 @@ function openCandidateModal(candidate: Candidate) {
       :candidate="lists[0].candidates[0]"
       :coalition-name="coalitionName"
       :coalition-id="coalitionId"
+      :year="year"
+      :type="type"
     />
 
     <!-- Loading State -->
@@ -165,7 +193,7 @@ function openCandidateModal(candidate: Candidate) {
                  v-for="candidate in list.candidates"
                  :key="candidate.id"
                  :candidate="candidate"
-                 @select="openCandidateModal"
+                 @select="openCandidateProfile"
                 />
             </div>
 
@@ -175,7 +203,7 @@ function openCandidateModal(candidate: Candidate) {
                   v-for="candidate in list.candidates"
                   :key="candidate.id"
                   :candidate="candidate"
-                  @select="openCandidateModal"
+                  @select="openCandidateProfile"
                 />
             </div>
           </div>
@@ -221,7 +249,7 @@ function openCandidateModal(candidate: Candidate) {
                  v-for="candidate in group.titulaires.candidates"
                  :key="candidate.id"
                  :candidate="candidate"
-                 @select="openCandidateModal"
+                 @select="openCandidateProfile"
                 />
               </div>
             </template>
@@ -232,7 +260,7 @@ function openCandidateModal(candidate: Candidate) {
                   v-for="candidate in group.suppleants.candidates"
                   :key="candidate.id"
                   :candidate="candidate"
-                  @select="openCandidateModal"
+                  @select="openCandidateProfile"
                 />
               </div>
             </template>
@@ -250,6 +278,7 @@ function openCandidateModal(candidate: Candidate) {
 
     <!-- Candidate Detail Modal -->
     <ElectionsDashboardModalsCandidateDetailModal
+      v-if="isLocal"
       v-model="isModalOpen"
       :candidate="selectedCandidate"
     />

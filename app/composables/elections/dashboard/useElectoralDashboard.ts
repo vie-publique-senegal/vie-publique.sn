@@ -75,6 +75,7 @@ export const useElectoralDashboard = () => {
     const route = useRoute();
     const router = useRouter();
     const isDashboardPage = computed(() => route.path.includes('/elections-senegal/dashboard'));
+    const isCandidateProfilePage = computed(() => /^\/elections-senegal\/dashboard\/[^/]+\/[^/]+\/candidats\/[^/]+$/.test(route.path));
     const getRouteTab = () => {
       const routeTab = route.params.tab;
       if (typeof routeTab === 'string' && routeTab) return routeTab;
@@ -86,6 +87,10 @@ export const useElectoralDashboard = () => {
     // Note: year and type are in the route path, not query params
     const syncFromRoute = () => {
       if (!isDashboardPage.value) return;
+
+      if (isCandidateProfilePage.value) {
+        activeTab.value = 'candidats';
+      }
 
       const currentTab = getRouteTab();
       if (currentTab) activeTab.value = currentTab;
@@ -117,6 +122,7 @@ export const useElectoralDashboard = () => {
     // Note: year et type sont dans le path, pas dans les query params
     watch([activeTab, searchQuery, selectedCoalitionId, selectedConstituencyId, legislativeViewType], ([tab, search, coal, consti, view]) => {
       if (!isDashboardPage.value) return;
+      if (isCandidateProfilePage.value) return;
       if (!selectedType.value || !selectedYear.value) return;
 
       const currentQuery = route.query;

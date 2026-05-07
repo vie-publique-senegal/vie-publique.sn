@@ -8,6 +8,8 @@ interface Props {
   candidate: Candidate;
   coalitionName?: string;
   coalitionId?: string | number | null;
+  year?: number;
+  type?: string;
 }
 
 const props = defineProps<Props>();
@@ -26,6 +28,77 @@ const items = [
 const { videos, loading: videosLoading } = useCoalitionVideos(computed(() => props.coalitionId));
 
 const age = computed(() => calculateAge(props.candidate.birthdate || null));
+
+const formatBirthDate = (rawDate?: string | null) => {
+  if (!rawDate) return '';
+
+  const parsed = new Date(rawDate);
+  if (Number.isNaN(parsed.getTime())) return rawDate;
+
+  return new Intl.DateTimeFormat('fr-FR', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  }).format(parsed);
+};
+
+const birthDisplay = computed(() => {
+  const birthDate = formatBirthDate(props.candidate?.birthdate || null);
+  const birthPlace = typeof props.candidate?.birthplace === 'string' ? props.candidate.birthplace.trim() : '';
+
+  if (birthDate && birthPlace) return `${birthDate} à ${birthPlace}`;
+  return birthDate || birthPlace || '';
+});
+
+const decodeHtmlEntities = (text: string) =>
+  text
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&eacute;/g, 'é')
+    .replace(/&egrave;/g, 'è')
+    .replace(/&ecirc;/g, 'ê')
+    .replace(/&agrave;/g, 'à')
+    .replace(/&ocirc;/g, 'ô')
+    .replace(/&ccedil;/g, 'ç')
+    .replace(/&rsquo;/g, "'")
+    .replace(/&ldquo;|&rdquo;/g, '"');
+const profileSlug = computed(() => {
+  const rawSlug = (props.candidate as any)?.slug;
+  if (typeof rawSlug === 'string' && rawSlug.trim()) {
+    return rawSlug.trim().toLowerCase();
+  }
+
+  return `${props.candidate?.first_name || ''} ${props.candidate?.last_name || ''}`
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9-]/g, '')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+});
+
+const profileUrl = computed(() => {
+  if (!props.type || !props.year || !profileSlug.value) return null;
+  return `/elections-senegal/dashboard/${props.type}/${props.year}/candidats/${profileSlug.value}`;
+});
+
+const portraitText = computed(() => {
+  const shortBio = typeof (props.candidate as any)?.short_bio === 'string' ? (props.candidate as any).short_bio.trim() : '';
+  const legacyBio = typeof (props.candidate as any)?.biography === 'string' ? (props.candidate as any).biography.trim() : '';
+  const source = shortBio || legacyBio;
+  if (!source) return '';
+
+  return decodeHtmlEntities(source)
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+});
 
 // Scrollspy Logic
 const sections = ref<HTMLElement[]>([]);
@@ -141,14 +214,12 @@ const getAssetUrl = (assetId: string, slug: string) => {
               </div>
             </div>
 
-            <div v-if="candidate.birthdate || candidate.birthplace" class="flex items-start gap-3">
+            <div v-if="birthDisplay" class="flex items-start gap-3">
               <UIcon name="i-heroicons-cake" class="h-5 w-5 text-primary-500 mt-0.5" />
               <div>
                 <p class="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-wider">Naissance</p>
                 <p class="text-sm font-bold text-gray-900 dark:text-white">
-                  <template v-if="candidate.birthdate">{{ formatDate(candidate.birthdate) }}</template>
-                  <template v-if="candidate.birthdate && candidate.birthplace"> à </template>
-                  <template v-if="candidate.birthplace">{{ candidate.birthplace }}</template>
+                  {{ birthDisplay }}
                   <span v-if="age" class="ml-2 text-primary-600 dark:text-primary-400">({{ age }} ans)</span>
                 </p>
               </div>
@@ -164,7 +235,7 @@ const getAssetUrl = (assetId: string, slug: string) => {
           </div>
 
           <!-- Réseaux sociaux - Style bouton -->
-          <div v-if="candidate.facebook || candidate.twitter" class="flex gap-4 pt-4">
+          <div v-if="candidate.facebook || candidate.twitter || candidate.linkedin" class="flex gap-4 pt-4">
             <UButton
               v-if="candidate.facebook"
               icon="i-simple-icons-facebook"
@@ -186,6 +257,17 @@ const getAssetUrl = (assetId: string, slug: string) => {
               target="_blank"
               class="rounded-full h-10 w-10 flex items-center justify-center p-0"
               title="Twitter/X"
+            />
+            <UButton
+              v-if="candidate.linkedin"
+              icon="i-simple-icons-linkedin"
+              color="gray"
+              variant="ghost"
+              size="sm"
+              :to="candidate.linkedin"
+              target="_blank"
+              class="rounded-full h-10 w-10 flex items-center justify-center p-0"
+              title="LinkedIn"
             />
           </div>
         </div>
@@ -220,7 +302,7 @@ const getAssetUrl = (assetId: string, slug: string) => {
       <!-- Portrait Section -->
       <section :id="items[0].id" class="scroll-mt-40">
         <UCard :ui="{ body: { padding: 'p-8' } }" class="border-t-4 border-t-primary-500">
-          <div v-if="candidate.biography" class="prose prose-sm dark:prose-invert max-w-none">
+          <div v-if="portraitText" class="prose prose-sm dark:prose-invert max-w-none">
             <div class="flex items-center gap-3 mb-6">
                <div class="p-2 bg-primary-50 dark:bg-primary-900/20 rounded-lg">
                  <UIcon :name="items[0].icon" class="h-6 w-6 text-primary-600" />
@@ -228,8 +310,13 @@ const getAssetUrl = (assetId: string, slug: string) => {
                <h3 class="text-2xl font-black uppercase text-gray-900 dark:text-white m-0">Le Portrait</h3>
             </div>
             <p class="text-lg leading-relaxed text-gray-700 dark:text-gray-300 italic">
-              "{{ candidate.biography }}"
+              {{ portraitText }}
             </p>
+            <div v-if="profileUrl" class="mt-6">
+              <UButton :to="profileUrl" variant="soft" color="primary" size="sm" icon="i-heroicons-chevron-right">
+                Voir le profil complet
+              </UButton>
+            </div>
           </div>
           <div v-else class="text-center py-12">
             <UIcon name="i-heroicons-user-circle" class="h-12 w-12 text-gray-300 mx-auto mb-4" />
