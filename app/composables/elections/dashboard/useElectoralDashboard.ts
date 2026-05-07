@@ -76,6 +76,9 @@ export const useElectoralDashboard = () => {
     const router = useRouter();
     const isDashboardPage = computed(() => route.path.includes('/elections-senegal/dashboard'));
     const isCandidateProfilePage = computed(() => /^\/elections-senegal\/dashboard\/[^/]+\/[^/]+\/candidats\/[^/]+$/.test(route.path));
+    // Flag pour éviter les boucles de synchronisation route <-> state
+    let isSyncingFromRoute = false;
+
     const getRouteTab = () => {
       const routeTab = route.params.tab;
       if (typeof routeTab === 'string' && routeTab) return routeTab;
@@ -87,6 +90,8 @@ export const useElectoralDashboard = () => {
     // Note: year and type are in the route path, not query params
     const syncFromRoute = () => {
       if (!isDashboardPage.value) return;
+
+      isSyncingFromRoute = true;
 
       if (isCandidateProfilePage.value) {
         activeTab.value = 'candidats';
@@ -114,19 +119,20 @@ export const useElectoralDashboard = () => {
       if (route.query.view) {
         legislativeViewType.value = String(route.query.view);
       }
+
+      // Reset flag après le prochain tick pour permettre aux watchers de s'ignorer
+      nextTick(() => {
+        isSyncingFromRoute = false;
+      });
     };
 
     watch(() => route.fullPath, syncFromRoute, { immediate: true });
 
-    // Mettre à jour l'URL quand les filtres changent (uniquement sur le dashboard)
-    // Note: year et type sont dans le path, pas dans les query params
-    watch([activeTab, searchQuery, selectedCoalitionId, selectedConstituencyId, legislativeViewType], ([tab, search, coal, consti, view]) => {
-      if (!isDashboardPage.value) return;
-      if (isCandidateProfilePage.value) return;
-      if (!selectedType.value || !selectedYear.value) return;
-
+    const buildDashboardQuery = (tab: string, search: string, coal: number | null, consti: number | null, view: string) => {
       const currentQuery = route.query;
       const query: any = { ...currentQuery };
+      const isCandidatesTab = tab === 'candidats';
+      const isStatistiquesTab = tab === 'statistiques';
 
       // Legacy cleanup: tab is now part of the path
       delete query.tab;
@@ -138,10 +144,15 @@ export const useElectoralDashboard = () => {
       if (view && isLegislativeMainListView) query.view = view;
       else delete query.view;
 
-      if (coal !== null && coal !== undefined) query.coalition = String(coal);
+      // Nettoyer stats_type quand on quitte l'onglet statistiques
+      if (!isStatistiquesTab) {
+        delete query.stats_type;
+      }
+
+      if (isCandidatesTab && coal !== null && coal !== undefined) query.coalition = String(coal);
       else delete query.coalition;
 
-      if (consti !== null && consti !== undefined) query.constituency = String(consti);
+      if (isCandidatesTab && consti !== null && consti !== undefined) query.constituency = String(consti);
       else delete query.constituency;
 
       if (search) {
@@ -150,10 +161,27 @@ export const useElectoralDashboard = () => {
         delete query.q;
       }
 
-      // Ensure we don't trigger redundant navigation
-      const isDifferent = JSON.stringify(currentQuery) !== JSON.stringify(query);
+      return query;
+    };
+
+    // Sync du path uniquement quand l'onglet actif change.
+    watch(activeTab, (tab) => {
+      // Ignorer si on est en train de synchroniser depuis l'URL (évite les boucles)
+      if (isSyncingFromRoute) return;
+      if (!isDashboardPage.value) return;
+      if (isCandidateProfilePage.value) return;
+      if (!selectedType.value || !selectedYear.value) return;
 
       const currentTab = tab || 'candidats';
+      const currentSearch = searchQuery.value || '';
+      const currentCoalition = selectedCoalitionId.value;
+      const currentConstituency = selectedConstituencyId.value;
+      const currentView = legislativeViewType.value || '';
+      const query = buildDashboardQuery(currentTab, currentSearch, currentCoalition, currentConstituency, currentView);
+
+      // Ensure we don't trigger redundant navigation
+      const currentQuery = route.query;
+      const isDifferent = JSON.stringify(currentQuery) !== JSON.stringify(query);
       const targetPath = `/elections-senegal/dashboard/${selectedType.value}/${selectedYear.value}/${currentTab}`;
       const pathChanged = route.path !== targetPath;
 
@@ -162,6 +190,24 @@ export const useElectoralDashboard = () => {
               path: targetPath,
               query
           });
+      }
+    });
+
+    // Sync des filtres uniquement dans la query pour éviter les redirections de path intempestives.
+    watch([searchQuery, selectedCoalitionId, selectedConstituencyId, legislativeViewType], ([search, coal, consti, view]) => {
+      // Ignorer si on est en train de synchroniser depuis l'URL (évite les boucles)
+      if (isSyncingFromRoute) return;
+      if (!isDashboardPage.value) return;
+      if (isCandidateProfilePage.value) return;
+      if (!selectedType.value || !selectedYear.value) return;
+
+      const currentTab = activeTab.value || 'candidats';
+      const query = buildDashboardQuery(currentTab, search || '', coal, consti, view || '');
+      const currentQuery = route.query;
+      const isDifferent = JSON.stringify(currentQuery) !== JSON.stringify(query);
+
+      if (isDifferent) {
+        router.replace({ query });
       }
     });
   }

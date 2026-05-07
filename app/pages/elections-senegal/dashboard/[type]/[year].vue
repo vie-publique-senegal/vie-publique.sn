@@ -60,12 +60,19 @@ const getDefaultTab = (election: any) => {
 };
 
 const getAllowedTabsForElection = (election: any) => {
+  const electionTypeRaw = String(election?.type || selectedType.value || '').toLowerCase();
+  const isLegislativeElection = electionTypeRaw.includes('legislative');
+
   if (election?.status === 'completed') {
-    return new Set(['candidats', 'resultats', 'documents', 'statistiques']);
+    const completedTabs = new Set(['candidats', 'resultats', 'documents']);
+    if (isLegislativeElection) {
+      completedTabs.add('statistiques');
+    }
+    return completedTabs;
   }
 
   const allowedTabs = new Set(['candidats', 'carte', 'resultats', 'documents', 'guide']);
-  if (selectedType.value === 'legislative') {
+  if (isLegislativeElection) {
     allowedTabs.add('statistiques');
   }
   return allowedTabs;
@@ -128,25 +135,9 @@ if (process.client) {
         }
     });
 
-    // Nettoyer stats_type de l'URL quand on quitte l'onglet statistiques
-    // Nettoyer view de l'URL quand on quitte l'onglet candidats
-    watch(activeTab, (newTab) => {
-        const newQuery = { ...route.query };
-        let shouldReplace = false;
-
-        if (newTab !== 'statistiques' && route.query.stats_type) {
-            delete newQuery.stats_type;
-            shouldReplace = true;
-        }
-        if (newTab !== 'candidats' && route.query.view) {
-            delete newQuery.view;
-            shouldReplace = true;
-        }
-
-        if (shouldReplace) {
-            router.replace({ query: newQuery });
-        }
-    });
+    // Note: Le nettoyage de stats_type, view, coalition et constituency
+    // est maintenant entièrement géré par buildDashboardQuery dans le composable
+    // pour éviter les race conditions lors du changement de tab
 }
 
 // Fetch Stats Data
@@ -225,16 +216,6 @@ const tabs = computed(() => {
         ? selectedType.value === 'presidential' ? 'Candidats' : (selectedType.value === 'locale' ? 'Circonscriptions' : 'Coalitions')
         : tab.label,
     }));
-});
-
-const currentTabIndex = computed({
-  get: () => {
-    const idx = tabs.value.findIndex((t) => t.id === activeTab.value);
-    return idx === -1 ? 0 : idx;
-  },
-  set: (index) => {
-    activeTab.value = tabs.value[index].id;
-  },
 });
 
 // 4. SEO Dynamique avec le nom de l'élection
@@ -473,9 +454,8 @@ const resultCommunesForDept = computed(() => {
       </template>
       <template #tabs>
         <ElectionsDashboardElectoralDashboardTabs
-          v-model="currentTabIndex"
-          :selected-type="selectedType"
-          :election-status="currentElection?.status"
+          v-model="activeTab"
+          :tabs="tabs"
         />
       </template>
     </ElectionsDashboardElectoralDashboardHeader>
