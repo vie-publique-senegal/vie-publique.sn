@@ -12,7 +12,7 @@ import { readItems } from "@directus/sdk";
  *   - tour: '1' | '2'
  *   - election: ID de l'élection
  */
-export default defineEventHandler(
+export default defineCachedEventHandler(
   async (event) => {
     const directus = getCmsClient();
     const query = getQuery(event);
@@ -115,12 +115,12 @@ export default defineEventHandler(
       });
     }
   },
-  // {
-  //   maxAge: 30, // Cache 30 secondes
-  //   name: "election-pvs-list",
-  //   getKey: (event) => {
-  //     const query = getQuery(event);
-  //     return `pvs-${query.page || 1}-${query.source || "all"}-${query.election || "all"}`;
-  //   },
-  // }
+  {
+    maxAge: 30, // Cache 30 secondes
+    name: "election-pvs-list",
+    getKey: (event) => {
+      const query = getQuery(event);
+      return `pvs-${query.page || 1}-${query.source || "all"}-${query.election || "all"}`;
+    },
+  }
 );
