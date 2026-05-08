@@ -41,7 +41,7 @@ const statsTypes = [
 const route = useRoute();
 const router = useRouter();
 const statsType = ref<string>("professionCandidat");
-const VALID_TABS = new Set(['candidats', 'carte', 'resultats', 'documents', 'statistiques', 'guide']);
+const VALID_TABS = new Set(['candidats', 'carte', 'resultats', 'pvs', 'documents', 'statistiques', 'guide']);
 
 const getRouteTab = () => {
   const tabFromParam = route.params.tab;
@@ -65,6 +65,10 @@ const getAllowedTabsForElection = (election: any) => {
 
   if (election?.status === 'completed') {
     const completedTabs = new Set(['candidats', 'resultats', 'documents']);
+    // PVs tab uniquement si pv_upload_active est activé
+    if (election?.pv_upload_active) {
+      completedTabs.add('pvs');
+    }
     if (isLegislativeElection) {
       completedTabs.add('statistiques');
     }
@@ -72,6 +76,10 @@ const getAllowedTabsForElection = (election: any) => {
   }
 
   const allowedTabs = new Set(['candidats', 'carte', 'resultats', 'documents', 'guide']);
+  // PVs tab uniquement si pv_upload_active est activé
+  if (election?.pv_upload_active) {
+    allowedTabs.add('pvs');
+  }
   if (isLegislativeElection) {
     allowedTabs.add('statistiques');
   }
@@ -200,6 +208,7 @@ const allTabs = [
   },
   { id: "carte", label: "Carte", icon: "i-heroicons-map" },
   { id: "resultats", label: "Résultats", icon: "i-heroicons-chart-bar" },
+  { id: "pvs", label: "PVs", icon: "i-heroicons-document-check" },
   { id: "documents", label: "Documents", icon: "i-heroicons-document-duplicate" },
   { id: "statistiques", label: "Stats", icon: "i-heroicons-presentation-chart-line", hidden: true },
   { id: "guide", label: "Guide", icon: "i-heroicons-play-circle" },
@@ -949,6 +958,11 @@ const resultCommunesForDept = computed(() => {
         <!-- Dashboard Section: Guide de vote (Tab ID: guide) -->
         <section v-else-if="activeTab === 'guide'" class="animate-in fade-in duration-700">
           <ElectionsDashboardGuideElectoralVideos :type-election="selectedType" />
+        </section>
+
+        <!-- Dashboard Section: PVs (Tab ID: pvs) -->
+        <section v-else-if="activeTab === 'pvs'" class="animate-in fade-in duration-700">
+          <ElectionsDashboardPvsTab :election="currentElection" />
         </section>
 
         <!-- Dashboard Section: Documents (Tab ID: documents) -->

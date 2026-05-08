@@ -26,6 +26,7 @@ export default defineCachedEventHandler(
             "valid_votes",
             "absolute_majority",
             "national_quotient",
+            "pv_upload_active",
             "documents.documents_id.id",
             "documents.documents_id.slug",
             "documents.documents_id.title",
