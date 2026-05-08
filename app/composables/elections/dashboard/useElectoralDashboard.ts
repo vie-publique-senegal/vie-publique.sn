@@ -6,9 +6,18 @@ export interface ElectionConfig {
 }
 
 export const useElectoralDashboard = () => {
+  // Lire la route dès l'initialisation (SSR + client) pour éviter le flash de tab incorrect
+  const route = useRoute();
+  const getInitialTab = () => {
+    const routeTab = route.params.tab;
+    if (typeof routeTab === 'string' && routeTab) return routeTab;
+    if (route.query.tab) return String(route.query.tab);
+    return 'candidats';
+  };
+
   const selectedYear = useState<number>('election-selected-year');
   const selectedType = useState<string>('election-selected-type');
-  const activeTab = useState<string>('election-active-tab', () => 'candidats');
+  const activeTab = useState<string>('election-active-tab', getInitialTab);
   const selectedConstituencyId = useState<number | null>('election-selected-constituency-id', () => null);
   const selectedCoalitionId = useState<number | null>('election-selected-coalition-id', () => null);
   const selectedFilterConstituencyId = useState<number | null>('election-selected-filter-constituency-id', () => null);
@@ -72,7 +81,6 @@ export const useElectoralDashboard = () => {
 
   // Sync avec les query params (uniquement sur la page dashboard)
   if (process.client) {
-    const route = useRoute();
     const router = useRouter();
     const isDashboardPage = computed(() => route.path.includes('/elections-senegal/dashboard'));
     const isCandidateProfilePage = computed(() => /^\/elections-senegal\/dashboard\/[^/]+\/[^/]+\/candidats\/[^/]+$/.test(route.path));
