@@ -1,15 +1,20 @@
 <script setup lang="ts">
 import { useElectoralCandidateProfile } from '~/composables/elections/dashboard/useElectoralCandidateProfile';
+import { useElectoralDashboard } from '~/composables/elections/dashboard/useElectoralDashboard';
 import type { Candidate } from '~~/types/candidate';
 
 const route = useRoute();
 
-const type = computed(() => String(route.params.type || ''));
-const year = computed(() => Number(route.params.year || 0));
-const slug = computed(() => String(route.params.slug || ''));
+const electionSlug = computed(() => route.params.slug as string);
+const candidateSlug = computed(() => route.params.candidateSlug as string);
+
+const { selectedYear, selectedType, currentElection } = useElectoralDashboard();
+
+const type = computed(() => selectedType.value || String(route.params.type || ''));
+const year = computed(() => selectedYear.value || Number(route.params.year || 0));
 
 const { candidateData, candidate, coalition, pending, error } = useElectoralCandidateProfile({
-  slug,
+  slug: candidateSlug,
   year,
   type,
 });
@@ -21,23 +26,15 @@ const candidateName = computed(() => {
 
 const formatBirthDate = (rawDate?: string | null) => {
   if (!rawDate) return '';
-
   const parsed = new Date(rawDate);
   if (Number.isNaN(parsed.getTime())) return rawDate;
-
-  return new Intl.DateTimeFormat('fr-FR', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  }).format(parsed);
+  return new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }).format(parsed);
 };
 
 const birthDisplay = computed(() => {
   if (!candidate.value) return '';
-
   const birthDate = formatBirthDate(candidate.value.birthdate || null);
   const birthPlace = typeof candidate.value.birthplace === 'string' ? candidate.value.birthplace.trim() : '';
-
   if (birthDate && birthPlace) return `${birthDate} à ${birthPlace}`;
   return birthDate || birthPlace || '';
 });
@@ -53,24 +50,13 @@ const candidateBio = computed(() => {
 const candidateBioHtml = computed(() => {
   const bio = candidateBio.value;
   if (!bio) return '';
-
   const hasHtmlTags = /<\/?[a-z][\s\S]*>/i.test(bio);
   if (hasHtmlTags) return bio;
-
-  const escaped = bio
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-
-  return escaped
-    .split(/\n{2,}/)
-    .map((block) => `<p>${block.replace(/\n/g, '<br>')}</p>`)
-    .join('');
+  const escaped = bio.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  return escaped.split(/\n{2,}/).map(block => `<p>${block.replace(/\n/g, '<br>')}</p>`).join('');
 });
 
-const dashboardCandidatesUrl = computed(() => `/elections-senegal/dashboard/${type.value}/${year.value}/candidats`);
+const candidatsUrl = computed(() => `/elections-senegal/${electionSlug.value}/candidats`);
 
 useSeoMeta({
   title: () => `${candidateName.value} - Profil candidat | Vie-Publique SN`,
@@ -90,8 +76,8 @@ useSeoMeta({
       class="mb-6 text-xs"
       :items="[
         { label: 'Élections', to: '/elections-senegal' },
-        { label: 'Dashboard', to: dashboardCandidatesUrl },
-        { label: 'Candidats', to: dashboardCandidatesUrl },
+        { label: currentElection?.name || 'Élection', to: candidatsUrl },
+        { label: 'Candidats', to: candidatsUrl },
         { label: candidateName }
       ]"
     />
@@ -113,24 +99,15 @@ useSeoMeta({
     <div v-else-if="!candidate" class="text-center py-20 bg-white dark:bg-gray-900 rounded-2xl border dark:border-gray-800">
       <UIcon name="i-heroicons-user-circle" class="h-16 w-16 mx-auto mb-4 text-gray-300 dark:text-gray-700" />
       <h1 class="text-2xl font-black mb-2">Profil introuvable</h1>
-      <p class="text-sm text-gray-500 mb-6">
-        Le candidat demandé n'existe pas ou n'est pas encore publié pour cette élection.
-      </p>
-      <UButton :to="dashboardCandidatesUrl" icon="i-heroicons-arrow-left" variant="soft">
-        Retour aux candidats
-      </UButton>
+      <p class="text-sm text-gray-500 mb-6">Le candidat demandé n'existe pas ou n'est pas encore publié pour cette élection.</p>
+      <UButton :to="candidatsUrl" icon="i-heroicons-arrow-left" variant="soft">Retour aux candidats</UButton>
     </div>
 
     <div v-else class="space-y-6">
       <UCard class="overflow-hidden" :ui="{ body: { padding: 'p-0' } }">
         <div class="grid md:grid-cols-5 gap-0">
           <div class="md:col-span-2 aspect-square md:aspect-auto bg-gray-100 dark:bg-gray-900 overflow-hidden">
-            <CmsImage
-              v-if="candidate.photo"
-              :src="candidate.photo"
-              :alt="candidateName"
-              class="h-full w-full object-cover"
-            />
+            <CmsImage v-if="candidate.photo" :src="candidate.photo" :alt="candidateName" class="h-full w-full object-cover" />
             <div v-else class="h-full w-full flex items-center justify-center">
               <UIcon name="i-heroicons-user" class="h-24 w-24 text-gray-300 dark:text-gray-700" />
             </div>
@@ -138,12 +115,8 @@ useSeoMeta({
 
           <div class="md:col-span-3 p-6 md:p-8 space-y-5">
             <div>
-              <p class="text-[11px] font-black uppercase tracking-widest text-primary-600 dark:text-primary-400 mb-2">
-                Profil candidat
-              </p>
-              <h1 class="text-3xl sm:text-4xl font-black uppercase leading-tight">
-                {{ candidate.first_name }} {{ candidate.last_name }}
-              </h1>
+              <p class="text-[11px] font-black uppercase tracking-widest text-primary-600 dark:text-primary-400 mb-2">Profil candidat</p>
+              <h1 class="text-3xl sm:text-4xl font-black uppercase leading-tight">{{ candidate.first_name }} {{ candidate.last_name }}</h1>
             </div>
 
             <div class="grid sm:grid-cols-2 gap-4">
@@ -166,39 +139,9 @@ useSeoMeta({
             </div>
 
             <div class="flex flex-wrap items-center gap-2 pt-2">
-              <UButton
-                v-if="candidate.facebook"
-                :to="candidate.facebook"
-                target="_blank"
-                variant="ghost"
-                icon="i-simple-icons-facebook"
-                size="sm"
-                class="shrink-0"
-              >
-                Facebook
-              </UButton>
-              <UButton
-                v-if="candidate.twitter"
-                :to="candidate.twitter"
-                target="_blank"
-                variant="ghost"
-                icon="i-simple-icons-x"
-                size="sm"
-                class="shrink-0"
-              >
-                Twitter/X
-              </UButton>
-              <UButton
-                v-if="candidate.linkedin"
-                :to="candidate.linkedin"
-                target="_blank"
-                variant="ghost"
-                icon="i-simple-icons-linkedin"
-                size="sm"
-                class="shrink-0"
-              >
-                LinkedIn
-              </UButton>
+              <UButton v-if="candidate.facebook" :to="candidate.facebook" target="_blank" variant="ghost" icon="i-simple-icons-facebook" size="sm" class="shrink-0">Facebook</UButton>
+              <UButton v-if="candidate.twitter" :to="candidate.twitter" target="_blank" variant="ghost" icon="i-simple-icons-x" size="sm" class="shrink-0">Twitter/X</UButton>
+              <UButton v-if="candidate.linkedin" :to="candidate.linkedin" target="_blank" variant="ghost" icon="i-simple-icons-linkedin" size="sm" class="shrink-0">LinkedIn</UButton>
             </div>
           </div>
         </div>
@@ -209,15 +152,8 @@ useSeoMeta({
           <UIcon name="i-heroicons-identification" class="h-5 w-5 text-primary-600" />
           <h2 class="text-xl font-black uppercase">Biographie</h2>
         </div>
-
-        <div
-          v-if="candidateBioHtml"
-          class="prose prose-sm dark:prose-invert max-w-none leading-relaxed"
-          v-html="candidateBioHtml"
-        />
-        <p v-else class="text-sm text-gray-500">
-          La biographie de {{ candidate.first_name }} {{ candidate.last_name }}  n'est pas encore disponible.
-        </p>
+        <div v-if="candidateBioHtml" class="prose prose-sm dark:prose-invert max-w-none leading-relaxed" v-html="candidateBioHtml" />
+        <p v-else class="text-sm text-gray-500">La biographie de {{ candidate.first_name }} {{ candidate.last_name }} n'est pas encore disponible.</p>
       </UCard>
     </div>
   </main>

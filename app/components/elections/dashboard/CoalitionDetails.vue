@@ -19,7 +19,7 @@ const isPresidential = computed(() => props.type === 'presidential');
 const isLocal = computed(() => ['locale', 'locales', 'local'].includes(props.type));
 
 const dashboard = useElectoralDashboard();
-const { searchQuery } = dashboard;
+const { searchQuery, currentElection } = dashboard;
 
 const { lists, loading, error } = useElectoralDashboardLists({
   coalitionId: props.coalitionId,
@@ -108,7 +108,10 @@ function openCandidateProfile(candidate: Candidate) {
   if (!slug) return;
 
   if (props.type === 'presidential' || props.type === 'legislative') {
-    router.push(`/elections-senegal/dashboard/${props.type}/${props.year}/candidats/${slug}`);
+    const electionSlug = currentElection.value?.slug;
+    if (electionSlug) {
+      router.push(`/elections-senegal/${electionSlug}/candidats/${slug}`);
+    }
     return;
   }
 

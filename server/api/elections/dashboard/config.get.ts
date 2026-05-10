@@ -9,6 +9,7 @@ export default defineCachedEventHandler(
         (readItems as any)("elections", {
           fields: [
             "id",
+            "slug",
             "year",
             "type",
             "name",
@@ -38,6 +39,9 @@ export default defineCachedEventHandler(
             "documents.documents_id.status"
           ],
           sort: ["-year", "-election_date", "-id"],
+          filter: {
+            status: { _nin: ["draft", "archived"] }
+          },
         })
       )) as any[];
 

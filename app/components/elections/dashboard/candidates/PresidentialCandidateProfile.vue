@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useElectoralFormatting } from '~/composables/elections/dashboard/useElectoralFormatting';
 import { useCoalitionVideos } from '~/composables/elections/dashboard/useCoalitionVideos';
+import { useElectoralDashboard } from '~/composables/elections/dashboard/useElectoralDashboard';
 import { useIntersectionObserver } from '@vueuse/core';
 import type { Candidate } from '~~/types/candidate';
 
@@ -15,6 +16,7 @@ interface Props {
 const props = defineProps<Props>();
 
 const { formatDate, calculateAge, getYoutubeEmbedUrl } = useElectoralFormatting();
+const { currentElection } = useElectoralDashboard();
 
 const activeTab = ref(0);
 const isManualClick = ref(false);
@@ -84,8 +86,9 @@ const profileSlug = computed(() => {
 });
 
 const profileUrl = computed(() => {
-  if (!props.type || !props.year || !profileSlug.value) return null;
-  return `/elections-senegal/dashboard/${props.type}/${props.year}/candidats/${profileSlug.value}`;
+  const electionSlug = currentElection.value?.slug;
+  if (!electionSlug || !profileSlug.value) return null;
+  return `/elections-senegal/${electionSlug}/candidats/${profileSlug.value}`;
 });
 
 const portraitText = computed(() => {

@@ -149,7 +149,7 @@ const quickLinks = computed(() => [
 
       <template v-else>
         <!-- Featured Election Card -->
-        <div class="bg-white dark:bg-gray-900 rounded-3xl border dark:border-gray-800 shadow-sm overflow-hidden transition-all hover:shadow-md group">
+        <div v-if="election" class="bg-white dark:bg-gray-900 rounded-3xl border dark:border-gray-800 shadow-sm overflow-hidden transition-all hover:shadow-md group">
           <div class="flex flex-col lg:flex-row">
 
             <!-- Left Panel: Election Info & Quick Actions -->
@@ -158,7 +158,7 @@ const quickLinks = computed(() => [
               <!-- Header & Badge -->
               <div class="flex flex-wrap items-center gap-3">
                 <UBadge
-                  :color="election.status === 'completed' ? 'green' : 'primary'"
+                  :color="election?.status === 'completed' ? 'green' : 'primary'"
                   variant="subtle"
                   class="rounded-full px-2.5 py-0.5 font-black uppercase text-[10px] tracking-widest"
                 >
@@ -168,21 +168,21 @@ const quickLinks = computed(() => [
                   <UIcon name="i-heroicons-calendar" class="h-3.5 w-3.5" />
                   {{ election ? new Date(election.election_date).toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' }) : '' }}
                 </div>
-                <div v-if="election.participation_rate" class="flex items-center gap-1.5 text-blue-500 font-bold text-[10px] uppercase tracking-wider ml-auto lg:ml-0">
+                <div v-if="election?.participation_rate" class="flex items-center gap-1.5 text-blue-500 font-bold text-[10px] uppercase tracking-wider ml-auto lg:ml-0">
                   <UIcon name="i-heroicons-chart-pie" class="h-3.5 w-3.5" />
-                  Participation: {{ election.participation_rate }}%
+                  Participation: {{ election?.participation_rate }}%
                 </div>
               </div>
 
               <!-- Title -->
               <div>
                  <h1 class="text-2xl lg:text-3xl font-black uppercase tracking-tighter text-gray-900 dark:text-white leading-tight">
-                    {{ election.name || 'Élections Sénégal' }}
+                   {{ election?.name || 'Élections Sénégal' }}
                  </h1>
               </div>
 
               <!-- Specific Action Links -->
-              <div v-if="election.status === 'completed'" class="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2">
+              <div v-if="election?.status === 'completed'" class="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2">
                  <!-- Actions Présidentielle -->
                  <template v-if="election.type === 'presidential'">
                     <UButton to="/elections-senegal/legislation?q=resultats" color="gray" variant="solid" size="xs" icon="i-heroicons-document-check" class="justify-start">Résultats Définitifs</UButton>
@@ -264,16 +264,16 @@ const quickLinks = computed(() => [
           </div>
           <!-- Desktop: Link text -->
           <NuxtLink
-            v-if="election"
-            :to="`/elections-senegal/dashboard/${election.type}/${election.year}/resultats`"
+            v-if="election?.slug"
+            :to="`/elections-senegal/${election.slug}/resultats`"
             class="hidden md:block p-4 bg-slate-50 dark:bg-gray-800/50 border-t dark:border-gray-800 text-center text-sm font-black uppercase tracking-widest text-gray-500 hover:text-primary-600 hover:bg-slate-100 transition-all"
           >
             Voir le tableau de bord complet <UIcon name="i-heroicons-arrow-right" class="ml-2 inline-block h-4 w-4" />
           </NuxtLink>
           <!-- Mobile: Card style CTA -->
           <NuxtLink
-            v-if="election"
-            :to="`/elections-senegal/dashboard/${election.type}/${election.year}/resultats`"
+            v-if="election?.slug"
+            :to="`/elections-senegal/${election.slug}/resultats`"
             class="md:hidden group flex items-center justify-center gap-3 p-4 bg-gradient-to-br from-primary-50 via-primary-100 to-primary-200 dark:from-primary-900/30 dark:via-primary-800/25 dark:to-primary-900/20 border-t dark:border-gray-800 transition hover:shadow-lg"
           >
             <UIcon
