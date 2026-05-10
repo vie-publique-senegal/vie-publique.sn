@@ -30,6 +30,10 @@ watch(electionBySlug, (election) => {
   }
 }, { immediate: true });
 
+const isCandidateProfilePage = computed(() =>
+  /^\/elections-senegal\/[^/]+\/candidats\/[^/]+$/.test(route.path)
+);
+
 // Tab actif = dernier segment du path
 const currentTab = computed(() => {
   const segments = route.path.split('/').filter(Boolean);
@@ -132,7 +136,7 @@ useHead({
   <div class="min-h-screen pb-16 text-gray-900 dark:text-gray-100 transition-colors duration-300">
 
     <!-- Header : breadcrumb + sélecteurs type/année -->
-    <div class="border-b border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
+    <div v-if="!isCandidateProfilePage" class="border-b border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
       <div class="container mx-auto px-4 py-4 md:py-6">
         <AppBreadcrumb
           v-if="currentElection"
@@ -179,7 +183,7 @@ useHead({
     </div>
 
     <!-- Tabs Navigation (style budget) -->
-    <div class="sticky top-0 z-40 border-b border-gray-200 bg-white/95 backdrop-blur-sm dark:border-gray-800 dark:bg-gray-900/95">
+    <div v-if="!isCandidateProfilePage" class="sticky top-0 z-40 border-b border-gray-200 bg-white/95 backdrop-blur-sm dark:border-gray-800 dark:bg-gray-900/95">
       <div class="container mx-auto px-4">
         <nav class="-mb-px flex gap-0.5 py-1 sm:gap-1" aria-label="Onglets">
           <button
@@ -205,7 +209,7 @@ useHead({
     </div>
 
     <!-- Contenu principal -->
-    <main class="container mx-auto px-4 py-8">
+    <main :class="isCandidateProfilePage ? '' : 'container mx-auto px-4 py-8'">
       <!-- État : élection introuvable -->
       <div v-if="!loadingConfig && !electionBySlug" class="flex flex-col items-center justify-center py-32 text-center animate-in fade-in zoom-in-95 duration-500">
         <div class="bg-primary-50 dark:bg-primary-900/10 p-6 rounded-full mb-6">

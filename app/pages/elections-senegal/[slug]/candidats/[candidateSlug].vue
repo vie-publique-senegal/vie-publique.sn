@@ -71,7 +71,7 @@ useSeoMeta({
 </script>
 
 <template>
-  <main class="container mx-auto px-4 py-8">
+  <div class="container mx-auto px-4 py-8">
     <AppBreadcrumb
       class="mb-6 text-xs"
       :items="[
@@ -156,5 +156,5 @@ useSeoMeta({
         <p v-else class="text-sm text-gray-500">La biographie de {{ candidate.first_name }} {{ candidate.last_name }} n'est pas encore disponible.</p>
       </UCard>
     </div>
-  </main>
+  </div>
 </template>
