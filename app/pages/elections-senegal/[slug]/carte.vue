@@ -33,6 +33,12 @@ useSeoMeta({
   description: () => currentElection.value?.name
     ? `Carte électorale interactive pour ${currentElection.value.name} — répartition par département et diaspora.`
     : 'Carte électorale des élections au Sénégal.',
+  ogTitle: () => currentElection.value?.name
+    ? `Carte Électorale · ${currentElection.value.name}`
+    : 'Carte Électorale — Élections Sénégal',
+  ogDescription: () => currentElection.value?.name
+    ? `Carte électorale interactive pour ${currentElection.value.name} — répartition géographique par département et diaspora.`
+    : 'Carte électorale interactive des élections au Sénégal.',
 });
 </script>
 

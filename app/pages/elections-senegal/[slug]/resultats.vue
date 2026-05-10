@@ -66,6 +66,12 @@ useSeoMeta({
   description: () => currentElection.value?.name
     ? `Résultats officiels de ${currentElection.value.name} : classement des coalitions et carte des résultats.`
     : 'Résultats des élections au Sénégal.',
+  ogTitle: () => currentElection.value?.name
+    ? `Résultats · ${currentElection.value.name}`
+    : 'Résultats des Élections au Sénégal',
+  ogDescription: () => currentElection.value?.name
+    ? `Résultats officiels de ${currentElection.value.name} : classement des coalitions et carte des résultats.`
+    : 'Résultats des élections au Sénégal.',
 });
 </script>
 

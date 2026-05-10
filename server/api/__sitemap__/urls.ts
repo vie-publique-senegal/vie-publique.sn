@@ -176,7 +176,53 @@ export default defineSitemapEventHandler(async () => {
       console.warn('Erreur sitemap archives années:', sitemapError);
     }
 
-    // 6. Pages statiques : Laissées à l'auto-découverte de Nuxt Sitemap
+    // 6. Élections — pages par onglet
+    try {
+      const elections = (await directus.request(
+        readItems('elections' as any, {
+          fields: ['slug', 'type', 'status', 'election_date', 'pv_upload_active'],
+          filter: { status: { _nin: ['draft', 'archived'] } },
+          limit: -1,
+        }),
+      )) as any[];
+
+      for (const election of elections) {
+        const lastmod = toISODate(election.election_date);
+        const base = `/elections-senegal/${election.slug}`;
+        const isCompleted = election.status === 'completed';
+        const isLegislative = String(election.type).includes('legislative');
+
+        const tabs: { tab: string; priority: number }[] = isCompleted
+          ? [
+              { tab: 'resultats', priority: 0.9 },
+              { tab: 'candidats', priority: 0.8 },
+              { tab: 'documents', priority: 0.7 },
+            ]
+          : [
+              { tab: 'candidats', priority: 0.8 },
+              { tab: 'resultats', priority: 0.8 },
+              { tab: 'carte', priority: 0.7 },
+              { tab: 'documents', priority: 0.7 },
+              { tab: 'guide', priority: 0.6 },
+            ];
+
+        if (election.pv_upload_active) tabs.push({ tab: 'pvs', priority: 0.6 });
+        if (isLegislative) tabs.push({ tab: 'statistiques', priority: 0.7 });
+
+        for (const { tab, priority } of tabs) {
+          urls.push({
+            loc: `${base}/${tab}`,
+            ...(lastmod && { lastmod }),
+            changefreq: isCompleted ? 'monthly' : 'weekly',
+            priority,
+          });
+        }
+      }
+    } catch (sitemapError) {
+      console.warn('Erreur sitemap élections:', sitemapError);
+    }
+
+    // 7. Pages statiques : Laissées à l'auto-découverte de Nuxt Sitemap
     // Le module @nuxtjs/seo va automatiquement inclure toutes les pages du dossier /pages
   } catch (error) {
     console.error('Erreur génération sitemap:', error);

@@ -10,6 +10,12 @@ useSeoMeta({
   description: () => currentElection.value?.name
     ? `Documents et textes officiels de ${currentElection.value.name}.`
     : 'Documents officiels des élections au Sénégal.',
+  ogTitle: () => currentElection.value?.name
+    ? `Documents · ${currentElection.value.name}`
+    : 'Documents Officiels des Élections au Sénégal',
+  ogDescription: () => currentElection.value?.name
+    ? `Accédez aux documents et textes officiels de ${currentElection.value.name} : décrets, arrêtés et résultats définitifs.`
+    : 'Documents officiels des élections au Sénégal.',
 });
 </script>
 

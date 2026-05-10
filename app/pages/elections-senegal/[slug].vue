@@ -114,6 +114,9 @@ const onTypeChange = (type: string) => {
   navigateToElection(type, targetYear);
 };
 
+const { siteUrl } = useSiteMetadata();
+const ogImage = `${siteUrl}/og-image.png`;
+
 useSeoMeta({
   title: () => currentElection.value?.name
     ? `${currentElection.value.name} | Vie-Publique SN`
@@ -125,6 +128,9 @@ useSeoMeta({
   ogDescription: () => currentElection.value?.name
     ? `Tableau de bord complet pour ${currentElection.value.name} : candidats, résultats, carte électorale et documents.`
     : 'Plateforme d\'information électorale du Sénégal.',
+  ogImage,
+  twitterCard: 'summary_large_image',
+  twitterImage: ogImage,
 });
 
 useHead({

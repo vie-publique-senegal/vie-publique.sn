@@ -58,6 +58,9 @@ const candidateBioHtml = computed(() => {
 
 const candidatsUrl = computed(() => `/elections-senegal/${electionSlug.value}/candidats`);
 
+const { siteUrl } = useSiteMetadata();
+const ogImage = `${siteUrl}/og-image.png`;
+
 useSeoMeta({
   title: () => `${candidateName.value} - Profil candidat | Vie-Publique SN`,
   description: () => candidateBio.value
@@ -67,6 +70,9 @@ useSeoMeta({
   ogDescription: () => candidateBio.value
     ? candidateBio.value.slice(0, 200)
     : `${candidateName.value} - Profil candidat sur Vie-Publique SN`,
+  ogImage,
+  twitterCard: 'summary_large_image',
+  twitterImage: ogImage,
 });
 </script>
 

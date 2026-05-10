@@ -44,6 +44,12 @@ useSeoMeta({
   description: () => currentElection.value?.name
     ? `Analyses démographiques et socioprofessionnelles pour ${currentElection.value.name}.`
     : 'Statistiques des élections au Sénégal.',
+  ogTitle: () => currentElection.value?.name
+    ? `Statistiques · ${currentElection.value.name}`
+    : 'Statistiques des Élections au Sénégal',
+  ogDescription: () => currentElection.value?.name
+    ? `Analyses démographiques et socioprofessionnelles des candidats pour ${currentElection.value.name}.`
+    : 'Statistiques des élections au Sénégal.',
 });
 </script>
 

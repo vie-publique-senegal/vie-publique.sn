@@ -54,6 +54,12 @@ useSeoMeta({
   description: () => currentElection.value?.name
     ? `Découvrez tous les candidats et coalitions pour ${currentElection.value.name}.`
     : 'Candidats et coalitions des élections au Sénégal.',
+  ogTitle: () => currentElection.value?.name
+    ? `Candidats · ${currentElection.value.name}`
+    : 'Candidats des Élections au Sénégal',
+  ogDescription: () => currentElection.value?.name
+    ? `Découvrez tous les candidats et coalitions pour ${currentElection.value.name}.`
+    : 'Candidats et coalitions des élections au Sénégal.',
 });
 </script>
 
