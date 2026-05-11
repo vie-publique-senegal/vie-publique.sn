@@ -19,10 +19,8 @@ export interface ElectionPv {
 
 export interface PvFilters {
   source?: "national" | "diaspora";
-  tour?: "1" | "2";
   election?: number;
   // National
-  region?: string;
   department?: string;
   municipality?: string;
   // Diaspora
@@ -40,7 +38,14 @@ export interface PvOptions {
  * Composable pour gérer les PVs (liste, filtres, pagination)
  */
 export const useElectionPvsUpload = (options: PvOptions = {}) => {
-  const filters = reactive<PvFilters>({});
+  const filters = reactive<PvFilters>({
+    source: undefined,
+    election: undefined,
+    department: undefined,
+    municipality: undefined,
+    country: undefined,
+    diplomatic_representation: undefined,
+  });
   const currentPage = ref(1);
   const itemsPerPage = options.limit || 12;
 
@@ -52,11 +57,9 @@ export const useElectionPvsUpload = (options: PvOptions = {}) => {
 
     if (options.election) params.election = options.election;
     if (filters.source) params.source = filters.source;
-    if (filters.tour) params.tour = filters.tour;
     if (filters.election) params.election = filters.election;
 
     // National
-    if (filters.region) params.region = filters.region;
     if (filters.department) params.department = filters.department;
     if (filters.municipality) params.municipality = filters.municipality;
 
@@ -85,9 +88,12 @@ export const useElectionPvsUpload = (options: PvOptions = {}) => {
   };
 
   const clearFilters = () => {
-    Object.keys(filters).forEach((key) => {
-      delete filters[key as keyof PvFilters];
-    });
+    filters.source = undefined;
+    filters.election = undefined;
+    filters.department = undefined;
+    filters.municipality = undefined;
+    filters.country = undefined;
+    filters.diplomatic_representation = undefined;
     currentPage.value = 1;
   };
 

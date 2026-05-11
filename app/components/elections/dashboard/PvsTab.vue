@@ -74,53 +74,17 @@
         />
       </div>
 
-      <!-- Tour -->
-      <div v-if="availableFilters.tours.length > 0" class="relative min-w-[120px]">
-        <select
-          :value="filters.tour || ''"
-          class="focus:ring-primary/40 w-full appearance-none rounded-xl border border-gray-200 bg-gray-50 py-2 pl-3 pr-8 text-sm text-gray-700 focus:outline-none focus:ring-2 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
-          @change="(e) => setFilter('tour', (e.target as HTMLSelectElement).value || undefined)"
-        >
-          <option value="">Tous les tours</option>
-          <option v-for="tour in availableFilters.tours" :key="tour" :value="tour">
-            {{ tour === '1' ? '1er tour' : '2ème tour' }}
-          </option>
-        </select>
-        <UIcon
-          name="i-heroicons-chevron-down"
-          class="pointer-events-none absolute right-2 top-1/2 h-3 w-3 -translate-y-1/2 text-gray-400"
-        />
-      </div>
-
       <!-- Filtres conditionnels National -->
       <template v-if="filters.source === 'national'">
-        <!-- Région -->
-        <div v-if="availableFilters.national.regions.length > 0" class="relative min-w-[140px]">
-          <select
-            :value="filters.region || ''"
-            class="focus:ring-primary/40 w-full appearance-none rounded-xl border border-gray-200 bg-gray-50 py-2 pl-3 pr-8 text-sm text-gray-700 focus:outline-none focus:ring-2 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
-            @change="(e) => setFilter('region', (e.target as HTMLSelectElement).value || undefined)"
-          >
-            <option value="">Toutes les régions</option>
-            <option v-for="region in availableFilters.national.regions" :key="region" :value="region">
-              {{ region }}
-            </option>
-          </select>
-          <UIcon
-            name="i-heroicons-chevron-down"
-            class="pointer-events-none absolute right-2 top-1/2 h-3 w-3 -translate-y-1/2 text-gray-400"
-          />
-        </div>
-
         <!-- Département -->
-        <div v-if="availableFilters.national.departments.length > 0" class="relative min-w-[140px]">
+        <div v-if="availableNationalDepartments.length > 0" class="relative min-w-[170px]">
           <select
             :value="filters.department || ''"
             class="focus:ring-primary/40 w-full appearance-none rounded-xl border border-gray-200 bg-gray-50 py-2 pl-3 pr-8 text-sm text-gray-700 focus:outline-none focus:ring-2 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
-            @change="(e) => setFilter('department', (e.target as HTMLSelectElement).value || undefined)"
+            @change="handleDepartmentChange"
           >
             <option value="">Tous les départements</option>
-            <option v-for="dept in availableFilters.national.departments" :key="dept" :value="dept">
+            <option v-for="dept in availableNationalDepartments" :key="dept" :value="dept">
               {{ dept }}
             </option>
           </select>
@@ -131,14 +95,15 @@
         </div>
 
         <!-- Commune -->
-        <div v-if="availableFilters.national.municipalities.length > 0" class="relative min-w-[140px]">
+        <div v-if="filters.department" class="relative min-w-[170px]">
           <select
             :value="filters.municipality || ''"
+            :disabled="availableNationalMunicipalities.length === 0"
             class="focus:ring-primary/40 w-full appearance-none rounded-xl border border-gray-200 bg-gray-50 py-2 pl-3 pr-8 text-sm text-gray-700 focus:outline-none focus:ring-2 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
             @change="(e) => setFilter('municipality', (e.target as HTMLSelectElement).value || undefined)"
           >
             <option value="">Toutes les communes</option>
-            <option v-for="mun in availableFilters.national.municipalities" :key="mun" :value="mun">
+            <option v-for="mun in availableNationalMunicipalities" :key="mun" :value="mun">
               {{ mun }}
             </option>
           </select>
@@ -290,7 +255,6 @@
                 <p class="truncate text-sm text-gray-600 dark:text-gray-400">
                   {{ pv.municipality }}
                 </p>
-                <p class="truncate text-xs text-gray-500 dark:text-gray-500">{{ pv.region }}</p>
               </template>
               <!-- Diaspora -->
               <template v-else>
@@ -323,19 +287,6 @@
             <span class="font-medium text-gray-700 dark:text-gray-300">{{ pv.bureau }}</span>
           </div>
 
-          <!-- Date -->
-          <div class="mt-2 flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-            <UIcon name="i-heroicons-calendar" class="h-3.5 w-3.5" />
-            <time :datetime="pv.date_created">
-              {{
-                new Date(pv.date_created).toLocaleDateString('fr-FR', {
-                  day: 'numeric',
-                  month: 'short',
-                  year: 'numeric',
-                })
-              }}
-            </time>
-          </div>
         </div>
       </div>
     </div>
@@ -358,124 +309,60 @@
     <ElectionsDashboardModalsPvLoginModal v-model="showLoginModal" @success="onLoginSuccess" />
     <ElectionsDashboardModalsPvUploadModal v-model="showUploadModal" @success="onUploadSuccess" />
 
-    <!-- Modal lightbox PV -->
-    <UModal v-model="showPvModal" :ui="{ width: 'sm:max-w-4xl' }">
-      <div v-if="selectedPv" class="p-6">
-        <div class="mb-4 flex items-start justify-between">
-          <div class="flex-1">
-            <div class="mb-2 flex items-center gap-2">
-              <span
-                class="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold shadow-md"
-                :class="
-                  selectedPv.source === 'diaspora'
-                    ? 'bg-emerald-500 text-white dark:bg-emerald-600'
-                    : 'bg-blue-600 text-white dark:bg-blue-500'
-                "
-              >
-                <UIcon
-                  :name="
-                    selectedPv.source === 'diaspora'
-                      ? 'i-heroicons-globe-europe-africa'
-                      : 'i-heroicons-map'
-                  "
-                  class="h-3.5 w-3.5"
-                />
-                {{ selectedPv.source === 'diaspora' ? 'Diaspora' : 'National' }}
-              </span>
-              <span
-                class="inline-flex rounded-full px-2.5 py-1 text-xs font-bold shadow-sm"
-                :class="
-                  selectedPv.tour === '2'
-                    ? 'bg-amber-500 text-white dark:bg-amber-600'
-                    : 'bg-slate-600 text-white dark:bg-slate-500'
-                "
-              >
-                {{ selectedPv.tour }}{{ selectedPv.tour === '1' ? 'er' : 'ème' }} tour
-              </span>
-            </div>
+    <!-- Visualisation PV plein écran (mobile-friendly) -->
+    <Teleport to="body">
+      <div
+        v-if="showPvModal && selectedPv"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-3 sm:p-4"
+        @click.self="closePvModal"
+      >
+        <button
+          type="button"
+          class="absolute right-3 top-3 sm:right-4 sm:top-4 flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20 transition-colors"
+          @click="closePvModal"
+        >
+          <UIcon name="i-heroicons-x-mark" class="h-5 w-5" />
+        </button>
 
-            <!-- National -->
-            <template v-if="selectedPv.source === 'national'">
-              <h2 class="text-xl font-bold text-gray-900 dark:text-white">
-                {{ selectedPv.department }} › {{ selectedPv.municipality }}
-              </h2>
-              <p class="text-sm text-gray-500 dark:text-gray-400">{{ selectedPv.region }}</p>
-            </template>
-            <!-- Diaspora -->
-            <template v-else>
-              <h2 class="text-xl font-bold text-gray-900 dark:text-white">
-                {{ selectedPv.country }}
-              </h2>
-              <p class="text-sm text-gray-600 dark:text-gray-400">
-                {{ selectedPv.diplomatic_representation }}
-              </p>
-              <p v-if="selectedPv.locality" class="text-sm text-gray-500 dark:text-gray-400">
-                {{ selectedPv.locality }}
-              </p>
-            </template>
-
-            <p class="mt-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-              Bureau: {{ selectedPv.bureau }}
-            </p>
-          </div>
-
-          <UButton
-            color="gray"
-            variant="ghost"
-            icon="i-heroicons-x-mark"
-            square
-            @click="showPvModal = false"
-          />
-        </div>
-
-        <!-- Image -->
-        <div class="relative overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-800">
-          <!-- Spinner de chargement -->
-          <div
-            v-if="imageLoading"
-            class="absolute inset-0 flex items-center justify-center bg-gray-100 dark:bg-gray-800"
-          >
-            <div class="flex flex-col items-center gap-3">
-              <svg
-                class="h-12 w-12 animate-spin text-primary"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <circle
-                  class="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  stroke-width="4"
-                ></circle>
-                <path
-                  class="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                ></path>
-              </svg>
-              <p class="text-sm text-gray-500 dark:text-gray-400">Chargement de l'image...</p>
-            </div>
-          </div>
-
-          <!-- Image -->
+        <div class="w-full max-w-5xl text-center">
           <CmsImage
             v-if="selectedPv.image?.id"
             :src="selectedPv.image.id"
             :alt="`PV ${selectedPv.bureau}`"
-            :class="[
-              'h-auto w-full transition-opacity duration-300',
-              imageLoading ? 'opacity-0' : 'opacity-100',
-            ]"
+            class="mx-auto max-h-[85vh] max-w-full rounded-lg object-contain shadow-2xl"
             loading="eager"
-            @load="imageLoading = false"
-            @error="imageLoading = false"
           />
+
+          <div class="mt-3 flex flex-wrap items-center justify-center gap-2">
+            <span
+              class="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold"
+              :class="
+                selectedPv.source === 'diaspora'
+                  ? 'bg-emerald-500 text-white'
+                  : 'bg-blue-600 text-white'
+              "
+            >
+              <UIcon
+                :name="
+                  selectedPv.source === 'diaspora'
+                    ? 'i-heroicons-globe-europe-africa'
+                    : 'i-heroicons-map'
+                "
+                class="h-3.5 w-3.5"
+              />
+              {{ selectedPv.source === 'diaspora' ? 'Diaspora' : 'National' }}
+            </span>
+            <span class="inline-flex rounded-full bg-white/20 px-2.5 py-1 text-xs font-bold text-white">
+              {{ selectedPv.tour === '1' ? '1er tour' : '2ème tour' }}
+            </span>
+          </div>
+
+          <p class="mt-2 text-sm font-bold text-white">
+            {{ selectedPv.source === 'national' ? selectedPv.municipality : selectedPv.country }} · {{ selectedPv.bureau }}
+          </p>
         </div>
       </div>
-    </UModal>
+    </Teleport>
   </div>
 </template>
 
@@ -535,19 +422,38 @@ const handleLogout = async () => {
   await logout();
 };
 
-const imageLoading = ref(false);
-
 const openPvModal = (pv: ElectionPv) => {
   selectedPv.value = pv;
-  imageLoading.value = true;
   showPvModal.value = true;
+};
+
+const closePvModal = () => {
+  showPvModal.value = false;
+  selectedPv.value = null;
+};
+
+const availableNationalDepartments = computed<string[]>(() => {
+  return availableFilters.value.national.departments || [];
+});
+
+const availableNationalMunicipalities = computed<string[]>(() => {
+  const selectedDepartment = filters.department;
+  if (!selectedDepartment) return [];
+
+  const map = availableFilters.value.national.municipalitiesByDepartment || {};
+  return map[selectedDepartment] || [];
+});
+
+const handleDepartmentChange = (e: Event) => {
+  const value = (e.target as HTMLSelectElement).value || undefined;
+  setFilter('municipality', undefined);
+  setFilter('department', value);
 };
 
 // Handler pour changement de source (réinitialiser les filtres géographiques)
 const handleSourceChange = (e: Event) => {
   const value = (e.target as HTMLSelectElement).value || undefined;
   // Réinitialiser les filtres géographiques
-  setFilter('region', undefined);
   setFilter('department', undefined);
   setFilter('municipality', undefined);
   setFilter('country', undefined);

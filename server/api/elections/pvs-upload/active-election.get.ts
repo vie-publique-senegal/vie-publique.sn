@@ -11,7 +11,7 @@ export default defineCachedEventHandler(
     try {
       const elections = await directus.request(
         readItems("elections", {
-          fields: ["id", "name", "year", "type", "slug"],
+          fields: ["id", "name", "year", "type", "slug", "rounds"],
           filter: { pv_upload_active: { _eq: true } },
           limit: 1,
         })

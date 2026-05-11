@@ -1,4 +1,4 @@
-import { aggregate, readItems } from "@directus/sdk";
+import { readItems } from "@directus/sdk";
 
 /**
  * Retourne les valeurs disponibles pour les filtres
@@ -11,7 +11,7 @@ export default defineEventHandler(async (event) => {
   const directus = getCmsClient();
 
   try {
-    // Filtres de base : source et tour
+    // Filtres de base : source
     const baseFilter: any = { status: { _eq: "published" } };
     if (electionId) {
       baseFilter.election = { _eq: electionId };
@@ -22,7 +22,6 @@ export default defineEventHandler(async (event) => {
       readItems("election_pvs", {
         fields: [
           "source",
-          "tour",
           "region",
           "department",
           "municipality",
@@ -37,13 +36,22 @@ export default defineEventHandler(async (event) => {
 
     // Construire les valeurs uniques pour chaque filtre
     const sources = [...new Set((pvs as any[]).map((p) => p.source))].filter(Boolean);
-    const tours = [...new Set((pvs as any[]).map((p) => p.tour))].filter(Boolean).sort();
-
     // Filtres géographiques pour National
     const nationalPvs = (pvs as any[]).filter((p) => p.source === "national");
-    const regions = [...new Set(nationalPvs.map((p) => p.region))].filter(Boolean).sort();
     const departments = [...new Set(nationalPvs.map((p) => p.department))].filter(Boolean).sort();
-    const municipalities = [...new Set(nationalPvs.map((p) => p.municipality))].filter(Boolean).sort();
+    const municipalitiesByDepartment = departments.reduce((acc: Record<string, string[]>, dept) => {
+      const municipalities = [
+        ...new Set(
+          nationalPvs
+            .filter((p) => p.department === dept)
+            .map((p) => p.municipality)
+            .filter(Boolean)
+        ),
+      ].sort();
+
+      acc[dept] = municipalities;
+      return acc;
+    }, {});
 
     // Filtres géographiques pour Diaspora
     const diasporaPvs = (pvs as any[]).filter((p) => p.source === "diaspora");
@@ -58,11 +66,9 @@ export default defineEventHandler(async (event) => {
     return {
       data: {
         sources,
-        tours,
         national: {
-          regions,
           departments,
-          municipalities,
+          municipalitiesByDepartment,
         },
         diaspora: {
           countries,

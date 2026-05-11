@@ -9,7 +9,6 @@ import { readItems } from "@directus/sdk";
  *   - source: 'national' | 'diaspora'
  *   - region, department, municipality (pour national)
  *   - country, diplomatic_representation (pour diaspora)
- *   - tour: '1' | '2'
  *   - election: ID de l'élection
  */
 export default defineCachedEventHandler(
@@ -31,10 +30,6 @@ export default defineCachedEventHandler(
 
     if (query.election) {
       filter.election = { _eq: Number(query.election) };
-    }
-
-    if (query.tour) {
-      filter.tour = { _eq: query.tour };
     }
 
     // Filtres National
@@ -88,15 +83,15 @@ export default defineCachedEventHandler(
       );
 
       // Récupérer le total
-      const [totalResult] = await directus.request(
-        readItems("election_pvs", {
+      const totalRows = (await directus.request(
+        (readItems as any)("election_pvs", {
           filter,
           aggregate: { count: "*" },
           limit: 1,
-        }) as any
-      );
+        })
+      )) as any[];
 
-      const total = totalResult?.count || 0;
+      const total = totalRows?.[0]?.count || 0;
 
       return {
         data,

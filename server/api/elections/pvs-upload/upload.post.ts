@@ -50,7 +50,7 @@ export default defineEventHandler(async (event) => {
   const activeElections = await adminDirectus
     .request(
       readItems("elections", {
-        fields: ["id", "name"],
+        fields: ["id", "name", "rounds"],
         filter: { pv_upload_active: { _eq: true } },
         limit: 1,
       })
@@ -95,13 +95,30 @@ export default defineEventHandler(async (event) => {
   }
 
   const source = sourceField?.data?.toString("utf-8").trim() || "national";
-  const tour = tourField?.data?.toString("utf-8").trim();
+  const submittedTour = tourField?.data?.toString("utf-8").trim();
+  const rounds = Number((activeElection as any)?.rounds || 0);
+  const isSingleRoundElection = rounds === 1;
+  const tour = isSingleRoundElection ? "1" : submittedTour;
   const bureau = bureauField?.data?.toString("utf-8").trim();
 
-  if (!tour || !bureau) {
+  if (!bureau) {
     throw createError({
       statusCode: 400,
-      message: "Tour et bureau sont requis",
+      message: "Bureau requis",
+    });
+  }
+
+  if (!isSingleRoundElection && !tour) {
+    throw createError({
+      statusCode: 400,
+      message: "Tour requis",
+    });
+  }
+
+  if (tour && !["1", "2"].includes(tour)) {
+    throw createError({
+      statusCode: 400,
+      message: "Tour invalide (1 ou 2)",
     });
   }
 

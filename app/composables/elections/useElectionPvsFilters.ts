@@ -11,11 +11,10 @@ export const useElectionPvsFilters = (electionId?: number | undefined) => {
 
   const availableFilters = computed(() => ({
     sources: (data.value as any)?.data?.sources || [],
-    tours: (data.value as any)?.data?.tours || [],
     national: {
-      regions: (data.value as any)?.data?.national?.regions || [],
       departments: (data.value as any)?.data?.national?.departments || [],
-      municipalities: (data.value as any)?.data?.national?.municipalities || [],
+      municipalitiesByDepartment:
+        (data.value as any)?.data?.national?.municipalitiesByDepartment || {},
     },
     diaspora: {
       countries: (data.value as any)?.data?.diaspora?.countries || [],

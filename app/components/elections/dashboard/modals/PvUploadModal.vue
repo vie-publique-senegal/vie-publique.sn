@@ -78,8 +78,8 @@
           </div>
         </div>
 
-        <!-- Tour -->
-        <div>
+        <!-- Tour (multi-tours uniquement) -->
+        <div v-if="!isSingleRoundElection">
           <label class="mb-1 block text-xs font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400">
             Tour <span class="text-red-500">*</span>
           </label>
@@ -494,6 +494,9 @@ const form = reactive({
   bureau: "",
 });
 
+const isSingleRoundElection = computed(() => Number(activeElection.value?.rounds || 0) === 1);
+const effectiveTour = computed(() => (isSingleRoundElection.value ? "1" : form.tour));
+
 // Cascade loading handlers
 const onRegionChange = async () => {
   form.department = "";
@@ -585,7 +588,7 @@ const onDrop = (e: DragEvent) => {
 
 // Form validation
 const isFormValid = computed(() => {
-  if (!form.tour || !form.bureau || !selectedFile.value) return false;
+  if (!effectiveTour.value || !form.bureau || !selectedFile.value) return false;
 
   if (source.value === "national") {
     return !!(form.region && form.department && form.municipality && form.polling_place);
@@ -600,7 +603,7 @@ const errorMsg = ref("");
 const successMsg = ref("");
 
 const resetForm = () => {
-  form.tour = "";
+  form.tour = isSingleRoundElection.value ? "1" : "";
   form.region = "";
   form.department = "";
   form.municipality = "";
@@ -663,7 +666,7 @@ const handleUpload = async () => {
     const fd = new FormData();
     fd.append("file", selectedFile.value!);
     fd.append("source", source.value);
-    fd.append("tour", form.tour);
+    fd.append("tour", effectiveTour.value);
     fd.append("bureau", form.bureau);
 
     if (source.value === "national") {
@@ -714,11 +717,20 @@ watch(() => form.municipality, (newMunicipality) => {
   }
 });
 
+// Préremplir le tour pour les élections à tour unique
+watch(isSingleRoundElection, (isSingleRound) => {
+  if (isSingleRound) {
+    form.tour = "1";
+  }
+}, { immediate: true });
+
 // Reset messages quand on ferme
 watch(isOpen, (open) => {
   if (!open) {
     errorMsg.value = "";
     successMsg.value = "";
+  } else if (isSingleRoundElection.value) {
+    form.tour = "1";
   }
 });
 </script>
