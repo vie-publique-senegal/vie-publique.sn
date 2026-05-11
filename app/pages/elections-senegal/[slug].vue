@@ -139,10 +139,10 @@ useHead({
 </script>
 
 <template>
-  <div class="min-h-screen pb-16 text-gray-900 dark:text-gray-100 transition-colors duration-300">
+  <div class="min-h-screen pb-16 bg-white text-gray-900 dark:bg-gray-900 dark:text-gray-100 overflow-x-hidden">
 
     <!-- Header : breadcrumb + sélecteurs type/année -->
-    <div v-if="!isCandidateProfilePage" class="border-b border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
+    <div v-if="!isCandidateProfilePage" class="border-b border-gray-200 dark:border-transparent">
       <div class="container mx-auto px-4 py-4 md:py-6">
         <AppBreadcrumb
           v-if="currentElection"
@@ -191,11 +191,11 @@ useHead({
     <!-- Tabs Navigation (style budget) -->
     <div v-if="!isCandidateProfilePage" class="sticky top-0 z-40 border-b border-gray-200 bg-white/95 backdrop-blur-sm dark:border-gray-800 dark:bg-gray-900/95">
       <div class="container mx-auto px-4">
-        <nav class="-mb-px flex gap-0.5 py-1 sm:gap-1" aria-label="Onglets">
+        <nav class="-mb-px flex gap-0.5 py-1 sm:gap-1 overflow-x-auto no-scrollbar" aria-label="Onglets">
           <button
             v-for="tab in tabs"
             :key="tab.id"
-            class="group flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-medium transition-all sm:gap-2 sm:px-3 sm:py-2 sm:text-sm"
+            class="group flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-medium transition-all sm:gap-2 sm:px-3 sm:py-2 sm:text-sm shrink-0"
             :class="currentTab === tab.id
               ? 'bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400'
               : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white'"
@@ -245,7 +245,7 @@ useHead({
       </div>
     </main>
 
-    <footer class="mt-20 border-t dark:border-gray-800 bg-white dark:bg-gray-950 py-12">
+    <footer class="mt-20 border-t border-gray-200 dark:border-gray-800 py-12">
       <div class="container mx-auto px-4">
         <div>
           <h5 class="text-lg font-black uppercase text-gray-400 italic">Plateforme Électorale</h5>

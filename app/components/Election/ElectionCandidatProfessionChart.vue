@@ -1,16 +1,12 @@
 <template>
   <UCard class="custom-shadow">
     <template #header>
-      <div
-        class="mb-4 flex flex-col items-center justify-between gap-2 md:flex-row"
-      >
-        <h2 class="text-center text-xl font-semibold">
-          Classement des professions des {{ totalCandidates }} candidats
-        </h2>
-      </div>
+      <h2 class="text-xl font-semibold">
+        Classement des professions — {{ totalCandidates }} candidats
+      </h2>
     </template>
 
-    <div class="flex flex-col gap-4">
+    <div class="flex flex-col gap-3">
       <div
         v-for="item in professions"
         :key="item.profession"
@@ -34,7 +30,7 @@
           </div>
         </div>
 
-        <UDivider class="mb-2" />
+        <UDivider />
       </div>
     </div>
   </UCard>

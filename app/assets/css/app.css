@@ -24,16 +24,16 @@
   --color-bg-card: #1E2732;
   --color-bg-elevated: #22303C;
   --color-bg-hover: #2C3640;
-  
+
   /* Borders & Dividers */
   --color-border: #38444D;
   --color-border-light: #2F3336;
-  
+
   /* Text */
   --color-text-primary: #E7E9EA;
   --color-text-secondary: #8899A6;
   --color-text-muted: #6E767D;
-  
+
   /* Accent blue (Twitter blue) */
   --color-accent: #1D9BF0;
   --color-accent-hover: #1A8CD8;
@@ -41,7 +41,8 @@
 
 /* Override Tailwind dark mode colors with Dim palette */
 .dark body,
-.dark .bg-gray-900 {
+.dark .bg-gray-900,
+.dark .dark\:bg-gray-900 {
   background-color: #15202B !important;
 }
 
@@ -126,6 +127,10 @@
   width: 12px;
   height: 12px;
 }
+
+/* Utility: hide scrollbar while keeping scroll functionality */
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
 
 .dark ::-webkit-scrollbar-track {
   background: #15202B;

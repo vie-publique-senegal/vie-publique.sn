@@ -149,7 +149,7 @@ useSeoMeta({
 
           <UBadge size="md" color="white" class="shadow-sm border dark:border-gray-800 shrink-0 self-start sm:self-center">
             <span class="text-primary-600 font-black mr-1">{{ isLocalElection ? constituencies.length : coalitions.length }}</span>
-            {{ isLocalElection ? 'circonscriptions' : (selectedType === 'presidential' ? 'candidats' : 'plateformes engagées') }}
+            {{ isLocalElection ? 'circonscriptions' : (selectedType === 'presidential' ? 'candidats' : 'coalitions') }}
           </UBadge>
         </div>
       </div>

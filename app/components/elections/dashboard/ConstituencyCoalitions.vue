@@ -48,9 +48,9 @@ const searchQuery = ref('');
 
 const filteredLists = computed(() => {
   if (!lists.value) return [];
-  
+
   let result = lists.value.filter((l: any) => {
-      if (l.constituency?.type === 'departement' || l.constituency?.nationale_type === 'departement') return false; 
+      if (l.constituency?.type === 'departement' || l.constituency?.nationale_type === 'departement') return false;
       return true;
   });
 
@@ -60,8 +60,8 @@ const filteredLists = computed(() => {
 
   if (searchQuery.value) {
     const q = searchQuery.value.toLowerCase();
-    result = result.filter((l: any) => 
-      l.coalition?.name?.toLowerCase().includes(q) || 
+    result = result.filter((l: any) =>
+      l.coalition?.name?.toLowerCase().includes(q) ||
       l.coalition?.acronym?.toLowerCase().includes(q)
     );
   }
@@ -71,13 +71,13 @@ const filteredLists = computed(() => {
 
 const uniqueCoalitions = computed(() => {
     if (!filteredLists.value) return [];
-    
+
     const map = new Map();
     filteredLists.value.forEach((list: any) => {
-        const key = selectedCommuneId.value 
-            ? list.coalition.id 
+        const key = selectedCommuneId.value
+            ? list.coalition.id
             : `${list.coalition.id}-${list.constituency?.id}`;
-            
+
         if (list.coalition && !map.has(key)) {
             map.set(key, list);
         }
@@ -92,7 +92,7 @@ watch(() => props.constituencyId, () => {
 const selectCoalition = (list: any) => {
     if (list.coalition?.id) {
         const targetConstituencyId = selectedCommuneId.value || list.constituency?.id || props.constituencyId;
-        
+
         emit('selectCoalition', {
             coalitionId: list.coalition.id,
             constituencyId: targetConstituencyId
@@ -104,7 +104,7 @@ const selectCoalition = (list: any) => {
 <template>
   <div class="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
     <!-- Header avec bouton retour et Filtre -->
-    <div class="sticky top-[80px] md:top-[124px] z-40 bg-gray-50/95 backdrop-blur-md dark:bg-gray-950/95 py-4 -mx-4 px-4 border-b border-gray-200 dark:border-gray-800 transition-all duration-300">
+    <div class="pb-4 border-b border-gray-200 dark:border-gray-800">
       <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div class="flex items-start gap-4">
             <UButton
@@ -172,8 +172,8 @@ const selectCoalition = (list: any) => {
 
     <!-- Grille des Listes -->
     <div v-else-if="uniqueCoalitions.length > 0" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-      <div 
-        v-for="list in uniqueCoalitions" 
+      <div
+        v-for="list in uniqueCoalitions"
         :key="list.coalition?.id || list.id"
         class="group relative bg-white dark:bg-gray-900 rounded-2xl border dark:border-gray-800 overflow-hidden hover:ring-2 hover:ring-primary-500 transition-all cursor-pointer shadow-sm hover:shadow-lg"
         @click="selectCoalition(list)"
