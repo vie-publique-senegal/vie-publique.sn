@@ -3,7 +3,7 @@ import { useElectoralDashboard } from '~/composables/elections/dashboard/useElec
 import { useElectoralCoalitions } from '~/composables/elections/dashboard/useElectoralCoalitions';
 import { type TableResultItem, useElectionMapDataResult } from '~/composables/useElectionMapJsonResult';
 
-const { selectedYear, selectedType, currentElection } = useElectoralDashboard();
+const { selectedYear, selectedType, currentElection, loadingConfig } = useElectoralDashboard();
 
 const isLocalElection = computed(() => selectedType.value === 'locale');
 
@@ -118,7 +118,16 @@ useSeoMeta({
       </div>
 
       <div v-else-if="resultViewType === 'map'" class="w-full h-full min-h-[400px] sm:min-h-[500px]">
-        <div v-if="!currentElection?.id || mapResultHasNoData" class="flex flex-col items-center justify-center py-20 text-center">
+        <!-- Loading state pendant le chargement de la config -->
+        <div v-if="loadingConfig" class="flex flex-col items-center justify-center py-20">
+          <div class="relative h-12 w-12">
+            <div class="absolute inset-0 border-4 border-primary-100 dark:border-primary-900 rounded-full"></div>
+            <div class="absolute inset-0 border-4 border-primary-600 rounded-full border-t-transparent animate-spin"></div>
+          </div>
+          <p class="text-sm font-medium text-gray-400 animate-pulse mt-3">Chargement...</p>
+        </div>
+        <!-- Erreur si pas de données après chargement -->
+        <div v-else-if="!currentElection?.id || mapResultHasNoData" class="flex flex-col items-center justify-center py-20 text-center">
           <div class="bg-gray-100 dark:bg-gray-800 p-6 rounded-full mb-6">
             <UIcon name="i-heroicons-map" class="h-16 w-16 text-gray-300 dark:text-gray-600" />
           </div>

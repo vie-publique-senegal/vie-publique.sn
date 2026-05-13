@@ -74,27 +74,35 @@ export function useElectionMapDataResult() {
     () => false,
   );
 
+  // Promise partagée pour éviter les fetch concurrents
+  let loadingPromise: Promise<GeoData[]> | null = null;
+
   // Charger les données géographiques depuis l'API serveur Nuxt
-  const loadGeoDataWithWinner = async () => {
+  const loadGeoDataWithWinner = async (): Promise<GeoData[]> => {
     if (isGeoDataLoaded.value) return geoData.value;
-    if (loading.value) return []; // Avoid concurrent fetches
+    // Si un fetch est déjà en cours, attendre qu'il se termine plutôt que de retourner []
+    if (loadingPromise) return loadingPromise;
 
     loading.value = true;
-    try {
-      const response = await $fetch<{ data: GeoData[] }>('/api/carte/result');
-      const data = (response?.data || response) as GeoData[];
-      geoData.value = Array.isArray(data) ? data : [];
-      isGeoDataLoaded.value = true;
-      return geoData.value;
-    } catch (error) {
-      console.error(
-        "Erreur lors du chargement des données de résultats:",
-        error,
-      );
-      return [];
-    } finally {
-      loading.value = false;
-    }
+    loadingPromise = (async () => {
+      try {
+        const response = await $fetch<{ data: GeoData[] }>('/api/carte/result');
+        const data = (response?.data || response) as GeoData[];
+        geoData.value = Array.isArray(data) ? data : [];
+        isGeoDataLoaded.value = true;
+        return geoData.value;
+      } catch (error) {
+        console.error(
+          "Erreur lors du chargement des données de résultats:",
+          error,
+        );
+        return [];
+      } finally {
+        loading.value = false;
+        loadingPromise = null;
+      }
+    })();
+    return loadingPromise;
   };
 
   // Obtenir les données géographiques

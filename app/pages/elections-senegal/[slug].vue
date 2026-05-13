@@ -175,7 +175,7 @@ useHead({
           </div>
 
           <!-- Sélecteurs type + année -->
-          <div v-if="config" class="flex items-center gap-2">
+          <div v-if="config && currentElection" class="flex items-center gap-2">
             <USelect
               :model-value="selectedType"
               :options="config.types"

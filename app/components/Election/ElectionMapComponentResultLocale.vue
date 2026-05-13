@@ -289,8 +289,8 @@ watch(rawResults, (newData) => {
 }, { immediate: true });
 
 // Émettre map-error si pas de données après chargement
-watch([() => departmentResults.value, pending], ([results, isPending]) => {
-  if (!isPending && (!results || results.length === 0 || results.every(r => !r.winnerName))) {
+watch([() => departmentResults.value.length, pending], ([resultsLen, isPending]) => {
+  if (!isPending && resultsLen > 0 && departmentResults.value.every(r => !r.winnerName)) {
     emit('map-error');
   }
 }, { immediate: true });
