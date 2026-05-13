@@ -162,15 +162,7 @@ useSeoMeta({
             />
           </div>
           <template #fallback>
-            <div class="flex h-[500px] w-full items-center justify-center">
-              <div class="flex flex-col items-center gap-3">
-                <div class="relative h-12 w-12">
-                  <div class="absolute inset-0 border-4 border-primary-100 dark:border-primary-900 rounded-full"></div>
-                  <div class="absolute inset-0 border-4 border-primary-600 rounded-full border-t-transparent animate-spin"></div>
-                </div>
-                <p class="text-sm font-medium text-gray-400 animate-pulse">Chargement de la carte...</p>
-              </div>
-            </div>
+            <div class="h-[500px] w-full" />
           </template>
         </ClientOnly>
       </div>

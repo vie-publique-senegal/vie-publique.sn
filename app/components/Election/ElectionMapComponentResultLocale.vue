@@ -2,16 +2,6 @@
   <div class="w-full overflow-hidden" :class="isMobile ? 'h-[400px]' : 'h-[600px]'">
     <!-- Conteneur carte -->
     <div class="relative h-full">
-      <!-- Loading spinner -->
-      <div
-        v-if="loading || pending"
-        class="absolute inset-0 z-50 flex items-center justify-center bg-white/80 dark:bg-gray-900/80"
-      >
-        <div
-          class="h-20 w-20 animate-spin rounded-full border-8 border-gray-300 border-t-green-700"
-        ></div>
-      </div>
-
       <client-only>
         <LMap
           v-if="!pending && departmentResults.length > 0"
