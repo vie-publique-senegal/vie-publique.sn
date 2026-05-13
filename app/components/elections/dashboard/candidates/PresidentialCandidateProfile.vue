@@ -277,9 +277,9 @@ const getAssetUrl = (assetId: string, slug: string) => {
       </div>
     </UCard>
 
-    <!-- Sticky Tabs Navigation -->
-    <div class="sticky top-[80px] md:top-[124px] z-40 bg-gray-50/95 backdrop-blur-md dark:bg-gray-950/95 py-4 -mx-4 px-4 transition-all duration-300">
-      <div class="bg-white dark:bg-gray-900 p-1 rounded-xl shadow-lg ring-1 ring-gray-200 dark:ring-gray-800 flex gap-1 max-w-2xl mx-auto">
+    <!-- Tabs Navigation -->
+    <div class="py-4">
+      <div class="bg-gray-100 dark:bg-gray-800 p-1 rounded-xl flex gap-1 max-w-2xl mx-auto">
         <button
           v-for="(item, index) in items"
           :key="index"
@@ -287,7 +287,7 @@ const getAssetUrl = (assetId: string, slug: string) => {
           class="flex-1 flex items-center justify-center gap-2 px-2 sm:px-4 py-2.5 rounded-lg font-bold text-xs sm:text-sm transition-all duration-300"
           :class="activeTab === index
             ? 'bg-primary-600 text-white shadow-md'
-            : 'text-gray-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-gray-50 dark:hover:bg-gray-800'"
+            : 'text-gray-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 hover:bg-white dark:hover:bg-gray-700'"
         >
           <UIcon :name="item.icon" class="h-4 w-4 shrink-0" />
           <span
