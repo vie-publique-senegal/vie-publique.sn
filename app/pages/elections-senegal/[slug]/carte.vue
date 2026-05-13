@@ -21,6 +21,12 @@ const mapTabs = [
   { label: 'Résumé', icon: 'i-heroicons-chart-bar', slot: 'resume' },
 ];
 
+const mapIsReady = ref(false);
+
+watch([selectedMapOption, selectedType, selectedYear], () => {
+  mapIsReady.value = false;
+});
+
 watch([selectedType, selectedYear], () => {
   mapCarteHasNoData.value = false;
   selectedMapOption.value = optionMap;
@@ -83,10 +89,18 @@ useSeoMeta({
                 </div>
 
                 <div v-if="selectedMapOption === optionMap" class="relative min-h-[600px]">
+                  <div v-if="!mapIsReady" class="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3">
+                    <div class="relative h-12 w-12">
+                      <div class="absolute inset-0 border-4 border-primary-100 dark:border-primary-900 rounded-full"></div>
+                      <div class="absolute inset-0 border-4 border-primary-600 rounded-full border-t-transparent animate-spin"></div>
+                    </div>
+                    <p class="text-sm font-medium text-gray-400 animate-pulse">Chargement de la carte...</p>
+                  </div>
                   <ElectionMapComponent4
                     :election-id="currentElection?.id"
                     :is-local-election="isLocalElection"
                     @map-error="mapCarteHasNoData = true"
+                    @map-ready="mapIsReady = true"
                   />
                 </div>
                 <div v-else class="w-full">
@@ -109,8 +123,14 @@ useSeoMeta({
           </UTabs>
 
           <template #fallback>
-            <div class="flex items-center justify-center py-16">
-              <div class="h-12 w-12 animate-spin rounded-full border-4 border-gray-300 border-t-primary-600"></div>
+            <div class="flex h-[500px] w-full items-center justify-center">
+              <div class="flex flex-col items-center gap-3">
+                <div class="relative h-12 w-12">
+                  <div class="absolute inset-0 border-4 border-primary-100 dark:border-primary-900 rounded-full"></div>
+                  <div class="absolute inset-0 border-4 border-primary-600 rounded-full border-t-transparent animate-spin"></div>
+                </div>
+                <p class="text-sm font-medium text-gray-400 animate-pulse">Chargement de la carte...</p>
+              </div>
             </div>
           </template>
         </ClientOnly>

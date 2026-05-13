@@ -224,9 +224,12 @@ const mapDataAvailable = ref(true);
 const listDataAvailable = ref(true);
 const mapKey = ref(0); // Clé pour forcer le rechargement du composant
 
+const mapIsReady = ref(false);
+
 // Gestionnaire quand la carte est prête
 const handleMapReady = () => {
   mapDataAvailable.value = true;
+  mapIsReady.value = true;
 };
 
 // Gestionnaire pour les erreurs de chargement de carte
@@ -249,9 +252,14 @@ watch(selectedElectionId, (newId, oldId) => {
     mapDataAvailable.value = true;
     listDataAvailable.value = true;
     mapKey.value++;
+    mapIsReady.value = false;
     isDepartmentPanelOpen.value = false;
     selectedDepartmentData.value = null;
   }
+});
+
+watch(selectedOptions, (newVal) => {
+  if (newVal === optionMap) mapIsReady.value = false;
 });
 </script>
 
@@ -327,7 +335,6 @@ watch(selectedElectionId, (newId, oldId) => {
 
             <!-- CARTE -->
             <div v-if="selectedOptions == optionMap">
-              <!-- Message si pas de données disponibles -->
               <div v-if="!mapDataAvailable" class="flex flex-col items-center justify-center py-16 text-center">
                 <UIcon name="i-heroicons-map" class="w-16 h-16 text-gray-300 dark:text-gray-600 mb-4" />
                 <h3 class="text-lg font-bold text-gray-600 dark:text-gray-400 mb-2">Données cartographiques non disponibles</h3>
@@ -335,15 +342,23 @@ watch(selectedElectionId, (newId, oldId) => {
                   Les données de la carte électorale pour cette élection ne sont pas encore disponibles.
                 </p>
               </div>
-              <ElectionMapComponent4
-                v-else
-                :key="`map-${mapKey}`"
-                :election-id="selectedElectionId"
-                :is-local-election="isLocalElection"
-                @map-ready="handleMapReady"
-                @map-error="handleMapError"
-                @department-selected="handleDepartmentSelected"
-              />
+              <div v-else class="relative min-h-[600px]">
+                <div v-if="!mapIsReady" class="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3">
+                  <div class="relative h-12 w-12">
+                    <div class="absolute inset-0 border-4 border-primary-100 dark:border-primary-900 rounded-full"></div>
+                    <div class="absolute inset-0 border-4 border-primary-600 rounded-full border-t-transparent animate-spin"></div>
+                  </div>
+                  <p class="text-sm font-medium text-gray-400 animate-pulse">Chargement de la carte...</p>
+                </div>
+                <ElectionMapComponent4
+                  :key="`map-${mapKey}`"
+                  :election-id="selectedElectionId"
+                  :is-local-election="isLocalElection"
+                  @map-ready="handleMapReady"
+                  @map-error="handleMapError"
+                  @department-selected="handleDepartmentSelected"
+                />
+              </div>
             </div>
 
             <!-- LISTE -->
@@ -382,8 +397,14 @@ watch(selectedElectionId, (newId, oldId) => {
         </template>
         </UTabs>
         <template #fallback>
-          <div class="flex items-center justify-center py-16">
-            <div class="h-12 w-12 animate-spin rounded-full border-4 border-gray-300 border-t-primary-600"></div>
+          <div class="flex h-[500px] w-full items-center justify-center">
+            <div class="flex flex-col items-center gap-3">
+              <div class="relative h-12 w-12">
+                <div class="absolute inset-0 border-4 border-primary-100 dark:border-primary-900 rounded-full"></div>
+                <div class="absolute inset-0 border-4 border-primary-600 rounded-full border-t-transparent animate-spin"></div>
+              </div>
+              <p class="text-sm font-medium text-gray-400 animate-pulse">Chargement de la carte...</p>
+            </div>
           </div>
         </template>
       </ClientOnly>

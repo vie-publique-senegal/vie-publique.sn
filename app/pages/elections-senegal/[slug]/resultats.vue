@@ -32,11 +32,18 @@ watch([resultViewType, isLocalElection], async ([view, isLocale]) => {
   if (view === 'map' && isLocale) await loadLocaleResultsData();
 }, { immediate: true });
 
+const mapIsReady = ref(false);
+
+watch(resultViewType, (newView) => {
+  if (newView === 'map') mapIsReady.value = false;
+});
+
 watch([selectedType, selectedYear], () => {
   resultCommunesByDept.value = [];
   resultDeptPanelOpen.value = false;
   resultDeptPanelData.value = null;
   mapResultHasNoData.value = false;
+  mapIsReady.value = false;
 });
 
 const handleResultDeptSelected = async (dept: any) => {
@@ -119,24 +126,41 @@ useSeoMeta({
           <p class="text-sm text-gray-400 dark:text-gray-500 max-w-md">Les données cartographiques des résultats pour cette élection ne sont pas encore disponibles.</p>
         </div>
         <ClientOnly v-else>
-          <template v-if="isLocalElection">
-            <ElectionMapComponentResultLocale
-              :key="`result-map-locale-${selectedYear}`"
+          <div class="relative w-full min-h-[500px] sm:min-h-[600px]">
+            <div v-if="!mapIsReady" class="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3">
+              <div class="relative h-12 w-12">
+                <div class="absolute inset-0 border-4 border-primary-100 dark:border-primary-900 rounded-full"></div>
+                <div class="absolute inset-0 border-4 border-primary-600 rounded-full border-t-transparent animate-spin"></div>
+              </div>
+              <p class="text-sm font-medium text-gray-400 animate-pulse">Chargement de la carte...</p>
+            </div>
+            <template v-if="isLocalElection">
+              <ElectionMapComponentResultLocale
+                :key="`result-map-locale-${selectedYear}`"
+                :election-type="selectedType"
+                :election-year="selectedYear"
+                @department-selected="handleResultDeptSelected"
+                @map-error="mapResultHasNoData = true"
+                @map-ready="mapIsReady = true"
+              />
+            </template>
+            <ElectionMapComponentResult
+              v-else
               :election-type="selectedType"
               :election-year="selectedYear"
-              @department-selected="handleResultDeptSelected"
               @map-error="mapResultHasNoData = true"
+              @map-ready="mapIsReady = true"
             />
-          </template>
-          <ElectionMapComponentResult
-            v-else
-            :election-type="selectedType"
-            :election-year="selectedYear"
-            @map-error="mapResultHasNoData = true"
-          />
+          </div>
           <template #fallback>
             <div class="flex h-[500px] w-full items-center justify-center">
-              <div class="h-10 w-10 animate-spin rounded-full border-4 border-gray-300 border-t-primary-600"></div>
+              <div class="flex flex-col items-center gap-3">
+                <div class="relative h-12 w-12">
+                  <div class="absolute inset-0 border-4 border-primary-100 dark:border-primary-900 rounded-full"></div>
+                  <div class="absolute inset-0 border-4 border-primary-600 rounded-full border-t-transparent animate-spin"></div>
+                </div>
+                <p class="text-sm font-medium text-gray-400 animate-pulse">Chargement de la carte...</p>
+              </div>
             </div>
           </template>
         </ClientOnly>
