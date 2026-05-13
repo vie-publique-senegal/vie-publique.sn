@@ -45,9 +45,15 @@ export const useElectoralDashboard = () => {
       server: true
   });
 
-  // Initialiser avec la dernière élection "completed" par défaut SEULEMENT si pas déjà défini
+  // Initialiser avec la dernière élection "completed" par défaut
+  // SEULEMENT si pas déjà défini ET si on n'est PAS sur une page élection par slug
+  // (sur les pages [slug], l'élection est définie depuis le slug lui-même)
   watch(config, (newConfig) => {
     if (newConfig && newConfig.elections && newConfig.elections.length > 0) {
+      // Ne pas définir de valeur par défaut si on est sur une page élection avec slug
+      // Ces pages gèrent leur propre sync depuis le slug
+      if (isElectionSlugPage.value) return;
+
       if (!selectedYear.value || !selectedType.value) {
         const completedElections = newConfig.elections.filter(e => e.status === 'completed');
         const defaultElection = completedElections.length > 0
@@ -158,6 +164,11 @@ export const useElectoralDashboard = () => {
 
       if (isCandidatesTab && consti !== null && consti !== undefined) query.constituency = String(consti);
       else delete query.constituency;
+
+      // Nettoyer commune_id quand on n'est pas sur candidats ou qu'on n'a pas de constituency
+      if (!isCandidatesTab || consti === null || consti === undefined) {
+        delete query.commune_id;
+      }
 
       if (search) query.q = search;
       else delete query.q;
