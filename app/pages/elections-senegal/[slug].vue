@@ -23,12 +23,23 @@ const electionBySlug = computed(() =>
 );
 
 // Syncer type+year depuis le slug au chargement
+// Utilise flush: 'sync' pour que la mise à jour soit immédiate avant le rendu
 watch(electionBySlug, (election) => {
   if (election) {
     selectedType.value = election.type;
     selectedYear.value = election.year;
   }
-}, { immediate: true });
+}, { immediate: true, flush: 'sync' });
+
+// Quand le slug change (navigation entre élections), re-sync immédiatement
+watch(electionSlug, () => {
+  // Forcer la re-sync quand le slug change
+  const election = config.value?.elections?.find((e: any) => e.slug === electionSlug.value);
+  if (election) {
+    selectedType.value = election.type;
+    selectedYear.value = election.year;
+  }
+}, { flush: 'sync' });
 
 const isCandidateProfilePage = computed(() =>
   /^\/elections-senegal\/[^/]+\/candidats\/[^/]+$/.test(route.path)
