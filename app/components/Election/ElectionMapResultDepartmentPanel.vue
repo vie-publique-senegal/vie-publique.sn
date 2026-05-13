@@ -114,10 +114,11 @@ const medalEmoji = (index: number) => ['🥇', '🥈', '🥉'][index] || '';
       :class="[
         isMobile
           ? 'fixed bottom-0 left-0 right-0 z-50 max-h-[80vh] rounded-t-2xl'
-          : 'fixed right-4 bottom-4 w-[400px] z-30 rounded-2xl top-[136px]',
+          : 'fixed right-4 z-50 w-[400px] rounded-2xl',
         'bg-white dark:bg-gray-900 shadow-2xl overflow-hidden flex flex-col',
         'border border-gray-200 dark:border-gray-700',
       ]"
+      :style="!isMobile ? { top: '80px', bottom: '16px' } : {}"
     >
       <!-- Drag handle mobile -->
       <div v-if="isMobile" class="flex justify-center pt-2 pb-1 shrink-0">
