@@ -52,6 +52,7 @@ export default defineEventHandler(async (event) => {
       readItems("elections", {
         fields: ["id", "name", "rounds"],
         filter: { pv_upload_active: { _eq: true } },
+        sort: ["-year", "-id"],
         limit: 1,
       })
     )
@@ -74,9 +75,35 @@ export default defineEventHandler(async (event) => {
   const getField = (name: string) => form.find((f) => f.name === name);
 
   const fileField = getField("file");
+  const electionIdField = getField("election_id");
   const sourceField = getField("source");
   const tourField = getField("tour");
   const bureauField = getField("bureau");
+
+  const requestedElectionId = Number(electionIdField?.data?.toString("utf-8").trim() || "0") || null;
+
+  let selectedElection = activeElection;
+  if (requestedElectionId) {
+    const electionRows = await adminDirectus
+      .request(
+        readItems("elections", {
+          fields: ["id", "name", "rounds", "pv_upload_active"],
+          filter: { id: { _eq: requestedElectionId } },
+          limit: 1,
+        })
+      )
+      .catch(() => []);
+
+    const requestedElection = (electionRows as any[])[0] || null;
+    if (!requestedElection || !requestedElection.pv_upload_active) {
+      throw createError({
+        statusCode: 403,
+        message: "L'élection sélectionnée n'accepte pas l'upload de PVs",
+      });
+    }
+
+    selectedElection = requestedElection;
+  }
 
   // National
   const regionField = getField("region");
@@ -96,7 +123,7 @@ export default defineEventHandler(async (event) => {
 
   const source = sourceField?.data?.toString("utf-8").trim() || "national";
   const submittedTour = tourField?.data?.toString("utf-8").trim();
-  const rounds = Number((activeElection as any)?.rounds || 0);
+  const rounds = Number((selectedElection as any)?.rounds || 0);
   const isSingleRoundElection = rounds === 1;
   const tour = isSingleRoundElection ? "1" : submittedTour;
   const bureau = bureauField?.data?.toString("utf-8").trim();
@@ -183,9 +210,10 @@ export default defineEventHandler(async (event) => {
 
   // 1. Upload l'image avec le token utilisateur
   const fileFormData = new FormData();
+  const fileBytes = new Uint8Array(fileField.data);
   fileFormData.append(
     "file",
-    new File([fileField.data], fileField.filename || "pv.jpg", {
+    new File([fileBytes], fileField.filename || "pv.jpg", {
       type: mimeType,
     })
   );
@@ -210,7 +238,7 @@ export default defineEventHandler(async (event) => {
   // 2. Créer l'entrée election_pvs (avec le token utilisateur)
   const pvData: any = {
     status: "draft",
-    election: activeElection.id,
+    election: selectedElection.id,
     source,
     tour,
     bureau,

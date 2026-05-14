@@ -18,7 +18,7 @@
         <!-- Bouton Upload (si authentifié et élection active) -->
         <template v-if="isAuthenticated">
           <UButton
-            v-if="activeElection"
+            v-if="canUploadFromCurrentElection"
             size="sm"
             color="primary"
             icon="i-heroicons-arrow-up-tray"
@@ -307,7 +307,11 @@
 
     <!-- Modaux -->
     <ElectionsDashboardModalsPvLoginModal v-model="showLoginModal" @success="onLoginSuccess" />
-    <ElectionsDashboardModalsPvUploadModal v-model="showUploadModal" @success="onUploadSuccess" />
+    <ElectionsDashboardModalsPvUploadModal
+      v-model="showUploadModal"
+      :election="props.election"
+      @success="onUploadSuccess"
+    />
 
     <!-- Visualisation PV plein écran (mobile-friendly) -->
     <Teleport to="body">
@@ -374,7 +378,14 @@ import { useActiveElection } from '~/composables/elections/useActiveElection';
 import type { ElectionPv } from '~/composables/elections/useElectionPvsUpload';
 
 const props = defineProps<{
-  election?: { id: number; name: string; year: number; type: string };
+  election?: {
+    id: number;
+    name: string;
+    year: number;
+    type: string;
+    rounds?: number;
+    pv_upload_active?: boolean;
+  };
 }>();
 
 // Auth
@@ -382,6 +393,12 @@ const { isAuthenticated, displayName, logout, checkAuth } = useElectionAuth();
 
 // Active election
 const { activeElection } = useActiveElection();
+const canUploadFromCurrentElection = computed(() => {
+  if (typeof props.election?.pv_upload_active === 'boolean') {
+    return props.election.pv_upload_active;
+  }
+  return !!activeElection.value;
+});
 
 // Filtres disponibles (chargés dynamiquement)
 const { availableFilters } = useElectionPvsFilters(props.election?.id);

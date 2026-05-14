@@ -122,7 +122,7 @@ export default defineCachedEventHandler(
     }
   },
   {
-    maxAge: 60 * 60,
+    maxAge: 5 * 60,
     name: "elections-dashboard-config",
     getKey: () => "elections-dashboard-config",
   }

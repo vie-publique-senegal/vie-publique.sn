@@ -11,7 +11,7 @@
             Uploader un PV
           </h2>
           <p class="text-xs text-gray-500 dark:text-gray-400">
-            <template v-if="activeElection">{{ activeElection.name }} ({{ activeElection.year }})</template>
+            <template v-if="effectiveElection">{{ effectiveElection.name }} ({{ effectiveElection.year }})</template>
             <template v-else>Aucune élection active</template>
           </p>
         </div>
@@ -19,7 +19,7 @@
 
       <!-- Upload désactivé -->
       <div
-        v-if="!activeElection && !loadingElection"
+        v-if="!effectiveElection && !loadingElection"
         class="rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 px-4 py-4 text-center"
       >
         <UIcon name="i-heroicons-lock-closed" class="mx-auto mb-2 h-8 w-8 text-amber-500" />
@@ -436,6 +436,13 @@ import { useElectionGeography } from '~/composables/elections/useElectionGeograp
 
 const props = defineProps<{
   modelValue: boolean;
+  election?: {
+    id: number;
+    name: string;
+    year: number;
+    rounds?: number;
+    pv_upload_active?: boolean;
+  };
 }>();
 
 const emit = defineEmits<{
@@ -449,7 +456,13 @@ const isOpen = computed({
 });
 
 // Active election (via composable)
-const { activeElection, loading: loadingElection } = useActiveElection();
+const {
+  activeElection,
+  loading: loadingElection,
+  refresh: refreshActiveElection,
+} = useActiveElection();
+
+const effectiveElection = computed(() => props.election || activeElection.value || null);
 
 // Géographie (via composable)
 const {
@@ -494,7 +507,7 @@ const form = reactive({
   bureau: "",
 });
 
-const isSingleRoundElection = computed(() => Number(activeElection.value?.rounds || 0) === 1);
+const isSingleRoundElection = computed(() => Number(effectiveElection.value?.rounds || 0) === 1);
 const effectiveTour = computed(() => (isSingleRoundElection.value ? "1" : form.tour));
 
 // Cascade loading handlers
@@ -668,6 +681,9 @@ const handleUpload = async () => {
     fd.append("source", source.value);
     fd.append("tour", effectiveTour.value);
     fd.append("bureau", form.bureau);
+    if (effectiveElection.value?.id) {
+      fd.append("election_id", String(effectiveElection.value.id));
+    }
 
     if (source.value === "national") {
       fd.append("region", form.region);
@@ -731,6 +747,24 @@ watch(isOpen, (open) => {
     successMsg.value = "";
   } else if (isSingleRoundElection.value) {
     form.tour = "1";
+  }
+});
+
+watch(isOpen, async (open) => {
+  if (!open) return;
+
+  if (!props.election) {
+    try {
+      await refreshActiveElection();
+    } catch {
+      // Silent fail: l'état actuel sera conservé jusqu'au prochain refresh.
+    }
+  }
+
+  if (isSingleRoundElection.value) {
+    form.tour = "1";
+  } else {
+    form.tour = "";
   }
 });
 </script>
