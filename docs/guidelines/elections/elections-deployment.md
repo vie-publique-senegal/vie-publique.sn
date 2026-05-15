@@ -11,8 +11,9 @@
 
 Dans `election_constitiencies` comme a un nouveau champs `nationale_type` il faut mettre les données existantes en `nationale_type`=`departement`
 
-**Dans `elections_candidats` (`election_candidates`)** :
+**Dans `election_candidates` (`election_candidates`)** :
 
+- `slug` | String | Slug d'un candidat
 - `short_bio` | Text | Résumé court candidat
 - `long_bio` | Text | Biographie détaillée candidat
 - `documents` | M2O → `documents` | Programme/document du candidat (principalement pour la présidentielle)
@@ -62,6 +63,7 @@ Dans `election_constitiencies` comme a un nouveau champs `nationale_type` il fau
 
 | Champ | Type | Interface | Note |
 |-------|------|-----------|------|
+| `slug` | String | input-slug | URL-friendly identifier pour les routes |
 | `documents` | Alias | list-m2m (→ documents via elections_documents) | Documents liés |
 | `participation_rate` | Float | input | Taux de participation (%) |
 | `rounds` | Integer | input | Nombre de tours (défaut: 1) |
