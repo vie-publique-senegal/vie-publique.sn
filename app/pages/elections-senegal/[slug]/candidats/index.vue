@@ -47,6 +47,38 @@ const hasElectionStats = computed(() => {
     (e.national_quotient && e.type === 'legislative'));
 });
 
+// Seules les élections présidentielles peuvent avoir 2 tours (rounds=2)
+const presidentialRoundFilter = ref<'all' | 'round2'>('all');
+
+const isPresidential2Rounds = computed(() =>
+  currentElection.value?.type === 'presidential' && currentElection.value?.rounds === 2
+);
+
+// Le filtre de tour s'affiche uniquement si l'élection est présidentielle à 2 tours
+// ET qu'au moins une coalition a des données de second tour renseignées
+const hasRound2Coalitions = computed(() =>
+  isPresidential2Rounds.value &&
+  coalitions.value.some(c =>
+    (c.round_2_voix != null && c.round_2_voix > 0) ||
+    (c.round_2_pourcentage != null && c.round_2_pourcentage > 0)
+  )
+);
+
+const displayedPresidentialCoalitions = computed(() => {
+  if (presidentialRoundFilter.value === 'round2') {
+    return coalitions.value.filter(c =>
+      (c.round_2_voix != null && c.round_2_voix > 0) ||
+      (c.round_2_pourcentage != null && c.round_2_pourcentage > 0)
+    );
+  }
+  return coalitions.value;
+});
+
+// Réinitialiser le filtre quand on change d'élection
+watch([selectedType, selectedYear], () => {
+  presidentialRoundFilter.value = 'all';
+});
+
 useSeoMeta({
   title: () => currentElection.value?.name
     ? `Candidats · ${currentElection.value.name} | Vie-Publique SN`
@@ -148,10 +180,32 @@ useSeoMeta({
           </div>
 
           <UBadge size="md" color="white" class="shadow-sm border dark:border-gray-800 shrink-0 self-start sm:self-center">
-            <span class="text-primary-600 font-black mr-1">{{ isLocalElection ? constituencies.length : coalitions.length }}</span>
+            <span class="text-primary-600 font-black mr-1">{{ isLocalElection ? constituencies.length : (selectedType === 'presidential' ? displayedPresidentialCoalitions.length : coalitions.length) }}</span>
             {{ isLocalElection ? 'circonscriptions' : (selectedType === 'presidential' ? 'candidats' : 'coalitions') }}
           </UBadge>
         </div>
+      </div>
+
+      <!-- Filtre tour présidentielle (si second tour disponible) -->
+      <div v-if="selectedType === 'presidential' && hasRound2Coalitions" class="flex items-center gap-1.5 bg-gray-100/50 dark:bg-gray-800/50 p-1.5 rounded-2xl border dark:border-gray-700 w-fit">
+        <UButton
+          :color="presidentialRoundFilter === 'all' ? 'primary' : 'gray'"
+          :variant="presidentialRoundFilter === 'all' ? 'solid' : 'ghost'"
+          size="xs"
+          class="rounded-xl px-3 font-bold uppercase text-[10px] tracking-widest"
+          @click="presidentialRoundFilter = 'all'"
+        >
+          Tous les tours
+        </UButton>
+        <UButton
+          :color="presidentialRoundFilter === 'round2' ? 'amber' : 'gray'"
+          :variant="presidentialRoundFilter === 'round2' ? 'solid' : 'ghost'"
+          size="xs"
+          class="rounded-xl px-3 font-bold uppercase text-[10px] tracking-widest"
+          @click="presidentialRoundFilter = 'round2'"
+        >
+          2<sup>e</sup> tour
+        </UButton>
       </div>
 
       <!-- Sélecteur vue législatives -->
@@ -190,7 +244,7 @@ useSeoMeta({
         <ElectionsDashboardCoalitionGridLoadingState v-if="loadingCoalitions" />
 
         <div v-else-if="coalitions.length > 0 && selectedType === 'presidential'" class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          <ElectionsDashboardCardsLegislativeCoalitionHeadCard v-for="c in coalitions" :key="c.id" :coalition="c" @select="selectCoalition" />
+          <ElectionsDashboardCardsLegislativeCoalitionHeadCard v-for="c in displayedPresidentialCoalitions" :key="c.id" :coalition="c" :show-round2-badge="isPresidential2Rounds" @select="selectCoalition" />
         </div>
 
         <div v-else-if="coalitions.length > 0"

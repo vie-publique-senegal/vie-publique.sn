@@ -99,6 +99,8 @@ export default defineCachedEventHandler(
             "sieges_national",
             "list_order",
             "bulletin",
+            "round_2_voix",
+            "round_2_pourcentage",
             "head_of_list.id",
             "head_of_list.first_name",
             "head_of_list.last_name",

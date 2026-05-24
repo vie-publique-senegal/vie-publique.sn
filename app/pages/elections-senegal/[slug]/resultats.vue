@@ -14,6 +14,18 @@ const { coalitions, loading: loadingCoalitions } = useElectoralCoalitions({
   search: ref(''),
 });
 
+// Seules les élections présidentielles peuvent avoir 2 tours (rounds=2)
+const isPresidential2Rounds = computed(() =>
+  currentElection.value?.type === 'presidential' && currentElection.value?.rounds === 2
+);
+
+// La section second tour s'affiche uniquement si l'élection est présidentielle à 2 tours
+// ET qu'au moins une coalition a des données de second tour renseignées
+const isPresidentialWithRound2 = computed(() =>
+  isPresidential2Rounds.value &&
+  coalitions.value.some(c => (c.round_2_voix != null && c.round_2_voix > 0) || (c.round_2_pourcentage != null && c.round_2_pourcentage > 0))
+);
+
 const resultViewType = ref('list');
 const resultDeptPanelOpen = ref(false);
 const resultDeptPanelData = ref<any>(null);
@@ -113,6 +125,15 @@ useSeoMeta({
           <div v-else>
             <ElectionsDashboardResultChart v-if="['presidential', 'legislative'].includes(selectedType)" :results="coalitions" :type="selectedType" class="mb-6" />
             <ElectionsDashboardResultClassement :coalitions="coalitions" :loading="loadingCoalitions" :type="selectedType" />
+
+            <!-- Section Second Tour (présidentielle uniquement) -->
+            <div v-if="isPresidentialWithRound2" class="mt-8 pt-6 border-t border-gray-100 dark:border-gray-800">
+              <ElectionsDashboardResultRound2
+                :coalitions="coalitions"
+                :loading="loadingCoalitions"
+                :election-date-round2="currentElection?.election_date_round_2"
+              />
+            </div>
           </div>
         </template>
       </div>
