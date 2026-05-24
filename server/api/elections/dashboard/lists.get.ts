@@ -52,6 +52,7 @@ export default defineCachedEventHandler(
           filter: {
             year: { _eq: year },
             type: { _eq: type },
+            status: { _nin: ["draft", "archived"] },
           },
           sort: ["-election_date", "-id"],
           limit: 1,
