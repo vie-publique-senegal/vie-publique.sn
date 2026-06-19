@@ -362,7 +362,12 @@ const backLabel = computed(() => {
                 <!-- Poste actuel (en vert, bien visible) -->
                 <div v-if="currentAppointment && isActive" class="mt-2">
                   <p class="text-sm font-medium text-green-700 dark:text-green-400 sm:text-base">
-                    {{ currentAppointment.position_title }}
+                    <NuxtLink
+                      v-if="currentAppointment.organization_entity?.has_public_page && currentAppointment.organization_entity?.slug"
+                      :to="`/etat-senegal/${currentAppointment.organization_entity.slug}`"
+                      class="inline-flex items-center gap-1 underline decoration-green-400/50 underline-offset-2 hover:decoration-green-500"
+                    >{{ currentAppointment.position_title }}<UIcon name="i-heroicons-arrow-right" class="h-3.5 w-3.5 shrink-0 opacity-60" /></NuxtLink>
+                    <template v-else>{{ currentAppointment.position_title }}</template>
                   </p>
                   <p
                     v-if="currentAppointment.organization_label"
@@ -381,7 +386,12 @@ const backLabel = computed(() => {
                 <!-- Dernier poste connu (si plus en fonction) -->
                 <div v-else-if="currentAppointment" class="mt-2">
                   <p class="text-sm text-gray-600 dark:text-gray-400 sm:text-base">
-                    {{ currentAppointment.position_title }}
+                    <NuxtLink
+                      v-if="currentAppointment.organization_entity?.has_public_page && currentAppointment.organization_entity?.slug"
+                      :to="`/etat-senegal/${currentAppointment.organization_entity.slug}`"
+                      class="inline-flex items-center gap-1 underline decoration-gray-400/50 underline-offset-2 hover:decoration-gray-600"
+                    >{{ currentAppointment.position_title }}<UIcon name="i-heroicons-arrow-right" class="h-3.5 w-3.5 shrink-0 opacity-60" /></NuxtLink>
+                    <template v-else>{{ currentAppointment.position_title }}</template>
                   </p>
                   <p
                     v-if="currentAppointment.organization_label"
@@ -549,7 +559,12 @@ const backLabel = computed(() => {
                   {{ apt.position_title }}
                 </p>
                 <p class="text-xs text-gray-500 dark:text-gray-400">
-                  {{ apt.organization_label }}
+                  <NuxtLink
+                    v-if="apt.organization_entity?.has_public_page && apt.organization_entity?.slug"
+                    :to="`/etat-senegal/${apt.organization_entity.slug}`"
+                    class="hover:text-blue-600 hover:underline dark:hover:text-blue-400"
+                  >{{ apt.organization_label }}</NuxtLink>
+                  <template v-else>{{ apt.organization_label }}</template>
                 </p>
                 <p class="mt-1 text-[11px] text-gray-400 dark:text-gray-500">
                   {{ formatDate(apt.appointment_date) }}

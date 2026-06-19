@@ -8,6 +8,18 @@ type DecreeRow = {
   date_publication?: string
 }
 
+type LeaderRow = {
+  id: number
+  position_title: string
+  person: {
+    id: number
+    slug: string
+    full_name: string
+    photo: string | null
+    short_bio: string | null
+  }
+}
+
 const CHANGE_LABELS: Record<string, string> = {
   created: 'Création',
   rename: 'Renommage',
@@ -194,6 +206,46 @@ export default defineCachedEventHandler(
       )
       .catch(() => [])
 
+    const leaderAppointments = await cmsClient.request(
+      readItems('public_person_appointments', {
+        fields: [
+          'id',
+          'position_title',
+          'person.id',
+          'person.slug',
+          'person.full_name',
+          'person.photo',
+          'person.short_bio',
+        ],
+        filter: {
+          _and: [
+            { organization_entity: { _eq: Number(target.id) } },
+            { is_current: { _eq: true } },
+            { status: { _eq: 'published' } },
+          ],
+        },
+        limit: 1,
+      }),
+    ).catch(() => [])
+
+    const leaderRaw = (leaderAppointments as LeaderRow[])[0] ?? null
+    const leaderPerson =
+      leaderRaw && typeof leaderRaw.person === 'object' && leaderRaw.person !== null
+        ? leaderRaw.person
+        : null
+    const currentLeader = leaderPerson
+      ? {
+          appointment_id: leaderRaw!.id,
+          position_title: leaderRaw!.position_title,
+          person_id: leaderPerson.id,
+          // fallback to id string when slug is missing so the URL is always valid
+          person_slug: leaderPerson.slug || String(leaderPerson.id),
+          full_name: leaderPerson.full_name,
+          photo: leaderPerson.photo ?? null,
+          short_bio: leaderPerson.short_bio ?? null,
+        }
+      : null
+
     return {
       decree: {
         id: activeDecree.id,
@@ -213,11 +265,12 @@ export default defineCachedEventHandler(
         to_decree: change.to_decree?.numero || null,
         date_created: change.date_created,
       })),
+      currentLeader,
     }
   },
   {
     maxAge: getCacheMaxAge(CacheDuration.SHORT),
-    name: 'etat-organisation-entity-detail-v6',
+    name: 'etat-organisation-entity-detail-v7',
     getKey: event => {
       const slug = getRouterParam(event, 'slug')
       return `etat-organisation-entity-${slug}`

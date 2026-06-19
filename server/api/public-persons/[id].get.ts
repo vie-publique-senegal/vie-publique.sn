@@ -87,6 +87,10 @@ export default defineCachedEventHandler(
               'position_category',
               'position_category_slug',
               'organization_label',
+              'organization_entity.id',
+              'organization_entity.slug',
+              'organization_entity.name',
+              'organization_entity.has_public_page',
               'appointment_date',
               'end_date',
               'end_reason',
@@ -121,6 +125,15 @@ export default defineCachedEventHandler(
         position_category: apt.position_category,
         position_category_slug: apt.position_category_slug || null,
         organization_label: apt.organization_label,
+        organization_entity:
+          apt.organization_entity && typeof apt.organization_entity === 'object'
+            ? {
+                id: apt.organization_entity.id,
+                slug: apt.organization_entity.slug,
+                name: apt.organization_entity.name,
+                has_public_page: apt.organization_entity.has_public_page === true,
+              }
+            : null,
         appointment_date: apt.appointment_date,
         end_date: apt.end_date || null,
         end_reason: apt.end_reason || null,

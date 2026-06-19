@@ -2,7 +2,7 @@
 const route = useRoute()
 const slug = computed(() => route.params.slug as string)
 
-const { decree, entity, children, breadcrumb, pending, error } =
+const { decree, entity, children, breadcrumb, pending, error, currentLeader } =
   useEtatOrganisationEntity(slug)
 
 watchEffect(() => {
@@ -320,6 +320,51 @@ useHead({
         </div>
       </section>
 
+      <!-- ─── Dirigeant actuel (mobile only — appears right after header) ── -->
+      <section v-if="currentLeader" class="mx-auto mt-4 max-w-7xl px-4 block xl:hidden">
+        <div class="rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800/50">
+          <div class="border-b border-gray-100 px-5 py-3 dark:border-gray-700">
+            <div class="flex items-center gap-2">
+              <UIcon name="i-heroicons-user-circle" class="h-4 w-4 text-gray-400" />
+              <h2 class="text-sm font-semibold text-gray-900 dark:text-white">Dirigeant actuel</h2>
+            </div>
+          </div>
+          <div class="flex items-center gap-4 px-5 py-4">
+            <div class="h-12 w-12 shrink-0 overflow-hidden rounded-full">
+              <img
+                v-if="currentLeader.photo"
+                :src="useCmsImage(currentLeader.photo)"
+                :alt="currentLeader.full_name"
+                class="h-full w-full object-cover"
+                loading="lazy"
+              />
+              <div
+                v-else
+                class="flex h-full w-full items-center justify-center bg-gray-100 text-base font-semibold text-gray-500 dark:bg-gray-700 dark:text-gray-300"
+              >
+                {{ currentLeader.full_name.charAt(0).toUpperCase() }}
+              </div>
+            </div>
+            <div class="min-w-0 flex-1">
+              <NuxtLink
+                :to="`/personnalites/${currentLeader.person_id}/${currentLeader.person_slug}`"
+                class="text-sm font-semibold text-gray-900 hover:text-blue-600 dark:text-white dark:hover:text-blue-400"
+              >
+                {{ currentLeader.full_name }}
+              </NuxtLink>
+              <p class="text-xs text-gray-500 dark:text-gray-400">{{ currentLeader.position_title }}</p>
+            </div>
+            <UButton
+              :to="`/personnalites/${currentLeader.person_id}/${currentLeader.person_slug}`"
+              variant="soft"
+              size="sm"
+            >
+              Profil
+            </UButton>
+          </div>
+        </div>
+      </section>
+
       <!-- ─── Content ────────────────────────────────────────────── -->
       <section class="mx-auto mt-6 max-w-7xl px-4">
         <div class="grid gap-6 xl:grid-cols-3">
@@ -576,6 +621,53 @@ useHead({
 
           <!-- Sidebar: always on the right column on desktop -->
           <div class="space-y-5 xl:col-span-1">
+            <!-- Dirigeant actuel (desktop sidebar only) -->
+            <div
+              v-if="currentLeader"
+              class="hidden xl:block rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800/50"
+            >
+              <div class="border-b border-gray-100 px-5 py-3 dark:border-gray-700">
+                <div class="flex items-center gap-2">
+                  <UIcon name="i-heroicons-user-circle" class="h-4 w-4 text-gray-400" />
+                  <h2 class="text-sm font-semibold text-gray-900 dark:text-white">Dirigeant actuel</h2>
+                </div>
+              </div>
+              <div class="flex flex-col items-center px-5 py-4 text-center">
+                <!-- Photo ou initiales -->
+                <div class="mb-3 h-16 w-16 overflow-hidden rounded-full">
+                  <img
+                    v-if="currentLeader.photo"
+                    :src="useCmsImage(currentLeader.photo)"
+                    :alt="currentLeader.full_name"
+                    class="h-full w-full object-cover"
+                    loading="lazy"
+                  />
+                  <div
+                    v-else
+                    class="flex h-full w-full items-center justify-center bg-gray-100 text-lg font-semibold text-gray-500 dark:bg-gray-700 dark:text-gray-300"
+                  >
+                    {{ currentLeader.full_name.charAt(0).toUpperCase() }}
+                  </div>
+                </div>
+                <NuxtLink
+                  :to="`/personnalites/${currentLeader.person_id}/${currentLeader.person_slug}`"
+                  class="text-sm font-semibold text-gray-900 hover:text-blue-600 dark:text-white dark:hover:text-blue-400"
+                >
+                  {{ currentLeader.full_name }}
+                </NuxtLink>
+                <!-- Bouton profil -->
+                <UButton
+                  :to="`/personnalites/${currentLeader.person_id}/${currentLeader.person_slug}`"
+                  variant="soft"
+                  size="sm"
+                  block
+                  class="mt-4"
+                >
+                  Voir le profil
+                </UButton>
+              </div>
+            </div>
+
             <!-- Budget link -->
             <div
               v-if="hasBudget"

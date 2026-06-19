@@ -22,6 +22,7 @@ export function useEtatOrganisationEntity(slug: string | Ref<string>) {
   const children = computed(() => response.value?.children || [])
   const breadcrumb = computed(() => response.value?.breadcrumb || [])
   const history = computed(() => response.value?.history || [])
+  const currentLeader = computed(() => response.value?.currentLeader ?? null)
 
   return {
     decree,
@@ -29,6 +30,7 @@ export function useEtatOrganisationEntity(slug: string | Ref<string>) {
     children,
     breadcrumb,
     history,
+    currentLeader,
     pending,
     error,
     refresh,

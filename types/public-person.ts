@@ -4,6 +4,7 @@ export interface PublicPersonAppointment {
   position_category: string;
   position_category_slug?: string | null;
   organization_label: string;
+  organization_entity?: { id: number; slug: string; name: string; has_public_page: boolean } | null;
   appointment_date: string;
   end_date?: string | null;
   end_reason?: string | null;

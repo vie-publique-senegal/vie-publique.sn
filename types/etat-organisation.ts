@@ -123,12 +123,23 @@ export interface EtatOrganisationEntityHistoryItem {
   date_created?: string;
 }
 
+export interface EtatOrganisationEntityLeader {
+  appointment_id: number;
+  position_title: string;
+  person_id: number;
+  person_slug: string;
+  full_name: string;
+  photo: string | null;
+  short_bio: string | null;
+}
+
 export interface EtatOrganisationEntityDetailResponse {
   decree: EtatOrganisationDecreeRef | null;
   entity: EtatOrganisationEntity;
   children: EtatOrganisationEntity[];
   breadcrumb: Array<Pick<EtatOrganisationEntity, 'id' | 'public_slug' | 'name'>>;
   history: EtatOrganisationEntityHistoryItem[];
+  currentLeader: EtatOrganisationEntityLeader | null;
 }
 
 /** Full change record used by the comparison page */
