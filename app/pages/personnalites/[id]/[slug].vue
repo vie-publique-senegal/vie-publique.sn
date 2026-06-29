@@ -10,12 +10,13 @@ const { siteName, siteUrl, keywords, themeColor } = useSiteMetadata();
 
 // Métadonnées dynamiques
 const title = computed(() => {
-  if (!person.value) return 'Personnalité publique | Vie Publique Sénégal';
+  // La marque est ajoutée par le titleTemplate global → ne pas la répéter ici.
+  if (!person.value) return 'Personnalité publique';
   const apt = currentAppointment.value;
   if (apt?.position_title) {
-    return `${person.value.full_name} - ${apt.position_title} | Vie Publique Sénégal`;
+    return `${person.value.full_name} - ${apt.position_title}`;
   }
-  return `${person.value.full_name} | Vie Publique Sénégal`;
+  return person.value.full_name;
 });
 
 const description = computed(() => {
@@ -120,7 +121,15 @@ const personSchema = computed(() => {
     image: image.value,
     description: description.value,
     url: url.value,
-    gender: person.value.sexe === 'male' ? 'Male' : 'Female',
+    mainEntityOfPage: url.value,
+    // gender seulement si connu (sinon Google recevait « Female » par défaut)
+    ...(person.value.sexe && {
+      gender: person.value.sexe === 'male' ? 'Male' : 'Female',
+    }),
+    ...(person.value.birthdate && { birthDate: person.value.birthdate.split('T')[0] }),
+    ...(person.value.birthplace && {
+      birthPlace: { '@type': 'Place', name: person.value.birthplace },
+    }),
     nationality: {
       '@type': 'Country',
       name: 'Sénégal',
@@ -136,30 +145,7 @@ const personSchema = computed(() => {
   };
 });
 
-const breadcrumbSchema = computed(() => ({
-  '@context': 'https://schema.org',
-  '@type': 'BreadcrumbList',
-  itemListElement: [
-    {
-      '@type': 'ListItem',
-      position: 1,
-      name: 'Accueil',
-      item: siteUrl,
-    },
-    {
-      '@type': 'ListItem',
-      position: 2,
-      name: 'Personnalités',
-      item: `${siteUrl}/personnalites-senegal`,
-    },
-    {
-      '@type': 'ListItem',
-      position: 3,
-      name: person.value?.full_name || 'Personnalité',
-      item: url.value,
-    },
-  ],
-}));
+// Breadcrumb : émis par <AppBreadcrumb> (source unique du fil d'Ariane, §7 CLAUDE.md).
 
 useHead({
   htmlAttrs: { lang: 'fr-SN' },
@@ -171,20 +157,13 @@ useHead({
     { property: 'og:site_name', content: siteName },
     { name: 'robots', content: 'index, follow' },
   ],
-  script: computed(() => {
-    const scripts = [];
-    if (personSchema.value) {
-      scripts.push({
-        type: 'application/ld+json',
-        children: JSON.stringify(personSchema.value),
-      });
-    }
-    scripts.push({
+  script: [
+    {
+      key: 'ld-person',
       type: 'application/ld+json',
-      children: JSON.stringify(breadcrumbSchema.value),
-    });
-    return scripts;
-  }),
+      innerHTML: computed(() => (personSchema.value ? JSON.stringify(personSchema.value) : '')),
+    },
+  ],
 });
 
 // Date formatting
@@ -408,7 +387,10 @@ const backLabel = computed(() => {
                     {{ isActive ? 'En fonction' : 'Fin de fonction' }}
                   </span>
                   <span
-                    v-if="currentAppointment?.position_category && currentAppointment.position_category !== 'Autre'"
+                    v-if="
+                      currentAppointment?.position_category &&
+                      currentAppointment.position_category !== 'Autre'
+                    "
                     class="bg-primary-50 text-primary-700 ring-primary-200 dark:bg-primary-900/20 dark:text-primary-400 dark:ring-primary-800 inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ring-1"
                   >
                     {{ currentAppointment.position_category }}
@@ -613,7 +595,13 @@ const backLabel = computed(() => {
                   </a>
                   <span v-else-if="apt.source_label">{{ apt.source_label }}</span>
                   <span v-if="apt.source_document && apt.source_label"> · </span>
-                  <span v-if="apt.source_document">{{ apt.source_document.title }}</span>
+                  <NuxtLink
+                    v-if="apt.source_document"
+                    :to="`/documents/${apt.source_document.id}/${apt.source_document.slug}`"
+                    class="text-primary-600 dark:text-primary-400 underline-offset-2 hover:underline"
+                  >
+                    {{ apt.source_document.title }}
+                  </NuxtLink>
                 </p>
 
                 <!-- Notes -->
@@ -640,7 +628,7 @@ const backLabel = computed(() => {
           </div>
           <div class="p-6">
             <div
-              class="prose prose-sm max-w-none sm:prose prose-headings:text-gray-900 prose-p:text-gray-600 prose-strong:text-gray-900 prose-li:text-gray-600 prose-a:text-primary-600 prose-img:rounded-xl prose-img:shadow-md dark:prose-headings:text-white dark:prose-p:text-gray-300 dark:prose-strong:text-white dark:prose-li:text-gray-300 dark:prose-a:text-primary-400 dark:prose-hr:border-gray-700"
+              class="prose-a:text-primary-600 dark:prose-a:text-primary-400 prose prose-sm max-w-none sm:prose prose-headings:text-gray-900 prose-p:text-gray-600 prose-strong:text-gray-900 prose-li:text-gray-600 prose-img:rounded-xl prose-img:shadow-md dark:prose-headings:text-white dark:prose-p:text-gray-300 dark:prose-strong:text-white dark:prose-li:text-gray-300 dark:prose-hr:border-gray-700"
               v-html="person.long_bio"
             ></div>
           </div>

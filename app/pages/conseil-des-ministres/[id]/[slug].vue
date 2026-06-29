@@ -34,9 +34,10 @@ const url = computed(
 );
 
 const image = computed(() => {
+  // URL absolue construite avec siteUrl (capturé en setup) + useCmsImage() (fonction pure) :
+  // pas d'appel de composable Nuxt ici, donc lisible sans risque dans le JSON-LD ci-dessous.
   if (article.value?.cover_image) {
-    // cover_image est un ID d'asset Directus → transformer en URL proxy absolue
-    return useCmsImageAbsolute(article.value.cover_image);
+    return `${siteUrl}${useCmsImage(article.value.cover_image)}`;
   }
   return `${siteUrl}/images/share-conseil-des-ministres-nomination-full.jpg`;
 });
@@ -78,49 +79,52 @@ useSeoMeta({
     ].join(', '),
 });
 
-// Schema.org
-useSchemaOrg([
-  defineBreadcrumb({
-    itemListElement: () => [
-      { name: 'Accueil', item: '/' },
-      { name: 'Conseil des ministres', item: '/conseil-des-ministres' },
-      { name: article.value?.title || 'Communiqué', item: url.value },
-    ],
-  }),
-  defineArticle({
-    '@type': 'GovernmentAnnouncement',
-    headline: () => article.value?.title || 'Communiqué du Conseil des ministres',
-    description: () => description.value,
-    image: () => image.value,
-    datePublished: () => publishedDate.value,
-    dateModified: () => modifiedDate.value || publishedDate.value,
-    author: {
-      '@type': 'GovernmentOrganization',
-      name: 'Conseil des ministres du Sénégal',
-      url: `${siteUrl}/conseil-des-ministres`,
+// Schema.org — JSON-LD brut (pattern projet, modèle : documents/[id]/[slug].vue)
+// Breadcrumb : émis par <AppBreadcrumb> (source unique du fil d'Ariane, §7 CLAUDE.md).
+//
+// Type NewsArticle (et non GovernmentAnnouncement) : c'est le type que Google
+// exploite pour « Top Stories » / résultats Article (fraîcheur = levier CTR).
+// ⚠️ CRÉDIBILITÉ : Vie Publique REPUBLIE et structure le communiqué officiel.
+// On déclare donc l'éditeur (author/publisher) = Vie Publique (Organization),
+// et on CITE la source de l'État (about + citation). On ne se déclare PAS
+// GovernmentOrganization : se faire passer pour l'État = incohérence E-E-A-T.
+const articleSchema = computed(() => ({
+  '@context': 'https://schema.org',
+  '@type': 'NewsArticle',
+  headline: article.value?.title || 'Communiqué du Conseil des ministres',
+  description: description.value,
+  image: image.value ? [image.value] : undefined,
+  datePublished: publishedDate.value || undefined,
+  dateModified: modifiedDate.value || publishedDate.value || undefined,
+  inLanguage: 'fr-SN',
+  author: {
+    '@type': 'Organization',
+    name: siteName,
+    url: siteUrl,
+  },
+  publisher: {
+    '@type': 'Organization',
+    name: siteName,
+    url: siteUrl,
+    logo: {
+      '@type': 'ImageObject',
+      // Logo Vie Publique à jour, URL publique stable + raster (requis par Google
+      // pour le logo éditeur ; le SVG de app/assets a une URL hashée non stable).
+      url: `${siteUrl}/logos/logo-transparent-carre.png`,
     },
-    publisher: {
-      '@type': 'GovernmentOrganization',
-      name: 'Conseil des ministres du Sénégal',
-      url: `${siteUrl}/conseil-des-ministres`,
-      logo: {
-        '@type': 'ImageObject',
-        url: `${siteUrl}/images/logo-senegal.png`,
-      },
-    },
-    articleSection: 'Gouvernement',
-    keywords: ['Conseil des ministres', 'Sénégal', 'Gouvernement', 'Communiqué officiel'],
-    about: {
-      '@type': 'GovernmentOrganization',
-      name: 'Conseil des ministres du Sénégal',
-      parentOrganization: {
-        '@type': 'GovernmentOrganization',
-        name: 'République du Sénégal',
-      },
-    },
-    mainEntityOfPage: () => url.value,
-  }),
-]);
+  },
+  articleSection: 'Conseil des ministres',
+  keywords: ['Conseil des ministres', 'Sénégal', 'Gouvernement', 'Communiqué officiel'],
+  // Sujet de l'article (l'organe de l'État) — on PARLE de lui, on ne l'EST pas.
+  about: {
+    '@type': 'GovernmentOrganization',
+    name: 'Conseil des ministres de la République du Sénégal',
+  },
+  // Source officielle citée (crédibilité : données issues de l'État, attribuées).
+  citation: 'Communiqué officiel du Conseil des ministres de la République du Sénégal',
+  isAccessibleForFree: true,
+  mainEntityOfPage: url.value,
+}));
 
 useHead({
   htmlAttrs: { lang: 'fr-SN' },
@@ -130,7 +134,7 @@ useHead({
   ],
   meta: [
     { name: 'theme-color', content: themeColor },
-    { name: 'author', content: 'Conseil des ministres du Sénégal' },
+    { name: 'author', content: siteName },
     { property: 'og:type', content: 'article' },
     { property: 'og:site_name', content: siteName },
     { property: 'article:published_time', content: () => publishedDate.value },
@@ -141,6 +145,12 @@ useHead({
     { name: 'geo.placename', content: 'Dakar' },
     { name: 'geo.position', content: '14.7645042;-17.3660286' },
     { name: 'ICBM', content: '14.7645042, -17.3660286' },
+  ],
+  script: [
+    {
+      type: 'application/ld+json',
+      innerHTML: computed(() => JSON.stringify(articleSchema.value)),
+    },
   ],
 });
 
@@ -157,7 +167,9 @@ const formatDateISO = (date: string) => {
 <template>
   <div class="min-h-screen bg-gray-50/50 dark:bg-gray-900">
     <!-- Sticky Header (mobile only) -->
-    <header class="sticky top-0 z-40 border-b border-gray-100 bg-white/95 backdrop-blur-sm dark:border-gray-800 dark:bg-gray-900/95 md:relative md:border-0 md:bg-transparent md:backdrop-blur-none dark:md:bg-transparent">
+    <header
+      class="sticky top-0 z-40 border-b border-gray-100 bg-white/95 backdrop-blur-sm dark:border-gray-800 dark:bg-gray-900/95 md:relative md:border-0 md:bg-transparent md:backdrop-blur-none dark:md:bg-transparent"
+    >
       <div class="container mx-auto px-4">
         <div class="flex items-center gap-3 py-3 md:hidden">
           <!-- Back button -->
@@ -171,9 +183,13 @@ const formatDateISO = (date: string) => {
 
           <!-- Title & Meta -->
           <div class="min-w-0 flex-1">
-            <h1 v-if="article" class="line-clamp-2 text-xs font-semibold leading-tight text-gray-900 dark:text-white">
+            <!-- Barre de nav mobile : titre en paragraphe (le H1 unique est dans le contenu) -->
+            <p
+              v-if="article"
+              class="line-clamp-2 text-xs font-semibold leading-tight text-gray-900 dark:text-white"
+            >
               {{ article.title }}
-            </h1>
+            </p>
             <USkeleton v-else class="h-4 w-48" />
             <p v-if="article?.date_published" class="mt-0.5 text-[10px] text-gray-500">
               {{ $dateformatWithDayName(article.date_published) }}
@@ -197,14 +213,18 @@ const formatDateISO = (date: string) => {
     </header>
 
     <div class="container mx-auto px-4 py-6">
-      <AppBreadcrumb :items="[
-        { label: 'Conseil des ministres', to: '/conseil-des-ministres' },
-        { label: article?.title || 'Communiqué' }
-      ]" />
+      <AppBreadcrumb
+        :items="[
+          { label: 'Conseil des ministres', to: '/conseil-des-ministres' },
+          { label: article?.title || 'Communiqué' },
+        ]"
+      />
 
       <!-- Loading state -->
       <div v-if="loading" class="mx-auto max-w-3xl space-y-6">
-        <div class="overflow-hidden rounded-2xl bg-white ring-1 ring-gray-100 dark:bg-gray-800 dark:ring-gray-700">
+        <div
+          class="overflow-hidden rounded-2xl bg-white ring-1 ring-gray-100 dark:bg-gray-800 dark:ring-gray-700"
+        >
           <USkeleton class="aspect-video w-full" />
           <div class="space-y-4 p-6">
             <USkeleton class="h-6 w-3/4" />
@@ -217,10 +237,17 @@ const formatDateISO = (date: string) => {
 
       <!-- Error state -->
       <div v-else-if="error" class="mx-auto max-w-md py-16 text-center">
-        <div class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/30">
-          <UIcon name="i-heroicons-exclamation-triangle" class="h-8 w-8 text-red-600 dark:text-red-400" />
+        <div
+          class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/30"
+        >
+          <UIcon
+            name="i-heroicons-exclamation-triangle"
+            class="h-8 w-8 text-red-600 dark:text-red-400"
+          />
         </div>
-        <h2 class="mb-2 text-lg font-semibold text-gray-900 dark:text-white">Erreur de chargement</h2>
+        <h2 class="mb-2 text-lg font-semibold text-gray-900 dark:text-white">
+          Erreur de chargement
+        </h2>
         <p class="mb-6 text-sm text-gray-600 dark:text-gray-400">
           Une erreur est survenue lors du chargement de l'article.
         </p>
@@ -235,25 +262,34 @@ const formatDateISO = (date: string) => {
 
       <!-- Content -->
       <div v-else-if="article" class="mx-auto max-w-3xl">
-        <article
-          itemscope
-          itemtype="https://schema.org/GovernmentAnnouncement"
-        >
+        <article itemscope itemtype="https://schema.org/NewsArticle">
           <!-- Schema.org hidden metadata -->
-          <div itemprop="publisher" itemscope itemtype="https://schema.org/GovernmentOrganization" class="hidden">
-            <meta itemprop="name" content="Conseil des ministres du Sénégal" />
-            <meta itemprop="url" :content="`${siteUrl}/conseil-des-ministres`" />
+          <!-- Éditeur = Vie Publique (Organization), PAS l'État : on republie/cite. -->
+          <div
+            itemprop="publisher"
+            itemscope
+            itemtype="https://schema.org/Organization"
+            class="hidden"
+          >
+            <meta itemprop="name" :content="siteName" />
+            <meta itemprop="url" :content="siteUrl" />
           </div>
-          <div itemprop="about" itemscope itemtype="https://schema.org/GovernmentOrganization" class="hidden">
-            <meta itemprop="name" content="Conseil des ministres du Sénégal" />
-            <div itemprop="parentOrganization" itemscope itemtype="https://schema.org/GovernmentOrganization">
-              <meta itemprop="name" content="République du Sénégal" />
-            </div>
+          <!-- Sujet de l'article (l'organe de l'État) : on en parle, on ne l'est pas. -->
+          <div
+            itemprop="about"
+            itemscope
+            itemtype="https://schema.org/GovernmentOrganization"
+            class="hidden"
+          >
+            <meta itemprop="name" content="Conseil des ministres de la République du Sénégal" />
           </div>
           <meta itemprop="url" :content="url" />
           <meta itemprop="genre" content="Communiqué officiel" />
           <meta itemprop="articleSection" content="Gouvernement" />
-          <meta itemprop="keywords" content="Conseil des ministres, Sénégal, Gouvernement, Communiqué officiel" />
+          <meta
+            itemprop="keywords"
+            content="Conseil des ministres, Sénégal, Gouvernement, Communiqué officiel"
+          />
 
           <!-- Cover Image -->
           <div
@@ -278,7 +314,10 @@ const formatDateISO = (date: string) => {
           <div class="space-y-6">
             <!-- Title & Meta (visible on larger screens) -->
             <div class="hidden md:block">
-              <h1 class="mb-3 text-2xl font-bold text-gray-900 dark:text-white sm:text-3xl" itemprop="headline name">
+              <h1
+                class="mb-3 text-2xl font-bold text-gray-900 dark:text-white sm:text-3xl"
+                itemprop="headline name"
+              >
                 {{ article.title }}
               </h1>
               <div class="flex items-center gap-3 text-sm text-gray-500">
@@ -313,7 +352,9 @@ const formatDateISO = (date: string) => {
             </div>
 
             <!-- Article Body -->
-            <div class="rounded-2xl bg-white p-6 ring-1 ring-gray-100 dark:bg-gray-800 dark:ring-gray-700 sm:p-8">
+            <div
+              class="rounded-2xl bg-white p-6 ring-1 ring-gray-100 dark:bg-gray-800 dark:ring-gray-700 sm:p-8"
+            >
               <div
                 itemprop="articleBody"
                 class="prose prose-sm max-w-none dark:prose-invert prose-headings:font-semibold prose-h2:mt-8 prose-h2:text-xl prose-p:leading-relaxed prose-a:text-emerald-600 dark:prose-a:text-emerald-400"
@@ -322,11 +363,10 @@ const formatDateISO = (date: string) => {
             </div>
 
             <!-- Share & Social -->
-            <div class="rounded-2xl bg-white p-5 ring-1 ring-gray-100 dark:bg-gray-800 dark:ring-gray-700">
-              <SocialShare
-                :title="article.title"
-                :url="url"
-              />
+            <div
+              class="rounded-2xl bg-white p-5 ring-1 ring-gray-100 dark:bg-gray-800 dark:ring-gray-700"
+            >
+              <SocialShare :title="article.title" :url="url" />
             </div>
           </div>
         </article>
@@ -334,10 +374,14 @@ const formatDateISO = (date: string) => {
 
       <!-- Not Found -->
       <div v-else class="mx-auto max-w-md py-16 text-center">
-        <div class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800">
+        <div
+          class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800"
+        >
           <UIcon name="i-heroicons-document-magnifying-glass" class="h-8 w-8 text-gray-400" />
         </div>
-        <h2 class="mb-2 text-lg font-semibold text-gray-900 dark:text-white">Communiqué non trouvé</h2>
+        <h2 class="mb-2 text-lg font-semibold text-gray-900 dark:text-white">
+          Communiqué non trouvé
+        </h2>
         <p class="mb-6 text-sm text-gray-600 dark:text-gray-400">
           Ce communiqué n'existe pas ou a été supprimé.
         </p>

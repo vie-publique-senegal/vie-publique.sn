@@ -74,11 +74,11 @@ avec valeurs `draft` / `published` / `archived`.
 
 **Collections** — 3 familles :
 
-| Famille | Convention | Exemples | Quand l'utiliser |
-| --- | --- | --- | --- |
-| **Contenu public principal** | pluriel nu, sans préfixe | `documents`, `news`, `media`, `elections`, `dossiers` | Contenu public de 1er rang destiné aux citoyens. Le nom calque souvent l'URL publique (ex. `/dossiers` → `dossiers`, `/carte` → `carte`). |
-| **Module métier** | `<domaine>_<entité>` (singulier) | `assembly_deputy`, `budget_line`, `state_organization_entity`, `election_coalition`, `public_project`, `public_persons` | Données structurées d'un domaine fonctionnel (assemblée, budget, état, élections, projets). Les tables liées gardent le préfixe du domaine. |
-| **Contenu propre à l'association** | préfixe `vp_` | `vp_podcasts`, `vp_documents`, `vp_team`, `vp_partners`, `vp_social_stats`, `vp_feature_flags` | Contenu/ressources **de l'association Vie Publique** (page « À propos » : leurs documents, leur équipe, partenaires…) + config applicative. **Ne PAS confondre** avec le contenu public du site. |
+| Famille                            | Convention                       | Exemples                                                                                                                | Quand l'utiliser                                                                                                                                                                                 |
+| ---------------------------------- | -------------------------------- | ----------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Contenu public principal**       | pluriel nu, sans préfixe         | `documents`, `news`, `media`, `elections`, `dossiers`                                                                   | Contenu public de 1er rang destiné aux citoyens. Le nom calque souvent l'URL publique (ex. `/dossiers` → `dossiers`, `/carte` → `carte`).                                                        |
+| **Module métier**                  | `<domaine>_<entité>` (singulier) | `assembly_deputy`, `budget_line`, `state_organization_entity`, `election_coalition`, `public_project`, `public_persons` | Données structurées d'un domaine fonctionnel (assemblée, budget, état, élections, projets). Les tables liées gardent le préfixe du domaine.                                                      |
+| **Contenu propre à l'association** | préfixe `vp_`                    | `vp_podcasts`, `vp_documents`, `vp_team`, `vp_partners`, `vp_social_stats`, `vp_feature_flags`                          | Contenu/ressources **de l'association Vie Publique** (page « À propos » : leurs documents, leur équipe, partenaires…) + config applicative. **Ne PAS confondre** avec le contenu public du site. |
 
 > ⚠️ Le préfixe `vp_` = « contenu de l'association », **pas** « contenu éditorial du site ».
 > Une page de référence publique (ex. Dossiers) va dans la famille **sans préfixe**.
@@ -132,6 +132,30 @@ Le projet utilise `@nuxtjs/seo`. Un audit basé uniquement sur le code produit d
 3. `@nuxtjs/seo` fournit des **fallbacks globaux** (og:image, robots, canonical, og:site_name) → « la page ne définit pas X » ≠ « X absent du HTML ».
 4. **2 seules causes réelles de partage social cassé** : (a) meta dans un `watch`/`onMounted` au lieu du scope setup → SSR rend les meta GLOBALES ; (b) concat malformée `` `${siteUrl}${idBrut}` `` (sans slash). Toujours définir `useSeoMeta`/`useHead` **en scope setup avec getters réactifs**, et utiliser `useCmsImageAbsolute()` pour les images CMS.
 5. Avant de « corriger l'indexation » d'une page : vérifier `routeRules` (redirects 301) et `robots.disallow` dans `nuxt.config.ts`.
+6. **Schema.org : utiliser le JSON-LD brut (pattern majoritaire du projet, modèle = `documents/[id]/[slug].vue`), PAS `useSchemaOrg`.** Définir chaque schéma comme un objet `computed` simple (`{ '@context': 'https://schema.org', '@type': 'Article', … }`) en scope setup, puis l'injecter via `useHead({ script: [{ type: 'application/ld+json', innerHTML: computed(() => JSON.stringify(monSchema.value)) }] })`. **⚠️ Utiliser `innerHTML`, PAS `children`** : avec `@unhead/vue` v2 (le projet est en v2), `children` est rendu comme **attribut HTML** (`<script … children="{…}">`) et le JSON-LD n'est **pas lu par Google**. _(Beaucoup de pages historiques utilisent encore `children` → JSON-LD page cassé ; à migrer vers `innerHTML`. Vérifier le rendu : `curl -s <url> | grep -oE '<script type="application/ld\+json">'` doit montrer le `{…}` en contenu, pas en attribut.)_ Construire les URLs d'image **absolues** avec la fonction pure `useCmsImage()` + le `siteUrl` capturé en setup (`` `${siteUrl}${useCmsImage(id)}` ``), jamais `useCmsImageAbsolute()` à l'intérieur du schéma. _(Les 6 pages historiques en `useSchemaOrg`/`defineArticle` sont l'exception ; si on doit y toucher, ne jamais appeler de composable Nuxt — `useRuntimeConfig`/`useSiteMetadata`/`useCmsImageAbsolute` — dans un getter, car nuxt-schema-org les résout hors scope setup → 500 SSR. Pour une nouvelle page, préférer le JSON-LD brut.)_
+
+   **⚠️ TOUJOURS mettre un `key` unique sur chaque entrée `script` JSON-LD** :
+   `useHead({ script: [{ key: 'ld-article', type: 'application/ld+json', innerHTML: … }, { key: 'ld-breadcrumb', … }] })`.
+   **Sans `key`**, avec un `script: () => [...]` réactif (schéma dépendant de données chargées en async via `useAsyncData`), `@unhead` **AJOUTE** un 2ᵉ `<script>` à l'hydratation client au lieu de **remplacer** → **nœud JSON-LD dupliqué dans le DOM rendu** (ex. **« 2 Articles » au test Rich Results**). ⚠️ Piège : **invisible en SSR** (`curl` ne montre qu'1 nœud) car le doublon est ajouté **côté client** — le test Rich Results, lui, exécute le JS et voit les 2. Donc pour ce bug précis, vérifier le **DOM rendu** (test Rich Results / DevTools), pas seulement le HTML `curl`. _(Corrigé sur `documents/[id]/[slug]`, `actualites/[id]/[slug]`, `dossiers/[slug]`, `assemblee-nationale/actualites/[id]/[slug]`.)_
+
+   **⚠️ ORDRE des déclarations en `<script setup>` (anti-TDZ « Cannot access 'x' before initialization »).** Tout ce qu'un getter `useSeoMeta`/`useHead` ou un `computed` de schéma référence doit être **déclaré AVANT**. Ordre obligatoire : (1) `props`/`useRoute`/data-fetch → (2) **fonctions helper** (`formatDate`, `formatDateISO`, `getYoutubeVideoId`…) → (3) `computed`/schemas → (4) **`useSeoMeta`/`useHead` EN DERNIER**. Piège : une fonction `const formatDateISO = …` déclarée **après** un schéma qui l'appelle compile sans erreur mais **plante à l'hydratation client** : `@unhead` évalue les getters pendant le setup, avant l'init de la fonction → **500 en accès direct** (SSR renvoie 200 → `curl` ne le voit PAS ; reproduire en **collant l'URL** dans le navigateur, idéalement nav privée). La règle ESLint `@typescript-eslint/no-use-before-define` (`variables: true`, en `warn`) signale ces cas — **ne pas ignorer un warning sur un helper utilisé dans un computed/getter**. _(Corrigé sur `documents/[id]/[slug]`, `actualites/[id]/[slug]`, `podcasts/[id]/[slug]`, `assemblee-nationale/questions/[id]`.)_
+
+7. **Ne pas dupliquer les nœuds déjà émis par le `@graph` global.** `@nuxtjs/seo` / `nuxt-schema-org` émet déjà, dans un `<script>` `@graph`, les nœuds **WebSite, WebPage, Organization, ImageObject et un `BreadcrumbList` auto-dérivé de la route** (vérifié valide). En page, n'émettre que le **nœud d'entité propre à la page** (`Article`, `NewsArticle`, `Person`, `FAQPage`, `CollectionPage`, `GovernmentOrganization`…). **Ne PAS** réémettre `WebPage`/`Organization`/`BreadcrumbList` en page :
+   - **⚠️ Le `BreadcrumbList` du `@graph` est émis par le composant `<AppBreadcrumb>`** (`app/components/AppBreadcrumb.vue` appelle `useSchemaOrg([defineBreadcrumb(...)])` à partir de ses `items`). **C'est la source UNIQUE du breadcrumb.** Donc sur **toute page qui utilise `<AppBreadcrumb>`** (quasi toutes les pages détail), **ne JAMAIS** ajouter un autre breadcrumb : ni un `defineBreadcrumb` page, ni un `BreadcrumbList` en JSON-LD brut — le composant s'en charge.
+   - un **2ᵉ `defineBreadcrumb`** dans la page **fusionne** avec celui d'AppBreadcrumb dans le **même** nœud `@graph` → **un seul `BreadcrumbList` malformé à items dupliqués** (ex. `assemblee-nationale/deputes/[id]` : **8 items au lieu de 4**, chaque niveau en double). **Corrigé** (retrait du `defineBreadcrumb` page) sur `deputes/[id]/[name]`, `commissions/[id]`, `budget-senegal/[slug]`.
+   - un **`BreadcrumbList` en JSON-LD brut** dans la page = 2 nœuds séparés (page + AppBreadcrumb) = doublon **toléré** par Google mais inutile → à retirer par opportunité (laisser AppBreadcrumb seul). Pages encore concernées : `documents/[id]/[slug]`, `personnalites/[id]/[slug]`, `actualites/[id]/[slug]`, `etat-senegal/[slug]`…
+   _Vérifier : `curl -s <url> | grep -oE '"@type":"(BreadcrumbList|ListItem)"' | sort | uniq -c` → attendu **1 BreadcrumbList** et **N ListItem** (N = nb de niveaux, pas 2×N). Le nœud `Person` n'apparaît PAS au test Rich Results (type sans affichage enrichi) — c'est **normal**, pas un bug._
+8. **Un seul `<h1>` par page.** Piège récurrent : les pages détail ont **deux en-têtes** (barre sticky **mobile** + en-tête **desktop**) qui affichent le même titre. Si les deux sont `<h1>` → **2 H1** (les deux sont dans le DOM, juste masqués en CSS selon le viewport). **Règle : un seul `<h1>` = le titre principal du contenu ; la barre de nav mobile et les titres de cartes/sections sont en `<p>` ou `<h2>`.** Vérifier : `curl -s <url> | grep -o "<h1" | wc -l` doit donner **1**.
+9. **Titre de page : ne PAS répéter la marque.** Le `titleTemplate` global (`@nuxtjs/seo`) ajoute déjà `| Vie-Publique.sn`. En page, mettre **juste le titre** (+ éventuel descripteur utile : « Nom - Poste »), **sans** « - Vie Publique Sénégal » ni « | … Vie Publique Sénégal » (sinon marque dupliquée + titre trop long). Un **qualificatif de section** sans la marque (« | Actualités Sénégal ») reste acceptable.
+
+### Conventions d'URL (SEO)
+
+> Détail complet : `docs/guidelines/url-structure-analysis.md`.
+
+- Mots séparés par des **tirets** (`-`), pas d'underscores.
+- URL **courte mais descriptive**, calée sur les termes de recherche FR courants.
+- **Pas d'accents** ni de caractères spéciaux/encodés ; minuscules.
+- Slug stable une fois indexé ; si changement, prévoir une **redirection 301** (`routeRules`).
 
 ### UI & Design conventions (IMPORTANT)
 
@@ -161,6 +185,49 @@ dashboard ».
    transformer les tableaux larges en blocs empilés.
 7. **Réutiliser les composants existants** plutôt que recréer : documents →
    `DocumentsDocumentListItem` ; fil d'ariane → `AppBreadcrumb` ; images CMS → `CmsImage`.
+
+### Listes paginées / filtrées & SSR (IMPORTANT — éviter le bug de pagination)
+
+> Contexte : une liste paginée doit rendre le BON contenu **côté serveur**. Un état lu trop
+> tard (après le rendu serveur) casse la pagination ET le SEO. Règle apprise sur la page
+> `/assemblee-nationale/questions` (cf. `useCollectionState.ts`).
+
+1. **Initialiser l'état UI (page, recherche, tri, filtre) à partir de `route.query` DE FAÇON
+   SYNCHRONE dans le `setup`** — JAMAIS dans `onMounted`. `onMounted` ne s'exécute pas pendant
+   le SSR : l'état resterait à sa valeur par défaut (`page=1`), le serveur rendrait toujours la
+   page 1 quel que soit `?page=N`, puis l'affichage « sauterait » après hydratation.
+
+   ```typescript
+   // ✅ BON — lu au setup, valable SSR + client
+   const route = useRoute();
+   const currentPage = ref(parseInt(route.query.page as string) || 1);
+
+   // ❌ MAUVAIS — onMounted = client uniquement → SSR ignore ?page
+   const currentPage = ref(1);
+   onMounted(() => {
+     if (route.query.page) currentPage.value = +route.query.page;
+   });
+   ```
+
+2. **Réutiliser `useCollectionState` + `useCmsCollection`** pour toute nouvelle liste (documents,
+   news, votes, dossiers… 15 collections les utilisent déjà). Ne pas réimplémenter la pagination
+   à la main. La pagination est **serveur** (`limit`/`offset` via l'API), pas un `slice` client.
+
+3. **Pages hors-limites** : prévoir le recalage `?page=999` → dernière page valide une fois les
+   données chargées (voir le `watch([totalPages, loading])` dans `useDocuments.ts`), sinon l'UI
+   affiche « Aucun résultat » à tort.
+
+4. **Toujours vérifier en SSR avant de conclure** (cf. règle SEO §1) : comparer le HTML serveur
+   de deux pages doit donner des items **disjoints**.
+
+   ```bash
+   # les deux ensembles d'IDs doivent être différents (0 commun)
+   curl -sL "<url>?page=1" | grep -oE '/prefix/[0-9]+' | sort -u
+   curl -sL "<url>?page=2" | grep -oE '/prefix/[0-9]+' | sort -u
+   ```
+
+   ⚠️ S'assurer de cibler le bon motif de lien d'item : une page « hub » (ex. `/documents` =
+   catégories) n'est PAS la liste paginée (ex. `/documents/public`).
 
 ### Performance Considerations
 

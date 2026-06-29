@@ -42,7 +42,7 @@ const datasetSchema = {
   url: url,
   keywords: ['budget', 'finances publiques', 'Sénégal', 'recettes', 'dépenses'],
   creator: {
-    '@type': 'GovernmentOrganization',
+    '@type': 'Organization',
     name: 'Ministère des Finances et du Budget du Sénégal',
   },
   publisher: {
@@ -116,15 +116,15 @@ useHead({
   script: [
     {
       type: 'application/ld+json',
-      children: JSON.stringify(budgetSchema),
+      innerHTML: JSON.stringify(budgetSchema),
     },
     {
       type: 'application/ld+json',
-      children: JSON.stringify(datasetSchema),
+      innerHTML: JSON.stringify(datasetSchema),
     },
     {
       type: 'application/ld+json',
-      children: JSON.stringify(breadcrumbSchema),
+      innerHTML: JSON.stringify(breadcrumbSchema),
     },
   ],
 });

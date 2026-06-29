@@ -22,7 +22,7 @@ watch(
 
 // Mapping des types de documents vers labels et URLs
 const documentTypes: Record<string, { label: string; slug: string }> = {
-  official_journal: { label: 'Journal Officiel', slug: 'journal-officiel' },
+  official_journal: { label: 'Journal Officiel', slug: 'journal-officiel-senegal' },
   audit_report: { label: "Rapport d'Audit", slug: 'rapports-audit' },
   budget: { label: 'Budget', slug: 'budget' },
   strategy: { label: 'Stratégie', slug: 'strategies' },
@@ -46,19 +46,43 @@ const getSafeString = (val: unknown): string => {
   return '';
 };
 
-const pageTitle = computed(() =>
-  document.value?.title
-    ? `${getSafeString(document.value.title)} - Vie Publique Sénégal`
-    : 'Chargement...',
-);
+// Date formatée — déclarée AVANT pageDescription qui l'utilise. Sinon référence en
+// avant : @unhead évalue le getter `description` de useSeoMeta pendant le setup côté
+// client, avant l'init de `formattedDate` → TDZ « Cannot access before initialization ».
+const formattedDate = computed(() => {
+  if (!document.value?.publish_date) return '';
+  const date = new Date(document.value.publish_date);
+  return date.toLocaleDateString('fr-FR', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+});
 
-const pageDescription = computed(
-  () =>
-    getSafeString(document.value?.description) ||
-    `${typeLabel.value} - Document officiel du Sénégal`,
-);
+// La marque est ajoutée UNE fois par le titleTemplate global (@nuxtjs/seo) → ne pas
+// la répéter ici (sinon « … - Vie Publique Sénégal | Vie-Publique.sn », titre trop long).
+const pageTitle = computed(() => getSafeString(document.value?.title) || 'Chargement...');
 
-const { siteUrl } = useSiteMetadata();
+// Fallback descriptif et UNIQUE quand le document n'a pas de description (sinon meta
+// générique « Document - Document officiel… » trop courte/dupliquée).
+const pageDescription = computed(() => {
+  const desc = getSafeString(document.value?.description);
+  if (desc) return desc;
+  const t = getSafeString(document.value?.title);
+  const d = formattedDate.value ? ` (${formattedDate.value})` : '';
+  return t
+    ? `${t} — ${typeLabel.value} officiel de la République du Sénégal${d}. À consulter et télécharger sur Vie-Publique.sn.`
+    : `${typeLabel.value} officiel de la République du Sénégal.`;
+});
+
+const { siteUrl, siteName, defaultImage } = useSiteMetadata();
+
+// Date ISO 8601 AVEC fuseau horaire (Google exige tz sur datePublished/dateModified)
+const toISO = (d?: string) => {
+  if (!d) return undefined;
+  const dt = new Date(d);
+  return isNaN(dt.getTime()) ? undefined : dt.toISOString();
+};
 
 const pageImageUrl = computed(() => {
   const img = document.value?.cover_image;
@@ -74,7 +98,7 @@ useSeoMeta({
   title: () => pageTitle.value,
   description: () => pageDescription.value,
   ogTitle: () => getSafeString(document.value?.title),
-  ogDescription: () => getSafeString(document.value?.description) || typeLabel.value,
+  ogDescription: () => pageDescription.value,
   ogImage: () => pageImageUrl.value,
   ogType: 'article',
   ogUrl: () =>
@@ -83,63 +107,53 @@ useSeoMeta({
       : '',
   twitterCard: 'summary_large_image',
   twitterTitle: () => getSafeString(document.value?.title),
-  twitterDescription: () => getSafeString(document.value?.description) || typeLabel.value,
+  twitterDescription: () => pageDescription.value,
   twitterImage: () => pageImageUrl.value,
 });
 
-const breadcrumbSchema = computed(() => ({
-  '@context': 'https://schema.org',
-  '@type': 'BreadcrumbList',
-  itemListElement: [
-    {
-      '@type': 'ListItem',
-      position: 1,
-      name: 'Accueil',
-      item: siteUrl,
-    },
-    {
-      '@type': 'ListItem',
-      position: 2,
-      name: 'Documents',
-      item: `${siteUrl}/documents/public`,
-    },
-    {
-      '@type': 'ListItem',
-      position: 3,
-      name: typeLabel.value,
-      item: `${siteUrl}/documents/${typeSlug.value}`,
-    },
-    {
-      '@type': 'ListItem',
-      position: 4,
-      name: document.value?.title || '',
-      item: document.value
-        ? `${siteUrl}/documents/${document.value.id}/${document.value.slug}`
-        : '',
-    },
-  ],
-}));
+// Pas de BreadcrumbList ici : <AppBreadcrumb> (dans le template) est la source unique
+// du fil d'Ariane (§7 CLAUDE.md). En émettre un second = doublon au test Rich Results.
 
 const articleSchema = computed(() => ({
   '@context': 'https://schema.org',
   '@type': 'Article',
   headline: getSafeString(document.value?.title),
-  description: getSafeString(document.value?.description) || typeLabel.value,
+  description: pageDescription.value,
   image: pageImageUrl.value || undefined,
-  datePublished: document.value?.publish_date || undefined,
+  datePublished: toISO(document.value?.publish_date),
+  dateModified: toISO(document.value?.date_updated) || toISO(document.value?.publish_date),
   author: {
     '@type': 'Organization',
     name: 'République du Sénégal',
+    url: siteUrl,
   },
   publisher: {
     '@type': 'Organization',
-    name: 'Vie Publique Sénégal',
+    name: siteName,
     url: siteUrl,
+    logo: { '@type': 'ImageObject', url: defaultImage },
   },
 }));
 
 useHead({
   htmlAttrs: { lang: 'fr-SN' },
+  meta: [
+    // Grande vignette dans les résultats Google (meilleur CTR).
+    { name: 'robots', content: 'index, follow, max-image-preview:large' },
+    // Signaux de fraîcheur (absents jusqu'ici sur les pages documents).
+    {
+      property: 'article:published_time',
+      content: () => toISO(document.value?.publish_date) || '',
+    },
+    {
+      property: 'article:modified_time',
+      content: () =>
+        toISO(document.value?.date_updated) || toISO(document.value?.publish_date) || '',
+    },
+    { property: 'article:section', content: () => typeLabel.value },
+    // Auteur du texte légal = l'État (cohérent avec le schema Article) ; éditeur = Vie Publique.
+    { property: 'article:author', content: 'République du Sénégal' },
+  ],
   link: () => [
     {
       rel: 'canonical',
@@ -148,14 +162,11 @@ useHead({
         : '',
     },
   ],
-  script: [
+  script: () => [
     {
+      key: 'ld-article',
       type: 'application/ld+json',
-      children: computed(() => JSON.stringify(breadcrumbSchema.value)),
-    },
-    {
-      type: 'application/ld+json',
-      children: computed(() => JSON.stringify(articleSchema.value)),
+      innerHTML: JSON.stringify(articleSchema.value),
     },
   ],
 });
@@ -176,20 +187,8 @@ const fileSize = computed(() => {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 });
 
-// Date formatée
-const formattedDate = computed(() => {
-  if (!document.value?.publish_date) return '';
-  const date = new Date(document.value.publish_date);
-  return date.toLocaleDateString('fr-FR', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
-});
-
 // État du viewer PDF modal
 const showPdfViewer = ref(false);
-
 </script>
 
 <template>
@@ -210,12 +209,13 @@ const showPdfViewer = ref(false);
               <UIcon name="i-heroicons-arrow-left" class="h-4 w-4" />
             </NuxtLink>
             <div class="min-w-0 flex-1">
-              <h1
+              <!-- Barre de nav mobile : titre en paragraphe (le titre principal est dans le contenu) -->
+              <p
                 v-if="document"
                 class="line-clamp-2 text-sm font-semibold leading-tight text-gray-900 dark:text-white"
               >
                 {{ document.title }}
-              </h1>
+              </p>
               <USkeleton v-else class="h-4 w-48" />
               <p v-if="formattedDate" class="mt-0.5 text-[10px] text-gray-500">
                 {{ formattedDate }}

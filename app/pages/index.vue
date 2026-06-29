@@ -147,19 +147,19 @@ useHead({
   script: [
     {
       type: 'application/ld+json',
-      children: JSON.stringify(organizationSchema),
+      innerHTML: JSON.stringify(organizationSchema),
     },
     {
       type: 'application/ld+json',
-      children: JSON.stringify(websiteSchema),
+      innerHTML: JSON.stringify(websiteSchema),
     },
     {
       type: 'application/ld+json',
-      children: JSON.stringify(breadcrumbSchema),
+      innerHTML: JSON.stringify(breadcrumbSchema),
     },
     {
       type: 'application/ld+json',
-      children: JSON.stringify(newsMediaSchema),
+      innerHTML: JSON.stringify(newsMediaSchema),
     },
   ],
 });
@@ -193,7 +193,7 @@ const { isFeatureEnabled } = useFeatureFlags();
         <HomeFeaturedDocuments />
       </div>
 
-      <div class="my-8">
+      <div v-if="isFeatureEnabled('menu_dossiers')" class="my-8">
         <HomeDossiers />
       </div>
 

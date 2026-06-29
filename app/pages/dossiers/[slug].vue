@@ -23,10 +23,6 @@ watchEffect(() => {
 });
 
 // Helpers
-const formatDate = (date?: string) =>
-  date
-    ? new Date(date).toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' })
-    : '';
 const formatDateISO = (date?: string) => (date ? new Date(date).toISOString() : '');
 const stripHtml = (html?: string) => (html ? html.replace(/<[^>]*>/g, '').trim() : '');
 
@@ -38,11 +34,13 @@ const sections = computed(() => {
   const d = dossier.value;
   if (!d) return [];
   const list: { id: string; label: string }[] = [];
+  // Ordre : d'abord l'essentiel concret (repères, documents/sources, calendrier,
+  // ce qui change), PUIS l'analyse longue. Cf. demande produit (mobile-first).
   if (has(d.highlights)) list.push({ id: 'a-retenir', label: 'À retenir' });
-  if (d.intro_html || d.content_html) list.push({ id: 'introduction', label: 'Introduction' });
   if (has(d.documents)) list.push({ id: 'documents', label: 'Documents' });
-  if (has(d.comparison)) list.push({ id: 'comparatif', label: 'Comparatif' });
   if (has(d.timeline)) list.push({ id: 'chronologie', label: 'Chronologie' });
+  if (has(d.comparison)) list.push({ id: 'comparatif', label: 'Comparatif' });
+  if (d.intro_html || d.content_html) list.push({ id: 'introduction', label: 'Analyse' });
   if (has(d.news)) list.push({ id: 'actualites', label: 'Actualités' });
   if (has(d.podcasts)) list.push({ id: 'videos', label: 'Vidéos' });
   if (has(d.public_entities)) list.push({ id: 'entites', label: 'Entités' });
@@ -52,10 +50,20 @@ const sections = computed(() => {
   return list;
 });
 
+// Tags affichés en pied d'article (« sujets liés »), limités pour rester sobres.
+const dossierTags = computed(() => (dossier.value?.tags || []).slice(0, 10));
+
+// Sommaire mobile déroulant (<details>) : refermé après sélection d'une ancre.
+const mobileToc = ref<HTMLDetailsElement | null>(null);
+const closeMobileToc = () => {
+  if (mobileToc.value) mobileToc.value.open = false;
+};
+
 // ---- SEO (scope setup + getters réactifs → rendu SSR pour les crawlers) ----
 const seoTitle = computed(() => {
   if (!dossier.value) return 'Chargement…';
-  return dossier.value.seo_title || `${dossier.value.title} | Dossier Vie Publique Sénégal`;
+  // La marque est ajoutée par le titleTemplate global → ne pas la répéter ici.
+  return dossier.value.seo_title || dossier.value.title;
 });
 
 const seoDescription = computed(() => {
@@ -105,15 +113,9 @@ const articleSchema = computed(() => {
   };
 });
 
-const breadcrumbSchema = computed(() => ({
-  '@context': 'https://schema.org',
-  '@type': 'BreadcrumbList',
-  itemListElement: [
-    { '@type': 'ListItem', position: 1, name: 'Accueil', item: siteUrl },
-    { '@type': 'ListItem', position: 2, name: 'Dossiers', item: `${siteUrl}/dossiers` },
-    { '@type': 'ListItem', position: 3, name: dossier.value?.title || 'Dossier', item: url.value },
-  ],
-}));
+// Pas de BreadcrumbList ni WebPage en page : le @graph global de @nuxtjs/seo
+// les émet déjà (breadcrumb auto-dérivé de la route). On ne garde que les nœuds
+// d'entité propres à la page (Article, FAQPage).
 
 const faqSchema = computed(() => {
   if (!has(dossier.value?.faq)) return null;
@@ -172,13 +174,14 @@ useHead({
   script: () =>
     [
       articleSchema.value && {
+        key: 'ld-article',
         type: 'application/ld+json',
-        children: JSON.stringify(articleSchema.value),
+        innerHTML: JSON.stringify(articleSchema.value),
       },
-      { type: 'application/ld+json', children: JSON.stringify(breadcrumbSchema.value) },
       faqSchema.value && {
+        key: 'ld-faq',
         type: 'application/ld+json',
-        children: JSON.stringify(faqSchema.value),
+        innerHTML: JSON.stringify(faqSchema.value),
       },
     ].filter(Boolean),
 });
@@ -186,7 +189,8 @@ useHead({
 
 <template>
   <!-- Pas de fond dark explicite : on hérite du body global (#15202B). -->
-  <div class="min-h-screen bg-white pb-20 dark:bg-transparent">
+  <!-- pb généreux sur mobile : la bottom-nav flottante ne doit pas masquer le contenu. -->
+  <div class="min-h-screen bg-white pb-32 dark:bg-transparent lg:pb-12">
     <div class="container mx-auto max-w-3xl px-4 py-4 md:py-6 lg:max-w-5xl">
       <AppBreadcrumb
         :items="[{ label: 'Dossiers', to: '/dossiers' }, { label: dossier?.title || 'Dossier' }]"
@@ -204,26 +208,48 @@ useHead({
         <article class="min-w-0 lg:flex-1">
           <DossierHero :dossier="dossier" />
 
-          <!-- Sommaire mobile : barre d'onglets fine (masquée sur desktop, cf. sidebar) -->
-          <nav
+          <!-- Sommaire mobile : barre sticky fine + vrai menu déroulant (masqué sur desktop) -->
+          <details
             v-if="sections.length > 1"
-            aria-label="Sommaire du dossier"
-            class="scrollbar-hide sticky top-0 z-30 -mx-4 mt-6 overflow-x-auto border-b border-gray-100 bg-white/90 px-4 backdrop-blur dark:border-gray-700 dark:bg-gray-900/90 lg:hidden"
+            ref="mobileToc"
+            class="group sticky top-0 z-30 -mx-4 mt-6 border-b border-gray-100 bg-white/95 backdrop-blur dark:border-gray-700 dark:bg-gray-900/95 lg:hidden"
           >
-            <ul class="flex gap-5 whitespace-nowrap">
-              <li v-for="section in sections" :key="section.id">
-                <a
-                  :href="`#${section.id}`"
-                  class="inline-flex border-b-2 border-transparent py-3 text-sm font-medium text-gray-500 transition-colors hover:border-gray-300 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
-                >
-                  {{ section.label }}
-                </a>
-              </li>
-            </ul>
-          </nav>
+            <summary
+              class="toc-summary flex cursor-pointer select-none items-center justify-between px-4 py-2.5 text-sm font-semibold text-gray-700 dark:text-gray-200"
+            >
+              <span class="inline-flex items-center gap-2">
+                <UIcon name="i-heroicons-list-bullet" class="h-4 w-4 text-gray-400" />
+                Sommaire
+              </span>
+              <UIcon
+                name="i-heroicons-chevron-down"
+                class="h-4 w-4 text-gray-400 transition-transform group-open:rotate-180"
+              />
+            </summary>
+            <nav aria-label="Sommaire du dossier">
+              <ul
+                class="max-h-[60vh] space-y-0.5 overflow-y-auto border-t border-gray-100 px-2 py-2 dark:border-gray-700"
+              >
+                <li v-for="section in sections" :key="section.id">
+                  <a
+                    :href="`#${section.id}`"
+                    class="block rounded-md px-3 py-2 text-sm text-gray-600 transition-colors hover:bg-gray-50 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white"
+                    @click="closeMobileToc"
+                  >
+                    {{ section.label }}
+                  </a>
+                </li>
+              </ul>
+            </nav>
+          </details>
 
           <!-- Sections -->
-          <div class="mt-8 space-y-8 sm:mt-10 sm:space-y-10">
+          <!--
+            Ordre voulu (mobile-first) : on place EN HAUT les blocs à forte valeur et
+            concrets (repères, documents/sources, calendrier, ce qui change) ; l'analyse
+            longue vient APRÈS. Le sommaire (computed `sections`) suit le même ordre.
+          -->
+          <div class="mt-6 space-y-5 sm:mt-10 sm:space-y-10">
             <!-- 1. À retenir : résumé rapide / repères clés, AVANT le contenu détaillé -->
             <DossierSection
               id="a-retenir"
@@ -234,30 +260,17 @@ useHead({
               <DossierHighlights :items="dossier.highlights!" />
             </DossierSection>
 
-            <!-- 2. Introduction éditoriale + contenu riche -->
-            <DossierSection
-              id="introduction"
-              title="Introduction"
-              :empty="!dossier.intro_html && !dossier.content_html"
-            >
-              <div
-                v-if="dossier.intro_html"
-                class="prose prose-base max-w-none text-gray-700 dark:prose-invert prose-headings:font-semibold prose-a:text-sky-600 dark:text-gray-300 dark:prose-a:text-sky-400"
-                v-html="dossier.intro_html"
-              />
-              <div
-                v-if="dossier.content_html"
-                class="prose prose-base mt-6 max-w-none text-gray-700 dark:prose-invert prose-headings:font-semibold prose-h2:mt-8 prose-p:leading-relaxed prose-a:text-sky-600 prose-img:rounded-xl dark:text-gray-300 dark:prose-a:text-sky-400"
-                v-html="dossier.content_html"
-              />
-            </DossierSection>
-
-            <!-- 3. Documents liés -->
+            <!-- 2. Documents liés (sources) -->
             <DossierSection id="documents" title="Documents liés" :empty="!has(dossier.documents)">
               <DossierRelatedDocuments :documents="dossier.documents!" />
             </DossierSection>
 
-            <!-- 4. Comparatif ancien / nouveau -->
+            <!-- 3. Chronologie (le calendrier) -->
+            <DossierSection id="chronologie" title="Chronologie" :empty="!has(dossier.timeline)">
+              <DossierTimeline :items="dossier.timeline!" />
+            </DossierSection>
+
+            <!-- 4. Comparatif ancien / nouveau (ce qui change concrètement) -->
             <DossierSection
               id="comparatif"
               title="Comparatif"
@@ -267,9 +280,22 @@ useHead({
               <DossierComparison :rows="dossier.comparison!" />
             </DossierSection>
 
-            <!-- 5. Chronologie -->
-            <DossierSection id="chronologie" title="Chronologie" :empty="!has(dossier.timeline)">
-              <DossierTimeline :items="dossier.timeline!" />
+            <!-- 5. Analyse : introduction éditoriale + contenu riche (texte long, APRÈS l'essentiel) -->
+            <DossierSection
+              id="introduction"
+              title="Analyse"
+              :empty="!dossier.intro_html && !dossier.content_html"
+            >
+              <div
+                v-if="dossier.intro_html"
+                class="prose prose-base max-w-none text-gray-700 dark:prose-invert prose-headings:font-semibold prose-p:text-[17px] prose-p:leading-[1.65] prose-a:text-sky-600 dark:text-gray-300 dark:prose-a:text-sky-400 sm:prose-p:text-lg"
+                v-html="dossier.intro_html"
+              />
+              <div
+                v-if="dossier.content_html"
+                class="prose prose-base mt-6 max-w-none text-gray-700 dark:prose-invert prose-headings:font-semibold prose-h2:mt-8 prose-p:text-[17px] prose-p:leading-[1.65] prose-a:text-sky-600 prose-img:rounded-xl dark:text-gray-300 dark:prose-a:text-sky-400 sm:prose-p:text-lg"
+                v-html="dossier.content_html"
+              />
             </DossierSection>
 
             <!-- 6. Actualités liées -->
@@ -314,6 +340,27 @@ useHead({
             >
               <DossierLinks :links="dossier.sources!" />
             </DossierSection>
+
+            <!-- Thèmes / tags : en pied d'article (convention éditoriale « sujets liés ») -->
+            <div
+              v-if="dossierTags.length"
+              class="border-t border-gray-100 pt-5 dark:border-gray-700 sm:pt-8"
+            >
+              <p
+                class="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500"
+              >
+                Thèmes
+              </p>
+              <div class="flex flex-wrap gap-1.5">
+                <span
+                  v-for="tag in dossierTags"
+                  :key="tag"
+                  class="rounded-md bg-gray-100 px-2 py-0.5 text-xs text-gray-600 dark:bg-gray-800 dark:text-gray-400"
+                >
+                  {{ tag }}
+                </span>
+              </div>
+            </div>
 
             <!-- Partage (mobile) -->
             <div class="border-t border-gray-100 pt-8 dark:border-gray-700 lg:hidden">
@@ -365,5 +412,12 @@ useHead({
 }
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
+}
+/* Masque le marqueur natif (triangle) du <summary> du sommaire mobile. */
+.toc-summary::-webkit-details-marker {
+  display: none;
+}
+.toc-summary {
+  list-style: none;
 }
 </style>

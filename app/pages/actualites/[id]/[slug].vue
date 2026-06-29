@@ -21,6 +21,21 @@ watch(
   },
 );
 
+// Helpers de date — déclarés AVANT les computed/schemas qui les utilisent. Sinon TDZ
+// (« Cannot access before initialization ») : @unhead évalue les getters useSeoMeta/
+// useHead pendant l'hydratation client, avant l'init de la fonction → 500 en accès direct.
+const formatDate = (date: string) => {
+  return new Date(date).toLocaleDateString('fr-FR', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+};
+
+const formatDateISO = (date: string) => {
+  return new Date(date).toISOString();
+};
+
 const title = computed(() => {
   if (!article.value) return 'Chargement...';
   return `${article.value.title} | Actualités Sénégal`;
@@ -38,9 +53,14 @@ const url = computed(() => {
   return `${siteUrl}/actualites/${route.params.id}/${route.params.slug}`;
 });
 
+// URL absolue construite SANS useRuntimeConfig dans ce computed : il est lu par des
+// getters useHead/useSeoMeta évalués hors scope setup (SSR), or `useCmsImageAbsolute`
+// → `useSiteMetadata` → `useRuntimeConfig` y plante (500). `useCmsImage` est pur ;
+// `siteUrl` est déjà capturé en setup.
 const image = computed(() => {
-  if (!article.value) return defaultImage;
-  return article.value.cover_image ? useCmsImageAbsolute(article.value.cover_image) : defaultImage;
+  if (!article.value?.cover_image) return defaultImage;
+  const rel = useCmsImage(article.value.cover_image);
+  return rel.startsWith('http') ? rel : `${siteUrl}${rel}`;
 });
 
 const pdfUrl = computed(() => {
@@ -73,12 +93,13 @@ const articleSchema = computed(() => {
       url: siteUrl,
     },
     publisher: {
-      '@type': 'NewsMediaOrganization',
+      '@type': 'Organization',
       name: siteName,
       url: siteUrl,
       logo: {
         '@type': 'ImageObject',
-        url: defaultImage,
+        // Logo Vie Publique à jour, URL publique stable + raster (cf. conseil-des-ministres).
+        url: `${siteUrl}/logos/logo-transparent-carre.png`,
       },
     },
     mainEntityOfPage: {
@@ -100,30 +121,7 @@ const articleSchema = computed(() => {
   };
 });
 
-const breadcrumbSchema = computed(() => ({
-  '@context': 'https://schema.org',
-  '@type': 'BreadcrumbList',
-  itemListElement: [
-    {
-      '@type': 'ListItem',
-      position: 1,
-      name: 'Accueil',
-      item: siteUrl,
-    },
-    {
-      '@type': 'ListItem',
-      position: 2,
-      name: 'Actualités',
-      item: `${siteUrl}/actualites`,
-    },
-    {
-      '@type': 'ListItem',
-      position: 3,
-      name: article.value?.title || 'Article',
-      item: url.value,
-    },
-  ],
-}));
+// Breadcrumb : émis par <AppBreadcrumb> (source unique du fil d'Ariane, §7 CLAUDE.md).
 
 const webPageSchema = computed(() => {
   if (!article.value) return null;
@@ -171,19 +169,6 @@ const digitalDocumentSchema = computed(() => {
     },
   };
 });
-
-// Helper functions
-const formatDate = (date: string) => {
-  return new Date(date).toLocaleDateString('fr-FR', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
-};
-
-const formatDateISO = (date: string) => {
-  return new Date(date).toISOString();
-};
 
 // SEO setup — défini dans le scope setup avec des getters réactifs pour être rendu
 // correctement côté serveur (les crawlers sociaux ne lisent que le HTML SSR).
@@ -267,24 +252,23 @@ useHead({
     [
       articleSchema.value
         ? {
+            key: 'ld-article',
             type: 'application/ld+json',
-            children: JSON.stringify(articleSchema.value),
+            innerHTML: JSON.stringify(articleSchema.value),
           }
         : null,
-      {
-        type: 'application/ld+json',
-        children: JSON.stringify(breadcrumbSchema.value),
-      },
       webPageSchema.value
         ? {
+            key: 'ld-webpage',
             type: 'application/ld+json',
-            children: JSON.stringify(webPageSchema.value),
+            innerHTML: JSON.stringify(webPageSchema.value),
           }
         : null,
       digitalDocumentSchema.value
         ? {
+            key: 'ld-digitaldocument',
             type: 'application/ld+json',
-            children: JSON.stringify(digitalDocumentSchema.value),
+            innerHTML: JSON.stringify(digitalDocumentSchema.value),
           }
         : null,
     ].filter(Boolean),
@@ -292,9 +276,15 @@ useHead({
 </script>
 
 <template>
-  <div class="min-h-screen bg-gray-50/50 dark:bg-gray-900" itemscope itemtype="https://schema.org/WebPage">
+  <div
+    class="min-h-screen bg-gray-50/50 dark:bg-gray-900"
+    itemscope
+    itemtype="https://schema.org/WebPage"
+  >
     <!-- Sticky Header (mobile only) -->
-    <header class="sticky top-0 z-40 border-b border-gray-100 bg-white/95 backdrop-blur-sm dark:border-gray-800 dark:bg-gray-900/95 md:relative md:border-0 md:bg-transparent md:backdrop-blur-none dark:md:bg-transparent">
+    <header
+      class="sticky top-0 z-40 border-b border-gray-100 bg-white/95 backdrop-blur-sm dark:border-gray-800 dark:bg-gray-900/95 md:relative md:border-0 md:bg-transparent md:backdrop-blur-none dark:md:bg-transparent"
+    >
       <div class="container mx-auto px-4">
         <div class="flex items-center gap-3 py-3 md:hidden">
           <!-- Back button -->
@@ -308,9 +298,13 @@ useHead({
 
           <!-- Title & Meta -->
           <div class="min-w-0 flex-1">
-            <h1 v-if="article" class="line-clamp-2 text-xs font-semibold leading-tight text-gray-900 dark:text-white">
+            <!-- Barre de nav mobile : titre en paragraphe (le H1 unique est dans le contenu) -->
+            <p
+              v-if="article"
+              class="line-clamp-2 text-xs font-semibold leading-tight text-gray-900 dark:text-white"
+            >
               {{ article.title }}
-            </h1>
+            </p>
             <USkeleton v-else class="h-4 w-48" />
             <p v-if="article?.date_published" class="mt-0.5 text-[10px] text-gray-500">
               {{ formatDate(article.date_published) }}
@@ -343,7 +337,9 @@ useHead({
 
       <!-- Loading state -->
       <div v-if="loading" class="mx-auto max-w-3xl space-y-6">
-        <div class="overflow-hidden rounded-2xl bg-white ring-1 ring-gray-100 dark:bg-gray-800 dark:ring-gray-700">
+        <div
+          class="overflow-hidden rounded-2xl bg-white ring-1 ring-gray-100 dark:bg-gray-800 dark:ring-gray-700"
+        >
           <USkeleton class="aspect-video w-full" />
           <div class="space-y-4 p-6">
             <USkeleton class="h-6 w-3/4" />
@@ -356,10 +352,17 @@ useHead({
 
       <!-- Error state -->
       <div v-else-if="error" class="mx-auto max-w-md py-16 text-center">
-        <div class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/30">
-          <UIcon name="i-heroicons-exclamation-triangle" class="h-8 w-8 text-red-600 dark:text-red-400" />
+        <div
+          class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/30"
+        >
+          <UIcon
+            name="i-heroicons-exclamation-triangle"
+            class="h-8 w-8 text-red-600 dark:text-red-400"
+          />
         </div>
-        <h2 class="mb-2 text-lg font-semibold text-gray-900 dark:text-white">Erreur de chargement</h2>
+        <h2 class="mb-2 text-lg font-semibold text-gray-900 dark:text-white">
+          Erreur de chargement
+        </h2>
         <p class="mb-6 text-sm text-gray-600 dark:text-gray-400">
           Une erreur est survenue lors du chargement de l'article.
         </p>
@@ -384,15 +387,25 @@ useHead({
         <div class="hidden">
           <meta itemprop="url" :content="url" />
           <meta itemprop="datePublished" :content="formatDateISO(article.date_published)" />
-          <meta itemprop="dateModified" :content="article.date_updated ? formatDateISO(article.date_updated) : formatDateISO(article.date_published)" />
+          <meta
+            itemprop="dateModified"
+            :content="
+              article.date_updated
+                ? formatDateISO(article.date_updated)
+                : formatDateISO(article.date_published)
+            "
+          />
           <meta itemprop="articleSection" :content="article.category?.name || 'Actualités'" />
-          <meta itemprop="keywords" :content="article.tags?.join(', ') || 'République du Sénégal'" />
+          <meta
+            itemprop="keywords"
+            :content="article.tags?.join(', ') || 'République du Sénégal'"
+          />
           <meta itemprop="inLanguage" content="fr-SN" />
-          <div itemprop="publisher" itemscope itemtype="https://schema.org/NewsMediaOrganization">
+          <div itemprop="publisher" itemscope itemtype="https://schema.org/Organization">
             <meta itemprop="name" :content="siteName" />
             <meta itemprop="url" :content="siteUrl" />
             <div itemprop="logo" itemscope itemtype="https://schema.org/ImageObject">
-              <meta itemprop="url" :content="defaultImage" />
+              <meta itemprop="url" :content="`${siteUrl}/logos/logo-transparent-carre.png`" />
             </div>
           </div>
           <div itemprop="author" itemscope itemtype="https://schema.org/Organization">
@@ -432,11 +445,17 @@ useHead({
           <!-- Title & Meta (visible on larger screens) -->
           <div class="hidden md:block">
             <div class="mb-3 flex items-center gap-2">
-              <span v-if="article.category?.name" class="rounded-full bg-blue-100 px-2.5 py-1 text-xs font-semibold text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+              <span
+                v-if="article.category?.name"
+                class="rounded-full bg-blue-100 px-2.5 py-1 text-xs font-semibold text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
+              >
                 {{ article.category.name }}
               </span>
             </div>
-            <h1 class="mb-3 text-2xl font-bold text-gray-900 dark:text-white sm:text-3xl" itemprop="headline">
+            <h1
+              class="mb-3 text-2xl font-bold text-gray-900 dark:text-white sm:text-3xl"
+              itemprop="headline"
+            >
               {{ article.title }}
             </h1>
             <div class="flex items-center gap-3 text-sm text-gray-500">
@@ -452,7 +471,13 @@ useHead({
           </div>
 
           <!-- PDF Download (desktop) -->
-          <div v-if="article.document" class="hidden md:block" itemprop="associatedMedia" itemscope itemtype="https://schema.org/DigitalDocument">
+          <div
+            v-if="article.document"
+            class="hidden md:block"
+            itemprop="associatedMedia"
+            itemscope
+            itemtype="https://schema.org/DigitalDocument"
+          >
             <meta itemprop="encodingFormat" content="application/pdf" />
             <meta itemprop="url" :content="pdfUrl" />
             <meta itemprop="isAccessibleForFree" content="true" />
@@ -481,7 +506,9 @@ useHead({
           </div> -->
 
           <!-- Article Body -->
-          <div class="rounded-2xl bg-white p-6 ring-1 ring-gray-100 dark:bg-gray-800 dark:ring-gray-700 sm:p-8">
+          <div
+            class="rounded-2xl bg-white p-6 ring-1 ring-gray-100 dark:bg-gray-800 dark:ring-gray-700 sm:p-8"
+          >
             <div
               class="prose prose-sm max-w-none dark:prose-invert prose-headings:font-semibold prose-h2:mt-8 prose-h2:text-xl prose-p:leading-relaxed prose-a:text-blue-600 prose-img:rounded-xl dark:prose-a:text-blue-400"
               itemprop="articleBody"
@@ -490,18 +517,19 @@ useHead({
           </div>
 
           <!-- Share & Social -->
-          <div class="rounded-2xl bg-white p-5 ring-1 ring-gray-100 dark:bg-gray-800 dark:ring-gray-700">
-            <SocialShare
-              :title="article.title"
-              :url="url"
-            />
+          <div
+            class="rounded-2xl bg-white p-5 ring-1 ring-gray-100 dark:bg-gray-800 dark:ring-gray-700"
+          >
+            <SocialShare :title="article.title" :url="url" />
           </div>
         </div>
       </article>
 
       <!-- Not Found -->
       <div v-else class="mx-auto max-w-md py-16 text-center">
-        <div class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800">
+        <div
+          class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800"
+        >
           <UIcon name="i-heroicons-document-magnifying-glass" class="h-8 w-8 text-gray-400" />
         </div>
         <h2 class="mb-2 text-lg font-semibold text-gray-900 dark:text-white">Article non trouvé</h2>

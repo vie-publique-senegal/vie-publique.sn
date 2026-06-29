@@ -1,8 +1,13 @@
 # Audit SEO — Vie-Publique.sn
 
-> Dernière mise à jour : avril 2026
-> Données GSC/GA : période nov. 2025 – fév. 2026 (90 jours)
-> Sources : Google Analytics 4, Google Search Console, audit du code source
+> Dernière mise à jour : juin 2026
+> Données GSC : **export 12 mois (25 juin 2025 → 24 juin 2026)** — voir [`gsc-analyse-2026-06.md`](./gsc-analyse-2026-06.md)
+> Sources : Google Search Console, Google Analytics 4, audit du code source
+>
+> **⚠️ Mise à jour majeure (GSC juin 2026)** : l'indexation est **débloquée** (16 512 pages indexées,
+> vs 973 estimées en fév.) → la priorité n'est plus l'indexation mais le **CTR**. Le plus gros gisement
+> du site = **Conseil des ministres / nominations** (303k impr/an, ~1,3 % CTR) puis **Personnalités**
+> (277k impr). Détail et plan d'action : `gsc-analyse-2026-06.md`.
 
 ---
 
@@ -38,14 +43,14 @@
 
 | # | Problème | Priorité | Action | Réf. |
 |---|----------|----------|--------|------|
-| 1 | 5 251 pages en noindex (88% invisible) | HAUTE | Auditer via GSC, retirer noindex des /documents/ valides | [P2](#p2--haute--5-251-pages-en-noindex) |
-| 2 | 468 pages explorées non indexées | HAUTE | Enrichir contenu, maillage interne | [P3](#p3--haute--468-pages-explorées-mais-non-indexées) |
+| 1 | ~~5 251 pages en noindex~~ — **RÉSOLU** (16 512 indexées en juin 2026) | ~~HAUTE~~ FAIT | Indexation débloquée ; reste ~10 461 non indexées (majorité = PDF `/docs/`, normal) | `gsc-analyse-2026-06.md` |
+| 2 | 468 pages explorées non indexées | MOYENNE | Enrichir contenu, maillage interne | [P3](#p3--haute--468-pages-explorées-mais-non-indexées) |
 | 3 | 165 erreurs 404 | HAUTE | Redirections 301 via routeRules | [P4](#p4--haute--165-erreurs-404) |
 | 4 | 18 soft 404 | HAUTE | Vrai 404 ou enrichir contenu | [P5](#p5--haute--18-soft-404) |
 | 5 | 58 pages en double sans canonical | MOYENNE | Identifier via GSC (probablement /docs/ PDF) | [P6](#p6--moyenne--58-pages-en-double-sans-canonical) |
 | 6 | 6 erreurs serveur 5xx | BASSE | Investiguer logs serveur | [P7](#p7--basse--6-erreurs-serveur-5xx) |
-| 7 | CTR /conseil-des-ministres : 0,74% | HAUTE | Optimiser title/description avec date dynamique | [Section 4](#4-opportunités-ctr) |
-| 8 | CTR /nomination-senegal : 1,44% | HAUTE | Optimiser title avec année + postes | [Section 4](#4-opportunités-ctr) |
+| 7 | **CTR /conseil-des-ministres : 1,0 %** sur **313k impr/an** (= levier n°1 du site) | **CRITIQUE** | Titres datés (« …du [date] »), description = nominations phares, FAQ, fraîcheur, IndexNow | `gsc-analyse-2026-06.md` §4A |
+| 8 | CTR /nomination-senegal : 1,9 % sur 132k impr | **CRITIQUE** | Title avec date + postes clés ; page « running » nominations | `gsc-analyse-2026-06.md` §4A |
 | 9 | llms-full.txt | BASSE | Créer version détaillée | [Section 5](#5-optimisation-pour-les-llm-geo) |
 | 10 | 17+ catégories documents manquantes | STRATÉGIE | Ajouter au CATEGORY_CONFIG | Voir `seo-strategy.md` |
 | 11 | Pages archives /annee/ | STRATÉGIE | Créer documents/annee/[year].vue | Voir `seo-strategy.md` |
@@ -280,8 +285,16 @@ const title = `Conseil des ministres du Sénégal — ${new Date().toLocaleDateS
 | `/rapport-senegal/**` | `/documents/rapports-audit` | 301 |
 | `/code-senegal/**` | `/documents/codes` | 301 |
 | `/budget-etat-senegal` | `/budget-senegal` | 301 |
-| `/portraits/*` | `/personnalites/*` | 301 |
+| `/portraits/<slug>` | `/personnalites/<id>/<slug>` (résolu) | 301 |
 | 12+ URLs PDF legacy | `/documents/*` | 301 |
+
+> ⚠️ **`/portraits/<slug>` — corrigé juin 2026.** L'ancien routeRule `/portraits/** -> /personnalites/**`
+> renvoyait sur un **404** (la cible `/personnalites/[id]/[slug]` a 2 segments, l'ancien slug n'en a
+> qu'1). Or ces URLs rankent encore et reçoivent des clics (ex. `el-malick-ndiaye` ~1096 clics/an).
+> Remplacé par un handler `server/routes/portraits/[slug].get.ts` qui résout `slug -> id` via le CMS
+> (carte normalisée, cache 1h) + un petit tableau d'alias pour les slugs corrigés à la migration
+> (`yacine-fall->yassine-fall`, `omar-samba-ba->oumar-samba-ba`, `general-jean-baptiste-tine->jean-baptiste-tine`).
+> Slug introuvable -> `/personnalites-senegal` (jamais de 404). **Y ajouter toute nouvelle correspondance legacy repérée en GSC.**
 
 ### C. Robots.txt — Paths bloqués
 

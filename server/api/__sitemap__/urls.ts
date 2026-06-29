@@ -1,5 +1,6 @@
 ﻿import { defineSitemapEventHandler } from '#imports';
 import { readItems } from '@directus/sdk';
+import { AUDIT_INSTITUTION_PAGES } from '~~/types/document';
 
 export default defineSitemapEventHandler(async () => {
   const urls: any[] = [];
@@ -39,7 +40,7 @@ export default defineSitemapEventHandler(async () => {
     // 2. Actualités et Conseil des ministres
     const news = await directus.request(
       readItems('news', {
-        fields: ['slug', 'id', 'date_updated', 'date_published', 'category.name'],
+        fields: ['slug', 'id', 'title', 'date_updated', 'date_published', 'category.name'],
         filter: {
           status: { _eq: 'published' },
         },
@@ -47,6 +48,12 @@ export default defineSitemapEventHandler(async () => {
         sort: ['-date_published'],
       }),
     );
+
+    // Fraîcheur Google News : les articles publiés il y a moins de 48 h reçoivent
+    // la balise <news:news> (éligibilité « Top Stories » / onglet Actualités).
+    // Au-delà de 48 h, Google ignore la balise → on ne la pose que sur les récents.
+    const NEWS_WINDOW_MS = 48 * 60 * 60 * 1000;
+    const nowMs = Date.now();
 
     for (const item of news) {
       let path = `/actualites/${item.id}/${item.slug}`;
@@ -58,11 +65,24 @@ export default defineSitemapEventHandler(async () => {
       }
 
       const lastmod = toISODate(item.date_updated) || toISODate(item.date_published);
+      const publishedMs = item.date_published ? new Date(item.date_published).getTime() : 0;
+      const isRecent = publishedMs > 0 && nowMs - publishedMs < NEWS_WINDOW_MS;
+
       urls.push({
         loc: path,
         ...(lastmod && { lastmod }),
-        changefreq: 'weekly',
+        changefreq: isRecent ? 'hourly' : 'weekly',
         priority: priority,
+        // Balise Google News uniquement pour les articles frais (< 48 h)
+        ...(isRecent && item.title
+          ? {
+              news: {
+                publication: { name: 'Vie Publique Sénégal', language: 'fr' },
+                publication_date: toISODate(item.date_published),
+                title: item.title,
+              },
+            }
+          : {}),
       });
     }
 
@@ -126,6 +146,15 @@ export default defineSitemapEventHandler(async () => {
       console.warn('Erreur sitemap dossiers:', sitemapError);
     }
 
+    // 3c. Pages dédiées par organisme de contrôle (rapports d'audit)
+    for (const orga of AUDIT_INSTITUTION_PAGES) {
+      urls.push({
+        loc: `/documents/rapports-audit/organisme/${orga.slug}`,
+        changefreq: 'weekly',
+        priority: 0.8,
+      });
+    }
+
     // 4. Projets Publics
     try {
       // Pages dashboards (PRES et PIP)
@@ -170,7 +199,13 @@ export default defineSitemapEventHandler(async () => {
         }),
       );
 
-      const categories = ['journal-officiel', 'rapports-audit', 'strategies', 'codes', 'budget'];
+      const categories = [
+        'journal-officiel-senegal',
+        'rapports-audit',
+        'strategies',
+        'codes',
+        'budget',
+      ];
 
       // Page index archives
       urls.push({
@@ -245,7 +280,8 @@ export default defineSitemapEventHandler(async () => {
       );
 
       const activeDecree =
-        (sitemapDecrees as any[]).find((d: any) => d.status === 'active') || (sitemapDecrees as any[])[0];
+        (sitemapDecrees as any[]).find((d: any) => d.status === 'active') ||
+        (sitemapDecrees as any[])[0];
 
       // Pages statiques non auto-découvertes (sous-dossier /organisation)
       urls.push(
