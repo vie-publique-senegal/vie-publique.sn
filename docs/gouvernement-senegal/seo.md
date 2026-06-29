@@ -127,35 +127,40 @@ Les slugs des gouvernements suivent la convention du projet :
 
 ## Sitemap
 
-> **À implémenter** — les gouvernements publiés ne sont pas encore ajoutés au sitemap
-> (`server/api/__sitemap__/urls.ts`).
+> **Implémenté** — section 9 « Gouvernements » dans `server/api/__sitemap__/urls.ts`.
 
-Ajouter une section « Gouvernements » dans `urls.ts` :
+- Page historique `/gouvernement-senegal/historique` : `priority 0.85`, `changefreq monthly`.
+- Chaque gouvernement publié `/gouvernement-senegal/<slug>` : `lastmod = date_updated`.
+- Le gouvernement **en cours** (`end_date` null) est plus prioritaire et plus fréquent
+  (`priority 0.8`, `changefreq weekly`) ; les gouvernements **clos** sont stables
+  (`priority 0.6`, `changefreq yearly`).
+- Les pages index `/gouvernement-senegal` restent auto-découvertes par `@nuxtjs/seo`.
 
 ```typescript
-// Section : Gouvernements
-const govs = await directus.request(
-  readItems('governments', {
-    fields: ['slug', 'date_updated'],
-    filter: { status: { _eq: 'published' } },
-    limit: -1,
-  })
-);
-urls.push(
-  ...govs.map((g) => ({
-    loc: `/gouvernement-senegal/${g.slug}`,
-    priority: 0.8,
-    changefreq: 'monthly' as const,
-    lastmod: g.date_updated ?? undefined,
-  }))
-);
-
-// Page historique (statique)
+// Section 9 : Gouvernements
 urls.push({
   loc: '/gouvernement-senegal/historique',
-  priority: 0.85,
   changefreq: 'monthly',
+  priority: 0.85,
 });
+
+const governments = await directus.request(
+  readItems('governments', {
+    fields: ['slug', 'date_updated', 'end_date'],
+    filter: { status: { _eq: 'published' }, slug: { _nnull: true } },
+    limit: -1,
+  }),
+);
+for (const gov of governments) {
+  if (!gov.slug) continue;
+  const lastmod = toISODate(gov.date_updated);
+  urls.push({
+    loc: `/gouvernement-senegal/${gov.slug}`,
+    ...(lastmod && { lastmod }),
+    changefreq: gov.end_date === null ? 'weekly' : 'yearly',
+    priority: gov.end_date === null ? 0.8 : 0.6,
+  });
+}
 ```
 
 ---
@@ -174,7 +179,7 @@ urls.push({
      | grep -o '<script type="application/ld+json"'
    # → doit afficher 2 balises (Organization + BreadcrumbList)
    ```
-4. _(après ajout sitemap)_ Vérifier la présence dans `https://www.vie-publique.sn/sitemap.xml`.
+4. Vérifier la présence dans `https://www.vie-publique.sn/sitemap.xml`.
 5. Soumettre dans **Google Search Console** (Inspection d'URL → Demander l'indexation).
 6. Tester les rich results : <https://search.google.com/test/rich-results>
 7. Valider l'aperçu social (debuggers Facebook / Twitter / LinkedIn).

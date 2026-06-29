@@ -385,7 +385,42 @@ export default defineSitemapEventHandler(async () => {
       console.warn('Erreur sitemap budget entités:', sitemapError);
     }
 
-    // 9. Pages statiques : Laissées à l'auto-découverte de Nuxt Sitemap
+    // 9. Gouvernements (historique des gouvernements du Sénégal)
+    try {
+      // Page historique (frise chronologique)
+      urls.push({
+        loc: '/gouvernement-senegal/historique',
+        changefreq: 'monthly',
+        priority: 0.85,
+      });
+
+      const governments = await directus.request(
+        readItems('governments', {
+          fields: ['slug', 'date_updated', 'end_date'],
+          filter: {
+            status: { _eq: 'published' },
+            slug: { _nnull: true },
+          },
+          limit: -1,
+        }),
+      );
+
+      for (const gov of governments as any[]) {
+        if (!gov.slug) continue;
+        const lastmod = toISODate(gov.date_updated);
+        urls.push({
+          loc: `/gouvernement-senegal/${gov.slug}`,
+          ...(lastmod && { lastmod }),
+          // Le gouvernement en cours (end_date null) change plus souvent
+          changefreq: gov.end_date === null ? 'weekly' : 'yearly',
+          priority: gov.end_date === null ? 0.8 : 0.6,
+        });
+      }
+    } catch (sitemapError) {
+      console.warn('Erreur sitemap gouvernements:', sitemapError);
+    }
+
+    // 10. Pages statiques : Laissées à l'auto-découverte de Nuxt Sitemap
     // Le module @nuxtjs/seo va automatiquement inclure toutes les pages du dossier /pages
   } catch (error) {
     console.error('Erreur génération sitemap:', error);
