@@ -70,7 +70,7 @@ const personSchema = computed(() => {
     ...(p.birthdate ? { birthDate: p.birthdate } : {}),
     ...(p.birthplace ? { birthPlace: { '@type': 'Place', name: p.birthplace } } : {}),
     jobTitle: 'Président de la République du Sénégal',
-    worksFor: { '@type': 'GovernmentOrganization', name: 'République du Sénégal' },
+    worksFor: { '@type': 'Organization', name: 'République du Sénégal' },
     ...(p.short_bio ? { description: p.short_bio } : {}),
     ...(isSafeUrl(p.website) ? { sameAs: [p.website] } : {}),
   };

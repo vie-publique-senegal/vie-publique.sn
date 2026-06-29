@@ -188,7 +188,7 @@ const orgSchema = computed(() => {
       name: m.person.full_name,
       jobTitle: m.position_title,
       gender: m.person.sexe === 'female' ? 'Female' : 'Male',
-      image: m.person.photo ? useCmsImageAbsolute(m.person.photo) : undefined,
+      image: m.person.photo ? `${siteUrl}${useCmsImage(m.person.photo)}` : undefined,
       url: `${siteUrl}${personUrl(m).split('?')[0]}`,
     })),
   };
