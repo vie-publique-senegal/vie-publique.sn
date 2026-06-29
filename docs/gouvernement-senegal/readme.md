@@ -236,6 +236,14 @@ curl -sL "http://localhost:3000/gouvernement-senegal/historique?president=abdoul
 
 ---
 
+## Features connexes
+
+- **[`docs/leader-history/`](../leader-history/readme.md)** — pages présidents & premiers
+  ministres (`/senegal/presidents`, `/senegal/premiers-ministres`). Ces pages dérivent leurs
+  données de la même collection `governments` via `server/utils/leader-history.ts`.
+
+---
+
 ## Ce qui n'a PAS été modifié
 
 - `app/pages/gouvernement-senegal/index.vue` — gouvernement actuel
