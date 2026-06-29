@@ -420,7 +420,51 @@ export default defineSitemapEventHandler(async () => {
       console.warn('Erreur sitemap gouvernements:', sitemapError);
     }
 
-    // 10. Pages statiques : Laissées à l'auto-découverte de Nuxt Sitemap
+    // 10. Présidents & Premiers ministres (dérivés des gouvernements)
+    try {
+      urls.push(
+        { loc: '/senegal/presidents', changefreq: 'monthly', priority: 0.8 },
+        { loc: '/senegal/premiers-ministres', changefreq: 'monthly', priority: 0.8 },
+      );
+
+      const leaderGovs = await directus.request(
+        readItems('governments', {
+          fields: [
+            'president.full_name',
+            'president.slug',
+            'prime_minister.full_name',
+            'prime_minister.slug',
+          ],
+          filter: { status: { _eq: 'published' }, president: { _nnull: true } },
+          limit: -1,
+        }),
+      );
+
+      const presidentSlugs = new Set<string>();
+      const pmSlugs = new Set<string>();
+      for (const g of leaderGovs as any[]) {
+        if (g.president?.full_name) {
+          presidentSlugs.add(g.president.slug || generateSlugFromName(g.president.full_name));
+        }
+        if (g.prime_minister?.full_name) {
+          pmSlugs.add(g.prime_minister.slug || generateSlugFromName(g.prime_minister.full_name));
+        }
+      }
+      for (const slug of presidentSlugs) {
+        urls.push({ loc: `/senegal/presidents/${slug}`, changefreq: 'yearly', priority: 0.7 });
+      }
+      for (const slug of pmSlugs) {
+        urls.push({
+          loc: `/senegal/premiers-ministres/${slug}`,
+          changefreq: 'yearly',
+          priority: 0.7,
+        });
+      }
+    } catch (sitemapError) {
+      console.warn('Erreur sitemap présidents/PM:', sitemapError);
+    }
+
+    // 11. Pages statiques : Laissées à l'auto-découverte de Nuxt Sitemap
     // Le module @nuxtjs/seo va automatiquement inclure toutes les pages du dossier /pages
   } catch (error) {
     console.error('Erreur génération sitemap:', error);
