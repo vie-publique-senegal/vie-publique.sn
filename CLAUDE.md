@@ -61,6 +61,8 @@ Required environment variables (see .env.example):
 
 **⚠️ IMPORTANT**: All URLs must be WITHOUT trailing slash to avoid double-slash issues in the CMS proxy system.
 
+**Hôte canonique** : `https://www.vie-publique.sn` (AVEC www). La redirection 301 apex→www est faite par `server/middleware/host-redirect.ts` (PAS par Coolify — sa Direction doit rester sur « Allow www & non-www ») ; mécanisme complet documenté dans `docs/guidelines/dns-redirections-domaines.md`.
+
 ### Conventions de nommage Directus (IMPORTANT — à suivre pour toute nouvelle feature)
 
 > Avant de créer une collection Directus, identifier à quelle **famille** appartient le contenu,
@@ -85,8 +87,22 @@ avec valeurs `draft` / `published` / `archived`.
 
 **Relations Many-to-Many** : un champ M2M par type de contenu lié. Directus crée la table de
 jonction `<collectionA>_<collectionB>` et les clés étrangères `<collection>_id`. Côté serveur,
-on lit la FK de la **cible** (ex. `documents_id`, `news_id`, `vp_podcasts_id`) — voir
-`server/api/dossiers/[slug].get.ts` (`flattenM2M`) comme référence.
+on lit la FK de la **cible** (ex. `documents_id`, `news_id`, `vp_podcasts_id`) via l'expansion
+imbriquée `champ.<cible>_id.<sousChamp>` puis on aplatit (`row => row.<cible>_id`, en filtrant
+`status === 'published'`). Références : `server/api/dossiers/[slug].get.ts` (helper `flattenM2M`)
+et `server/api/assembly/votes/[id].get.ts`.
+
+> ⚠️ **Piège permission (fait perdre du temps).** L'expansion imbriquée
+> `champ.<cible>_id.*` **ne remonte RIEN et le champ disparaît silencieusement** (pas d'erreur,
+> juste `undefined`) si le **rôle du token CMS n'a pas le droit `Read` sur la table de JONCTION**
+> `<collectionA>_<collectionB>`. Ce n'est PAS un bug de code. Directus n'accorde pas ce droit
+> automatiquement aux nouvelles jonctions. **Diagnostic** : si `champ.*` renvoie bien les lignes
+> de jonction (`{ id, <src>_id, <cible>_id }`) mais que `champ.<cible>_id.*` fait disparaître le
+> champ → **droit manquant sur la jonction**. **Fix** : Directus → Settings → Roles → *(rôle du
+> token)* → cocher **Read** sur la collection de jonction. Corollaire : ne PAS conclure trop vite
+> à un mauvais nom de FK ni basculer sur un contournement 2-requêtes — **vérifier d'abord le droit
+> de lecture sur la jonction** (et purger le cache : un résultat vide reste caché tant que le
+> `name` du `defineCachedEventHandler` n'est pas bumpé).
 
 **Blocs riches répétables** (FAQ, chronologie, comparatif…) : interface **« Repeater »**
 (section Selection ; anciennement « List ») → crée un champ `json` avec un formulaire propre
@@ -147,6 +163,7 @@ Le projet utilise `@nuxtjs/seo`. Un audit basé uniquement sur le code produit d
    _Vérifier : `curl -s <url> | grep -oE '"@type":"(BreadcrumbList|ListItem)"' | sort | uniq -c` → attendu **1 BreadcrumbList** et **N ListItem** (N = nb de niveaux, pas 2×N). Le nœud `Person` n'apparaît PAS au test Rich Results (type sans affichage enrichi) — c'est **normal**, pas un bug._
 8. **Un seul `<h1>` par page.** Piège récurrent : les pages détail ont **deux en-têtes** (barre sticky **mobile** + en-tête **desktop**) qui affichent le même titre. Si les deux sont `<h1>` → **2 H1** (les deux sont dans le DOM, juste masqués en CSS selon le viewport). **Règle : un seul `<h1>` = le titre principal du contenu ; la barre de nav mobile et les titres de cartes/sections sont en `<p>` ou `<h2>`.** Vérifier : `curl -s <url> | grep -o "<h1" | wc -l` doit donner **1**.
 9. **Titre de page : ne PAS répéter la marque.** Le `titleTemplate` global (`@nuxtjs/seo`) ajoute déjà `| Vie-Publique.sn`. En page, mettre **juste le titre** (+ éventuel descripteur utile : « Nom - Poste »), **sans** « - Vie Publique Sénégal » ni « | … Vie Publique Sénégal » (sinon marque dupliquée + titre trop long). Un **qualificatif de section** sans la marque (« | Actualités Sénégal ») reste acceptable.
+10. **Recherche interne : JAMAIS indexable.** Toute page de résultats de recherche (`/recherche` ou future variante) doit porter `{ name: 'robots', content: 'noindex, follow' }` et être exclue du sitemap (`sitemap.exclude` dans `nuxt.config.ts`). Raisons : espace d'URLs `?q=` infini qui brûle le crawl budget, **vecteur de spam** (des fermes de liens pointent vers `/recherche?q=<spam>` pour faire indexer leurs mots-clés sur notre domaine — constaté sur Bing en 2026-07), contenu pauvre/dupliqué pénalisé (« search results in search results »). **⚠️ PAS de `Disallow` robots.txt** sur ces pages : le crawler doit pouvoir les crawler pour voir le noindex, et `follow` laisse circuler le jus vers les fiches. Ce qui doit ranker à la place : les pages de listing éditoriales à URL stable (`/documents/public`, `/dossiers`…).
 
 ### Conventions d'URL (SEO)
 

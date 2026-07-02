@@ -24,9 +24,10 @@
             <UIcon name="i-heroicons-arrow-left" class="h-4 w-4 text-gray-600 dark:text-gray-400" />
           </NuxtLink>
           <div class="min-w-0 flex-1">
-            <h1 class="truncate text-sm font-semibold text-gray-900 dark:text-white md:text-lg">
+            <!-- Pas de h1 ici : le h1 unique de la page est dans AssemblyProfileHeader (règle SEO : 1 seul h1) -->
+            <p class="truncate text-sm font-semibold text-gray-900 dark:text-white md:text-lg">
               {{ deputyFullName || 'Député' }}
-            </h1>
+            </p>
           </div>
           <SocialShare v-if="deputy" :title="deputyFullName" :url="url" />
         </div>
@@ -165,13 +166,24 @@ const description = computed(() => {
   return `Découvrez le profil et l'activité parlementaire de ${deputyFullName.value}${ageText}, député${listText} à l'Assemblée nationale du Sénégal.`;
 });
 
+// Slug dérivé des DONNÉES (même logique que les liens d'AssemblyDeputyCard), jamais de
+// route.fullPath : le canonical doit rester stable quel que soit le slug tapé ou les
+// query params (?utm…), sinon chaque variante d'URL s'auto-canonise (audit BING-6).
+const deputySlug = computed(() => {
+  if (!deputy.value) return '';
+  return `${deputy.value.first_name}-${deputy.value.last_name}`
+    .toLowerCase()
+    .replace(/\s+/g, '-')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+});
+
 const url = computed(() => {
-  if (!route.params.id) return siteUrl;
-  // Utilise l'URL complète avec le nom du député si disponible
-  if (deputy.value && route.fullPath) {
-    return `${siteUrl}${route.fullPath}`;
+  if (deputy.value) {
+    return `${siteUrl}/assemblee-nationale/deputes/${deputy.value.id}/${deputySlug.value}`;
   }
-  // Fallback avec juste l'ID
+  if (!route.params.id) return siteUrl;
+  // Fallback avec juste l'ID tant que les données ne sont pas chargées
   return `${siteUrl}/assemblee-nationale/deputes/${route.params.id}`;
 });
 
