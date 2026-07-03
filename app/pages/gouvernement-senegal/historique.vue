@@ -46,9 +46,9 @@ const clearFilters = () => {
 const hasActiveFilters = computed(() => Boolean(q.value || president.value));
 const noResults = computed(() => !pending.value && !error.value && governments.value.length === 0);
 
-const title = 'Historique des gouvernements du Sénégal depuis 1960 | Vie Publique Sénégal';
+const title = 'Historique des gouvernements du Sénégal';
 const description =
-  "Frise chronologique de tous les gouvernements du Sénégal depuis l'indépendance en 1960 : présidents, premiers ministres, décrets de nomination et composition, de Senghor à Bassirou Diomaye Faye.";
+  "Frise chronologique des gouvernements du Sénégal depuis 1960 : présidents, Premiers ministres, nomination et composition.";
 const url = `${siteUrl}/gouvernement-senegal/historique`;
 const image = `${siteUrl}/nomination-3.png`;
 

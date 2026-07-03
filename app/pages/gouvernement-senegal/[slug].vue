@@ -152,19 +152,14 @@ const olderGovernment = computed<Government | null>(() => {
 
 const title = computed(() =>
   government.value
-    ? `${government.value.name} - Composition du gouvernement | Vie Publique Sénégal`
-    : 'Gouvernement du Sénégal | Vie Publique Sénégal',
+    ? `${government.value.name} - Gouvernement Sénégal`
+    : 'Gouvernement du Sénégal',
 );
 
 const description = computed(() => {
   const g = government.value;
   if (!g) return '';
-  const pm = g.prime_minister
-    ? `dirigé par le Premier Ministre ${g.prime_minister.full_name}`
-    : 'en présidence directe';
-  return `Composition du ${g.name}, sous la présidence de ${
-    g.president?.full_name ?? ''
-  }, ${pm}. Liste des ministres et secrétaires d'État, ${formatPeriod(g)}.`;
+  return `Gouvernement ${g.name} : ministres, secrétaires d'État, composition et historique de ${formatPeriod(g)}.`;
 });
 
 const url = computed(() => `${siteUrl}/gouvernement-senegal/${slug.value}`);

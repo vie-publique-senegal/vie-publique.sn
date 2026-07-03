@@ -33,9 +33,9 @@ const govUrl = (g: GovernmentBrief) => `/gouvernement-senegal/${g.slug}`;
 
 const title = computed(() => {
   const t = term.value;
-  if (!t) return 'Président du Sénégal | Vie Publique Sénégal';
+  if (!t) return 'Président du Sénégal';
   const end = t.end_date ? year(t.end_date) : 'présent';
-  return `${t.president.full_name} - Président du Sénégal (${year(t.start_date)}–${end}) | Vie Publique Sénégal`;
+  return `${t.president.full_name} - Président (${year(t.start_date)}–${end})`;
 });
 
 const description = computed(() => {

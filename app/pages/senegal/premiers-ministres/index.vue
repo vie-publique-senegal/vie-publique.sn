@@ -81,10 +81,10 @@ const setPresident = (slug: string) => {
 
 /* --------------------------------- SEO ----------------------------------- */
 
-const title = 'Premiers ministres du Sénégal depuis 1960 | Vie Publique Sénégal';
+const title = 'Premiers ministres du Sénégal';
 const description = computed(
   () =>
-    `Liste complète des ${total.value} Premiers ministres du Sénégal depuis 1960 avec leurs mandats, périodes d'exercice et présidents tutélaires.`,
+    `Tous les Premiers ministres du Sénégal depuis 1960 : mandats, périodes d'exercice et présidents tutélaires.`,
 );
 const url = `${siteUrl}/senegal/premiers-ministres`;
 const image = computed(() => {

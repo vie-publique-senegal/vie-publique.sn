@@ -59,10 +59,10 @@ const orderedTerms = computed(() => [...terms.value].reverse());
 
 /* --------------------------------- SEO ----------------------------------- */
 
-const title = 'Présidents du Sénégal depuis 1960 | Vie Publique Sénégal';
+const title = 'Présidents du Sénégal';
 const description = computed(
   () =>
-    `Découvrez l'historique des ${total.value} présidents de la République du Sénégal depuis l'indépendance en 1960 : mandats, gouvernements formés et Premiers ministres nommés.`,
+    `Découvrez tous les présidents du Sénégal depuis 1960 : mandats, gouvernements et Premiers ministres nommés.`,
 );
 const url = `${siteUrl}/senegal/presidents`;
 const image = computed(() => {

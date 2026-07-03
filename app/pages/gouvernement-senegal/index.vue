@@ -3,10 +3,9 @@ import type { GovernmentMember } from '~~/types/government-member';
 
 const { siteName, siteUrl, keywords, themeColor } = useSiteMetadata();
 
-const title =
-  'Gouvernement du Sénégal — Composition actuelle sous Bassirou Diomaye Faye | Vie Publique Sénégal';
+const title = 'Gouvernement du Sénégal - Bassirou Diomaye Faye';
 const description =
-  "Composition actuelle du gouvernement du Sénégal sous la présidence de Bassirou Diomaye Faye. Premier Ministre, liste complète des ministres et secrétaires d'État nommés avec photos, fonctions et fiches détaillées.";
+  "Découvrez la composition du gouvernement du Sénégal actuel : Premier Ministre, ministres, secrétaires d'État, fiches et photos.";
 const url = `${siteUrl}/gouvernement-senegal`;
 const image = `${siteUrl}/nomination-3.png`;
 
