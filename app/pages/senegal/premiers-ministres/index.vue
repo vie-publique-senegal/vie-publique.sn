@@ -161,7 +161,7 @@ useHead({
           <h1 class="text-lg font-bold text-gray-900 dark:text-white sm:text-xl">
             Premiers ministres du Sénégal
           </h1>
-          <p class="text-xs text-gray-500 dark:text-gray-400">Depuis 1960</p>
+          <p class="text-xs text-gray-500 dark:text-gray-400">Depuis l'indépendance en 1960</p>
         </div>
         <span
           class="inline-flex items-center rounded-full bg-sky-50 px-2.5 py-1 text-xs font-medium text-sky-700 dark:bg-sky-900/30 dark:text-sky-300"
@@ -213,10 +213,10 @@ useHead({
         >
       </div>
 
-      <ol v-else class="relative space-y-4 border-l-2 border-gray-300 pl-6 dark:border-gray-600">
-        <li v-for="(t, index) in orderedTerms" :key="t.prime_minister.id" class="relative">
+      <ol v-else class="relative space-y-4 border-l-2 border-gray-300 dark:border-gray-600">
+        <li v-for="(t, index) in orderedTerms" :key="t.prime_minister.id" class="relative pl-8">
           <span
-            class="absolute -left-[1.85rem] top-4 flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-sky-500 text-xs font-bold text-white dark:border-gray-900"
+            class="absolute left-0 top-1/2 flex h-7 w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 border-white bg-sky-500 text-xs font-bold text-white dark:border-gray-900"
             :class="t.end_date === null ? 'ring-2 ring-sky-300 dark:ring-sky-700' : ''"
             aria-hidden="true"
           >
@@ -265,9 +265,9 @@ useHead({
         </li>
 
         <!-- Périodes sans PM -->
-        <li v-for="(gap, i) in gaps" :key="`gap-${i}`" class="relative">
+        <li v-for="(gap, i) in gaps" :key="`gap-${i}`" class="relative pl-8">
           <span
-            class="absolute -left-[1.6rem] top-4 h-2.5 w-2.5 rounded-full border-2 border-white bg-gray-300 dark:border-gray-900 dark:bg-gray-600"
+            class="absolute left-0 top-1/2 h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-gray-300 dark:border-gray-900 dark:bg-gray-600"
             aria-hidden="true"
           />
           <div

@@ -251,7 +251,7 @@ const togglePresidency = (slug: string) => {
               Historique des gouvernements du Sénégal
             </h1>
             <p class="text-xs text-gray-500 dark:text-gray-400">
-              Depuis l'indépendance du Sénégal en 1960
+              Depuis l'indépendance en 1960
             </p>
           </div>
           <div class="hidden items-center gap-3 sm:flex">
@@ -435,12 +435,12 @@ const togglePresidency = (slug: string) => {
           <!-- Frise verticale (corps de l'accordéon) -->
           <div v-show="openPresidency === group.presidentSlug" class="px-4 pb-4">
             <ol
-              class="relative space-y-4 border-l-2 border-gray-300 pl-6 pt-2 dark:border-gray-600"
+              class="relative space-y-4 border-l-2 border-gray-300 pt-2 dark:border-gray-600"
             >
-              <li v-for="(gov, index) in group.governments" :key="gov.id" class="relative">
+              <li v-for="(gov, index) in group.governments" :key="gov.id" class="relative pl-8">
                 <!-- Numéro sur la frise -->
                 <span
-                  class="absolute -left-[1.85rem] top-2 flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-sky-500 text-xs font-bold text-white dark:border-gray-900"
+                  class="absolute left-0 top-1/2 flex h-7 w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 border-white bg-sky-500 text-xs font-bold text-white dark:border-gray-900"
                   :class="gov.end_date === null ? 'ring-2 ring-sky-300 dark:ring-sky-700' : ''"
                   aria-hidden="true"
                 >
@@ -451,12 +451,16 @@ const togglePresidency = (slug: string) => {
                   class="rounded-xl border border-gray-100 bg-white p-4 dark:border-gray-700 dark:bg-gray-900/40"
                 >
                   <div class="flex items-start justify-between gap-3">
-                    <div class="min-w-0">
+                    <div class="min-w-0 flex-1">
                       <NuxtLink
                         :to="govUrl(gov)"
-                        class="truncate text-sm font-semibold text-gray-900 hover:text-sky-600 hover:underline dark:text-white dark:hover:text-sky-400"
+                        class="group flex items-center gap-1.5 text-sm font-semibold text-gray-900 hover:text-sky-600 dark:text-white dark:hover:text-sky-400"
                       >
-                        {{ gov.name }}
+                        <span class="truncate">{{ gov.name }}</span>
+                        <UIcon
+                          name="i-heroicons-chevron-right"
+                          class="size-4 flex-shrink-0 text-gray-400 transition-transform group-hover:translate-x-0.5 group-hover:text-sky-600 dark:text-gray-500 dark:group-hover:text-sky-400"
+                        />
                       </NuxtLink>
                       <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
                         {{ formatPeriod(gov) }} · {{ formatDuration(gov) }}

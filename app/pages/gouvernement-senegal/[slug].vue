@@ -280,7 +280,7 @@ useHead({
 
     <main class="container mx-auto max-w-3xl px-4 pt-4">
       <!-- Loading -->
-      <div v-if="pending" class="space-y-6">
+      <div v-if="pending" class="space-y-4">
         <USkeleton class="h-8 w-2/3 rounded" />
         <USkeleton class="h-20 w-full rounded-xl" />
         <USkeleton class="h-5 w-40 rounded" />
@@ -290,10 +290,10 @@ useHead({
       </div>
 
       <!-- Contenu -->
-      <div v-else-if="government" class="space-y-8">
+      <div v-else-if="government" class="space-y-6">
         <!-- Header (style aligné sur l'historique) -->
         <header
-          class="sticky top-0 z-40 -mx-4 mb-2 bg-white/95 px-4 py-3 backdrop-blur-sm dark:bg-gray-900/95"
+          class="sticky top-0 z-40 -mx-4 bg-white/95 px-4 py-3 backdrop-blur-sm dark:bg-gray-900/95"
         >
           <div class="flex items-center justify-between gap-3">
             <div class="min-w-0">

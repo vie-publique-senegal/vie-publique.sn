@@ -169,10 +169,10 @@ useHead({
       </div>
 
       <!-- Timeline -->
-      <ol v-else class="relative space-y-4 border-l-2 border-gray-300 pl-6 dark:border-gray-600">
-        <li v-for="(t, index) in orderedTerms" :key="t.president.id" class="relative">
+      <ol v-else class="relative space-y-4 border-l-2 border-gray-300 dark:border-gray-600">
+        <li v-for="(t, index) in orderedTerms" :key="t.president.id" class="relative pl-8">
           <span
-            class="absolute -left-[1.85rem] top-4 flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-sky-500 text-xs font-bold text-white dark:border-gray-900"
+            class="absolute left-0 top-1/2 flex h-7 w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 border-white bg-sky-500 text-xs font-bold text-white dark:border-gray-900"
             :class="t.end_date === null ? 'ring-2 ring-sky-300 dark:ring-sky-700' : ''"
             aria-hidden="true"
           >

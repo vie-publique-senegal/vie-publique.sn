@@ -182,9 +182,13 @@ useHead({
               <div class="flex items-center justify-between gap-2">
                 <NuxtLink
                   :to="govUrl(g)"
-                  class="text-sm font-semibold text-gray-900 hover:text-sky-600 hover:underline dark:text-white dark:hover:text-sky-400"
+                  class="group flex items-center gap-1.5 text-sm font-semibold text-gray-900 hover:text-sky-600 dark:text-white dark:hover:text-sky-400"
                 >
-                  {{ g.name }}
+                  <span class="truncate">{{ g.name }}</span>
+                  <UIcon
+                    name="i-heroicons-chevron-right"
+                    class="size-4 flex-shrink-0 text-gray-400 transition-transform group-hover:translate-x-0.5 group-hover:text-sky-600 dark:text-gray-500 dark:group-hover:text-sky-400"
+                  />
                 </NuxtLink>
                 <span class="text-xs text-gray-400 dark:text-gray-500">{{
                   formatPeriod(g.start_date, g.end_date)
