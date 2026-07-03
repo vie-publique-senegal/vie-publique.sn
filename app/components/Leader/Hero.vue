@@ -36,7 +36,7 @@ const { initials } = useLeaderFormat();
         <span
           v-if="isCurrent"
           class="inline-flex items-center rounded-full bg-green-50 px-2.5 py-1 text-xs font-medium text-green-700 dark:bg-green-900/30 dark:text-green-300"
-          >En cours</span
+          >En exercice</span
         >
       </div>
       <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ roleLabel }} · {{ period }}</p>

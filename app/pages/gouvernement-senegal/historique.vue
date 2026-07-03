@@ -44,13 +44,9 @@ const clearFilters = () => {
 };
 
 const hasActiveFilters = computed(() => Boolean(q.value || president.value));
-const activePresidentName = computed(
-  () => presidents.value.find((p) => p.slug === president.value)?.full_name ?? '',
-);
 const noResults = computed(() => !pending.value && !error.value && governments.value.length === 0);
 
-const title =
-  'Historique des gouvernements du Sénégal depuis 1960 | Vie Publique Sénégal';
+const title = 'Historique des gouvernements du Sénégal depuis 1960 | Vie Publique Sénégal';
 const description =
   "Frise chronologique de tous les gouvernements du Sénégal depuis l'indépendance en 1960 : présidents, premiers ministres, décrets de nomination et composition, de Senghor à Bassirou Diomaye Faye.";
 const url = `${siteUrl}/gouvernement-senegal/historique`;
@@ -97,10 +93,6 @@ const formatDuration = (gov: Government): string => {
   if (rem === 0) return `${years} an${years > 1 ? 's' : ''}`;
   return `${years} an${years > 1 ? 's' : ''} et ${rem} mois`;
 };
-
-// Phrase dynamique de nomination (texte simple, liens gérés dans le template)
-const documentUrl = (decree: { id: number; slug: string }) =>
-  `/documents/${decree.id}/${decree.slug}`;
 
 const presidencyLabel = (slug: string, name: string | undefined): string => {
   return name || slug;
@@ -205,7 +197,10 @@ const presidentPhoto = (photo: string | null | undefined) =>
 // Accordéon : une seule présidence ouverte. Au chargement, la présidence en cours est dépliée.
 const openPresidency = ref<string | null>(null);
 const currentPresidencySlug = computed(
-  () => byPresidency.value.find((g) => g.endDate === null)?.presidentSlug ?? byPresidency.value[0]?.presidentSlug ?? null,
+  () =>
+    byPresidency.value.find((g) => g.endDate === null)?.presidentSlug ??
+    byPresidency.value[0]?.presidentSlug ??
+    null,
 );
 watch(
   currentPresidencySlug,
@@ -214,10 +209,22 @@ watch(
   },
   { immediate: true },
 );
+
+// Ouvrir automatiquement les présidences avec résultats de recherche
+watch(
+  [byPresidency, q, president],
+  ([presidencies, searchQuery]) => {
+    // Si recherche active et résultats, ouvrir la première présidence avec résultats
+    if (searchQuery && presidencies.length > 0) {
+      openPresidency.value = presidencies[0].presidentSlug;
+    }
+  },
+  { immediate: true },
+);
+
 const togglePresidency = (slug: string) => {
   openPresidency.value = openPresidency.value === slug ? null : slug;
 };
-
 </script>
 
 <template>
@@ -294,7 +301,12 @@ const togglePresidency = (slug: string) => {
         </div>
 
         <!-- Filtre par présidence (chips dérivées dynamiquement) -->
-        <div v-if="presidents.length" class="flex flex-wrap gap-2" role="group" aria-label="Filtrer par présidence">
+        <div
+          v-if="presidents.length"
+          class="flex flex-wrap gap-2"
+          role="group"
+          aria-label="Filtrer par présidence"
+        >
           <button
             type="button"
             class="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
@@ -330,15 +342,6 @@ const togglePresidency = (slug: string) => {
           class="flex flex-wrap items-center gap-2 text-xs text-gray-500 dark:text-gray-400"
         >
           <span>{{ governments.length }} résultat{{ governments.length > 1 ? 's' : '' }}</span>
-          <button
-            type="button"
-            class="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 font-medium text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
-            @click="clearFilters"
-          >
-            <UIcon name="i-heroicons-x-mark" class="size-3.5" />
-            Effacer les filtres
-            <template v-if="activePresidentName"> · {{ activePresidentName }}</template>
-          </button>
         </div>
       </div>
 
@@ -362,19 +365,11 @@ const togglePresidency = (slug: string) => {
             class="h-8 w-8 text-red-600 dark:text-red-400"
           />
         </div>
-        <p class="text-sm font-medium text-gray-900 dark:text-white">
-          Erreur de chargement
-        </p>
+        <p class="text-sm font-medium text-gray-900 dark:text-white">Erreur de chargement</p>
         <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
           Impossible de charger l'historique des gouvernements
         </p>
-        <UButton
-          color="red"
-          variant="soft"
-          size="sm"
-          class="mt-4"
-          @click="$router.go(0)"
-        >
+        <UButton color="red" variant="soft" size="sm" class="mt-4" @click="$router.go(0)">
           Réessayer
         </UButton>
       </div>
@@ -389,9 +384,7 @@ const togglePresidency = (slug: string) => {
             class="h-8 w-8 text-gray-400 dark:text-gray-500"
           />
         </div>
-        <p class="text-sm font-medium text-gray-900 dark:text-white">
-          Aucun gouvernement trouvé
-        </p>
+        <p class="text-sm font-medium text-gray-900 dark:text-white">Aucun gouvernement trouvé</p>
         <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
           Aucun résultat ne correspond à votre recherche.
         </p>
@@ -422,13 +415,14 @@ const togglePresidency = (slug: string) => {
             />
             <div class="min-w-0 flex-1">
               <h2 class="truncate text-base font-semibold text-gray-900 dark:text-white">
-                Présidence de
                 {{ presidencyLabel(group.presidentSlug, group.president?.full_name) }}
               </h2>
               <p class="text-xs text-gray-400 dark:text-gray-500">
                 {{ formatMonthYear(group.startDate) }} -
                 {{ group.endDate ? formatMonthYear(group.endDate) : 'aujourd’hui' }}
-                · {{ group.governments.length }} gouvernement{{ group.governments.length > 1 ? 's' : '' }}
+                · {{ group.governments.length }} gouvernement{{
+                  group.governments.length > 1 ? 's' : ''
+                }}
               </p>
             </div>
             <UIcon
@@ -440,18 +434,18 @@ const togglePresidency = (slug: string) => {
 
           <!-- Frise verticale (corps de l'accordéon) -->
           <div v-show="openPresidency === group.presidentSlug" class="px-4 pb-4">
-            <ol class="relative space-y-4 border-l border-gray-200 pl-6 pt-2 dark:border-gray-700">
-              <li
-                v-for="gov in group.governments"
-                :key="gov.id"
-                class="relative"
-              >
-                <!-- Point sur la frise -->
+            <ol
+              class="relative space-y-4 border-l-2 border-gray-300 pl-6 pt-2 dark:border-gray-600"
+            >
+              <li v-for="(gov, index) in group.governments" :key="gov.id" class="relative">
+                <!-- Numéro sur la frise -->
                 <span
-                  class="absolute -left-[1.65rem] top-3 h-3 w-3 rounded-full border-2 border-white bg-sky-500 dark:border-gray-900"
+                  class="absolute -left-[1.85rem] top-2 flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-sky-500 text-xs font-bold text-white dark:border-gray-900"
                   :class="gov.end_date === null ? 'ring-2 ring-sky-300 dark:ring-sky-700' : ''"
                   aria-hidden="true"
-                />
+                >
+                  {{ group.governments.length - index }}
+                </span>
 
                 <div
                   class="rounded-xl border border-gray-100 bg-white p-4 dark:border-gray-700 dark:bg-gray-900/40"
@@ -472,7 +466,7 @@ const togglePresidency = (slug: string) => {
                       v-if="gov.end_date === null"
                       class="inline-flex flex-shrink-0 items-center rounded-full bg-green-50 px-2 py-0.5 text-[11px] font-medium text-green-700 dark:bg-green-900/30 dark:text-green-300"
                     >
-                      En cours
+                      En exercice
                     </span>
                   </div>
 
@@ -483,43 +477,9 @@ const togglePresidency = (slug: string) => {
                       {{ gov.prime_minister.full_name }}
                     </template>
                     <template v-else>
-                      <span
-                        class="italic text-gray-400 dark:text-gray-500"
-                      >Présidence directe (sans Premier Ministre)</span>
-                    </template>
-                  </p>
-
-                  <!-- Phrase de nomination -->
-                  <p
-                    class="mt-2 text-[11px] leading-relaxed text-gray-500 dark:text-gray-400"
-                  >
-                    <template v-if="gov.prime_minister">
-                      Par
-                      <NuxtLink
-                        v-if="gov.pm_appointment_decree"
-                        :to="documentUrl(gov.pm_appointment_decree)"
-                        class="font-medium text-sky-600 hover:underline dark:text-sky-400"
-                      >{{ gov.pm_appointment_decree.title }}</NuxtLink>
-                      <span v-else class="font-medium">décret de nomination</span>, le Président
-                      <span class="font-medium">{{ gov.president?.full_name }}</span>
-                      nomme
-                      <span class="font-medium">{{ gov.prime_minister.full_name }}</span>
-                      Premier ministre<template v-if="gov.formation_decree">
-                        et fixe la composition du gouvernement (<NuxtLink
-                          :to="documentUrl(gov.formation_decree)"
-                          class="font-medium text-sky-600 hover:underline dark:text-sky-400"
-                        >{{ gov.formation_decree.title }}</NuxtLink>)</template>.
-                    </template>
-                    <template v-else>
-                      Par
-                      <NuxtLink
-                        v-if="gov.formation_decree"
-                        :to="documentUrl(gov.formation_decree)"
-                        class="font-medium text-sky-600 hover:underline dark:text-sky-400"
-                      >{{ gov.formation_decree.title }}</NuxtLink>
-                      <span v-else class="font-medium">décret de formation</span>, le Président
-                      <span class="font-medium">{{ gov.president?.full_name }}</span>
-                      forme le gouvernement.
+                      <span class="italic text-gray-400 dark:text-gray-500"
+                        >Présidence directe (sans Premier Ministre)</span
+                      >
                     </template>
                   </p>
                 </div>

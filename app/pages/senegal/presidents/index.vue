@@ -169,13 +169,15 @@ useHead({
       </div>
 
       <!-- Timeline -->
-      <ol v-else class="relative space-y-4 border-l border-gray-200 pl-6 dark:border-gray-700">
-        <li v-for="t in orderedTerms" :key="t.president.id" class="relative">
+      <ol v-else class="relative space-y-4 border-l-2 border-gray-300 pl-6 dark:border-gray-600">
+        <li v-for="(t, index) in orderedTerms" :key="t.president.id" class="relative">
           <span
-            class="absolute -left-[1.65rem] top-5 h-3 w-3 rounded-full border-2 border-white bg-sky-500 dark:border-gray-900"
+            class="absolute -left-[1.85rem] top-4 flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-sky-500 text-xs font-bold text-white dark:border-gray-900"
             :class="t.end_date === null ? 'ring-2 ring-sky-300 dark:ring-sky-700' : ''"
             aria-hidden="true"
-          />
+          >
+            {{ orderedTerms.length - index }}
+          </span>
           <NuxtLink
             :to="presidentUrl(t)"
             prefetch
@@ -205,7 +207,7 @@ useHead({
                   v-if="t.end_date === null"
                   class="inline-flex flex-shrink-0 items-center rounded-full bg-green-50 px-2 py-0.5 text-[11px] font-medium text-green-700 dark:bg-green-900/30 dark:text-green-300"
                 >
-                  En cours
+                  En exercice
                 </span>
               </div>
               <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
