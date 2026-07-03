@@ -248,7 +248,7 @@ const togglePresidency = (slug: string) => {
         <div class="flex items-center justify-between">
           <div>
             <h1 class="text-lg font-bold text-gray-900 dark:text-white sm:text-xl">
-              Historique des gouvernements
+              Historique des gouvernements du Sénégal
             </h1>
             <p class="text-xs text-gray-500 dark:text-gray-400">
               Depuis l'indépendance du Sénégal en 1960

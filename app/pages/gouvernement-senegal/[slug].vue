@@ -308,7 +308,7 @@ useHead({
               v-if="government.end_date === null"
               class="inline-flex flex-shrink-0 items-center rounded-full bg-green-50 px-2.5 py-1 text-xs font-medium text-green-700 dark:bg-green-900/30 dark:text-green-300"
             >
-              En cours
+              En exercice
             </span>
           </div>
         </header>
