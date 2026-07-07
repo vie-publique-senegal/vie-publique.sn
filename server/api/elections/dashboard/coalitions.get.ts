@@ -78,10 +78,12 @@ export default defineCachedEventHandler(
 
       if (search) {
         filter._or = [
-          { name: { _icontains: search } },
-          { acronym: { _icontains: search } },
-          { head_of_list: { first_name: { _icontains: search } } },
-          { head_of_list: { last_name: { _icontains: search } } }
+          // Les noms vivent sur l'entité politique
+          { political_entity: { name: { _icontains: search } } },
+          { political_entity: { acronym: { _icontains: search } } },
+          // L'identité de la tête de liste vit sur sa person
+          { head_of_list: { person: { first_name: { _icontains: search } } } },
+          { head_of_list: { person: { last_name: { _icontains: search } } } }
         ];
       }
 
@@ -89,8 +91,6 @@ export default defineCachedEventHandler(
         (readItems as any)("election_coalition", {
           fields: [
             "id",
-            "name",
-            "acronym",
             "logo",
             "color",
             "voix",
@@ -103,19 +103,25 @@ export default defineCachedEventHandler(
             "round_2_voix",
             "round_2_pourcentage",
             "head_of_list.id",
-            "head_of_list.first_name",
-            "head_of_list.last_name",
-            "head_of_list.photo",
             "head_of_list.profession",
+            ...PERSON_IDENTITY_FIELDS.map((f) => `head_of_list.person.${f}`),
+            ...ENTITY_IDENTITY_FIELDS.map((f) => `political_entity.${f}`),
           ],
           filter,
-          sort: ["list_order", "name"],
+          sort: ["list_order", "political_entity.name"],
           limit: -1,
         })
       );
 
+      // Identité de la tête de liste via sa person (fallback legacy)
+      // Identité de la coalition via son entité politique (fallback legacy)
+      const mergedCoalitions = (coalitions as any[]).map((c: any) => ({
+        ...mergeEntityIdentity(c),
+        head_of_list: c.head_of_list ? mergePersonIdentity(c.head_of_list) : c.head_of_list,
+      }));
+
       return {
-        data: coalitions,
+        data: mergedCoalitions,
         meta: {
           electionId,
           count: coalitions.length

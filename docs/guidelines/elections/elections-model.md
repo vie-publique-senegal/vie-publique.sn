@@ -80,6 +80,40 @@ Entités politiques participant aux élections.
 | sieges_national    | int                                        | Sièges au scrutin national               | 47               |
 
 > ⚠️ Pour les résultats, les champs utilisent des noms en français (`voix`, `pourcentage`, `sieges`).
+> 🔀 Depuis 2026-07, `election_coalition` porte un FK nullable `political_entity` → `election_political_entities` : l'identité pérenne migre vers l'entité politique, la coalition devient la **participation** (une entité × une élection — une ligne coalition n'est jamais liée à deux élections). Alias `programs` (O2M ← `election_programs.participation`). Voir `deployments/2026-07-migration-prod.md`.
+
+---
+
+### 2️⃣bis `election_political_entities` — *Entités politiques (identité pérenne)*
+
+Une ligne = un parti/coalition/candidature indépendante, réutilisé d'une élection à l'autre (ex. Rewmi en 2019 et 2024).
+
+| Champ           | Type                                       | Description                                            | Exemple      |
+| --------------- | ------------------------------------------ | ------------------------------------------------------ | ------------ |
+| id              | int                                        | ID interne                                             | 1            |
+| status          | string                                     | État de publication                                    | "published"  |
+| slug            | text (**unique**)                          | Identifiant durable                                    | "pastef"     |
+| name            | string                                     | Nom de l'entité                                        | "PASTEF"     |
+| acronym         | string                                     | Sigle                                                  | "PASTEF"     |
+| type            | enum (`coalition`, `party`, `independent`) | Type d'entité                                          | "party"      |
+| logo            | uuid → directus_files                      | Logo de référence (la participation peut l'overrider)  | "abc..."     |
+| color           | string (hex)                               | Couleur de référence (idem)                            | "#E63946"    |
+| description     | text                                       | Présentation                                           | "..."        |
+| tags            | csv                                        | Tags                                                   | "..."        |
+| participations  | alias O2M → election_coalition             | Participations aux élections                           | [...]        |
+
+---
+
+### 2️⃣ter `election_programs` — *Programmes des participations*
+
+| Champ         | Type                        | Description                                     | Exemple |
+| ------------- | --------------------------- | ----------------------------------------------- | ------- |
+| id            | int                         | ID interne                                      | 1       |
+| status        | string                      | État de publication                             | "published" |
+| participation | M2O → election_coalition    | Participation dont c'est le programme           | 215     |
+| document      | M2O → documents             | Document programme (type `programme`)           | 42      |
+| language      | string (défaut `fr`)        | Langue du programme                             | "fr"    |
+| version       | string (nullable)           | Version (null tant qu'il n'y a pas de versions) | null    |
 
 ---
 
@@ -138,6 +172,33 @@ Profils détaillés des candidats.
 | status          | string                       | État de publication            | "published"              |
 
 > 📊 Les **statistiques** (sexe, âge, profession) sont calculées à partir de cette collection.
+> 🔀 Depuis 2026-07, `election_candidates` porte un FK `person` → `election_persons` : l'identité pérenne migre vers `election_persons`, le candidat devient la **candidature** (une personne × une élection). Les champs d'identité listés ci-dessus restent en place pendant la transition.
+
+---
+
+### 4️⃣bis `election_persons` — *Personnes (identité pérenne)*
+
+Une ligne = un être humain, réutilisé d'une élection à l'autre. Schéma exact : `models/election_persons.json`.
+
+| Champ           | Type                         | Description                                    | Exemple               |
+| --------------- | ---------------------------- | ---------------------------------------------- | --------------------- |
+| id              | int                          | ID interne                                     | 1                     |
+| status          | string                       | État de publication                            | "published"           |
+| slug            | text (**unique**)            | Identifiant durable                            | "amadou-ba"           |
+| first_name      | string                       | Prénom                                         | "Amadou"              |
+| last_name       | string                       | Nom                                            | "BA"                  |
+| gender          | enum (`M`, `F`)              | Sexe                                           | "M"                   |
+| birthdate       | date                         | Date de naissance                              | "1961-05-17"          |
+| birthplace      | string                       | Lieu de naissance                              | "Dakar"               |
+| profession      | string                       | Profession courante (la donnée par scrutin reste sur le candidat) | "Économiste" |
+| tags            | csv                          | Tags                                           | "..."                 |
+| photo           | uuid → directus_files        | Photo                                          | "photo123..."         |
+| short_bio       | text                         | Résumé court                                   | "..."                 |
+| long_bio        | text                         | Biographie détaillée                           | "..."                 |
+| facebook / twitter / linkedin | string         | Réseaux sociaux                                | "https://..."         |
+| candidacies     | alias O2M → election_candidates | Candidatures de la personne                 | [...]                 |
+
+> 🔑 Le `slug` est la clé durable d'une personne (homonymes suffixés : `mamadou-niang`, `mamadou-niang-2`).
 
 ---
 
@@ -279,8 +340,8 @@ Documents liés aux élections (code électoral, programmes, etc.).
 ## 🧩 Relations principales
 
 ```
-elections ──┬── election_coalition ──┬── election_electoral_lists ─── election_candidates
-            │                        └── election_coalition_videos         └── documents (programme)
+elections ──┬── election_coalition ──┬── election_electoral_lists ─── election_candidates ──→ election_persons
+            │                        └── election_coalition_videos         └── documents (programme)      (identité pérenne, candidacies O2M)
             │
             ├── election_constituencies (avec parent → self)
             │

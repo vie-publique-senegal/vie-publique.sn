@@ -11,7 +11,9 @@ const toSlug = (value: string) =>
     .replace(/-+/g, "-")
     .replace(/^-|-$/g, "");
 
-const normalizeCandidate = (candidate: any) => {
+const normalizeCandidate = (rawCandidate: any) => {
+  // L'identité vient de la person liée (fallback sur les champs legacy du candidat)
+  const candidate = mergePersonIdentity(rawCandidate);
   const fallbackSlug = toSlug(`${candidate?.first_name || ""} ${candidate?.last_name || ""}`) || `candidat-${candidate?.id || "inconnu"}`;
   const shortBio = typeof candidate?.short_bio === "string" ? candidate.short_bio : (typeof candidate?.biography === "string" ? candidate.biography : null);
   const longBio = typeof candidate?.long_bio === "string" ? candidate.long_bio : null;
@@ -103,17 +105,13 @@ export default defineCachedEventHandler(
         "constituency.type",
         "constituency.nationale_type",
         "coalition.id",
-        "coalition.name",
         "coalition.color",
         "coalition.logo",
+        ...ENTITY_IDENTITY_FIELDS.map((f) => `coalition.political_entity.${f}`),
       ];
-
       const candidateFields = [
         "*",
-        "documents.id",
-        "documents.file",
-        "documents.title",
-        "documents.slug",
+        { person: PERSON_IDENTITY_FIELDS },
       ];
 
       const readLists = async () =>
@@ -133,12 +131,50 @@ export default defineCachedEventHandler(
 
       lists = await readLists();
 
-      const normalizedLists = (lists || []).map((list: any) => ({
-        ...list,
-        candidates: Array.isArray(list?.candidates)
-          ? list.candidates.map(normalizeCandidate)
-          : [],
-      }));
+      // Programmes de la participation (election_programs) : exposés sur coalition.programs,
+      // et en compat sur candidate.documents (le profil présidentiel lit encore cette clé).
+      const listCoalitionIds = [
+        ...new Set((lists || []).map((l: any) => l?.coalition?.id).filter(Boolean)),
+      ];
+      const programsByCoalition = new Map<number, any[]>();
+      if (listCoalitionIds.length > 0) {
+        try {
+          const programs = await directus.request(
+            (readItems as any)("election_programs", {
+              fields: ["id", "language", "version", "participation", "document.id", "document.file", "document.title", "document.slug"],
+              filter: {
+                participation: { _in: listCoalitionIds },
+                status: { _eq: "published" },
+              },
+              limit: -1,
+            })
+          );
+          for (const program of programs as any[]) {
+            const key = program.participation;
+            if (!programsByCoalition.has(key)) programsByCoalition.set(key, []);
+            programsByCoalition.get(key)?.push(program);
+          }
+        } catch (programsError: any) {
+          console.error("Error fetching participation programs:", programsError?.message || programsError);
+        }
+      }
+
+      // Identité de la coalition via son entité politique (fallback legacy)
+      const normalizedLists = (lists || []).map((list: any) => {
+        const programs = programsByCoalition.get(list?.coalition?.id) || [];
+        return {
+          ...list,
+          coalition: list?.coalition
+            ? { ...mergeEntityIdentity(list.coalition), programs }
+            : list?.coalition,
+          candidates: Array.isArray(list?.candidates)
+            ? list.candidates.map((c: any) => ({
+                ...normalizeCandidate(c),
+                documents: programs[0]?.document ?? null,
+              }))
+            : [],
+        };
+      });
 
       return {
         data: normalizedLists,

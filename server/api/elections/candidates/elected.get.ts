@@ -21,24 +21,31 @@ export default defineCachedEventHandler(
     const search = query.search as string | undefined;
 
     try {
-      // Construction du filtre de base - uniquement les élus
+      // Construction du filtre de base - uniquement les élus publiés.
+      // Prérequis de données : les candidats doivent être en published (la normalisation
+      // des statuts draft fait partie de la migration prod, phase 2).
       const filter: any = {
         is_elected: { _eq: true },
+        status: { _eq: "published" },
       };
 
       // Ajout des filtres optionnels
+      // Le nom vit sur l'entité politique (champs legacy coalition supprimés)
       if (coalition) {
-        filter["electoral_list.coalition.name"] = { _eq: coalition };
+        filter.electoral_list = {
+          coalition: { political_entity: { name: { _eq: coalition } } },
+        };
       }
 
+      // L'identité vit sur la person liée, les champs legacy du candidat sont supprimés
       if (gender) {
-        filter.gender = { _eq: gender };
+        filter.person = { gender: { _eq: gender } };
       }
 
       if (search) {
         filter._or = [
-          { first_name: { _icontains: search } },
-          { last_name: { _icontains: search } },
+          { person: { first_name: { _icontains: search } } },
+          { person: { last_name: { _icontains: search } } },
           { profession: { _icontains: search } },
         ];
       }
@@ -48,20 +55,14 @@ export default defineCachedEventHandler(
         readItems("election_candidates", {
           fields: [
             "id",
-            "gender",
-            "first_name",
-            "last_name",
             "profession",
-            "birthplace",
-            "birthdate",
-            "photo",
-            "biography",
+            { person: PERSON_IDENTITY_FIELDS } as any,
             {
               electoral_list: [
                 "name",
                 "type",
                 {
-                  coalition: ["name", "color"],
+                  coalition: ["color", { political_entity: ENTITY_IDENTITY_FIELDS }],
                   constituency: ["name"],
                 },
               ],
@@ -70,7 +71,7 @@ export default defineCachedEventHandler(
           filter,
           limit,
           offset,
-          sort: ["last_name", "first_name"],
+          sort: ["person.last_name", "person.first_name"],
         })
       );
 
@@ -86,7 +87,21 @@ export default defineCachedEventHandler(
       const totalPages = Math.ceil(total / limit);
 
       return {
-        candidates: candidatesData,
+        // Identité via la person liée (fallback legacy)
+        // Identité de la coalition via son entité politique (fallback legacy)
+        candidates: (candidatesData as Record<string, unknown>[]).map((raw) => {
+          const candidate = mergePersonIdentity(raw);
+          // Compat : la clé `biography` reste servie (bio courte de la person)
+          candidate.biography = candidate.short_bio ?? null;
+          const electoralList = candidate.electoral_list as Record<string, unknown> | null;
+          if (electoralList?.coalition) {
+            candidate.electoral_list = {
+              ...electoralList,
+              coalition: mergeEntityIdentity(electoralList.coalition as Record<string, unknown>),
+            };
+          }
+          return candidate;
+        }),
         totalCandidates: total,
         pagination: {
           page,

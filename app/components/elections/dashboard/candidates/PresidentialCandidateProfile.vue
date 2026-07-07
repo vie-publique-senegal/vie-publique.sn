@@ -166,9 +166,15 @@ onMounted(() => {
 });
 
 // Fonction pour obtenir l'URL de l'asset via le nouveau proxy
-const getAssetUrl = (assetId: string, slug: string) => {
-  return useCmsFile(`${assetId}/${slug}.pdf`);
-};
+// URL du fichier programme (même construction que les pages documents)
+const programFileUrl = computed(() => {
+  const doc = (props.candidate as any)?.documents;
+  if (!doc?.file) return '';
+  return useCmsFile(`${doc.file}/${doc.slug}.pdf`);
+});
+
+// État du viewer PDF plein écran
+const showPdfViewer = ref(false);
 </script>
 
 <template>
@@ -343,14 +349,14 @@ const getAssetUrl = (assetId: string, slug: string) => {
           <div v-if="candidate.documents" class="p-4 md:p-8">
             <div v-if="candidate.documents.file" class="space-y-6">
 
-              <!-- PDF Viewer Integration -->
+              <!-- PDF Viewer Integration (même viewer que les pages documents ; Lazy pour ne
+                   jamais évaluer pdfjs côté SSR — DOMMatrix n'existe pas dans Node) -->
               <ClientOnly>
-                <div class="rounded-2xl border dark:border-gray-800 overflow-hidden shadow-inner bg-gray-100 dark:bg-gray-900">
-                  <PdfViewer
-                    :source="getAssetUrl(candidate.documents.file, candidate.documents.slug)"
-                    :download-name="`${candidate.documents.slug}.pdf`"
-                  />
-                </div>
+                <LazyPdfViewerInline
+                  :src="programFileUrl"
+                  max-height="700px"
+                  @open-fullscreen="showPdfViewer = true"
+                />
               </ClientOnly>
             </div>
           </div>
@@ -412,6 +418,16 @@ const getAssetUrl = (assetId: string, slug: string) => {
         </UCard>
       </section>
     </div>
+
+    <!-- Visionneuse PDF plein écran -->
+    <ClientOnly>
+      <LazyPdfViewerModal
+        v-if="showPdfViewer && programFileUrl"
+        :src="programFileUrl"
+        :title="candidate.documents?.title || 'Programme électoral'"
+        @close="showPdfViewer = false"
+      />
+    </ClientOnly>
   </div>
 </template>
 

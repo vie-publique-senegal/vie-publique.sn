@@ -31,14 +31,28 @@ export const useElectoralDashboard = () => {
     return 'candidats'
   }
 
+  const parseIdParam = (value: unknown): number | null => {
+    const parsed = parseInt(String(value ?? ''), 10);
+    return Number.isNaN(parsed) ? null : parsed;
+  };
+  const VALID_LEGISLATIVE_VIEWS = new Set(['list', 'head', 'ballot']);
+
   const selectedYear = useState<number>('election-selected-year', () => 0);
   const selectedType = useState<string>('election-selected-type', () => '');
   const activeTab = useState<string>('election-active-tab', getActiveTabFromRoute);
-  const selectedConstituencyId = useState<number | null>('election-selected-constituency-id', () => null);
-  const selectedCoalitionId = useState<number | null>('election-selected-coalition-id', () => null);
+  // Les états pilotés par l'URL sont initialisés depuis la query dès le premier rendu (serveur compris) :
+  // le SSR doit produire la même vue que le client, sinon mismatch d'hydratation au refresh (ex. ?view=head).
+  const selectedConstituencyId = useState<number | null>('election-selected-constituency-id', () =>
+    route.query.constituency ? parseIdParam(route.query.constituency) : null
+  );
+  const selectedCoalitionId = useState<number | null>('election-selected-coalition-id', () =>
+    route.query.coalition ? parseIdParam(route.query.coalition) : null
+  );
   const selectedFilterConstituencyId = useState<number | null>('election-selected-filter-constituency-id', () => null);
-  const searchQuery = useState<string>('election-search-query', () => '');
-  const legislativeViewType = useState<string>('election-legislative-view-type', () => 'list');
+  const searchQuery = useState<string>('election-search-query', () => (route.query.q ? String(route.query.q) : ''));
+  const legislativeViewType = useState<string>('election-legislative-view-type', () =>
+    VALID_LEGISLATIVE_VIEWS.has(String(route.query.view)) ? String(route.query.view) : 'list'
+  );
 
   const { data: config, pending: loadingConfig, error: configError } = useFetch<ElectionConfig>('/api/elections/dashboard/config', {
       key: 'election-dashboard-config',
@@ -130,7 +144,7 @@ export const useElectoralDashboard = () => {
 
       searchQuery.value = route.query.q ? String(route.query.q) : '';
 
-      if (route.query.view) {
+      if (route.query.view && VALID_LEGISLATIVE_VIEWS.has(String(route.query.view))) {
         legislativeViewType.value = String(route.query.view);
       }
 

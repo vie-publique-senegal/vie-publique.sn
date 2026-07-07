@@ -11,7 +11,9 @@ const toSlug = (value: string) =>
     .replace(/-+/g, "-")
     .replace(/^-|-$/g, "");
 
-const normalizeCandidate = (candidate: any) => {
+const normalizeCandidate = (rawCandidate: any) => {
+  // L'identité vient de la person liée (fallback sur les champs legacy du candidat)
+  const candidate = mergePersonIdentity(rawCandidate);
   const fallbackSlug = toSlug(`${candidate?.first_name || ""} ${candidate?.last_name || ""}`) || `candidat-${candidate?.id || "inconnu"}`;
   const shortBio = typeof candidate?.short_bio === "string" ? candidate.short_bio : (typeof candidate?.biography === "string" ? candidate.biography : null);
   const longBio = typeof candidate?.long_bio === "string" ? candidate.long_bio : null;
@@ -57,12 +59,11 @@ export default defineCachedEventHandler(
         return { data: null };
       }
 
+      // Le M2O legacy `documents` a été supprimé : le programme vient de la participation
+      // (election_programs de la coalition), voir plus bas.
       const candidateFields = [
         "*",
-        "documents.id",
-        "documents.file",
-        "documents.title",
-        "documents.slug",
+        { person: PERSON_IDENTITY_FIELDS },
       ];
 
       const readLists = async () =>
@@ -76,9 +77,9 @@ export default defineCachedEventHandler(
               "constituency.id",
               "constituency.name",
               "coalition.id",
-              "coalition.name",
               "coalition.color",
               "coalition.logo",
+              ...ENTITY_IDENTITY_FIELDS.map((f) => `coalition.political_entity.${f}`),
               { candidates: candidateFields },
             ],
             filter: {
@@ -101,6 +102,9 @@ export default defineCachedEventHandler(
         const candidates = Array.isArray(list?.candidates) ? list.candidates : [];
         for (const rawCandidate of candidates) {
           const candidate = normalizeCandidate(rawCandidate);
+          // Match strict sur le slug fusionné (slug person si liée, sinon slug candidat legacy).
+          // Pas de compat sur l'ancien slug candidat : les deux espaces de slugs se chevauchent
+          // (le slug candidat d'une personne peut être le slug person d'une autre).
           if (toSlug(candidate.slug || "") === normalizedSlug) {
             matches.push({ candidate, list });
           }
@@ -120,11 +124,37 @@ export default defineCachedEventHandler(
 
       const bestMatch = matches[0];
 
+      // Programmes de la participation (election_programs de la coalition)
+      let programs: any[] = [];
+      const coalitionId = bestMatch.list?.coalition?.id;
+      if (coalitionId) {
+        try {
+          programs = await directus.request(
+            (readItems as any)("election_programs", {
+              fields: ["id", "language", "version", "document.id", "document.file", "document.title", "document.slug"],
+              filter: {
+                participation: { _eq: coalitionId },
+                status: { _eq: "published" },
+              },
+              limit: -1,
+            })
+          );
+        } catch (programsError: any) {
+          console.error("Error fetching participation programs:", programsError?.message || programsError);
+        }
+      }
+
+      // Compat : l'ancienne clé `documents` du candidat (M2O legacy supprimé) reste servie
+      // avec le document du premier programme de la participation.
+      bestMatch.candidate.documents = programs[0]?.document ?? null;
+
       return {
         data: {
           election,
           candidate: bestMatch.candidate,
-          coalition: bestMatch.list?.coalition || null,
+          programs,
+          // Identité de la coalition via son entité politique (fallback legacy)
+          coalition: bestMatch.list?.coalition ? mergeEntityIdentity(bestMatch.list.coalition) : null,
           list: {
             id: bestMatch.list?.id,
             name: bestMatch.list?.name,
