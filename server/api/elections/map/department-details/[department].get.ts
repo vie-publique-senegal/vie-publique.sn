@@ -5,6 +5,10 @@ import type { PollingStation } from "~~/types/election-map-national";
  * Endpoint pour récupérer les détails d'un département (bureaux de vote)
  * GET /api/elections/map/department-details/:department
  *
+ * Source : election_polling_stations via le fichier électoral national publié
+ * le plus récent. Fallback : election_map_national tant que la prod n'est pas
+ * migrée.
+ *
  * @returns Liste des bureaux de vote du département
  */
 export default defineCachedEventHandler(
@@ -20,14 +24,66 @@ export default defineCachedEventHandler(
 
     try {
       const directus = getCmsClient();
+      const departmentName = decodeURIComponent(department);
 
-      // Récupération des bureaux de vote du département
+      const fileId = await resolveElectoralFileId(null, "national");
+
+      if (fileId) {
+        const stations = (await directus.request(
+          readItems("election_polling_stations", {
+            fields: [
+              "id",
+              "municipality",
+              "implantation",
+              "polling_place",
+              "office_number",
+              "voters",
+              "constituency.name",
+              "constituency.region",
+            ],
+            filter: {
+              electoral_file: { _eq: fileId },
+              constituency: { name: { _eq: departmentName } },
+            },
+            sort: ["municipality", "polling_place", "office_number"],
+            limit: -1,
+          })
+        )) as {
+          id: number;
+          municipality: string | null;
+          implantation: string | null;
+          polling_place: string;
+          office_number: string;
+          voters: number | null;
+          constituency?: { name?: string; region?: string | null } | null;
+        }[];
+
+        const pollingStations = stations.map((station) => ({
+          id: station.id,
+          department: station.constituency?.name || departmentName,
+          region: station.constituency?.region || null,
+          municipality: station.municipality,
+          implantation: station.implantation,
+          polling_place: station.polling_place,
+          office_number: station.office_number,
+          voters: station.voters,
+        }));
+
+        return {
+          data: pollingStations as PollingStation[],
+          total: pollingStations.length,
+        };
+      }
+
+      // Fallback legacy : election_map_national
+      warnElectoralLegacyFallback("/api/elections/map/department-details", departmentName);
+
       const pollingStations = await directus
         .request(
           readItems("election_map_national", {
             filter: {
               department: {
-                _eq: decodeURIComponent(department),
+                _eq: departmentName,
               },
             },
             sort: ["municipality", "polling_place", "office_number"],
@@ -61,7 +117,7 @@ export default defineCachedEventHandler(
   },
   {
     maxAge: 60 * 30, // 30 minutes de cache
-    name: "election-department-details",
+    name: "election-department-details-v2",
     getKey: (event) => {
       const department = getRouterParam(event, "department");
       return `department-details-${department}`;

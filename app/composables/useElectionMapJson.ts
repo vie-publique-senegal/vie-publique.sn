@@ -5,6 +5,7 @@ import type {
   DepartmentStats,
 } from "~~/types/election-map-national";
 import type { DepartmentGroup } from "~~/types/election-map";
+import type { ConstituencyContour } from "./useConstituencyContours";
 
 interface GeoData {
   departement: string;
@@ -15,7 +16,16 @@ interface GeoData {
   municipality: number;
   population: number;
   id: number;
-  // Support both formats: Position (old) and coordinates (new)
+  // Circonscription (jointure des contours statiques par slug)
+  constituencie?: {
+    id: number;
+    name: string;
+    slug?: string | null;
+    type?: string;
+    nationale_type?: string | null;
+    region?: string | null;
+  } | null;
+  // Position n'est plus servie que par la réponse fallback legacy (collection carte)
   Position?: {
     type: string;
     coordinates: number[][][];
@@ -107,9 +117,26 @@ export function useElectionMapData(electionId?: Ref<string | number | null> | st
     }
   });
 
+  const { loadContours } = useConstituencyContours();
+
+  // Charger les contours statiques nécessaires aux items (départements et/ou communes)
+  const loadContoursForItems = async (items: GeoData[]): Promise<Map<string, ConstituencyContour>> => {
+    const contours = await loadContours('departements');
+    if (items.some((item) => item.constituencie?.nationale_type === 'commune')) {
+      const communes = await loadContours('communes');
+      for (const [slug, contour] of communes) contours.set(slug, contour);
+    }
+    return contours;
+  };
+
   // Extraire les coordonnées depuis les différents formats possibles
-  const extractCoordinates = (item: GeoData): number[][][] | null => {
-    // Format Position (ancien)
+  const extractCoordinates = (item: GeoData, contours?: Map<string, ConstituencyContour>): number[][][] | null => {
+    // Contours statiques joints par slug de circonscription
+    const slug = item.constituencie?.slug;
+    if (slug && contours?.get(slug)?.ring?.length) {
+      return [contours.get(slug)!.ring];
+    }
+    // Format Position (legacy, réponse fallback)
     if (item.Position?.coordinates?.[0]?.length > 0) {
       return item.Position.coordinates;
     }
@@ -126,11 +153,11 @@ export function useElectionMapData(electionId?: Ref<string | number | null> | st
   };
 
   // Transformer les coordonnées pour Leaflet
-  const transformCoordinates = (geoData: GeoData[]): TransformedRegion[] => {
+  const transformCoordinates = (geoData: GeoData[], contours?: Map<string, ConstituencyContour>): TransformedRegion[] => {
     return geoData
-      .filter((item) => extractCoordinates(item) !== null)
+      .filter((item) => extractCoordinates(item, contours) !== null)
       .map((item) => {
-        const coords = extractCoordinates(item)!;
+        const coords = extractCoordinates(item, contours)!;
         return {
           id: item.id,
           departement: item.departement,
@@ -176,7 +203,8 @@ export function useElectionMapData(electionId?: Ref<string | number | null> | st
       getDepartmentStats(),
     ]);
 
-    const transformedGeoData = transformCoordinates(geoDataResult);
+    const contours = await loadContoursForItems(geoDataResult);
+    const transformedGeoData = transformCoordinates(geoDataResult, contours);
 
     return transformedGeoData.map((geo) => ({
       ...geo,
@@ -219,7 +247,7 @@ export function useElectionMapData(electionId?: Ref<string | number | null> | st
     });
   };
 
-  // Charger les polygones de département (sans filtre élection = entrées département-level)
+  // Charger les polygones de département depuis les contours statiques
   // Pour les élections locales, on a besoin des polygones de département, pas des communes
   const loadDepartmentPolygons = async (): Promise<TransformedRegion[]> => {
     const deptCacheKey = 'department-polygons';
@@ -231,41 +259,27 @@ export function useElectionMapData(electionId?: Ref<string | number | null> | st
     }
 
     try {
-      // Charger TOUTES les entrées carte (sans filtre élection)
-      const response = await $fetch<GeoData[] | { data: GeoData[] }>('/api/carte');
-      const allData = Array.isArray(response) ? response : (response.data || []);
+      const contours = await loadContours('departements');
 
-      // Filtrer : garder uniquement les entrées d'élections nationales (pas locales)
-      // Les élections nationales ont 1 entrée par département avec les polygones corrects
-      const nationalEntries = allData.filter(item => {
-        // Exclure les entrées d'élections locales (qui sont au niveau commune)
-        if (item.election?.type === 'locale') return false;
-        // Ignorer les entrées sans coordonnées
-        if (!extractCoordinates(item)) return false;
-        // Ignorer les entrées sans nom de département
-        if (!item.departement?.trim()) return false;
-        return true;
-      });
-
-      // Dédupliquer par département (clé normalisée, garder l'entrée avec le plus d'électeurs)
-      const deptMap = new Map<string, GeoData>();
-      for (const item of nationalEntries) {
-        const key = item.departement.trim().toLowerCase();
-        const existing = deptMap.get(key);
-        if (!existing) {
-          deptMap.set(key, item);
-        } else if (item.voters > existing.voters) {
-          deptMap.set(key, item);
-        }
-      }
-
-      const deptEntries = Array.from(deptMap.values());
-      const transformed = transformCoordinates(deptEntries);
+      const transformed: TransformedRegion[] = [...contours.values()].map((contour, index) => ({
+        id: index + 1,
+        departement: contour.name,
+        region: '',
+        voters: 0,
+        offices: 0,
+        places: 0,
+        municipality: 0,
+        population: 0,
+        coordinates: contour.ring.map((coord) => [
+          coord[1],
+          coord[0],
+        ]) as [number, number][], // Inverser lat/lng pour Leaflet
+      }));
 
       cachedPolygons.value = transformed;
       isPolygonsLoaded.value = true;
       return transformed;
-    } catch (error) {
+    } catch {
       return [];
     }
   };

@@ -80,6 +80,93 @@ export default defineCachedEventHandler(
         value: t,
       }));
 
+      // Fichiers électoraux des élections (additif, best-effort : requête séparée
+      // pour ne pas faire échouer la config quand le schéma n'existe pas encore en prod)
+      const electoralFileFields = (scope: string) => [
+        `electoral_file_${scope}.id`,
+        `electoral_file_${scope}.name`,
+        `electoral_file_${scope}.scope`,
+        `electoral_file_${scope}.year`,
+        `electoral_file_${scope}.revision_date`,
+        `electoral_file_${scope}.document.id`,
+        `electoral_file_${scope}.document.slug`,
+        `electoral_file_${scope}.document.title`,
+        `electoral_file_${scope}.document.type`,
+        `electoral_file_${scope}.document.file`,
+        `electoral_file_${scope}.document.status`,
+      ];
+
+      interface ElectoralFileRow {
+        id: number;
+        name: string;
+        year: number | null;
+        revision_date: string | null;
+        document?: {
+          id: number;
+          slug: string | null;
+          title: string | null;
+          type: string | null;
+          file: string | null;
+          status: string;
+        } | null;
+      }
+
+      interface CleanElectoralFile {
+        id: number;
+        name: string;
+        year: number | null;
+        revision_date: string | null;
+        document: Omit<NonNullable<ElectoralFileRow["document"]>, "status"> | null;
+      }
+
+      const electoralFilesByElection = new Map<
+        number,
+        { national: CleanElectoralFile | null; diaspora: CleanElectoralFile | null }
+      >();
+      try {
+        const fileRows = (await directus.request(
+          (readItems as any)("elections", {
+            fields: ["id", ...electoralFileFields("national"), ...electoralFileFields("diaspora")],
+            filter: { status: { _nin: ["draft", "archived"] } },
+            limit: -1,
+          })
+        )) as {
+          id: number;
+          electoral_file_national?: ElectoralFileRow | null;
+          electoral_file_diaspora?: ElectoralFileRow | null;
+        }[];
+
+        const cleanFile = (file: ElectoralFileRow | null | undefined): CleanElectoralFile | null => {
+          if (!file?.id) return null;
+          const document =
+            file.document?.id && file.document.status === "published"
+              ? {
+                  id: file.document.id,
+                  slug: file.document.slug,
+                  title: file.document.title,
+                  type: file.document.type,
+                  file: file.document.file,
+                }
+              : null;
+          return {
+            id: file.id,
+            name: file.name,
+            year: file.year,
+            revision_date: file.revision_date,
+            document,
+          };
+        };
+
+        for (const row of fileRows) {
+          electoralFilesByElection.set(row.id, {
+            national: cleanFile(row.electoral_file_national),
+            diaspora: cleanFile(row.electoral_file_diaspora),
+          });
+        }
+      } catch {
+        // Schéma des fichiers électoraux absent (prod pré-migration) : clé non exposée
+      }
+
       // Traiter les données des élections pour nettoyer et filtrer les documents
       const processedElections = electionsData.map((election: any) => {
         // Extraire et filtrer les documents (seulement les publiés)
@@ -97,7 +184,8 @@ export default defineCachedEventHandler(
 
         return {
           ...election,
-          documents
+          documents,
+          electoral_files: electoralFilesByElection.get(election.id) || null,
         };
       });
 
@@ -123,7 +211,7 @@ export default defineCachedEventHandler(
   },
   {
     maxAge: 5 * 60,
-    name: "elections-dashboard-config",
+    name: "elections-dashboard-config-v2",
     getKey: () => "elections-dashboard-config",
   }
 );

@@ -1,9 +1,12 @@
 import { readItems } from "@directus/sdk";
 
 /**
- * Liste des pays depuis election_map_diaspora
+ * Liste des pays de la diaspora
  * Route: GET /api/elections/pvs-upload/countries
  * Query params: ?election=ID (optionnel)
+ *
+ * Source : election_polling_stations (texte country) via le fichier électoral
+ * diaspora. Fallback : election_map_diaspora tant que la prod n'est pas migrée.
  */
 export default defineCachedEventHandler(
   async (event) => {
@@ -12,21 +15,39 @@ export default defineCachedEventHandler(
     const electionId = query.election ? Number(query.election) : null;
 
     try {
-      const filter: any = { country: { _nnull: true } };
-      if (electionId) {
-        filter.election = { _eq: electionId };
+      const fileId = await resolveElectoralFileId(electionId, "diaspora");
+
+      let data: { country: string }[];
+
+      if (fileId) {
+        data = (await directus.request(
+          readItems("election_polling_stations", {
+            fields: ["country"],
+            filter: {
+              electoral_file: { _eq: fileId },
+              country: { _nnull: true },
+            },
+            limit: -1,
+          })
+        )) as { country: string }[];
+      } else {
+        // Fallback legacy : election_map_diaspora
+        warnElectoralLegacyFallback("/api/elections/pvs-upload/countries");
+        const filter: any = { country: { _nnull: true } };
+        if (electionId) {
+          filter.election = { _eq: electionId };
+        }
+        data = (await directus.request(
+          readItems("election_map_diaspora", {
+            fields: ["country"],
+            filter,
+            limit: -1,
+          })
+        )) as { country: string }[];
       }
 
-      const data = await directus.request(
-        readItems("election_map_diaspora", {
-          fields: ["country"],
-          filter,
-          limit: -1,
-        })
-      );
-
       // Extraire les pays uniques et trier
-      const countries = [...new Set((data as any[]).map((item) => item.country))]
+      const countries = [...new Set(data.map((item) => item.country))]
         .filter(Boolean)
         .sort();
 
@@ -41,6 +62,6 @@ export default defineCachedEventHandler(
   },
   {
     maxAge: 300, // Cache 5 minutes
-    name: "election-pvs-countries",
+    name: "election-pvs-countries-v2",
   }
 );

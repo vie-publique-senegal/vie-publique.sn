@@ -78,16 +78,15 @@ const formatNumber = (value?: number) => {
   return value.toLocaleString('fr-FR');
 };
 
-// Construire l'URL de détail du département
+// Construire l'URL de détail du département (contexte : révision ou élection)
 const getDepartmentDetailUrl = () => {
   if (!props.department) return '/';
   const query: Record<string, string> = {};
 
-  if (route.query.type) {
-    query.type = route.query.type as string;
-  }
-  if (route.query.year) {
-    query.year = route.query.year as string;
+  if (route.query.revision) {
+    query.revision = route.query.revision as string;
+  } else if (props.electionId) {
+    query.election = String(props.electionId);
   }
 
   return {

@@ -4,6 +4,10 @@ import { readItems } from "@directus/sdk";
  * Liste des représentations diplomatiques filtrées par pays
  * Route: GET /api/elections/pvs-upload/diplomatic-representations
  * Query params: ?country=COUNTRY_NAME (requis)
+ *
+ * Source : election_polling_stations via le fichier électoral diaspora publié
+ * le plus récent. Fallback : election_map_diaspora tant que la prod n'est pas
+ * migrée.
  */
 export default defineCachedEventHandler(
   async (event) => {
@@ -19,20 +23,40 @@ export default defineCachedEventHandler(
     }
 
     try {
-      const data = await directus.request(
-        readItems("election_map_diaspora", {
-          fields: ["diplomatic_representation"],
-          filter: {
-            country: { _eq: country },
-            diplomatic_representation: { _nnull: true },
-          },
-          limit: -1,
-        })
-      );
+      const fileId = await resolveElectoralFileId(null, "diaspora");
+
+      let data: { diplomatic_representation: string }[];
+
+      if (fileId) {
+        data = (await directus.request(
+          readItems("election_polling_stations", {
+            fields: ["diplomatic_representation"],
+            filter: {
+              electoral_file: { _eq: fileId },
+              country: { _eq: country },
+              diplomatic_representation: { _nnull: true },
+            },
+            limit: -1,
+          })
+        )) as { diplomatic_representation: string }[];
+      } else {
+        // Fallback legacy : election_map_diaspora
+        warnElectoralLegacyFallback("/api/elections/pvs-upload/diplomatic-representations", country);
+        data = (await directus.request(
+          readItems("election_map_diaspora", {
+            fields: ["diplomatic_representation"],
+            filter: {
+              country: { _eq: country },
+              diplomatic_representation: { _nnull: true },
+            },
+            limit: -1,
+          })
+        )) as { diplomatic_representation: string }[];
+      }
 
       // Extraire les représentations uniques et trier
       const representations = [
-        ...new Set((data as any[]).map((item) => item.diplomatic_representation)),
+        ...new Set(data.map((item) => item.diplomatic_representation)),
       ]
         .filter(Boolean)
         .sort();
@@ -48,7 +72,7 @@ export default defineCachedEventHandler(
   },
   {
     maxAge: 300, // Cache 5 minutes
-    name: "election-pvs-diplomatic-representations",
+    name: "election-pvs-diplomatic-representations-v2",
     getKey: (event) => {
       const query = getQuery(event);
       return `representations-${query.country || "all"}`;

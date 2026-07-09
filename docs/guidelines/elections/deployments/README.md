@@ -28,5 +28,6 @@ Chaque fichier suit ce plan :
 | (antérieur) | Migration vers le schéma électoral générique | [../elections-deployment.md](../elections-deployment.md) |
 | (antérieur) | Module d'upload des PVs | [../pvs-upload-deploiement.md](../pvs-upload-deploiement.md) |
 | 2026-07 | Migration prod des identités pérennes (persons + entités politiques) - plan en 5 phases fondé sur un audit de la prod | [2026-07-migration-prod.md](./2026-07-migration-prod.md) |
+| 2026-07 | Migration prod de la géographie et des cartes (fichiers électoraux, bureaux, résultats) - plan en 3 phases fondé sur un diagnostic de la prod | [2026-07-migration-prod-geographie.md](./2026-07-migration-prod-geographie.md) |
 
 > Les deux fichiers antérieurs prédatent cette convention et restent à leur emplacement d'origine. Les évolutions futures du module seront versionnées ici.

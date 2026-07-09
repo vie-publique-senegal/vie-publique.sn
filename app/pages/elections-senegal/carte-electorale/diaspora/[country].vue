@@ -1,44 +1,38 @@
 <!-- pages/elections-senegal/carte-electorale/diaspora/[country].vue -->
 <script setup lang="ts">
-import { useElectoralDashboard } from '~/composables/elections/dashboard/useElectoralDashboard';
-
 /**
  * Page de détails d'un pays de la diaspora
  * Suit le pattern: page -> composable -> server -> Directus
  */
 
 const route = useRoute();
-const router = useRouter();
 
 const country = computed(() =>
   decodeURIComponent(route.params.country as string)
 );
 
-// Récupérer l'ID de l'élection depuis les query params
-const electionId = computed(() => route.query.election as string | undefined);
-const electionType = computed(() => route.query.type as string | undefined);
-const electionYear = computed(() => route.query.year as string | undefined);
-
-// Récupérer le nom de l'élection depuis la config
-const { config } = useElectoralDashboard();
-const electionName = computed(() => {
-  if (!config.value?.elections || !electionId.value) return null;
-  const election = config.value.elections.find(e => String(e.id) === electionId.value);
-  return election?.name || null;
-});
+// Contexte : révision de la carte électorale (?revision=) ou élection (?election=, compat)
+const {
+  revisionLabel,
+  electionName,
+  electionIdParam: electionId,
+  diasporaFileId,
+  backTo,
+} = useElectoralRevision();
 
 // États réactifs pour la recherche et la pagination
 const search = ref("");
 const page = ref(1);
 const q = ref(""); // Filtre local côté client
 
-// ✅ Utilisation du composable pour récupérer les données avec l'ID d'élection
+// ✅ Utilisation du composable (fichier électoral de la révision, élection en compat)
 const { stats, locations, pending, totalPages, refresh } = useDiasporaCountry({
   country: country.value,
   search,
   page,
   limit: 1000,
   electionId,
+  electoralFileId: diasporaFileId,
 });
 
 // Filtrage local côté client (pour le champ de recherche dans le tableau)
@@ -54,26 +48,16 @@ const filteredRows = computed(() => {
   });
 });
 
-// Construire l'URL de retour avec le contexte de l'élection
-const backUrl = computed(() => {
-  const query: Record<string, string> = {};
-  if (electionId.value) query.election = electionId.value;
-  if (electionType.value) query.type = electionType.value;
-  if (electionYear.value) query.year = electionYear.value;
+// URL de retour : le dashboard de l'élection si on en vient, sinon la vue diaspora
+const backUrl = computed(() => backTo("/elections-senegal/carte-electorale/diaspora"));
 
-  return {
-    path: "/elections-senegal/carte-electorale",
-    query,
-  };
-});
-
-// Titre de la page avec contexte élection (utilise le nom de l'élection)
+// Titre de la page : contexte élection si la navigation en vient, sinon la révision
 const pageTitle = computed(() => {
   let title = country.value;
   if (electionName.value) {
     title += ` - ${electionName.value}`;
-  } else if (electionType.value && electionYear.value) {
-    title += ` - ${electionType.value} ${electionYear.value}`;
+  } else if (revisionLabel.value) {
+    title += ` - ${revisionLabel.value}`;
   }
   return title;
 });
@@ -113,9 +97,14 @@ useSeoMeta({
                 :to="backUrl"
                 variant="ghost"
               />
-              <h1 class="text-xl font-bold dark:text-white sm:text-2xl">
-                {{ country }}
-              </h1>
+              <div>
+                <h1 class="text-xl font-bold dark:text-white sm:text-2xl">
+                  {{ country }}
+                </h1>
+                <p v-if="electionName || revisionLabel" class="text-sm text-gray-500 dark:text-gray-400">
+                  {{ electionName || revisionLabel }}
+                </p>
+              </div>
             </div>
           </div>
 

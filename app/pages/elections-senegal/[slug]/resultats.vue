@@ -164,20 +164,12 @@ useSeoMeta({
               </div>
               <p class="text-sm font-medium text-gray-400 animate-pulse">Chargement de la carte...</p>
             </div>
-            <template v-if="isLocalElection">
-              <ElectionMapComponentResultLocale
-                :key="`result-map-locale-${selectedYear}`"
-                :election-type="selectedType"
-                :election-year="selectedYear"
-                @department-selected="handleResultDeptSelected"
-                @map-error="mapResultHasNoData = true"
-                @map-ready="mapIsReady = true"
-              />
-            </template>
-            <ElectionMapComponentResult
-              v-else
-              :election-type="selectedType"
-              :election-year="selectedYear"
+            <ElectionUnifiedMap
+              :key="`result-map-${selectedType}-${selectedYear}`"
+              :mode="isLocalElection ? 'results-locale' : 'results'"
+              :election-id="currentElection?.id"
+              height="600px"
+              @department-selected="handleResultDeptSelected"
               @map-error="mapResultHasNoData = true"
               @map-ready="mapIsReady = true"
             />

@@ -87,7 +87,11 @@ export function useMapEngine() {
     try {
       const { MapboxOverlay } = await import('@deck.gl/mapbox')
       const overlay = new MapboxOverlay({
-        interleaved: true,
+        // Sur tactile, le rendu interleaved partage le picking buffer avec MapLibre :
+        // le premier tap est souvent consommé par la reconnaissance de geste (pan/zoom)
+        // avant que deck.gl ait pu "picker" — un second tap est alors nécessaire pour le
+        // clic. Un canvas dédié (non interleaved) lève cette dépendance sur tactile.
+        interleaved: !options.isMobile,
         layers: [],
         pickingRadius: options.isMobile ? 20 : 10,
         onClick: (info: any) => _onClickCallback?.(info),

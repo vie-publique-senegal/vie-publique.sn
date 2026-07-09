@@ -183,7 +183,13 @@ export function useMapLayers(options: UseMapLayersOptions) {
   // ─── Choroplèthe (GeoJsonLayer) ────────────────────────────────
 
   function buildChoroplethConfig(ds: MapDatasetConfig, data: any[]) {
-    const geoJson = geoJsonRegions.value;
+    const geoLevel = ds.geoLevel ?? 'regions';
+    const geoJson =
+      geoLevel === 'departements'
+        ? geoJsonDepartements?.value
+        : geoLevel === 'communes'
+          ? geoJsonCommunes?.value
+          : geoJsonRegions.value;
     if (!geoJson) return null;
 
     // Construire un Map pour le join rapide
@@ -245,41 +251,62 @@ export function useMapLayers(options: UseMapLayersOptions) {
     const currentZoom = viewport.value.zoom;
     const layers: any[] = [choropleth];
 
-    // ─── Labels des régions (toujours visibles) ──────────────────
-    const regionLabelData = (enrichedFeatures as any[])
-      .map((feature: any) => {
-        const centroid = computeCentroid(feature);
-        const name = feature.properties?.name ?? feature.properties?.region ?? '';
-        return { position: centroid, name };
-      })
-      .filter((d: any) => d.name && d.position[0] !== 0);
+    // ─── Labels des features de base (communes : seulement à partir du zoom 8) ─
+    if (geoLevel !== 'communes' || currentZoom >= 8) {
+      const regionLabelData = (enrichedFeatures as any[])
+        .map((feature: any) => {
+          const centroid = computeCentroid(feature);
+          const name = feature.properties?.name ?? feature.properties?.region ?? '';
+          return { position: centroid, name };
+        })
+        .filter((d: any) => d.name && d.position[0] !== 0);
 
-    layers.push({
-      _type: 'text',
-      _dsId: ds.id,
-      id: `layer-${ds.id}-region-labels`,
-      data: regionLabelData,
-      pickable: false,
-      getPosition: (d: any) => d.position,
-      getText: (d: any) => d.name,
-      getSize: currentZoom >= 8 ? 15 : 13,
-      getColor: theme.value === 'dark' ? [255, 255, 255, 230] : [0, 0, 0, 230],
-      getTextAnchor: 'middle',
-      getAlignmentBaseline: 'center',
-      fontFamily: 'Inter, system-ui, sans-serif',
-      fontWeight: 700,
-      outlineWidth: 3,
-      outlineColor: theme.value === 'dark' ? [0, 0, 0, 220] : [255, 255, 255, 220],
-      sizeUnits: 'pixels',
-      billboard: false,
-      updateTriggers: {
-        getColor: [theme.value],
-        getSize: [currentZoom],
-      },
-    });
+      layers.push({
+        _type: 'text',
+        _dsId: ds.id,
+        id: `layer-${ds.id}-region-labels`,
+        data: regionLabelData,
+        pickable: false,
+        getPosition: (d: any) => d.position,
+        getText: (d: any) => d.name,
+        getSize: geoLevel === 'communes' ? 10 : currentZoom >= 8 ? 15 : 13,
+        getColor: theme.value === 'dark' ? [255, 255, 255, 230] : [0, 0, 0, 230],
+        getTextAnchor: 'middle',
+        getAlignmentBaseline: 'center',
+        fontFamily: 'Inter, system-ui, sans-serif',
+        fontWeight: 700,
+        outlineWidth: 3,
+        outlineColor: theme.value === 'dark' ? [0, 0, 0, 220] : [255, 255, 255, 220],
+        sizeUnits: 'pixels',
+        billboard: false,
+        updateTriggers: {
+          getColor: [theme.value],
+          getSize: [currentZoom],
+        },
+      });
+    }
 
-    // ─── Départements : bordures + labels (zoom ≥ 7) ────────────
-    const deptGeojson = geoJsonDepartements?.value;
+    // ─── Bordures départements par-dessus une choroplèthe communale ─
+    if (geoLevel === 'communes' && geoJsonDepartements?.value) {
+      layers.push({
+        _type: 'geojson',
+        _dsId: ds.id,
+        id: `layer-${ds.id}-dept-overlay`,
+        data: geoJsonDepartements.value,
+        pickable: false,
+        stroked: true,
+        filled: false,
+        lineWidthMinPixels: 1.5,
+        opacity: 0.7,
+        getLineColor: theme.value === 'dark' ? [255, 255, 255, 140] : [0, 0, 0, 110],
+        updateTriggers: {
+          getLineColor: [theme.value],
+        },
+      });
+    }
+
+    // ─── Départements : bordures + labels (zoom ≥ 7, base régions) ─
+    const deptGeojson = geoLevel === 'regions' ? geoJsonDepartements?.value : null;
     if (deptGeojson && currentZoom >= 7) {
       // Bordures départements
       layers.push({
@@ -332,8 +359,8 @@ export function useMapLayers(options: UseMapLayersOptions) {
       });
     }
 
-    // ─── Labels des communes (zoom ≥ 9) ─────────────────────────
-    const communeGeojson = geoJsonCommunes?.value;
+    // ─── Labels des communes (zoom ≥ 9, base régions — points senegal-communes) ─
+    const communeGeojson = geoLevel === 'regions' ? geoJsonCommunes?.value : null;
     if (communeGeojson && currentZoom >= 9) {
       const communeLabelData = communeGeojson.features
         .map((feature) => {

@@ -43,3 +43,44 @@ Prérequis : le champ `election_coalition.political_entity`, la collection `elec
 Sorties : `reports/entities-review-fusions.csv` (rapprochements par tête de liste et nom — compléter par un scan de graphies proches), `reports/entities-execution-report.json`.
 
 ⚠️ IDs différents entre environnements — reconstruire le fichier `--merges` depuis le CSV de revue généré sur l'environnement cible (repères : nom + élection + tête de liste).
+
+### `backfill-constituencies.mjs` — Référentiel des circonscriptions
+
+```bash
+node scripts/elections/backfill-constituencies.mjs            # dry-run
+node scripts/elections/backfill-constituencies.mjs --execute  # exécution
+```
+
+Enrichit `election_constituencies` : crée les 14 régions (`nationale_type=region`, graphie accentuée), pose le `parent` des départements vers leur région (depuis le champ texte `region` normalisé), génère les `slug` manquants (région `region-<nom>`, département `<nom>`, commune `<nom>` avec suffixe du département en cas de collision, puis suffixe numérique) et les `code` officiels des régions et départements (pcodes OCHA COD-AB Sénégal v02, tables de correspondance dans le script ; le slug reste la clé contractuelle, le code est informatif). Jamais de réécriture d'un slug/code/parent déjà posé.
+
+Prérequis : les champs `slug` et `code` (uniques, nullables) et l'option `region` de `nationale_type` existent (phase schéma manuelle, voir le fichier de déploiement du référentiel des circonscriptions).
+
+Contrôles bloquants en `--execute` : exactement 14 régions, 0 ligne publiée sans slug, 0 slug dupliqué, 0 département sans parent.
+
+### `backfill-polling-stations.mjs` — Fichiers électoraux 2024 + bureaux de vote
+
+```bash
+node scripts/elections/backfill-polling-stations.mjs            # dry-run + CSV de revue
+node scripts/elections/backfill-polling-stations.mjs --execute  # exécution
+```
+
+Crée les 2 lignes « Fichier électoral 2024 » (`election_electoral_files`, scope national/diaspora, recherche par scope + année avant création), rattache les élections législatives et présidentielle 2024 (résolues par type + année, jamais par ID ; FK posée uniquement si null), puis copie les bureaux rattachés aux législatives 2024 : `election_map_national` → `election_polling_stations` (circonscription par matching du texte `department` normalisé, bloquant si non résolu) et `election_map_diaspora` → idem (zone par la table pays → circonscription de l'étranger du script, 50 pays, bloquant si absent). Les collections sources ne sont jamais modifiées.
+
+Prérequis : les 3 collections du volet fichiers électoraux et les 2 FK `elections.electoral_file_*` existent (phase schéma) ; le référentiel des circonscriptions porte les slugs.
+
+Contrôles bloquants en `--execute` : volumétries source/cible identiques par scope, 0 bureau sans circonscription, sommes `voters` identiques.
+
+Sorties : `reports/polling-stations-country-zones.csv` (correspondance pays → zone à revoir au dry-run).
+
+### `backfill-constituency-results.mjs` — Résultats par circonscription + population
+
+```bash
+node scripts/elections/backfill-constituency-results.mjs            # dry-run
+node scripts/elections/backfill-constituency-results.mjs --execute  # exécution
+```
+
+Copie 1:1 `carte` → `election_constituency_results` (1 ligne par couple élection × circonscription : `winning_coalition`, `winning_list`, `voters`, `seat`, `participation_10h/12h/14h/17h` ; les couples déjà présents sont sautés, les lignes `carte` en double sur un couple sont ignorées et rapportées) et pose `election_constituencies.population` depuis `carte.population` (uniquement si null ; en cas de divergence entre élections, la plus récente fait foi). `carte` n'est jamais modifiée et reste la source de lecture des endpoints jusqu'à la bascule.
+
+Prérequis : la collection `election_constituency_results` et le champ `election_constituencies.population` existent (phase schéma).
+
+Contrôles bloquants en `--execute` : volumétrie attendue, 0 doublon (election, constituency), échantillon comparé champ à champ à la source.

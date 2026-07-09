@@ -7,6 +7,9 @@ import { aggregate } from "@directus/sdk";
  * Query params:
  * - election: ID de l'élection pour filtrer les données
  *
+ * Source : election_polling_stations via le fichier électoral diaspora.
+ * Fallback : election_map_diaspora tant que la prod n'est pas migrée.
+ *
  * @returns Statistiques agrégées du pays (localités, bureaux, électeurs)
  */
 export default defineCachedEventHandler(
@@ -24,19 +27,38 @@ export default defineCachedEventHandler(
 
     try {
       const directus = getCmsClient();
+      const countryName = decodeURIComponent(country);
 
-      // Construire le filtre avec le pays et l'élection si fournie
-      const filter: Record<string, any> = {
-        country: { _eq: decodeURIComponent(country) },
+      const electoralFileParam = query.electoral_file as string | undefined;
+      const fileId = electoralFileParam
+        ? parseInt(electoralFileParam)
+        : await resolveElectoralFileId(
+            electionId ? parseInt(electionId) : null,
+            "diaspora"
+          );
+
+      const useLegacy = !fileId;
+      if (useLegacy) {
+        warnElectoralLegacyFallback("/api/elections/diaspora/country-stats", countryName);
+      }
+
+      const collection = useLegacy ? "election_map_diaspora" : "election_polling_stations";
+
+      const filter: Record<string, unknown> = {
+        country: { _eq: countryName },
       };
-      if (electionId) {
-        filter.election = { _eq: parseInt(electionId) };
+      if (useLegacy) {
+        if (electionId) {
+          filter.election = { _eq: parseInt(electionId) };
+        }
+      } else {
+        filter.electoral_file = { _eq: fileId };
       }
 
       // Récupération des statistiques agrégées
       const statsData = await directus
         .request(
-          aggregate("election_map_diaspora", {
+          aggregate(collection, {
             query: {
               filter,
               groupBy: ["country"],
@@ -75,10 +97,10 @@ export default defineCachedEventHandler(
   },
   {
     maxAge: 60 * 30, // 30 minutes de cache
-    name: "diaspora-country-stats",
+    name: "diaspora-country-stats-v2",
     getKey: (event) => {
       const country = getRouterParam(event, "country");
-      return `diaspora-stats-${country}`;
+      return buildCacheKey(`diaspora-stats-${country}`, getQuery(event));
     },
   },
 );

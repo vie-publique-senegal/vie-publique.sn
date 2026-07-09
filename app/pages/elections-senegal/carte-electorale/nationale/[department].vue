@@ -1,24 +1,20 @@
 <!-- pages/elections-senegal/carte-electorale/nationale/[department].vue -->
 <script setup lang="ts">
 import type { PollingStation } from "~~/types/election-map-national";
-import { useElectoralDashboard } from '~/composables/elections/dashboard/useElectoralDashboard';
 
 const route = useRoute();
 const router = useRouter();
 const department = decodeURIComponent(route.params.department as string);
 
-// Récupérer l'ID de l'élection depuis les query params
-const electionId = computed(() => route.query.election as string | undefined);
-const electionType = computed(() => route.query.type as string | undefined);
-const electionYear = computed(() => route.query.year as string | undefined);
-
-// Récupérer le nom de l'élection depuis la config
-const { config } = useElectoralDashboard();
-const electionName = computed(() => {
-  if (!config.value?.elections || !electionId.value) return null;
-  const election = config.value.elections.find(e => String(e.id) === electionId.value);
-  return election?.name || null;
-});
+// Contexte : révision de la carte électorale (?revision=) ou élection (?election=, compat)
+const {
+  revisionLabel,
+  electionName,
+  electionIdParam: electionId,
+  nationalFileId,
+  contextQuery,
+  backTo,
+} = useElectoralRevision();
 
 // État local initialisé avec les query params de l'URL pour partage
 const search = ref((route.query.q as string) || "");
@@ -28,9 +24,10 @@ const sortDesc = ref(route.query.order === "desc");
 const isRefreshing = ref(false);
 const selectedMunicipality = ref((route.query.commune as string) || "");
 
-// Initialisation du composable SSR avec l'ID d'élection
+// Initialisation du composable SSR (fichier électoral de la révision, élection en compat)
 const { fetchDepartmentDetails, getDepartmentStats } = useElectionData({
   electionId,
+  electoralFileId: nationalFileId,
 });
 
 // Charger les données avec le cache et SSR
@@ -173,26 +170,16 @@ const municipalities = computed(() => {
   return [...new Set(details.value.map((item) => item.municipality))].sort();
 });
 
-// Construire l'URL de retour avec le contexte de l'élection
-const backUrl = computed(() => {
-  const query: Record<string, string> = {};
-  if (electionId.value) query.election = electionId.value;
-  if (electionType.value) query.type = electionType.value;
-  if (electionYear.value) query.year = electionYear.value;
+// URL de retour : le dashboard de l'élection si on en vient, sinon la vue nationale
+const backUrl = computed(() => backTo("/elections-senegal/carte-electorale/nationale"));
 
-  return {
-    path: "/elections-senegal/carte-electorale",
-    query,
-  };
-});
-
-// Titre de la page avec contexte élection (utilise le nom de l'élection)
+// Titre de la page : contexte élection si la navigation en vient, sinon la révision
 const pageTitle = computed(() => {
   let title = `Département ${department}`;
   if (electionName.value) {
     title += ` - ${electionName.value}`;
-  } else if (electionType.value && electionYear.value) {
-    title += ` - ${electionType.value} ${electionYear.value}`;
+  } else if (revisionLabel.value) {
+    title += ` - ${revisionLabel.value}`;
   }
   return title;
 });
@@ -201,12 +188,7 @@ const pageTitle = computed(() => {
 watch(
   [search, selectedMunicipality, sortBy, sortDesc],
   ([newSearch, newMunicipality, newSort, newDesc]) => {
-    const query: Record<string, string> = {};
-
-    // Conserver les params de l'élection
-    if (electionId.value) query.election = electionId.value;
-    if (electionType.value) query.type = electionType.value;
-    if (electionYear.value) query.year = electionYear.value;
+    const query: Record<string, string> = { ...contextQuery.value };
 
     if (newSearch) query.q = newSearch;
     if (newMunicipality) query.commune = newMunicipality;
@@ -249,9 +231,14 @@ useSeoMeta({
           variant="ghost"
           :to="backUrl"
         />
-        <h1 class="text-xl font-bold dark:text-white sm:text-2xl">
-          {{ department }}
-        </h1>
+        <div>
+          <h1 class="text-xl font-bold dark:text-white sm:text-2xl">
+            {{ department }}
+          </h1>
+          <p v-if="electionName || revisionLabel" class="text-sm text-gray-500 dark:text-gray-400">
+            {{ electionName || revisionLabel }}
+          </p>
+        </div>
       </div>
     </div>
 

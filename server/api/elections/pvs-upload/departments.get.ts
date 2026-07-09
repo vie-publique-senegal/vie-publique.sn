@@ -4,6 +4,9 @@ import { readItems } from "@directus/sdk";
  * Liste des départements filtrés par région
  * Route: GET /api/elections/pvs-upload/departments
  * Query params: ?region=REGION_NAME (requis)
+ *
+ * Source : référentiel election_constituencies (départements enfants de la région).
+ * Fallback : textes department de election_map_national tant que la prod n'est pas migrée.
  */
 export default defineCachedEventHandler(
   async (event) => {
@@ -19,6 +22,28 @@ export default defineCachedEventHandler(
     }
 
     try {
+      const referentialDepartments = (await directus
+        .request(
+          readItems("election_constituencies", {
+            fields: ["name"],
+            filter: {
+              nationale_type: { _eq: "departement" },
+              status: { _neq: "archived" },
+              parent: { name: { _eq: region } },
+            },
+            sort: ["name"],
+            limit: -1,
+          })
+        )
+        .catch(() => [])) as { name: string }[];
+
+      if (referentialDepartments.length > 0) {
+        return { data: referentialDepartments.map((d) => d.name).filter(Boolean) };
+      }
+
+      // Fallback legacy : textes department des bureaux election_map_national
+      warnElectoralLegacyFallback("/api/elections/pvs-upload/departments", region);
+
       const data = await directus.request(
         readItems("election_map_national", {
           fields: ["department"],
@@ -46,7 +71,7 @@ export default defineCachedEventHandler(
   },
   {
     maxAge: 300, // Cache 5 minutes
-    name: "election-pvs-departments",
+    name: "election-pvs-departments-v2",
     getKey: (event) => {
       const query = getQuery(event);
       return `departments-${query.region || "all"}`;

@@ -23,6 +23,22 @@ const mapTabs = [
 
 const mapIsReady = ref(false);
 
+// Panel département (carte unifiée et carte locale legacy)
+const selectedDepartmentData = ref<any>(null);
+const isDepartmentPanelOpen = ref(false);
+
+const handleDepartmentSelected = (dept: any) => {
+  selectedDepartmentData.value = dept;
+  isDepartmentPanelOpen.value = true;
+};
+
+const closeDepartmentPanel = () => {
+  isDepartmentPanelOpen.value = false;
+  setTimeout(() => {
+    selectedDepartmentData.value = null;
+  }, 300);
+};
+
 watch([selectedMapOption, selectedType, selectedYear], () => {
   mapIsReady.value = false;
 });
@@ -30,6 +46,8 @@ watch([selectedMapOption, selectedType, selectedYear], () => {
 watch([selectedType, selectedYear], () => {
   mapCarteHasNoData.value = false;
   selectedMapOption.value = optionMap;
+  isDepartmentPanelOpen.value = false;
+  selectedDepartmentData.value = null;
 });
 
 useSeoMeta({
@@ -96,11 +114,24 @@ useSeoMeta({
                     </div>
                     <p class="text-sm font-medium text-gray-400 animate-pulse">Chargement de la carte...</p>
                   </div>
+                  <!-- Les élections locales gardent la carte legacy (bureaux rattachés au département,
+                       pas de choroplèthe communale en mode bureaux) -->
                   <ElectionMapComponent4
+                    v-if="isLocalElection"
                     :election-id="currentElection?.id"
-                    :is-local-election="isLocalElection"
+                    :is-local-election="true"
                     @map-error="mapCarteHasNoData = true"
                     @map-ready="mapIsReady = true"
+                    @department-selected="handleDepartmentSelected"
+                  />
+                  <ElectionUnifiedMap
+                    v-else
+                    mode="offices"
+                    :election-id="currentElection?.id"
+                    height="600px"
+                    @map-error="mapCarteHasNoData = true"
+                    @map-ready="mapIsReady = true"
+                    @department-selected="handleDepartmentSelected"
                   />
                 </div>
                 <div v-else class="w-full">
@@ -136,5 +167,12 @@ useSeoMeta({
         </ClientOnly>
       </div>
     </div>
+
+    <ElectionMapDepartmentPanel
+      :department="selectedDepartmentData"
+      :is-open="isDepartmentPanelOpen"
+      :election-id="currentElection?.id"
+      @close="closeDepartmentPanel"
+    />
   </div>
 </template>

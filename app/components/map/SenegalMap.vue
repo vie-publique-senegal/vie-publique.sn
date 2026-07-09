@@ -186,12 +186,18 @@ onMounted(async () => {
   window.addEventListener('resize', checkMobile)
   store.initFromConfig(props.config)
 
-  // Charger deck.gl + GeoJSON en parallèle
+  // Charger deck.gl + GeoJSON en parallèle (sources surchargées par config.geoSources)
+  const sources = props.config.geoSources ?? {}
+  const geoUrl = (key: 'regions' | 'departements' | 'communes', fallback: string) =>
+    sources[key] === null ? null : (sources[key] ?? fallback)
+  const fetchGeo = (url: string | null) =>
+    url ? fetch(url).then((r) => r.ok ? r.json() : null).catch(() => null) : Promise.resolve(null)
+
   const [, regions, departements, communes] = await Promise.all([
     loadDeckModules().catch(() => null),
-    fetch('/geo/senegal-regions.geojson').then((r) => r.ok ? r.json() : null).catch(() => null),
-    fetch('/geo/senegal-departements.geojson').then((r) => r.ok ? r.json() : null).catch(() => null),
-    fetch('/geo/senegal-communes.geojson').then((r) => r.ok ? r.json() : null).catch(() => null),
+    fetchGeo(geoUrl('regions', '/geo/senegal-regions.geojson')),
+    fetchGeo(geoUrl('departements', '/geo/senegal-departements.geojson')),
+    fetchGeo(geoUrl('communes', '/geo/senegal-communes.geojson')),
   ])
   geoJsonRegions.value = regions
   geoJsonDepartements.value = departements
@@ -220,7 +226,7 @@ onUnmounted(() => window.removeEventListener('resize', checkMobile))
 </script>
 
 <template>
-  <div class="senegal-map relative w-full" style="height: calc(100vh - 64px); height: calc(100dvh - 64px);">
+  <div class="senegal-map relative w-full" :style="{ height: config.height ?? 'calc(100dvh - 64px)' }">
     <!--
       Inline styles obligatoires : MapLibre injecte .maplibregl-map { position: relative }
       qui écrase Tailwind `absolute` → le container perd ses dimensions.

@@ -6,6 +6,8 @@ import type {
 
 interface UseElectionDataOptions {
   electionId?: Ref<string | number | null> | string | number | null;
+  /** Fichier électoral national explicite (prioritaire sur electionId côté API) */
+  electoralFileId?: Ref<string | number | null> | string | number | null;
 }
 
 /**
@@ -17,7 +19,7 @@ interface UseElectionDataOptions {
  * const { fetchDepartmentsStats, fetchDepartmentDetails, getDepartmentStats } = useElectionData({ electionId: ref(1) });
  */
 export function useElectionData(options: UseElectionDataOptions = {}) {
-  const { electionId } = options;
+  const { electionId, electoralFileId } = options;
 
   // Computed pour obtenir la valeur de l'election ID
   const currentElectionId = computed(() => {
@@ -27,57 +29,60 @@ export function useElectionData(options: UseElectionDataOptions = {}) {
     return typeof value === 'string' ? value : String(value);
   });
 
+  const currentElectoralFileId = computed(() => {
+    if (!electoralFileId) return null;
+    const value = isRef(electoralFileId) ? electoralFileId.value : electoralFileId;
+    if (value === null || value === undefined) return null;
+    return typeof value === 'string' ? value : String(value);
+  });
+
+  // Contexte de source commun aux requêtes (fichier électoral prioritaire)
+  const applySourceParams = (params: Record<string, string>) => {
+    if (currentElectoralFileId.value) {
+      params.electoral_file = currentElectoralFileId.value;
+    } else if (currentElectionId.value) {
+      params.election = currentElectionId.value;
+    }
+    return params;
+  };
+
+  const sourceKeySuffix = computed(
+    () => `${currentElectoralFileId.value ? `file-${currentElectoralFileId.value}` : currentElectionId.value || 'all'}`,
+  );
+
   // Récupération de la liste des départements avec statistiques
   const fetchDepartmentsStats = () => {
-    const queryParams = computed(() => {
-      const params: Record<string, string> = { groupBy: "department" };
-      if (currentElectionId.value) {
-        params.election = currentElectionId.value;
-      }
-      return params;
-    });
+    const queryParams = computed(() => applySourceParams({ groupBy: "department" }));
 
     return useFetch<DepartmentStats[]>("/api/elections/map/national", {
-      key: computed(() => `departments-stats-${currentElectionId.value || 'all'}`),
+      key: computed(() => `departments-stats-${sourceKeySuffix.value}`),
       query: queryParams,
       transform: (response: any) => response.data,
-      watch: [currentElectionId],
+      watch: [currentElectionId, currentElectoralFileId],
     });
   };
 
   // Récupération des détails d'un département spécifique
   const fetchDepartmentDetails = (department: string) => {
-    const queryParams = computed(() => {
-      const params: Record<string, string> = { department };
-      if (currentElectionId.value) {
-        params.election = currentElectionId.value;
-      }
-      return params;
-    });
+    const queryParams = computed(() => applySourceParams({ department }));
 
     return useFetch<PollingStation[]>("/api/elections/map/national", {
-      key: computed(() => `department-${department}-${currentElectionId.value || 'all'}`),
+      key: computed(() => `department-${department}-${sourceKeySuffix.value}`),
       query: queryParams,
       transform: (response: any) => response.data,
-      watch: [currentElectionId],
+      watch: [currentElectionId, currentElectoralFileId],
     });
   };
 
   // Stats en temps réel pour un département
   const getDepartmentStats = (department: string) => {
-    const queryParams = computed(() => {
-      const params: Record<string, string> = { department, groupBy: "department" };
-      if (currentElectionId.value) {
-        params.election = currentElectionId.value;
-      }
-      return params;
-    });
+    const queryParams = computed(() => applySourceParams({ department, groupBy: "department" }));
 
     return useFetch<DepartmentStats>("/api/elections/map/national", {
-      key: computed(() => `department-stats-${department}-${currentElectionId.value || 'all'}`),
+      key: computed(() => `department-stats-${department}-${sourceKeySuffix.value}`),
       query: queryParams,
       transform: (response: any) => response.data[0],
-      watch: [currentElectionId],
+      watch: [currentElectionId, currentElectoralFileId],
     });
   };
 

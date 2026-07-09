@@ -4,6 +4,10 @@ import { aggregate } from "@directus/sdk";
  * Endpoint pour récupérer les statistiques des départements
  * GET /api/elections/map/department-stats?department=Dakar (optionnel)
  *
+ * Source : election_polling_stations via le fichier électoral national publié
+ * le plus récent. Fallback : election_map_national tant que la prod n'est pas
+ * migrée.
+ *
  * @returns Statistiques agrégées des départements
  */
 export default defineCachedEventHandler(
@@ -14,7 +18,49 @@ export default defineCachedEventHandler(
     try {
       const directus = getCmsClient();
 
-      // Paramètres de base pour l'agrégation
+      const fileId = await resolveElectoralFileId(null, "national");
+
+      if (fileId) {
+        const filter: Record<string, unknown> = { electoral_file: { _eq: fileId } };
+        if (department) {
+          filter.constituency = { name: { _eq: department } };
+        }
+
+        const statsData = (await directus.request(
+          aggregate("election_polling_stations", {
+            aggregate: {
+              count: ["office_number"],
+              sum: ["voters"],
+              countDistinct: ["municipality", "polling_place"],
+            },
+            query: department
+              ? { filter, groupBy: ["constituency"] }
+              : { filter },
+          })
+        )) as {
+          count?: Record<string, string>;
+          sum?: Record<string, string>;
+          countDistinct?: Record<string, string>;
+        }[];
+
+        if (department && statsData && statsData.length > 0) {
+          const row = statsData[0];
+          return {
+            department,
+            count: row.count,
+            sum: row.sum,
+            countDistinct: row.countDistinct,
+          };
+        }
+
+        return {
+          data: statsData || [],
+        };
+      }
+
+      // Fallback legacy : election_map_national
+      warnElectoralLegacyFallback("/api/elections/map/department-stats", department);
+
       interface AggregateParams {
         aggregate: {
           count: string[];
@@ -39,7 +85,6 @@ export default defineCachedEventHandler(
         },
       };
 
-      // Si un département spécifique est demandé
       if (department) {
         aggregateParams.query = {
           filter: {
@@ -51,7 +96,6 @@ export default defineCachedEventHandler(
         };
       }
 
-      // Récupération des statistiques
       const statsData = await directus
         .request(
           aggregate("election_map_national", aggregateParams),
@@ -65,7 +109,6 @@ export default defineCachedEventHandler(
           });
         });
 
-      // Si on cherche un département spécifique, retourner le premier résultat
       if (department && statsData && statsData.length > 0) {
         return statsData[0];
       }
@@ -84,7 +127,7 @@ export default defineCachedEventHandler(
   },
   {
     maxAge: 60 * 30, // 30 minutes de cache
-    name: "election-department-stats",
+    name: "election-department-stats-v2",
     getKey: (event) => {
       const query = getQuery(event);
       const department = query.department as string | undefined;
