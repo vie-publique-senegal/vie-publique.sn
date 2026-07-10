@@ -88,7 +88,7 @@ const officialDocuments = computed(() => (selectedRevision.value ? officialDocum
             size="xs"
             color="primary"
             :variant="election.dashboardUrl ? 'soft' : 'solid'"
-            :trailing-icon="election.dashboardUrl ? 'i-heroicons-arrow-top-right-on-square' : undefined"
+            :trailing-icon="election.dashboardUrl ? 'i-heroicons-arrow-right' : undefined"
           >
             {{ election.label }}
           </UButton>
@@ -104,6 +104,7 @@ const officialDocuments = computed(() => (selectedRevision.value ? officialDocum
           color="gray"
           variant="soft"
           icon="i-heroicons-document-text"
+          trailing-icon="i-heroicons-chevron-right"
         >
           {{ doc.label }}
         </UButton>
