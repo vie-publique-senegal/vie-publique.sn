@@ -110,9 +110,13 @@ const formatDurationDays = (days: number): string => {
   return `${years} an${years > 1 ? 's' : ''} et ${rem} mois`;
 };
 
+// Le paramètre ?ref=gouvernement ne fait sens que pour le gouvernement en
+// exercice (retour vers /gouvernement-senegal) : absent pour les gouvernements
+// passés, consultés depuis l'historique.
 const personUrl = (m: GovernmentMemberFull): string => {
   const s = m.person.slug || generateSlugFromName(m.person.full_name);
-  return `/personnalites/${m.person.id}/${s}?ref=gouvernement`;
+  const suffix = government.value?.end_date === null ? '?ref=gouvernement' : '';
+  return `/personnalites/${m.person.id}/${s}${suffix}`;
 };
 
 const personRefUrl = (
@@ -120,7 +124,8 @@ const personRefUrl = (
 ): string | null => {
   if (!p) return null;
   const s = p.slug || generateSlugFromName(p.full_name);
-  return `/personnalites/${p.id}/${s}?ref=gouvernement`;
+  const suffix = government.value?.end_date === null ? '?ref=gouvernement' : '';
+  return `/personnalites/${p.id}/${s}${suffix}`;
 };
 
 const documentUrl = (decree: { id: number; slug: string }) =>

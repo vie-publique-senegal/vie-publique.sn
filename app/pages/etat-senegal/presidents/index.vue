@@ -52,7 +52,7 @@ const initials = (name: string): string =>
     .map((w) => w[0]?.toUpperCase() ?? '')
     .join('');
 
-const presidentUrl = (t: PresidentialTerm) => `/senegal/presidents/${t.president.slug}`;
+const presidentUrl = (t: PresidentialTerm) => `/etat-senegal/presidents/${t.president.slug}`;
 
 // Présentation chronologique récent → ancien
 const orderedTerms = computed(() => [...terms.value].reverse());
@@ -64,7 +64,7 @@ const description = computed(
   () =>
     `Découvrez tous les présidents du Sénégal depuis 1960 : mandats, gouvernements et Premiers ministres nommés.`,
 );
-const url = `${siteUrl}/senegal/presidents`;
+const url = `${siteUrl}/etat-senegal/presidents`;
 const image = computed(() => {
   const photo = current.value?.president.photo ?? terms.value[0]?.president.photo;
   return photo ? `${siteUrl}${useCmsImage(photo)}` : `${siteUrl}/nomination-3.png`;
@@ -133,7 +133,7 @@ useHead({
 <template>
   <div class="min-h-screen pb-20 dark:bg-gray-900/95">
     <div class="container mx-auto px-4 pt-2">
-      <AppBreadcrumb :items="[{ label: 'Sénégal' }, { label: 'Présidents' }]" />
+      <AppBreadcrumb :items="[{ label: 'État du Sénégal', to: '/etat-senegal' }, { label: 'Présidents' }]" />
     </div>
 
     <header

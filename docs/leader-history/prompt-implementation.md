@@ -7,10 +7,10 @@ Le projet **Vie Publique Sénégal** (`vpsn/`) est une application Nuxt 4 (Vue 3
 La collection `governments` (Directus) contient les champs `president` et `prime_minister` (FK → `public_persons`) pour les ~46 gouvernements depuis 1960. La collection `public_person_appointments` contient les nominations individuelles de chaque personnalité (y compris les nominations à la présidence ou au poste de PM, identifiées par `position_category_slug`).
 
 L'objectif est de créer :
-1. Une **page liste des présidents** (`/senegal/presidents`) — indexable, SEO-riche
-2. Une **page de détail par présidence** (`/senegal/presidents/[slug]`) — entité Google-referenceable
-3. Une **page liste des Premiers ministres** (`/senegal/premiers-ministres`)
-4. Une **page de détail par PM** (`/senegal/premiers-ministres/[slug]`)
+1. Une **page liste des présidents** (`/etat-senegal/presidents`) — indexable, SEO-riche
+2. Une **page de détail par présidence** (`/etat-senegal/presidents/[slug]`) — entité Google-referenceable
+3. Une **page liste des Premiers ministres** (`/etat-senegal/premiers-ministres`)
+4. Une **page de détail par PM** (`/etat-senegal/premiers-ministres/[slug]`)
 
 Ces pages doivent **ne pas casser** les pages existantes (`/gouvernement-senegal`, `/gouvernement-senegal/historique`, `/personnalites/...`).
 
@@ -396,15 +396,15 @@ export const usePrimeMinisterDetail = (slug: string | Ref<string>) => {
 
 ## Pages
 
-### `app/pages/senegal/presidents.vue`
+### `app/pages/etat-senegal/presidents.vue`
 
-**URL** : `/senegal/presidents`
+**URL** : `/etat-senegal/presidents`
 
 **Design** :
 - Header : titre H1 « Présidents de la République du Sénégal », sous-titre « depuis l'indépendance en 1960 », stat globale (nombre de présidents — **calculé dynamiquement depuis les données**, jamais en dur)
 - **Timeline verticale** (mobile-first) : chaque président = un bloc distinct avec :
   - Photo (`useCmsImage(photo)`, fallback initiales avec couleur dérivée du nom)
-  - Nom complet (lien → `/senegal/presidents/[slug]`)
+  - Nom complet (lien → `/etat-senegal/presidents/[slug]`)
   - Dates du mandat formatées (ex. « avr. 1960 — déc. 1980 ») ou badge « En cours » si `end_date = null`
   - Durée calculée
   - Nombre de gouvernements formés + nombre de PMs distincts (stats issues de l'API)
@@ -413,14 +413,14 @@ export const usePrimeMinisterDetail = (slug: string | Ref<string>) => {
 - État vide si données indisponibles
 - **SEO** :
   - `useSeoMeta` : title = "Présidents du Sénégal depuis 1960 | Vie Publique Sénégal", description riche avec les noms des présidents et les dates
-  - `useHead` avec canonical → `/senegal/presidents` (URL stable sans query params)
+  - `useHead` avec canonical → `/etat-senegal/presidents` (URL stable sans query params)
   - JSON-LD `ItemList` contenant un `ListItem` par présidence (avec `Person` imbriqué : `name`, `url`, `image`, `birthDate`)
   - Open Graph : `og:title`, `og:description`, `og:image` (photo du président en cours ou premier de la liste)
 - Breadcrumb visuel + `BreadcrumbList` JSON-LD : Accueil → Sénégal → Présidents
 
-### `app/pages/senegal/presidents/[slug].vue`
+### `app/pages/etat-senegal/presidents/[slug].vue`
 
-**URL** : `/senegal/presidents/senghor`, `/senegal/presidents/diouf`, etc.
+**URL** : `/etat-senegal/presidents/senghor`, `/etat-senegal/presidents/diouf`, etc.
 
 **Design** :
 - **Hero** : grande photo du président (LCP prioritaire — `fetchpriority="high"`, `loading="eager"`, dimensions explicites), nom en H1, dates du mandat, badge « En cours » ou durée calculée
@@ -430,20 +430,20 @@ export const usePrimeMinisterDetail = (slug: string | Ref<string>) => {
 - **Sections en accordéons** : les blocs « Biographie », « Gouvernements formés » et « Premiers ministres nommés » sont des accordéons `<details open class="group">` natifs (SSR-friendly, sans JS) avec compteur dans le `<summary>` (ex. « Gouvernements formés (3) ») et chevron `group-open:rotate-180`. Ouverts par défaut : dès le chargement, on voit quelles infos sont disponibles. Le « Résumé » (`short_bio`), le bloc naissance/formation et le « Décret d'investiture » restent des blocs simples non repliables.
 - **Bloc "Décret d'investiture"** : si l'`appointment` existe avec `source_document`, afficher le titre du décret et un lien
 - **Bloc "Gouvernements formés"** : liste de tous les gouvernements du mandat
-  - Chaque ligne : nom du gouvernement (lien → `/gouvernement-senegal/[slug]`), dates, Premier ministre (lien → `/senegal/premiers-ministres/[slug]`) ou badge « Fonction abolie » si null
+  - Chaque ligne : nom du gouvernement (lien → `/gouvernement-senegal/[slug]`), dates, Premier ministre (lien → `/etat-senegal/premiers-ministres/[slug]`) ou badge « Fonction abolie » si null
   - Durée de chaque gouvernement calculée
-- **Bloc "Premiers ministres nommés"** : grille de cartes (photo + nom + période) pour les PMs distincts nommés pendant le mandat. Liens vers `/senegal/premiers-ministres/[slug]`
+- **Bloc "Premiers ministres nommés"** : grille de cartes (photo + nom + période) pour les PMs distincts nommés pendant le mandat. Liens vers `/etat-senegal/premiers-ministres/[slug]`
 - **Navigation précédent/suivant** entre présidences (ordre chronologique), via les champs `prev`/`next` de l'API
 - Skeleton loaders sur chaque bloc
 - **SEO** :
   - `useSeoMeta` : title = `${full_name} — Président du Sénégal (${start_year}–${end_year ?? 'présent'}) | Vie Publique Sénégal`, description mentionnant dates, nombre de gouvernements, PMs
-  - `useHead` avec canonical → `/senegal/presidents/[slug]` (**sans** query params)
+  - `useHead` avec canonical → `/etat-senegal/presidents/[slug]` (**sans** query params)
   - JSON-LD `Person` :
     ```json
     {
       "@type": "Person",
       "name": "Léopold Sédar Senghor",
-      "url": "https://vie-publique.sn/senegal/presidents/senghor",
+      "url": "https://vie-publique.sn/etat-senegal/presidents/senghor",
       "image": "https://...",
       "birthDate": "1906-10-09",
       "birthPlace": { "@type": "Place", "name": "Joal, Sénégal" },
@@ -455,9 +455,9 @@ export const usePrimeMinisterDetail = (slug: string | Ref<string>) => {
   - Open Graph avec photo haute résolution
 - Breadcrumb visuel : Accueil → Sénégal → Présidents → [Nom]
 
-### `app/pages/senegal/premiers-ministres.vue`
+### `app/pages/etat-senegal/premiers-ministres.vue`
 
-**URL** : `/senegal/premiers-ministres`
+**URL** : `/etat-senegal/premiers-ministres`
 
 **Design** :
 - Header : titre H1 « Premiers ministres du Sénégal », stat globale (nombre de PMs distincts)
@@ -466,16 +466,16 @@ export const usePrimeMinisterDetail = (slug: string | Ref<string>) => {
   - PM = carte avec photo, nom, dates, président(s) sous qui il a servi, durée
   - Période sans PM = jallon sobre "Fonction de Premier ministre abolie" avec dates et président concerné
 - Filtre par président (select construit dynamiquement depuis les données)
-- Liens vers `/senegal/premiers-ministres/[slug]` et `/senegal/presidents/[slug]`
+- Liens vers `/etat-senegal/premiers-ministres/[slug]` et `/etat-senegal/presidents/[slug]`
 - **SEO** :
-  - `useSeoMeta` + canonical `/senegal/premiers-ministres`
+  - `useSeoMeta` + canonical `/etat-senegal/premiers-ministres`
   - JSON-LD `ItemList` de `Person`
   - `BreadcrumbList`
 - Breadcrumb : Accueil → Sénégal → Premiers ministres
 
-### `app/pages/senegal/premiers-ministres/[slug].vue`
+### `app/pages/etat-senegal/premiers-ministres/[slug].vue`
 
-**URL** : `/senegal/premiers-ministres/sonko`, `/senegal/premiers-ministres/diouf`, etc.
+**URL** : `/etat-senegal/premiers-ministres/sonko`, `/etat-senegal/premiers-ministres/diouf`, etc.
 
 **Design** :
 - Hero : photo, nom en H1, dates de la fonction, durée
@@ -488,7 +488,7 @@ export const usePrimeMinisterDetail = (slug: string | Ref<string>) => {
 - Navigation précédent/suivant entre PMs (ordre chronologique de prise de fonction)
 - **SEO** :
   - `useSeoMeta` : title = `${full_name} — Premier ministre du Sénégal (${year_start}–${year_end}) | Vie Publique Sénégal`
-  - canonical → `/senegal/premiers-ministres/[slug]`
+  - canonical → `/etat-senegal/premiers-ministres/[slug]`
   - JSON-LD `Person` avec `jobTitle: "Premier ministre du Sénégal"` + `BreadcrumbList`
 
 ---
@@ -511,7 +511,7 @@ export const usePrimeMinisterDetail = (slug: string | Ref<string>) => {
 ### Canonical
 
 - Listes : canonical = URL de base sans query params (le filtre `?president=` ne crée pas de duplicate)
-- Détails : canonical = `/senegal/presidents/[slug]` ou `/senegal/premiers-ministres/[slug]`
+- Détails : canonical = `/etat-senegal/presidents/[slug]` ou `/etat-senegal/premiers-ministres/[slug]`
 
 ### Schema.org
 
@@ -528,7 +528,7 @@ export const usePrimeMinisterDetail = (slug: string | Ref<string>) => {
       "item": {
         "@type": "Person",
         "name": "Léopold Sédar Senghor",
-        "url": "https://vie-publique.sn/senegal/presidents/senghor",
+        "url": "https://vie-publique.sn/etat-senegal/presidents/senghor",
         "image": "https://...",
         "birthDate": "1906-10-09"
       }
@@ -544,9 +544,9 @@ export const usePrimeMinisterDetail = (slug: string | Ref<string>) => {
   "@graph": [
     {
       "@type": "Person",
-      "@id": "https://vie-publique.sn/senegal/presidents/senghor#person",
+      "@id": "https://vie-publique.sn/etat-senegal/presidents/senghor#person",
       "name": "Léopold Sédar Senghor",
-      "url": "https://vie-publique.sn/senegal/presidents/senghor",
+      "url": "https://vie-publique.sn/etat-senegal/presidents/senghor",
       "image": "https://...",
       "birthDate": "1906-10-09",
       "birthPlace": { "@type": "Place", "name": "Joal, Sénégal" },
@@ -564,7 +564,7 @@ export const usePrimeMinisterDetail = (slug: string | Ref<string>) => {
       "itemListElement": [
         { "@type": "ListItem", "position": 1, "name": "Accueil", "item": "https://vie-publique.sn" },
         { "@type": "ListItem", "position": 2, "name": "Sénégal", "item": "https://vie-publique.sn/senegal" },
-        { "@type": "ListItem", "position": 3, "name": "Présidents", "item": "https://vie-publique.sn/senegal/presidents" },
+        { "@type": "ListItem", "position": 3, "name": "Présidents", "item": "https://vie-publique.sn/etat-senegal/presidents" },
         { "@type": "ListItem", "position": 4, "name": "Léopold Sédar Senghor" }
       ]
     }
@@ -710,9 +710,9 @@ const isSafeUrl = (url: string | null): boolean =>
 5. `server/api/leader/prime-ministers/[slug].get.ts`
 6. `app/composables/usePresidents.ts` + `usePresidentDetail.ts`
 7. `app/composables/usePrimeMinisters.ts` + `usePrimeMinisterDetail.ts`
-8. `app/pages/senegal/presidents.vue` (liste)
-9. `app/pages/senegal/presidents/[slug].vue` (détail)
-10. `app/pages/senegal/premiers-ministres.vue` (liste)
-11. `app/pages/senegal/premiers-ministres/[slug].vue` (détail)
+8. `app/pages/etat-senegal/presidents.vue` (liste)
+9. `app/pages/etat-senegal/presidents/[slug].vue` (détail)
+10. `app/pages/etat-senegal/premiers-ministres.vue` (liste)
+11. `app/pages/etat-senegal/premiers-ministres/[slug].vue` (détail)
 12. Vérification SEO : `lighthouse --only-categories=seo` sur chaque page
 13. Vérification `BreadcrumbList` + `Person` dans Google Rich Results Test

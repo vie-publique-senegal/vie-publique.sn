@@ -6,6 +6,8 @@ interface Props {
   period: string;
   duration: string;
   isCurrent?: boolean;
+  /** Si fourni, le nom devient un lien (ex. vers la fiche personnalité). */
+  nameTo?: string;
 }
 defineProps<Props>();
 
@@ -32,7 +34,12 @@ const { initials } = useLeaderFormat();
     </div>
     <div class="min-w-0">
       <div class="flex flex-wrap items-center justify-center gap-2 sm:justify-start">
-        <h1 class="text-xl font-bold text-gray-900 dark:text-white sm:text-2xl">{{ name }}</h1>
+        <h1 class="text-xl font-bold text-gray-900 dark:text-white sm:text-2xl">
+          <NuxtLink v-if="nameTo" :to="nameTo" class="text-sky-600 hover:text-sky-600 hover:underline dark:hover:text-sky-400">
+            {{ name }}
+          </NuxtLink>
+          <template v-else>{{ name }}</template>
+        </h1>
         <span
           v-if="isCurrent"
           class="inline-flex items-center rounded-full bg-green-50 px-2.5 py-1 text-xs font-medium text-green-700 dark:bg-green-900/30 dark:text-green-300"

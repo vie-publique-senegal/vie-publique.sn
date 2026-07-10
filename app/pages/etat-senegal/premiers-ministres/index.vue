@@ -53,8 +53,8 @@ const initials = (name: string): string =>
     .map((w) => w[0]?.toUpperCase() ?? '')
     .join('');
 
-const pmUrl = (pm: LeaderBrief) => `/senegal/premiers-ministres/${pm.slug}`;
-const presUrl = (p: LeaderBrief) => `/senegal/presidents/${p.slug}`;
+const pmUrl = (pm: LeaderBrief) => `/etat-senegal/premiers-ministres/${pm.slug}`;
+const presUrl = (p: LeaderBrief) => `/etat-senegal/presidents/${p.slug}`;
 
 // Présidents disponibles (pour le filtre), dérivés des terms
 const presidentOptions = computed(() => {
@@ -86,7 +86,7 @@ const description = computed(
   () =>
     `Tous les Premiers ministres du Sénégal depuis 1960 : mandats, périodes d'exercice et présidents tutélaires.`,
 );
-const url = `${siteUrl}/senegal/premiers-ministres`;
+const url = `${siteUrl}/etat-senegal/premiers-ministres`;
 const image = computed(() => {
   const photo = current.value?.prime_minister.photo ?? terms.value[0]?.prime_minister.photo;
   return photo ? `${siteUrl}${useCmsImage(photo)}` : `${siteUrl}/nomination-3.png`;
@@ -150,7 +150,7 @@ useHead({
 <template>
   <div class="min-h-screen pb-20 dark:bg-gray-900/95">
     <div class="container mx-auto px-4 pt-2">
-      <AppBreadcrumb :items="[{ label: 'Sénégal' }, { label: 'Premiers ministres' }]" />
+      <AppBreadcrumb :items="[{ label: 'État du Sénégal', to: '/etat-senegal' }, { label: 'Premiers ministres' }]" />
     </div>
 
     <header

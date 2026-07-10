@@ -190,6 +190,13 @@ useHead({
 
 const govUrl = (gov: GovernmentWithStats) => `/gouvernement-senegal/${gov.slug}`;
 
+// Lien vers la fiche personnalité du Premier ministre, sans ?ref=gouvernement
+// (ce paramètre est réservé au retour depuis le gouvernement en exercice).
+const pmUrl = (pm: { id: number; full_name: string; slug: string | null }) => {
+  const s = pm.slug || generateSlugFromName(pm.full_name);
+  return `/personnalites/${pm.id}/${s}`;
+};
+
 // Image du président pour l'en-tête d'accordéon (CMS).
 const presidentPhoto = (photo: string | null | undefined) =>
   photo ? useCmsImage(photo) : '/unknown_member.webp';
@@ -478,7 +485,12 @@ const togglePresidency = (slug: string) => {
                   <p class="mt-2 text-xs text-gray-600 dark:text-gray-300">
                     <template v-if="gov.prime_minister">
                       <span class="text-gray-400 dark:text-gray-500">Premier Ministre :</span>
-                      {{ gov.prime_minister.full_name }}
+                      <NuxtLink
+                        :to="pmUrl(gov.prime_minister)"
+                        class="text-sky-600 hover:underline dark:text-sky-400"
+                      >
+                        {{ gov.prime_minister.full_name }}
+                      </NuxtLink>
                     </template>
                     <template v-else>
                       <span class="italic text-gray-400 dark:text-gray-500"

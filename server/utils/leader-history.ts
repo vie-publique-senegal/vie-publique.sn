@@ -33,6 +33,8 @@ const toLeader = (p: any): LeaderBrief | null =>
  * Récupère tous les gouvernements publiés (président + PM), triés du plus
  * ancien au plus récent. Source unique pour dériver présidents et PMs.
  */
+const toDecreeRef = (d: any) => (d ? { id: d.id, title: d.title, slug: d.slug ?? null } : null);
+
 export async function fetchGovernmentsAsc(): Promise<GovernmentBrief[]> {
   const directus = getCmsClient();
   const data = await directus.request(
@@ -52,12 +54,45 @@ export async function fetchGovernmentsAsc(): Promise<GovernmentBrief[]> {
         'prime_minister.full_name',
         'prime_minister.slug',
         'prime_minister.photo',
+        'pm_appointment_decree.id',
+        'pm_appointment_decree.title',
+        'pm_appointment_decree.slug',
+        'formation_decree.id',
+        'formation_decree.title',
+        'formation_decree.slug',
       ],
       filter: { status: { _eq: 'published' }, president: { _nnull: true } },
       sort: ['start_date'],
       limit: -1,
     }),
   );
+
+  // Composition (nombre de ministres / femmes) par gouvernement : président et
+  // PM exclus, comptés à part sur leurs propres champs de relation.
+  const appointments = await directus
+    .request(
+      readItems('public_person_appointments', {
+        fields: ['government', 'person.sexe'],
+        filter: {
+          status: { _eq: 'published' },
+          government: { _nnull: true },
+          position_category_slug: { _nin: ['presidence', 'premier_ministre'] },
+        },
+        limit: -1,
+      }),
+    )
+    .catch(() => [] as any[]);
+
+  const statsByGov = new Map<number, { total: number; women: number }>();
+  for (const a of appointments as any[]) {
+    const govId =
+      typeof a.government === 'object' && a.government !== null ? a.government.id : a.government;
+    if (govId === null || govId === undefined) continue;
+    const entry = statsByGov.get(govId) ?? { total: 0, women: 0 };
+    entry.total += 1;
+    if (a.person?.sexe === 'female') entry.women += 1;
+    statsByGov.set(govId, entry);
+  }
 
   return (data as any[])
     .filter((g) => g.president)
@@ -70,6 +105,9 @@ export async function fetchGovernmentsAsc(): Promise<GovernmentBrief[]> {
       notes: g.notes ?? null,
       president: toLeader(g.president)!,
       prime_minister: toLeader(g.prime_minister),
+      stats: statsByGov.get(g.id) ?? { total: 0, women: 0 },
+      pm_appointment_decree: toDecreeRef(g.pm_appointment_decree),
+      formation_decree: toDecreeRef(g.formation_decree),
     }));
 }
 

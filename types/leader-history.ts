@@ -11,6 +11,8 @@ export type LeaderBrief = {
   photo: string | null;
 };
 
+export type LeaderDecreeRef = { id: number; title: string; slug: string | null } | null;
+
 export type GovernmentBrief = {
   id: number;
   name: string;
@@ -20,6 +22,10 @@ export type GovernmentBrief = {
   notes: string | null;
   prime_minister: LeaderBrief | null;
   president: LeaderBrief;
+  /** Nombre de ministres (hors présidence / PM) et de femmes parmi eux. */
+  stats: { total: number; women: number };
+  pm_appointment_decree: LeaderDecreeRef;
+  formation_decree: LeaderDecreeRef;
 };
 
 export type PresidentialTerm = {

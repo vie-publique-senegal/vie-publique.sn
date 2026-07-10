@@ -4,10 +4,10 @@ Pages de référence sur tous les présidents et Premiers ministres du Sénégal
 Les mandats sont **dérivés dynamiquement** de la collection `governments` — aucune liste codée
 en dur.
 
-- **Présidents — liste** : `/senegal/presidents`
-- **Présidents — détail** : `/senegal/presidents/<slug>` (ex. `/senegal/presidents/bassirou-diomaye-faye`)
-- **Premiers ministres — liste** : `/senegal/premiers-ministres`
-- **Premiers ministres — détail** : `/senegal/premiers-ministres/<slug>` (ex. `/senegal/premiers-ministres/ousmane-sonko`)
+- **Présidents — liste** : `/etat-senegal/presidents`
+- **Présidents — détail** : `/etat-senegal/presidents/<slug>` (ex. `/etat-senegal/presidents/bassirou-diomaye-faye`)
+- **Premiers ministres — liste** : `/etat-senegal/premiers-ministres`
+- **Premiers ministres — détail** : `/etat-senegal/premiers-ministres/<slug>` (ex. `/etat-senegal/premiers-ministres/ousmane-sonko`)
 
 ---
 
@@ -24,10 +24,10 @@ en dur.
 | Composable présidents | `app/composables/usePresidents.ts` | `usePresidents()` + `usePresidentDetail(slug)` |
 | Composable PMs | `app/composables/usePrimeMinisters.ts` | `usePrimeMinisters()` + `usePrimeMinisterDetail(slug)` |
 | Composable format | `app/composables/useLeaderFormat.ts` | Helpers partagés : dates, durée, initiales, URL sécurisée |
-| Page présidents liste | `app/pages/senegal/presidents/index.vue` | Grille de cartes, triées récent → ancien, SEO `ItemList` |
-| Page présidents détail | `app/pages/senegal/presidents/[slug].vue` | Profil, stats, gouvernements, SEO `Person` |
-| Page PMs liste | `app/pages/senegal/premiers-ministres/index.vue` | Grille + filtre par président (`?president=`), périodes sans PM, SEO `ItemList` |
-| Page PMs détail | `app/pages/senegal/premiers-ministres/[slug].vue` | Profil, stats, gouvernements, SEO `Person` |
+| Page présidents liste | `app/pages/etat-senegal/presidents/index.vue` | Grille de cartes, triées récent → ancien, SEO `ItemList` |
+| Page présidents détail | `app/pages/etat-senegal/presidents/[slug].vue` | Profil, stats, gouvernements, SEO `Person` |
+| Page PMs liste | `app/pages/etat-senegal/premiers-ministres/index.vue` | Grille + filtre par président (`?president=`), périodes sans PM, SEO `ItemList` |
+| Page PMs détail | `app/pages/etat-senegal/premiers-ministres/[slug].vue` | Profil, stats, gouvernements, SEO `Person` |
 | Composant | `app/components/Leader/PersonCard.vue` | Carte personne (photo/initiales + nom, lien) |
 | Composant | `app/components/Leader/BioFacts.vue` | Bloc biographique (naissance, formation, réseaux sociaux) |
 | Composant | `app/components/Leader/Hero.vue` | En-tête de page détail |
@@ -120,13 +120,13 @@ Helpers partagés par toutes les pages leaders (importés via `useLeaderFormat()
 
 ## Pages liste
 
-### `/senegal/presidents`
+### `/etat-senegal/presidents`
 - Cartes triées récent → ancien (`[...terms].reverse()`)
 - Chaque carte : photo/initiales, nom, période, durée, nb gouvernements, nb PMs
 - Pas de filtre
 - SEO : `useSeoMeta` + JSON-LD `ItemList` + `BreadcrumbList`
 
-### `/senegal/premiers-ministres`
+### `/etat-senegal/premiers-ministres`
 - **Filtre par président** via `?president=<slug>` (URL sync, dérivé des données)
 - Intégration des `gaps` (périodes sans PM) dans la frise chronologique
 - SEO : `useSeoMeta` + JSON-LD `ItemList` + `BreadcrumbList`
@@ -135,17 +135,17 @@ Helpers partagés par toutes les pages leaders (importés via `useLeaderFormat()
 
 ## Pages détail
 
-### `/senegal/presidents/[slug]`
+### `/etat-senegal/presidents/[slug]`
 - Profil biographique (`LeaderProfile`) : photo, naissance, formation, réseaux sociaux
 - Mandat : période, durée, stats
 - Liste des gouvernements formés (liens vers `/gouvernement-senegal/<slug>`)
-- Liste des PMs nommés (liens vers `/senegal/premiers-ministres/<slug>`)
+- Liste des PMs nommés (liens vers `/etat-senegal/premiers-ministres/<slug>`)
 - Décret d'investiture si disponible
 - Navigation précédent / suivant (`LeaderPrevNext`)
 - 404 via `watchEffect` si `error.value` après chargement
 - SEO : `Person` JSON-LD, `og:image` = photo CMS si dispo sinon `/nomination-3.png`
 
-### `/senegal/premiers-ministres/[slug]`
+### `/etat-senegal/premiers-ministres/[slug]`
 - Structure identique au détail président
 - Lien(s) vers le(s) président(s) sous qui le PM a servi
 - SEO : idem (`Person` JSON-LD)
@@ -179,9 +179,9 @@ Helpers partagés par toutes les pages leaders (importés via `useLeaderFormat()
 ## Maillage interne
 
 - Page détail président → liens gouvernements (`/gouvernement-senegal/<slug>`)
-- Page détail président → liens PMs nommés (`/senegal/premiers-ministres/<slug>`)
+- Page détail président → liens PMs nommés (`/etat-senegal/premiers-ministres/<slug>`)
 - Page détail PM → liens gouvernements (`/gouvernement-senegal/<slug>`)
-- Page détail PM → liens présidents (`/senegal/presidents/<slug>`)
+- Page détail PM → liens présidents (`/etat-senegal/presidents/<slug>`)
 - Page historique gouvernements → déjà liée (les gouvernements contiennent les slugs)
 
 ---
@@ -197,11 +197,11 @@ curl http://localhost:3000/api/leader/prime-ministers/ousmane-sonko
 curl "http://localhost:3000/api/leader/prime-ministers?president=bassirou-diomaye-faye"
 
 # SSR
-curl -sL http://localhost:3000/senegal/presidents | grep -oE '<title>[^<]+'
-curl -sL http://localhost:3000/senegal/presidents/bassirou-diomaye-faye | grep -oE '<title>[^<]+'
-curl -sL http://localhost:3000/senegal/premiers-ministres | grep -oE '<title>[^<]+'
-curl -sL http://localhost:3000/senegal/premiers-ministres/ousmane-sonko | grep -oE '<title>[^<]+'
+curl -sL http://localhost:3000/etat-senegal/presidents | grep -oE '<title>[^<]+'
+curl -sL http://localhost:3000/etat-senegal/presidents/bassirou-diomaye-faye | grep -oE '<title>[^<]+'
+curl -sL http://localhost:3000/etat-senegal/premiers-ministres | grep -oE '<title>[^<]+'
+curl -sL http://localhost:3000/etat-senegal/premiers-ministres/ousmane-sonko | grep -oE '<title>[^<]+'
 
 # 404
-curl -sI http://localhost:3000/senegal/presidents/inconnu  # → 404
+curl -sI http://localhost:3000/etat-senegal/presidents/inconnu  # → 404
 ```

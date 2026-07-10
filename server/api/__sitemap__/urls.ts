@@ -484,8 +484,8 @@ export default defineSitemapEventHandler(async () => {
     // 10. Présidents & Premiers ministres (dérivés des gouvernements)
     try {
       urls.push(
-        { loc: '/senegal/presidents', changefreq: 'monthly', priority: 0.8 },
-        { loc: '/senegal/premiers-ministres', changefreq: 'monthly', priority: 0.8 },
+        { loc: '/etat-senegal/presidents', changefreq: 'monthly', priority: 0.8 },
+        { loc: '/etat-senegal/premiers-ministres', changefreq: 'monthly', priority: 0.8 },
       );
 
       const leaderGovs = await directus.request(
@@ -512,11 +512,11 @@ export default defineSitemapEventHandler(async () => {
         }
       }
       for (const slug of presidentSlugs) {
-        urls.push({ loc: `/senegal/presidents/${slug}`, changefreq: 'yearly', priority: 0.7 });
+        urls.push({ loc: `/etat-senegal/presidents/${slug}`, changefreq: 'yearly', priority: 0.7 });
       }
       for (const slug of pmSlugs) {
         urls.push({
-          loc: `/senegal/premiers-ministres/${slug}`,
+          loc: `/etat-senegal/premiers-ministres/${slug}`,
           changefreq: 'yearly',
           priority: 0.7,
         });

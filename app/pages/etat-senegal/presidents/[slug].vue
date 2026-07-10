@@ -14,15 +14,11 @@ const {
   next,
   loading: pending,
   error,
-} = usePrimeMinisterDetail(slug);
+} = usePresidentDetail(slug);
 
 watchEffect(() => {
   if (!pending.value && error.value) {
-    throw createError({
-      statusCode: 404,
-      statusMessage: 'Premier ministre introuvable',
-      fatal: true,
-    });
+    throw createError({ statusCode: 404, statusMessage: 'Président introuvable', fatal: true });
   }
 });
 
@@ -30,16 +26,16 @@ watchEffect(() => {
 
 const { formatPeriod, formatDuration, year, isSafeUrl, documentUrl } = useLeaderFormat();
 
-const presUrl = (p: LeaderBrief) => `/senegal/presidents/${p.slug}`;
+const pmUrl = (pm: LeaderBrief) => `/etat-senegal/premiers-ministres/${pm.slug}`;
 const govUrl = (g: GovernmentBrief) => `/gouvernement-senegal/${g.slug}`;
 
 /* --------------------------------- SEO ----------------------------------- */
 
 const title = computed(() => {
   const t = term.value;
-  if (!t) return 'Premier ministre du Sénégal';
+  if (!t) return 'Président du Sénégal';
   const end = t.end_date ? year(t.end_date) : 'présent';
-  return `${t.prime_minister.full_name} - PM (${year(t.start_date)}–${end})`;
+  return `${t.president.full_name} - Président (${year(t.start_date)}–${end})`;
 });
 
 const description = computed(() => {
@@ -47,10 +43,14 @@ const description = computed(() => {
   if (!t) return '';
   const bio = profile.value?.short_bio;
   if (bio) return bio.length > 160 ? `${bio.slice(0, 157)}…` : bio;
-  return `${t.prime_minister.full_name} a été Premier ministre du Sénégal, ${formatPeriod(t.start_date, t.end_date)}, sous ${t.presidents.map((p) => p.full_name).join(' et ')}. ${t.stats.governments_count} gouvernements dirigés.`;
+  const end = t.end_date ? year(t.end_date) : null;
+  const period = end
+    ? `a dirigé le Sénégal de ${year(t.start_date)} à ${end}`
+    : `est président du Sénégal depuis ${year(t.start_date)}`;
+  return `${t.president.full_name} ${period}. Il a formé ${t.stats.governments_count} gouvernements avec ${t.stats.pm_count} Premiers ministres.`;
 });
 
-const url = computed(() => `${siteUrl}/senegal/premiers-ministres/${slug.value}`);
+const url = computed(() => `${siteUrl}/etat-senegal/presidents/${slug.value}`);
 const image = computed(() =>
   profile.value?.photo
     ? `${siteUrl}${useCmsImage(profile.value.photo)}`
@@ -69,7 +69,7 @@ const personSchema = computed(() => {
     ...(p.photo ? { image: `${siteUrl}${useCmsImage(p.photo)}` } : {}),
     ...(p.birthdate ? { birthDate: p.birthdate } : {}),
     ...(p.birthplace ? { birthPlace: { '@type': 'Place', name: p.birthplace } } : {}),
-    jobTitle: 'Premier ministre du Sénégal',
+    jobTitle: 'Président de la République du Sénégal',
     worksFor: { '@type': 'Organization', name: 'République du Sénégal' },
     ...(p.short_bio ? { description: p.short_bio } : {}),
     ...(isSafeUrl(p.website) ? { sameAs: [p.website] } : {}),
@@ -101,7 +101,7 @@ useHead({
   ],
   script: [
     {
-      key: 'ld-pm',
+      key: 'ld-president',
       type: 'application/ld+json',
       innerHTML: computed(() => (personSchema.value ? JSON.stringify(personSchema.value) : '')),
     },
@@ -114,9 +114,9 @@ useHead({
     <div class="container mx-auto px-4 pt-2">
       <AppBreadcrumb
         :items="[
-          { label: 'Sénégal' },
-          { label: 'Premiers ministres', to: '/senegal/premiers-ministres' },
-          { label: profile?.full_name || 'Premier ministre' },
+          { label: 'État du Sénégal', to: '/etat-senegal' },
+          { label: 'Présidents', to: '/etat-senegal/presidents' },
+          { label: profile?.full_name || 'Président' },
         ]"
       />
     </div>
@@ -129,10 +129,11 @@ useHead({
       </div>
 
       <div v-else-if="term && profile" class="space-y-8">
+        <!-- Hero -->
         <LeaderHero
           :name="profile.full_name"
           :photo="profile.photo"
-          role-label="Premier ministre"
+          role-label="Président de la République"
           :period="formatPeriod(term.start_date, term.end_date)"
           :duration="formatDuration(term.stats.duration_days)"
           :is-current="term.end_date === null"
@@ -146,6 +147,7 @@ useHead({
           {{ profile.short_bio }}
         </p>
 
+        <!-- Bio -->
         <LeaderBioFacts :profile="profile" />
 
         <!-- Biographie -->
@@ -154,11 +156,12 @@ useHead({
           <div class="prose prose-sm max-w-none dark:prose-invert" v-html="profile.long_bio" />
         </LeaderAccordion>
 
+        <!-- Décret d'investiture -->
         <section
           v-if="appointment?.source_document"
           class="rounded-2xl border border-gray-100 bg-white p-4 dark:border-gray-700 dark:bg-gray-800"
         >
-          <h2 class="text-base font-semibold text-gray-900 dark:text-white">Nomination</h2>
+          <h2 class="text-base font-semibold text-gray-900 dark:text-white">Investiture</h2>
           <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
             <NuxtLink
               :to="documentUrl(appointment.source_document)"
@@ -168,7 +171,8 @@ useHead({
           </p>
         </section>
 
-        <LeaderAccordion title="Gouvernements dirigés" :count="term.governments.length">
+        <!-- Gouvernements formés -->
+        <LeaderAccordion title="Gouvernements formés" :count="term.governments.length">
           <ol class="space-y-2">
             <li
               v-for="g in [...term.governments].reverse()"
@@ -191,30 +195,35 @@ useHead({
                 }}</span>
               </div>
               <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
-                Président :
-                <NuxtLink
-                  :to="presUrl(g.president)"
-                  class="text-sky-600 hover:underline dark:text-sky-400"
-                  >{{ g.president.full_name }}</NuxtLink
-                >
+                <template v-if="g.prime_minister">
+                  PM :
+                  <NuxtLink
+                    :to="pmUrl(g.prime_minister)"
+                    class="text-sky-600 hover:underline dark:text-sky-400"
+                    >{{ g.prime_minister.full_name }}</NuxtLink
+                  >
+                </template>
+                <span v-else class="italic">Présidence directe</span>
               </p>
             </li>
           </ol>
         </LeaderAccordion>
 
+        <!-- PMs nommés -->
         <LeaderAccordion
-          v-if="term.presidents.length > 1"
-          title="Présidents sous qui il a servi"
-          :count="term.presidents.length"
+          v-if="term.prime_ministers.length"
+          title="Premiers ministres nommés"
+          :count="term.prime_ministers.length"
         >
-          <ul class="grid grid-cols-2 gap-3 sm:grid-cols-3">
-            <li v-for="p in term.presidents" :key="p.id">
-              <LeaderPersonCard :person="p" :to="presUrl(p)" />
+          <ul class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+            <li v-for="pm in term.prime_ministers" :key="pm.id">
+              <LeaderPersonCard :person="pm" :to="pmUrl(pm)" />
             </li>
           </ul>
         </LeaderAccordion>
 
-        <LeaderPrevNext base-path="/senegal/premiers-ministres" :prev="prev" :next="next" />
+        <!-- Nav prev/next -->
+        <LeaderPrevNext base-path="/etat-senegal/presidents" :prev="prev" :next="next" />
       </div>
     </main>
   </div>
