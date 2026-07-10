@@ -13,7 +13,7 @@
 ### 🔴 Critique
 
 - [ ] [SEC-1 — Webhook Bictorys sans vérification de signature HMAC](#sec-1--webhook-bictorys-sans-vérification-de-signature)
-- [ ] [SEC-2 — Endpoints `server/api/debug/*` exposés en production](#sec-2--endpoints-de-debug-exposés-en-production)
+- [x] [SEC-2 — Endpoints `server/api/debug/*` exposés en production](#sec-2--endpoints-de-debug-exposés-en-production) ✅ corrigé 02/07/2026 : dossier `server/api/debug/` supprimé (aucune référence dans le code ; `/api/health` reste pour le healthcheck)
 - [ ] [SEC-3 — Protection CSRF inopérante (fichier mal placé)](#sec-3--protection-csrf-inopérante)
 - [ ] [SEC-4 — Turnstile jamais vérifié côté serveur + newsletter sans rate limit](#sec-4--turnstile-jamais-vérifié--newsletter-non-protégée)
 - [ ] [PERF-1 — Precache PWA de 45,6 MB](#perf-1--precache-pwa-de-456-mb)
@@ -97,21 +97,23 @@
 La vérification HMAC est **commentée** (TODO). N'importe qui peut POST un faux `charge.success` avec un `customer.email` arbitraire → déclenche `sendDonationConfirmationEmail()` (l. 94-103) : envoi d'un « reçu de don » au nom de l'association à n'importe quelle adresse, et corruption de futurs enregistrements de dons. L'endpoint renvoie toujours 200 (l. 68-73), masquant les abus.
 
 **Fix** : implémenter la vérification HMAC avec `config.bictorysWebhookSecret` (déjà présent en runtimeConfig) **avant tout traitement** ; rejeter en 401 si invalide.
-NB : le callback Paydunya re-confirme la transaction auprès de l'API Paydunya (`paydunya/callback.post.ts:30-40`) — correct, ne pas y toucher.
-
-### SEC-2 — Endpoints de debug exposés en production
-
-**Fichiers** : `server/api/debug/env.ts`, `server/api/debug/version.ts`
-Aucun garde (`NODE_ENV`, feature flag). `env.ts:24-28` renvoie `process.env.CMS_API_URL_ASSETS` en clair ; `version.ts` expose `gitCommit`, `nodeEnv`, `process.version`, `process.platform`. Le commentaire du fichier dit lui-même « À SUPPRIMER après débogage ! ».
-
-**Fix** : supprimer le dossier `server/api/debug/`, ou le protéger : `if (process.env.NODE_ENV === 'production') throw createError({ statusCode: 404 })`.
+NB : seul Bictorys est supporté ; la vérification HMAC doit être implémentée dans `webhook.post.ts`.
 
 ### SEC-3 — Protection CSRF inopérante
 
 **Fichier** : `server/api/middleware/csrf.ts`
 Le handler est dans `server/api/middleware/` → Nitro l'enregistre comme **route** `/api/middleware/csrf`, pas comme middleware global. Le dossier `server/middleware/` n'existe pas. Résultat : la vérification CSRF ne s'exécute sur **aucune** requête. Tous les POST (newsletter, whistleblowing, invitation podcast, notifications, donate) sont sans CSRF.
 
-**Fix** : déplacer le fichier vers `server/middleware/csrf.ts`. ⚠️ Exempter les webhooks (`/api/donate/**`) qui sont des POST externes légitimes sans header CSRF.
+**Vérifié empiriquement le 02/07/2026** (serveur dev) : `POST /api/newsletter/subscribe` sans token atteint le handler (400 « Email requis », pas de 403) ; la logique CSRF ne s'exécute que sur l'URL `/api/middleware/csrf` elle-même. Le système maison est en fait à moitié construit : `server/api/csrf-token.ts` + `app/components/CsrfToken.vue` (utilisé uniquement par le ChatBot) — aucun `$fetch` du front n'envoie `x-csrf-token`.
+
+**Fix recommandé (mis à jour 03/07/2026)** : ne PAS déplacer le fichier maison — utiliser la **protection CSRF intégrée de nuxt-security** (déjà installé), qui active le module `nuxt-csurf` (déjà présent dans node_modules). Doc : <https://nuxt-security.vercel.app/documentation/middleware/csrf>
+
+1. `nuxt.config.ts` → `security: { csrf: true }` (token chiffré aes-256, cookie httpOnly).
+2. Exempter les POST externes via `routeRules` : `'/api/donate/webhook': { csurf: false }`, `/api/csp-report`.
+3. Côté client : remplacer `$fetch` par `useCsrfFetch()`/`$csrfFetch` sur les formulaires (newsletter, signalement, invitation podcast, notifications, chat, donate init) — sinon ils recevront 403.
+4. Supprimer les 3 morceaux maison : `server/api/middleware/csrf.ts`, `server/api/csrf-token.ts`, `app/components/CsrfToken.vue`.
+
+⚠️ Nuance de gravité : pas de comptes utilisateurs sur le site → le CSRF classique (action avec la session de la victime) ne s'applique pas ; cette protection est surtout une couche anti-abus. SEC-4 (Turnstile + rate limit) reste plus prioritaire en pratique.
 
 ### SEC-4 — Turnstile jamais vérifié + newsletter non protégée
 
@@ -248,7 +250,7 @@ Séries copiées-collées jamais nettoyées : `ElectionMapComponent1/2/3` morts 
 
 ### QUAL-5 — 225 `console.*` en prod
 
-97 dans `app/`, **128 dans `server/`** — dont des logs dans le happy path : `budget/global.get.ts:31,57`, `__sitemap__/urls.ts` (8), **`donate/webhook.post.ts` (8) et `donate/paydunya/*` (12) — flux de paiement**.
+97 dans `app/`, **128 dans `server/`** — dont des logs dans le happy path : `budget/global.get.ts:31,57`, `__sitemap__/urls.ts` (8), **`donate/webhook.post.ts` (8) — flux de paiement**.
 
 **Fix** : règle ESLint `no-console: ['warn', { allow: ['error', 'warn'] }]` côté app ; logger conditionné à l'env côté serveur, en priorité sur `donate/*`.
 
@@ -488,7 +490,7 @@ Aucun lien « Aller au contenu » dans `app/layouts/default.vue`. **Fix** : `<a 
 
 ### SEC-9 — Divulgation de messages d'erreur
 
-`server/api/search.ts:208-211` renvoie le message d'erreur Typesense au client ; `donate/webhook` et `paydunya/callback` renvoient `error.message`. **Fix** : messages génériques, détails en logs.
+`server/api/search.ts:208-211` renvoie le message d'erreur Typesense au client ; `donate/webhook` renvoie `error.message`. **Fix** : messages génériques, détails en logs.
 Aussi : `rate-limit.ts:29` se fie au premier élément de `x-forwarded-for` (spoofable hors proxy de confiance).
 
 ### SEC-10 — Dépendances vulnérables

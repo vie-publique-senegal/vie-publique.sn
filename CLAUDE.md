@@ -108,6 +108,21 @@ et `server/api/assembly/votes/[id].get.ts`.
 (section Selection ; anciennement « List ») → crée un champ `json` avec un formulaire propre
 pour les rédacteurs (pas de JSON brut à saisir).
 
+### Cache Nitro & CMS en dev local (pièges — fait perdre du temps)
+
+- **Le cache SWR Nitro persiste sur disque dans `.nuxt/cache/nitro/` ENTRE les redémarrages du
+  serveur dev.** Avec `maxAge: 0` + SWR, un endpoint peut répondre 200 avec des données **périmées
+  d'une session précédente** alors que le CMS est injoignable ou que le code a changé. Pour tester
+  une valeur fraîche : supprimer `.nuxt/cache/nitro/handlers/<name>` (et `functions/<name>` pour
+  `defineCachedFunction`), ou bumper le `name`.
+- **Diagnostic** : certains endpoints CMS répondent 200 et d'autres 500 `fetch failed` → comparer
+  cache présent vs absent AVANT de chercher un bug de code.
+- Les requêtes Directus peuvent échouer en dev local avec `unable to get local issuer certificate`
+  (proxy/VPN Windows interceptant le TLS). **Ce n'est pas un bug de code** (OK en prod). Test
+  local uniquement : relancer avec `$env:NODE_TLS_REJECT_UNAUTHORIZED = '0'` (jamais en prod).
+- Tout nouveau handler consommant le CMS doit **dégrader proprement** : requêtes isolées
+  (échec = donnée omise ou fallback daté), jamais un 500 global (modèle : `server/utils/llms.ts`).
+
 ### Development Workflow
 
 1. **Branch Strategy**: Work on `develop` branch, create PRs to `develop`
@@ -164,6 +179,7 @@ Le projet utilise `@nuxtjs/seo`. Un audit basé uniquement sur le code produit d
 8. **Un seul `<h1>` par page.** Piège récurrent : les pages détail ont **deux en-têtes** (barre sticky **mobile** + en-tête **desktop**) qui affichent le même titre. Si les deux sont `<h1>` → **2 H1** (les deux sont dans le DOM, juste masqués en CSS selon le viewport). **Règle : un seul `<h1>` = le titre principal du contenu ; la barre de nav mobile et les titres de cartes/sections sont en `<p>` ou `<h2>`.** Vérifier : `curl -s <url> | grep -o "<h1" | wc -l` doit donner **1**.
 9. **Titre de page : ne PAS répéter la marque.** Le `titleTemplate` global (`@nuxtjs/seo`) ajoute déjà `| Vie-Publique.sn`. En page, mettre **juste le titre** (+ éventuel descripteur utile : « Nom - Poste »), **sans** « - Vie Publique Sénégal » ni « | … Vie Publique Sénégal » (sinon marque dupliquée + titre trop long). Un **qualificatif de section** sans la marque (« | Actualités Sénégal ») reste acceptable.
 10. **Recherche interne : JAMAIS indexable.** Toute page de résultats de recherche (`/recherche` ou future variante) doit porter `{ name: 'robots', content: 'noindex, follow' }` et être exclue du sitemap (`sitemap.exclude` dans `nuxt.config.ts`). Raisons : espace d'URLs `?q=` infini qui brûle le crawl budget, **vecteur de spam** (des fermes de liens pointent vers `/recherche?q=<spam>` pour faire indexer leurs mots-clés sur notre domaine — constaté sur Bing en 2026-07), contenu pauvre/dupliqué pénalisé (« search results in search results »). **⚠️ PAS de `Disallow` robots.txt** sur ces pages : le crawler doit pouvoir les crawler pour voir le noindex, et `follow` laisse circuler le jus vers les fiches. Ce qui doit ranker à la place : les pages de listing éditoriales à URL stable (`/documents/public`, `/dossiers`…).
+11. **Texte CMS injecté dans les meta / JSON-LD : TOUJOURS passer par `useCleanText`.** Pour toute valeur `useSeoMeta` (description…) ou champ JSON-LD (`text`, `articleBody`, `description`, FAQ `answer`…) construite à partir de contenu rédigé au CMS, utiliser `cleanCmsText()` (strip HTML + décode les entités + `.normalize('NFKC')` + collapse blancs) et, pour couper, `truncateText()` — **jamais** `.slice`/`.substring` bruts. Raison : du texte collé depuis les réseaux contient souvent du **pseudo-gras Unicode** (`𝐎𝐛𝐣𝐞𝐭…`, plan astral U+1D400+ = paires de surrogates UTF-16) ; Google tronque les longues valeurs structurées et coupe **au milieu d'une paire** → surrogate orphelin → GSC **« Truncated Unicode character »** (structured data invalide, page inéligible aux rich results). `NFKC` replie ces caractères en ASCII (`𝐎𝐛𝐣𝐞𝐭 → Objet`) → plus aucun surrogate ; `truncateText` coupe au **code point** (jamais au milieu d'une paire). ⚠️ Ne PAS réimplémenter un `stripHtml` local (`html.replace(/<[^>]*>/g,'')`) : il laisse les entités brutes (`&eacute;`) ET les caractères astraux. Le composable `useCleanText` ([app/composables/useCleanText.ts](app/composables/useCleanText.ts)) est auto-importé. _(Bug rencontré 2026-07 sur `assemblee-nationale/questions/[id]` ; corrigé + rollout préventif sur `votes/[id]`, `dossiers/[slug]`, `actualites/[id]`, `assemblee-nationale/actualites/[id]`, `conseil-des-ministres/[id]`, `podcasts/[id]`.)_ Le fix ne nettoie que la sortie SEO — le **contenu affiché** (`v-html`) garde le pseudo-gras : à corriger côté Directus si besoin d'accessibilité.
 
 ### Conventions d'URL (SEO)
 
@@ -173,6 +189,17 @@ Le projet utilise `@nuxtjs/seo`. Un audit basé uniquement sur le code produit d
 - URL **courte mais descriptive**, calée sur les termes de recherche FR courants.
 - **Pas d'accents** ni de caractères spéciaux/encodés ; minuscules.
 - Slug stable une fois indexé ; si changement, prévoir une **redirection 301** (`routeRules`).
+
+### llms.txt (GEO — crawlers IA)
+
+> Détail complet : `docs/seo/llms-txt.md`.
+
+`/llms.txt` et `/llms-full.txt` sont des **routes Nitro dynamiques** (`server/routes/llms*.txt.get.ts`,
+markdown construit dans `server/utils/llms.ts` depuis Directus). Règles : (1) **ne JAMAIS recréer
+`public/llms.txt`** — un asset statique masquerait silencieusement la route ; (2) nouvelle rubrique
+majeure du site → l'ajouter dans `buildLlmsSections()`, sauf si elle est en `Disallow` robots ;
+(3) changement de Président/PM → mettre à jour les fallbacks datés dans `server/utils/llms.ts`
+(le CMS prime, le fallback ne sert qu'en panne).
 
 ### UI & Design conventions (IMPORTANT)
 

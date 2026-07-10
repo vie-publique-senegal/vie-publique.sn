@@ -287,13 +287,6 @@ const allNavigationCards: NavigationCard[] = [
     featureKey: 'menu_don_bictorys',
   },
   {
-    title: 'Don avec Paydunya',
-    description: 'Soutenez-nous via Paydunya',
-    icon: 'i-heroicons-heart',
-    to: '/don/paydunya',
-    featureKey: 'menu_don_paydunya',
-  },
-  {
     title: 'Podcasts',
     description: 'Lives, Spaces, Interviews en replay',
     icon: 'i-heroicons-microphone',
@@ -384,10 +377,6 @@ const cardConfigs: CardConfigs = {
   'Don avec Bictorys': {
     color: 'text-red-600 dark:text-red-400',
     bgColor: 'bg-red-100 dark:bg-red-900/30',
-  },
-  'Don avec Paydunya': {
-    color: 'text-rose-600 dark:text-rose-400',
-    bgColor: 'bg-rose-100 dark:bg-rose-900/30',
   },
   Podcasts: {
     color: 'text-violet-600 dark:text-violet-400',
