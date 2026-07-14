@@ -106,25 +106,22 @@ const navigationLinks = computed(() => {
       description: 'Lieux et bureaux de vote',
       icon: 'i-heroicons-map',
       to: election.value
-        ? `/elections-senegal/carte-electorale?type=${election.value.type}&year=${election.value.year}`
+        ? `/elections-senegal/carte-electorale?election=${election.value.id}`
         : '/elections-senegal/carte-electorale',
       iconColor: 'text-purple-600 dark:text-purple-400',
       iconBg: 'bg-purple-100 dark:bg-purple-900/30',
       hoverRing: 'md:hover:ring-purple-200'
-    }
-  ];
-
-  if (election.value?.type === 'legislative' && election.value?.status === 'completed') {
-    links.push({
-      title: 'Députés élus',
-      description: 'Annuaire des députés',
-      icon: 'i-heroicons-users',
-      to: '/assemblee-nationale/deputes',
+    },
+    {
+      title: 'Révision Électorale',
+      description: "Période d'inscription sur les listes",
+      icon: 'i-heroicons-calendar-days',
+      to: '/elections-senegal/revision-electorale',
       iconColor: 'text-orange-600 dark:text-orange-400',
       iconBg: 'bg-orange-100 dark:bg-orange-900/30',
       hoverRing: 'md:hover:ring-orange-200'
-    });
-  }
+    }
+  ];
 
   return links;
 });

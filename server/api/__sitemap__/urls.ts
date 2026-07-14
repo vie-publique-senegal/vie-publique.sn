@@ -67,38 +67,41 @@ export default defineSitemapEventHandler(async () => {
     }
 
     // 3. Députés
-    const deputies = await directus.request(
-      readItems('assembly_deputy', {
-        fields: ['id', 'first_name', 'last_name', 'date_updated'],
-        limit: -1,
-        sort: ['last_name'],
-      }),
-    );
-
-    const slugify = (text: string) => {
-      return text
-        .toString()
-        .normalize('NFD')
-        .replace(/[\u0300-\u036f]/g, '')
-        .toLowerCase()
-        .trim()
-        .replace(/\s+/g, '-')
-        .replace(/[^\w-]+/g, '')
-        .replace(/--+/g, '-');
-    };
-
-    for (const deputy of deputies) {
-      const fullName = `${deputy.first_name} ${deputy.last_name}`;
-      const slug = slugify(fullName);
-      const lastmod = toISODate(deputy.date_updated);
-      urls.push({
-        loc: `/assemblee-nationale/deputes/${deputy.id}/${slug}`,
-        ...(lastmod && { lastmod }),
-        changefreq: 'monthly',
-        priority: 0.6,
-      });
+    try {
+      const deputies = await directus.request(
+        readItems('assembly_deputy', {
+          fields: ['id', 'first_name', 'last_name', 'date_updated'],
+          limit: -1,
+          sort: ['last_name'],
+        }),
+      );
+  
+      const slugify = (text: string) => {
+        return text
+          .toString()
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .toLowerCase()
+          .trim()
+          .replace(/\s+/g, '-')
+          .replace(/[^\w-]+/g, '')
+          .replace(/--+/g, '-');
+      };
+  
+      for (const deputy of deputies) {
+        const fullName = `${deputy.first_name} ${deputy.last_name}`;
+        const slug = slugify(fullName);
+        const lastmod = toISODate(deputy.date_updated);
+        urls.push({
+          loc: `/assemblee-nationale/deputes/${deputy.id}/${slug}`,
+          ...(lastmod && { lastmod }),
+          changefreq: 'monthly',
+          priority: 0.6,
+        });
+      }
+    } catch (sitemapError) {
+      console.warn('Erreur sitemap députés:', sitemapError);
     }
-
     // 4. Projets Publics
     try {
       // Pages dashboards (PRES et PIP)
@@ -222,7 +225,30 @@ export default defineSitemapEventHandler(async () => {
       console.warn('Erreur sitemap élections:', sitemapError);
     }
 
-    // 7. Pages statiques : Laissées à l'auto-découverte de Nuxt Sitemap
+    // 7. Révisions électorales (pages dynamiques /elections-senegal/revision-electorale/[slug])
+    try {
+      const revisions = (await directus.request(
+        readItems('election_revisions' as any, {
+          fields: ['slug', 'date_updated'],
+          filter: { status: { _nin: ['draft', 'archived'] } },
+          limit: -1,
+        }),
+      )) as any[];
+
+      for (const revision of revisions) {
+        const lastmod = toISODate(revision.date_updated);
+        urls.push({
+          loc: `/elections-senegal/revision-electorale/${revision.slug}`,
+          ...(lastmod && { lastmod }),
+          changefreq: 'monthly',
+          priority: 0.6,
+        });
+      }
+    } catch (sitemapError) {
+      console.warn('Erreur sitemap révisions électorales:', sitemapError);
+    }
+
+    // 8. Pages statiques : Laissées à l'auto-découverte de Nuxt Sitemap
     // Le module @nuxtjs/seo va automatiquement inclure toutes les pages du dossier /pages
   } catch (error) {
     console.error('Erreur génération sitemap:', error);

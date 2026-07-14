@@ -18,9 +18,6 @@ export interface RevisionDocumentRef {
 
 export interface RevisionFileRef {
   id: number;
-  name: string;
-  year: number | null;
-  revision_date: string | null;
   document: RevisionDocumentRef | null;
 }
 
@@ -33,15 +30,15 @@ export interface RevisionElectionRef {
 }
 
 export interface ElectoralRevision {
+  slug: string;
   year: number | null;
-  revision_date: string | null;
+  type: string;
   national: RevisionFileRef | null;
   diaspora: RevisionFileRef | null;
   elections: RevisionElectionRef[];
 }
 
-export const revisionKeyOf = (revision: ElectoralRevision) =>
-  `${revision.year ?? ''}${revision.revision_date ? `-${revision.revision_date}` : ''}`;
+export const revisionKeyOf = (revision: ElectoralRevision) => revision.slug;
 
 const ELECTION_TYPE_LABELS: Record<string, string> = {
   presidential: 'Présidentielle',

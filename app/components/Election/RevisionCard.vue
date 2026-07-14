@@ -38,9 +38,6 @@ const revisionTotals = computed(() => {
   return `${formatNumber(total.voters)} électeurs · ${formatNumber(total.offices)} bureaux · ${formatNumber(total.places)} lieux de vote`;
 });
 
-const formatDate = (value: string) =>
-  new Date(value).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
-
 const officialDocuments = computed(() => (selectedRevision.value ? officialDocumentsOf(selectedRevision.value) : []));
 </script>
 
@@ -67,12 +64,18 @@ const officialDocuments = computed(() => (selectedRevision.value ? officialDocum
         <span class="font-bold dark:text-white">
           Carte électorale {{ selectedRevision.year }}
         </span>
-        <span v-if="selectedRevision.revision_date" class="text-sm text-gray-500 dark:text-gray-400">
-          Révision du {{ formatDate(selectedRevision.revision_date) }}
-        </span>
         <span v-if="revisionTotals" class="text-sm text-gray-500 dark:text-gray-400">
           {{ revisionTotals }}
         </span>
+        <UButton
+          :to="`/elections-senegal/revision-electorale/${selectedRevision.slug}`"
+          size="xs"
+          color="gray"
+          variant="link"
+          trailing-icon="i-heroicons-arrow-right"
+        >
+          En savoir plus sur cette révision
+        </UButton>
       </div>
 
       <!-- Scrutins rattachés (liste extensible, lien vers le tableau de bord de chacun) -->

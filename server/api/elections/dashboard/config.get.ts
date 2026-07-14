@@ -87,7 +87,6 @@ export default defineCachedEventHandler(
         `electoral_file_${scope}.name`,
         `electoral_file_${scope}.scope`,
         `electoral_file_${scope}.year`,
-        `electoral_file_${scope}.revision_date`,
         `electoral_file_${scope}.document.id`,
         `electoral_file_${scope}.document.slug`,
         `electoral_file_${scope}.document.title`,
@@ -100,7 +99,6 @@ export default defineCachedEventHandler(
         id: number;
         name: string;
         year: number | null;
-        revision_date: string | null;
         document?: {
           id: number;
           slug: string | null;
@@ -115,7 +113,6 @@ export default defineCachedEventHandler(
         id: number;
         name: string;
         year: number | null;
-        revision_date: string | null;
         document: Omit<NonNullable<ElectoralFileRow["document"]>, "status"> | null;
       }
 
@@ -152,7 +149,6 @@ export default defineCachedEventHandler(
             id: file.id,
             name: file.name,
             year: file.year,
-            revision_date: file.revision_date,
             document,
           };
         };
