@@ -39,6 +39,9 @@ if (dsn) {
       'Load failed',
       // Extensions navigateur / scripts tiers hors de notre contrôle
       'ResizeObserver loop',
+      // Webviews Android avec stockage tiers bloqué : l'accès localStorage est
+      // refusé au boot (DOMException 18). Environnemental, pas un bug applicatif.
+      "Failed to read the 'localStorage' property from 'Window'",
     ],
     // Ne pas remonter les erreurs venant de scripts tiers (GTM, Twitter, Facebook…)
     denyUrls: [
@@ -47,6 +50,24 @@ if (dsn) {
       /clarity\.ms/,
       /connect\.facebook\.net/,
       /platform\.twitter\.com/,
+      // Extensions navigateur injectées via blob: — notre code (y compris le worker
+      // pdf.js) est toujours servi depuis /_nuxt/, jamais depuis un blob:
+      /^blob:/,
     ],
+
+    // Les 404 « attendus » (slug inexistant, vieux lien) sont un comportement
+    // normal, pas une erreur à monitorer : ne pas brûler le quota avec.
+    // Les throw createError({ statusCode: 503 }) des pages, eux, remontent bien.
+    beforeSend(event, hint) {
+      const original = hint.originalException;
+      if (
+        original &&
+        typeof original === 'object' &&
+        (original as { statusCode?: number }).statusCode === 404
+      ) {
+        return null;
+      }
+      return event;
+    },
   });
 }

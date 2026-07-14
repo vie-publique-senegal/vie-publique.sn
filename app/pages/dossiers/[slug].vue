@@ -15,9 +15,14 @@ watchEffect(() => {
 const slug = computed(() => route.params.slug as string);
 const { dossier, loading, error } = useDossier(slug);
 
-// 404 propre : dossier introuvable OU non publié (l'API renvoie 404 dans ce cas)
+// 404 propre : dossier introuvable OU non publié (l'API renvoie 404 dans ce cas).
+// Une erreur transitoire (réseau, CMS) ne doit PAS être présentée comme un 404.
 watchEffect(() => {
-  if (!loading.value && (error.value || !dossier.value)) {
+  if (loading.value) return;
+  if (error.value && error.value.statusCode !== 404) {
+    throw createError({ statusCode: 503, statusMessage: 'Erreur de chargement de la page' });
+  }
+  if (error.value || !dossier.value) {
     throw createError({ statusCode: 404, statusMessage: 'Dossier non trouvé' });
   }
 });

@@ -1,5 +1,5 @@
 import { initializeApp, type FirebaseApp } from 'firebase/app';
-import { getMessaging, getToken, onMessage, type Messaging } from 'firebase/messaging';
+import { getMessaging, getToken, isSupported, onMessage, type Messaging } from 'firebase/messaging';
 
 let firebaseApp: FirebaseApp | null = null;
 let messaging: Messaging | null = null;
@@ -61,10 +61,22 @@ export default defineNuxtPlugin(() => {
     if (!messagingPromise) {
       messagingPromise = (async (): Promise<Messaging | null> => {
         try {
+          // getMessaging() lance en interne une promesse de validation non rattachée :
+          // sur un navigateur non supporté (IndexedDB bloqué, navigation privée…),
+          // elle rejette en "unhandled rejection" que notre try/catch ne voit pas.
+          // isSupported() fait la même validation, de façon capturable.
+          const supported = await isSupported().catch(() => false);
+          if (!supported) {
+            console.warn('[Firebase] Messaging not supported by this browser');
+            return null;
+          }
+
           // Quick check: is any SW registered?
           const registrations = await navigator.serviceWorker.getRegistrations();
           if (registrations.length === 0) {
-            console.warn('[Firebase] No service worker registered — FCM needs a SW. Is PWA_ENABLED=true?');
+            console.warn(
+              '[Firebase] No service worker registered — FCM needs a SW. Is PWA_ENABLED=true?',
+            );
             return null;
           }
 

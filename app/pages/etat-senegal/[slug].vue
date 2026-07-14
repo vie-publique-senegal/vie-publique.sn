@@ -6,7 +6,13 @@ const { decree, entity, children, breadcrumb, pending, error } = useEtatOrganisa
 
 watchEffect(() => {
   if (error.value) {
-    throw createError({ statusCode: 404, statusMessage: 'Entité publique introuvable' });
+    // Ne traduire en 404 que si l'API a vraiment répondu 404 : une erreur
+    // transitoire (réseau mobile, CMS indisponible) sur une entité existante
+    // ne doit pas être présentée comme « introuvable » (vu via Sentry).
+    if (error.value.statusCode === 404) {
+      throw createError({ statusCode: 404, statusMessage: 'Entité publique introuvable' });
+    }
+    throw createError({ statusCode: 503, statusMessage: 'Erreur de chargement de la page' });
   }
 });
 
