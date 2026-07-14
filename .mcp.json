@@ -16,6 +16,10 @@
       "type": "http",
       "url": "https://dns-analytics.mcp.cloudflare.com/mcp"
     },
+    "cloudflare-graphql": {
+      "type": "http",
+      "url": "https://graphql.mcp.cloudflare.com/mcp"
+    },
     "chrome-devtools": {
       "type": "stdio",
       "command": "npx",

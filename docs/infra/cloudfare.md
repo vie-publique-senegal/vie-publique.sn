@@ -306,34 +306,45 @@ Tous opérationnels.
 
 ---
 
-# KPI à suivre (48 à 72h)
+# KPI à suivre
 
-## Performance
+## Santé edge — baseline du 14/07/2026 (vérifiable par curl, sans dashboard)
 
-- Cache Hit Ratio
-- Temps de réponse
-- Bande passante économisée
+| Contrôle | Valeur au 14/07/2026 | Attendu |
+| --- | --- | --- |
+| `http://vie-publique.sn` | **301** → `https://vie-publique.sn/` (servi au edge) | 301 (jamais 302/307) |
+| `https://vie-publique.sn` | **301** → `https://www.vie-publique.sn/` | 301 |
+| HTML `/` | `DYNAMIC` | `DYNAMIC` (normal : pas de cache HTML, SWR Nitro à l'origine) |
+| Image `/cms/<uuid>` | **HIT** | HIT (via Cache Rule `cache-images-pdf`) |
+| PDF `/docs/**.pdf` | **HIT** (Age ~20 h) | HIT |
+| Asset `/_nuxt/*.js` | **HIT** (Age ~5 h) | HIT |
+| HSTS | `max-age=31536000; includeSubDomains` | présent |
+| HTTP/3 | `alt-svc: h3` | présent |
 
----
+Batterie de re-contrôle (une URL de chaque famille suffit) :
 
-## Sécurité
+```bash
+curl -s -o /dev/null -w "%{http_code} -> %{redirect_url}\n" "http://vie-publique.sn/"
+curl -s -o /dev/null -w "%{http_code} -> %{redirect_url}\n" "https://vie-publique.sn/"
+curl -sI "https://www.vie-publique.sn/" | grep -iE 'cf-cache-status|alt-svc|strict-transport'
+curl -sI "https://www.vie-publique.sn/cms/<uuid-image>" | grep -i cf-cache-status
+curl -sI "https://www.vie-publique.sn/docs/<uuid>/<nom>.pdf" | grep -i cf-cache-status
+```
 
-- WAF Blocks
-- Faux positifs
-- Pays d'origine
-- Top IP
-- Top Paths
+## KPI dashboard / API (fenêtre courte sur plan Free → relever régulièrement)
 
----
+> Le MCP `cloudflare-dns-analytics` ne lit PAS ces métriques (DNS uniquement). Le suivi
+> depuis Claude Code passe par le serveur MCP officiel **`cloudflare-graphql`**
+> (déclaré dans `.mcp.json` — OAuth via `/mcp` requis), qui interroge l'API GraphQL
+> Analytics. Dashboard : zone → Analytics & Logs.
 
-## IA
-
-- ChatGPT-User
-- Googlebot
-- Claude SearchBot
-- BingBot
-- PerplexityBot
-- MistralAI-User
+| KPI | Où | Baseline (à relever au 1er check MCP) | Interprétation |
+| --- | --- | --- | --- |
+| **Cache hit ratio** (« Percent Cached ») | GraphQL / Analytics → Traffic | _à relever_ | Doit monter nettement après la Cache Rule du 14/07 (images = gros volume de hits) |
+| **Bande passante servie par CF vs origine** | GraphQL / Analytics → Traffic | _à relever_ | Mesure directe de la charge épargnée au serveur Coolify |
+| **Requêtes totales / jour** | GraphQL / Analytics | _à relever_ | Baseline de trafic ; pics anormaux = crawl/attaque |
+| **Menaces bloquées (WAF)** | Analytics → Security | _à relever_ | Surveiller les faux positifs les premières semaines |
+| **Top crawlers IA** (ChatGPT-User, Claude SearchBot, PerplexityBot…) | AI Crawl Control | _à relever_ | Confirmer que les bots IA autorisés consomment bien `llms.txt` et le contenu |
 
 ---
 

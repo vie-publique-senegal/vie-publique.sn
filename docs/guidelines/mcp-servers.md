@@ -12,7 +12,8 @@
 | `sentry` | HTTP (hébergé Sentry) | OAuth via `/mcp` | Lire les issues/stack traces de prod (détail : [`infra/sentry.md`](../infra/sentry.md) §5) |
 | `github` | HTTP (hébergé GitHub) | OAuth via `/mcp` | PRs, issues, CI (le CLI `gh` reste dispo en parallèle) |
 | `cloudflare-docs` | HTTP (hébergé Cloudflare) | aucune | Recherche dans la doc Cloudflare |
-| `cloudflare-dns-analytics` | HTTP (hébergé Cloudflare) | OAuth via `/mcp` | Analytics DNS de la zone (le site passe par Cloudflare) |
+| `cloudflare-dns-analytics` | HTTP (hébergé Cloudflare) | OAuth via `/mcp` | Analytics DNS de la zone (le site passe par Cloudflare). ⚠️ Rapport DNS inutilisable en plan Free (fenêtre max 6 h, l'outil ne descend pas sous 24 h) |
+| `cloudflare-graphql` | HTTP (hébergé Cloudflare) | OAuth via `/mcp` | API GraphQL Analytics : cache hit ratio, requêtes, bande passante, menaces — sert au suivi des KPI de [`infra/cloudfare.md`](../infra/cloudfare.md) |
 | `chrome-devtools` | stdio (`npx chrome-devtools-mcp`) | aucune | Piloter un vrai Chrome : DOM **après hydratation**, console, réseau — la classe de bugs invisibles en `curl` (JSON-LD dupliqué client, TDZ à l'hydratation, cf. CLAUDE.md § SEO) |
 | `directus` | stdio (`npx @directus/content-mcp`) | token via env | Inspecter les collections/champs réels du CMS (évite les pièges de nommage et de permissions documentés dans CLAUDE.md) |
 | `google-analytics` | stdio (`python -m pipx run analytics-mcp`) | ADC Google | Requêter GA4 (rapports, temps réel) |
