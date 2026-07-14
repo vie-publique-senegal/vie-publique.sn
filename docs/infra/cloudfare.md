@@ -126,14 +126,28 @@ Pas nécessaire actuellement.
 
 ## Cache Rules
 
+**`cache-images-pdf`** (déployée le 14/07/2026) :
+
 ```
-Aucune
+Si : URI Path wildcard /cms/* OU URI Path wildcard /docs/*
+Alors : Eligible for cache (Edge TTL non défini = respecte le Cache-Control de l'origine)
 ```
 
-Décision :
+Pourquoi : Cloudflare ne cache par défaut que les URLs **avec extension de fichier
+connue**. Les images CMS (`/cms/<uuid>`, sans extension) restaient en `DYNAMIC` —
+chaque affichage traversait Coolify → proxy Nitro → Directus, malgré le
+`Cache-Control: public, max-age=2592000` déjà envoyé. Les PDF (`/docs/**.pdf`)
+étaient déjà cachés grâce à leur extension ; la condition `/docs/*` est un filet
+pour d'éventuels fichiers sans extension.
 
-- attendre plusieurs jours de métriques
-- optimiser ensuite selon les pages les plus consultées
+⚠️ Ne PAS élargir à `/medias/*` : ce sont des **pages HTML** (annuaire des médias),
+pas des assets.
+
+Vérifié le 14/07/2026 : `/cms/<uuid>` passe de `DYNAMIC` à `MISS` → `HIT`.
+
+```bash
+curl -sI "https://www.vie-publique.sn/cms/<uuid>" | grep -i cf-cache-status
+```
 
 ---
 
@@ -248,6 +262,18 @@ Le bénéfice de visibilité est largement supérieur au coût du crawl.
 
 ---
 
+## Always Use HTTPS
+
+✅ **Activé** (14/07/2026 — SSL/TLS → Edge Certificates).
+
+Le saut `http→https` est servi en **301 par le edge Cloudflare** : les requêtes HTTP
+n'atteignent plus l'origine. Remplace le 307/302 temporaire de Traefik/Coolify — c'était
+le dernier résidu de l'issue SEO **BING-1** (Bing traite les redirections temporaires
+sans transférer les signaux). Chaîne complète documentée dans
+[`docs/guidelines/dns-redirections-domaines.md`](../guidelines/dns-redirections-domaines.md).
+
+---
+
 ## DNS
 
 ✅ Propagation terminée
@@ -313,11 +339,11 @@ Tous opérationnels.
 
 # Optimisations prévues (phase 2)
 
-- Cache Rules ciblées
+- ✅ Cache Rules ciblées (fait 14/07/2026 : `cache-images-pdf`)
 - Rate Limiting API
-- Cache des PDF
-- Optimisation des assets Nuxt
-- Compression et cache des images
+- ✅ Cache des PDF (déjà effectif par extension `.pdf`, vérifié HIT 14/07/2026)
+- ✅ Optimisation des assets Nuxt (déjà effectif : `/_nuxt/*` HIT + immutable, vérifié 14/07/2026)
+- ✅ Compression et cache des images (fait 14/07/2026 via la Cache Rule `/cms/*`)
 - Firewall Rules personnalisées si nécessaire
 - Monitoring des faux positifs WAF
 
@@ -336,7 +362,8 @@ Tous opérationnels.
 | Bot Fight Mode | OFF |
 | AI Bots | Autorisés |
 | Mixed Crawlers | Autorisés |
-| Cache Rules | Aucune (pour le moment) |
+| Always Use HTTPS | ✅ (301 au edge, 14/07/2026) |
+| Cache Rules | `cache-images-pdf` (`/cms/*` + `/docs/*`, 14/07/2026) |
 | Browser Cache TTL | 4 h |
 | Development Mode | OFF |
 | Always Online | OFF |

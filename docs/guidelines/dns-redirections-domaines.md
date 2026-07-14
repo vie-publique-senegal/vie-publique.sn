@@ -42,9 +42,12 @@ Traefik par une redirection **307 temporaire** (non paramétrable en 301 dans l'
 Coolify), avant même que l'app ne voie la requête — c'était la cause du bug SEO BING-1,
 et cela rendrait le middleware ci-dessous inerte.
 
-Résidu connu et accepté : le saut `http→https` (redirection d'entrypoint Traefik,
-gérée globalement par Coolify) reste en 302. Impact mineur : le saut suivant vers le
-www est en 301.
+~~Résidu connu et accepté : le saut `http→https` reste en 302 (entrypoint Traefik).~~
+**Réglé le 14/07/2026** : la zone est désormais proxifiée par **Cloudflare** avec
+**« Always Use HTTPS » activé** (SSL/TLS → Edge Certificates) → le saut `http→https`
+est un **301 servi au edge**, les requêtes HTTP n'atteignent plus du tout l'origine
+(le 302 Traefik est devenu inatteignable de l'extérieur). Config Cloudflare complète :
+[`docs/infra/cloudfare.md`](../infra/cloudfare.md).
 
 ### 3. Middleware Nitro — la redirection 301 elle-même
 
@@ -58,6 +61,9 @@ repo `archives.sn` (apex `archives.sn` → `https://www.archives.sn`).
 ```bash
 # Attendu : 301 → https://www.vie-publique.sn/ (et pas 302/307)
 curl -s -o /dev/null -w "%{http_code} -> %{redirect_url}\n" "https://vie-publique.sn/"
+
+# Attendu : 301 → https://vie-publique.sn/ (Always Use HTTPS, servi par Cloudflare)
+curl -s -o /dev/null -w "%{http_code} -> %{redirect_url}\n" "http://vie-publique.sn/"
 
 # Le www répond directement (200, pas de boucle)
 curl -s -o /dev/null -w "%{http_code}\n" "https://www.vie-publique.sn/"
