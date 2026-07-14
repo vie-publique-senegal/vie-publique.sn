@@ -33,6 +33,11 @@ if (dsn) {
       'Loading chunk',
       'ChunkLoadError',
       'Failed to load module script',
+      // Manifest de build Nuxt : un onglet resté ouvert sur l'ancien build
+      // interroge /_nuxt/builds/meta/<ancien-id>.json qui n'existe plus après
+      // un déploiement → 404 attendu (c'est ce qui déclenche la détection de
+      // build périmé). Regex limitée à ce chemin : ne masque rien d'autre.
+      /\/_nuxt\/builds\/meta\/[\w-]+\.json.*404/,
       // Connectivité utilisateur (réseaux mobiles instables), pas un bug applicatif
       'Failed to fetch',
       'NetworkError when attempting to fetch a resource',
