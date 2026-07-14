@@ -338,13 +338,30 @@ curl -sI "https://www.vie-publique.sn/docs/<uuid>/<nom>.pdf" | grep -i cf-cache-
 > (déclaré dans `.mcp.json` — OAuth via `/mcp` requis), qui interroge l'API GraphQL
 > Analytics. Dashboard : zone → Analytics & Logs.
 
-| KPI | Où | Baseline (à relever au 1er check MCP) | Interprétation |
+| KPI | Où | Baseline (10→14/07/2026, via MCP GraphQL) | Interprétation |
 | --- | --- | --- | --- |
-| **Cache hit ratio** (« Percent Cached ») | GraphQL / Analytics → Traffic | _à relever_ | Doit monter nettement après la Cache Rule du 14/07 (images = gros volume de hits) |
-| **Bande passante servie par CF vs origine** | GraphQL / Analytics → Traffic | _à relever_ | Mesure directe de la charge épargnée au serveur Coolify |
-| **Requêtes totales / jour** | GraphQL / Analytics | _à relever_ | Baseline de trafic ; pics anormaux = crawl/attaque |
-| **Menaces bloquées (WAF)** | Analytics → Security | _à relever_ | Surveiller les faux positifs les premières semaines |
-| **Top crawlers IA** (ChatGPT-User, Claude SearchBot, PerplexityBot…) | AI Crawl Control | _à relever_ | Confirmer que les bots IA autorisés consomment bien `llms.txt` et le contenu |
+| **Cache hit ratio** (requêtes) | GraphQL / Analytics → Traffic | **53–63 %/j avant la Cache Rule** ; **75 %** le 14/07 (jour du déploiement, journée partielle) | Doit se stabiliser ≥ 75 % ; une rechute = règle cassée ou nouvelle famille d'URLs non cachée |
+| **Bande passante servie par CF** | GraphQL / Analytics → Traffic | 64–74 %/j en cache ; volume total **77–200 GB/j**, dont **22–45 GB/j restant sur l'origine** | Mesure la charge épargnée à Coolify ; l'egress origine doit baisser avec la règle images |
+| **Requêtes totales / jour** | GraphQL / Analytics | **~230k–440k/j** (pic à 584k le 14/07 en cours de journée) | Baseline de trafic ; pic anormal = crawl/attaque |
+| **Visiteurs uniques / jour** | GraphQL / Analytics | **8,5k–10,4k/j** | Cohérence avec GA4 (qui ne voit pas les bots) |
+| **Menaces bloquées (WAF)** | GraphQL (`threats`) / Analytics → Security | **0,6k–14,3k/j** — pic à 14 342 le 13/07 | Très variable ; surveiller les faux positifs et investiguer les pics (13/07 ?) |
+| **Top crawlers IA** (ChatGPT-User, Claude SearchBot, PerplexityBot…) | AI Crawl Control (dashboard) | _à relever au dashboard_ | Confirmer que les bots IA autorisés consomment bien `llms.txt` et le contenu |
+
+Requête GraphQL du relevé (à réutiliser tel quel au prochain check, via le MCP `cloudflare-graphql`) :
+
+```graphql
+query {
+  viewer {
+    zones(filter: { zoneTag: "bee4ae2dbd779242be2e6800d8830c83" }) {
+      httpRequests1dGroups(limit: 7, filter: { date_geq: "<J-4>", date_leq: "<J>" }, orderBy: [date_ASC]) {
+        dimensions { date }
+        sum { requests cachedRequests bytes cachedBytes threats pageViews }
+        uniq { uniques }
+      }
+    }
+  }
+}
+```
 
 ---
 
