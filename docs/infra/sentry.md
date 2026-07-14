@@ -109,7 +109,25 @@ volontairement (`ignoreErrors` / `denyUrls` dans `sentry.client.config.ts`) :
 Pour capturer manuellement un cas métier : `import * as Sentry from '@sentry/nuxt'` puis
 `Sentry.captureException(error)`.
 
-## 5. Garde-fous / pièges
+## 5. MCP Sentry — accès aux issues depuis Claude Code
+
+Sentry fournit un [serveur MCP officiel hébergé](https://docs.sentry.io/product/sentry-mcp/)
+qui permet à Claude Code de lire directement les issues, stack traces et événements du dashboard
+(plus besoin de copier-coller les erreurs dans le chat).
+
+Le serveur est déclaré en **portée projet** dans [`.mcp.json`](../../.mcp.json) (committé — il ne
+contient que l'URL publique du serveur, aucun secret) : rien à installer. Chaque développeur doit
+seulement **s'authentifier une fois** : dans Claude Code, taper `/mcp` → sélectionner `sentry` →
+approuver le serveur du projet puis suivre l'OAuth avec son compte Sentry de l'org. Vérifier avec
+`claude mcp list` (doit afficher `Connected`).
+
+> ⚠️ Les serveurs MCP sont chargés au démarrage de session : après le premier checkout (ou une
+> modif de `.mcp.json`), redémarrer la session Claude Code pour qu'il apparaisse dans `/mcp`.
+
+Usage type : « liste les issues Sentry non résolues », « donne-moi la stack trace de l'issue
+VIE-PUBLIQUE-XX », puis correction directe dans le code.
+
+## 6. Garde-fous / pièges
 
 - **Ne pas activer replay ni tracing sans décision** : `replayIntegration` ajoute ~50 ko au
   bundle et brûle le quota ; `tracesSampleRate > 0` multiplie les événements. Le périmètre actuel
@@ -121,8 +139,9 @@ Pour capturer manuellement un cas métier : `import * as Sentry from '@sentry/nu
 - **Vitest** : les configs Sentry ne sont pas chargées par les tests (fichiers conventionnels du
   module Nuxt uniquement) — rien à mocker.
 
-## 6. Historique
+## 7. Historique
 
+- 2026-07-14 : ajout du MCP Sentry pour Claude Code (§5).
 - 2026-07 : intégration initiale (erreurs client + serveur, upload source maps désactivé).
   Remplace l'ébauche `docs/tmp/monitoring.md` (supprimée) : la piste Firebase App Check /
   Firebase Performance n'a pas été retenue — redondant avec GA4/Clarity côté analytics,
