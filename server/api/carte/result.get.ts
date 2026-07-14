@@ -29,6 +29,7 @@ export default defineCachedEventHandler(
         'winning_coalition.head_of_list.person.slug',
         'winning_coalition.head_of_list.person.first_name',
         'winning_coalition.head_of_list.person.last_name',
+        'constituency.id',
         'constituency.name',
         'constituency.slug',
         'constituency.region',
@@ -37,6 +38,7 @@ export default defineCachedEventHandler(
         'constituency.population',
         'constituency.parent.name',
         'constituency.parent.slug',
+        ...GEO_UNIT_FIELDS.map((f) => `constituency.${f}`),
         'election.id',
         'election.type',
         'election.year',
@@ -93,10 +95,26 @@ export default defineCachedEventHandler(
         });
 
       if (results && results.length > 0) {
-        // Clés legacy conservées : constituencie + coalition_gagnante
+        // Clés legacy conservées : constituencie + coalition_gagnante.
+        // Identité géographique (name/slug/region/population/parent) résolue via le
+        // référentiel geo_* (fallback legacy) ; constituencie reconstruit explicitement
+        // pour ne pas exposer les relations geo_* brutes.
         return mapWinners(results, 'winning_coalition').map((item) => {
           const mapped = { ...(item as Record<string, unknown>) };
-          mapped.constituencie = mapped.constituency ?? null;
+          const constituency = mapped.constituency as Record<string, unknown> | null;
+          const geo = resolveGeoUnit(constituency);
+          mapped.constituencie = constituency
+            ? {
+                id: constituency.id,
+                name: geo?.name || constituency.name,
+                slug: geo?.slug ?? constituency.slug ?? null,
+                region: geo?.region?.name ?? constituency.region ?? null,
+                type: constituency.type,
+                nationale_type: constituency.nationale_type,
+                population: geo?.population ?? null,
+                parent: geo?.parent ?? null,
+              }
+            : null;
           delete mapped.constituency;
           delete mapped.winning_coalition;
           return mapped;
@@ -152,7 +170,7 @@ export default defineCachedEventHandler(
   },
   {
     maxAge: 60 * 60, // 1 heure
-    name: 'carte-result-v2',
+    name: 'carte-result-v3',
     getKey: (event) => {
       const query = getQuery(event);
       return `carte-result-${query.election || 'all'}`;

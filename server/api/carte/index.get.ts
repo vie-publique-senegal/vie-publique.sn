@@ -25,15 +25,17 @@ interface ResultRow {
     region: string | null;
     population: number | null;
     parent: { name: string; region: string | null } | null;
-  } | null;
+  } & Record<string, unknown> | null;
 }
 
 /**
  * Données carte par circonscription (électeurs, bureaux, participation).
  * Source : election_constituency_results + agrégats election_polling_stations.
- * Fallback : collection legacy `carte` tant que les résultats ne sont pas backfillés
- * (prod non migrée). Les contours ne sont plus servis : le front les charge depuis
- * public/geo/elections/ et les joint par constituencie.slug.
+ * L'identité géographique (departement/region/municipality/population) est résolue
+ * via le référentiel geo_* (resolveGeoUnit, fallback champs legacy pour les lignes
+ * diaspora/Territoire National). Fallback : collection legacy `carte` tant que les
+ * résultats ne sont pas backfillés (prod non migrée). Les contours ne sont plus
+ * servis : le front les charge depuis public/geo/ et les joint par constituencie.slug.
  */
 export default defineCachedEventHandler(
   async (event) => {
@@ -66,6 +68,7 @@ export default defineCachedEventHandler(
               'constituency.population',
               'constituency.parent.name',
               'constituency.parent.region',
+              ...GEO_UNIT_FIELDS.map((f) => `constituency.${f}`),
             ],
             ...(electionId ? { filter: { election: { _eq: parseInt(electionId) } } } : {}),
             limit: -1,
@@ -125,9 +128,11 @@ export default defineCachedEventHandler(
       }
 
       // Contrat de réponse conservé (clés de `carte`), sans Position ;
-      // constituencie.slug ajouté pour la jointure des contours statiques
+      // constituencie.slug ajouté pour la jointure des contours statiques ;
+      // identité géographique résolue via le référentiel geo_* (fallback legacy)
       return results.map((row) => {
         const constituency = row.constituency;
+        const geo = resolveGeoUnit(constituency);
         const isCommune = constituency?.nationale_type === 'commune';
         const fileId = row.election ? fileIdByElection.get(row.election.id) : null;
         const stats = fileId && constituency ? stationAggregates.get(`${fileId}:${constituency.id}`) : undefined;
@@ -138,21 +143,21 @@ export default defineCachedEventHandler(
           constituencie: constituency
             ? {
                 id: constituency.id,
-                name: constituency.name,
-                slug: constituency.slug,
+                name: geo?.name || constituency.name,
+                slug: geo?.slug ?? constituency.slug,
                 type: constituency.type,
                 nationale_type: constituency.nationale_type,
-                region: constituency.region,
+                region: geo?.region?.name ?? constituency.region,
               }
             : null,
-          departement: isCommune ? constituency?.parent?.name || null : constituency?.name || null,
-          region: (isCommune ? constituency?.parent?.region : constituency?.region) || null,
-          municipality: isCommune ? constituency?.name || null : null,
+          departement: isCommune ? geo?.parent?.name || null : geo?.name || constituency?.name || null,
+          region: geo?.region?.name || null,
+          municipality: isCommune ? geo?.name || constituency?.name || null : null,
           voters: row.voters,
           seat: row.seat,
           offices: stats?.offices ?? null,
           places: stats?.places ?? null,
-          population: constituency?.population ?? null,
+          population: geo?.population ?? null,
           participation_10h: row.participation_10h,
           participation_12h: row.participation_12h,
           participation_14h: row.participation_14h,
@@ -170,7 +175,7 @@ export default defineCachedEventHandler(
   },
   {
     maxAge: 60 * 60, // 1 heure
-    name: 'carte-v2',
+    name: 'carte-v3',
     getKey: (event) => {
       const query = getQuery(event);
       return `carte-${query.election || 'all'}`;

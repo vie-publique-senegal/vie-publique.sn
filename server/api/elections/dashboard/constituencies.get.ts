@@ -36,7 +36,12 @@ export default defineCachedEventHandler(
 
       const allConstituencies = await directus.request(
         (readItems as any)('election_constituencies', {
-          fields: ['id', 'name', 'type', 'parent', 'region', 'nationale_type', 'seats'],
+          fields: [
+            'id', 'name', 'type', 'parent', 'region', 'nationale_type', 'seats',
+            // Identité géographique des départements via le référentiel geo_* (fallback legacy)
+            'geo_department.id', 'geo_department.name', 'geo_department.slug',
+            'geo_department.region.name', 'geo_department.region.slug',
+          ],
           limit: -1,
         }),
       );
@@ -99,12 +104,13 @@ export default defineCachedEventHandler(
         .map((dept: any) => {
           const attachedCommunes = deptCommunesMap.get(dept.id) || [];
           const uniqueCoalitions = deptCoalitionsMap.get(dept.id) || new Set();
+          const geo = resolveGeoUnit(dept);
 
           return {
             id: dept.id,
-            name: dept.name,
+            name: geo?.name || dept.name,
             type: dept.type,
-            region: dept.region,
+            region: geo?.region?.name ?? dept.region,
             seats: dept.seats,
             communes_count: attachedCommunes.length,
             coalitions_count: uniqueCoalitions.size,
@@ -134,7 +140,7 @@ export default defineCachedEventHandler(
   },
   {
     maxAge: 60 * 30,
-    name: "elections-dashboard-constituencies",
+    name: "elections-dashboard-constituencies-v2",
     getKey: (event) => {
       const query = getQuery(event);
       return `constituencies-${query.year}-${query.type}-${query.search || 'none'}`;
