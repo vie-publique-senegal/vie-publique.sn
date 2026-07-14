@@ -29,7 +29,7 @@ export default defineCachedEventHandler(
             filter: {
               nationale_type: { _eq: "departement" },
               status: { _neq: "archived" },
-              parent: { name: { _eq: region } },
+              geo_department: { region: { name: { _eq: region } } },
             },
             sort: ["name"],
             limit: -1,

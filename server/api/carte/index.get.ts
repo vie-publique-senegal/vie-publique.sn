@@ -22,9 +22,6 @@ interface ResultRow {
     slug: string | null;
     type: string;
     nationale_type: string | null;
-    region: string | null;
-    population: number | null;
-    parent: { name: string; region: string | null } | null;
   } & Record<string, unknown> | null;
 }
 
@@ -64,10 +61,6 @@ export default defineCachedEventHandler(
               'constituency.slug',
               'constituency.type',
               'constituency.nationale_type',
-              'constituency.region',
-              'constituency.population',
-              'constituency.parent.name',
-              'constituency.parent.region',
               ...GEO_UNIT_FIELDS.map((f) => `constituency.${f}`),
             ],
             ...(electionId ? { filter: { election: { _eq: parseInt(electionId) } } } : {}),
@@ -147,7 +140,7 @@ export default defineCachedEventHandler(
                 slug: geo?.slug ?? constituency.slug,
                 type: constituency.type,
                 nationale_type: constituency.nationale_type,
-                region: geo?.region?.name ?? constituency.region,
+                region: geo?.region?.name ?? null,
               }
             : null,
           departement: isCommune ? geo?.parent?.name || null : geo?.name || constituency?.name || null,

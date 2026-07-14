@@ -10,9 +10,7 @@ interface ParticipationRow {
   constituency: {
     name: string;
     nationale_type: string | null;
-    region: string | null;
-    parent: { name: string; region: string | null } | null;
-  } | null;
+  } & Record<string, unknown> | null;
 }
 
 /**
@@ -23,7 +21,7 @@ interface ParticipationRow {
  * - election: ID de l'élection (optionnel, additif — le legacy ne filtrait pas)
  *
  * Source : election_constituency_results (departement/region résolus via le
- * référentiel des circonscriptions). Fallback : collection `carte` tant que
+ * référentiel geo_* — resolveGeoUnit). Fallback : collection `carte` tant que
  * les résultats ne sont pas backfillés (prod non migrée).
  */
 export default defineCachedEventHandler(
@@ -44,9 +42,7 @@ export default defineCachedEventHandler(
               "participation_17h",
               "constituency.name",
               "constituency.nationale_type",
-              "constituency.region",
-              "constituency.parent.name",
-              "constituency.parent.region",
+              ...GEO_UNIT_FIELDS.map((f) => `constituency.${f}`),
             ],
             ...(electionId ? { filter: { election: { _eq: parseInt(electionId) } } } : {}),
             limit: -1,
@@ -59,10 +55,11 @@ export default defineCachedEventHandler(
         return results
           .map((row) => {
             const constituency = row.constituency;
+            const geo = resolveGeoUnit(constituency);
             const isCommune = constituency?.nationale_type === "commune";
             return {
-              departement: isCommune ? constituency?.parent?.name || null : constituency?.name || null,
-              region: (isCommune ? constituency?.parent?.region : constituency?.region) || null,
+              departement: isCommune ? geo?.parent?.name || null : geo?.name || constituency?.name || null,
+              region: geo?.region?.name || null,
               voters: row.voters,
               participation_10h: row.participation_10h,
               participation_12h: row.participation_12h,
@@ -103,7 +100,7 @@ export default defineCachedEventHandler(
   },
   {
     maxAge: 5 * 60, // Cache de 5 minutes (données en temps réel)
-    name: "election-participation-v2",
+    name: "election-participation-v3",
     getKey: (event) => {
       const query = getQuery(event);
       return `election-participation-${query.election || "all"}`;

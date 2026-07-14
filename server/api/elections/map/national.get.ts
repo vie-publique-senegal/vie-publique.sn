@@ -7,7 +7,7 @@ interface StationRow {
   polling_place: string;
   office_number: string;
   voters: number | null;
-  constituency?: { name?: string; region?: string | null } | null;
+  constituency?: { name?: string; geo_department?: { region?: { name?: string } } | null } | null;
 }
 
 interface StationStatsRow {
@@ -100,7 +100,7 @@ export default defineCachedEventHandler(
                 "office_number",
                 "voters",
                 "constituency.name",
-                "constituency.region",
+                "constituency.geo_department.region.name",
               ],
               filter: baseFilter,
               limit: 2000,
@@ -116,7 +116,7 @@ export default defineCachedEventHandler(
               polling_place: station.polling_place,
               office_number: station.office_number,
               voters: station.voters,
-              region: station.constituency?.region || null,
+              region: station.constituency?.geo_department?.region?.name || null,
             })),
           };
         }

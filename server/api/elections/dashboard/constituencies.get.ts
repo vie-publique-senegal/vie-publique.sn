@@ -37,10 +37,11 @@ export default defineCachedEventHandler(
       const allConstituencies = await directus.request(
         (readItems as any)('election_constituencies', {
           fields: [
-            'id', 'name', 'type', 'parent', 'region', 'nationale_type', 'seats',
-            // Identité géographique des départements via le référentiel geo_* (fallback legacy)
+            'id', 'name', 'type', 'nationale_type', 'seats',
+            // Identité et hiérarchie via le référentiel geo_*
             'geo_department.id', 'geo_department.name', 'geo_department.slug',
             'geo_department.region.name', 'geo_department.region.slug',
+            'geo_municipality.department',
           ],
           limit: -1,
         }),
@@ -49,19 +50,28 @@ export default defineCachedEventHandler(
       const departments = allConstituencies.filter((c: any) => c.type === 'national' && c.nationale_type === 'departement');
       const communes = allConstituencies.filter((c: any) => c.type === 'national' && c.nationale_type === 'commune');
 
+      // Hiérarchie commune → département via geo_municipality.department (id geo_departments)
+      const deptIdByGeoDept = new Map<number, number>();
+      departments.forEach((d: any) => {
+        if (d.geo_department?.id) deptIdByGeoDept.set(d.geo_department.id, d.id);
+      });
+      const departmentOf = (c: any) =>
+        c?.geo_municipality?.department ? deptIdByGeoDept.get(c.geo_municipality.department) ?? null : null;
+
       const deptCommunesMap = new Map<string, any[]>();
       communes.forEach((commune: any) => {
-        if (commune.parent) {
-          if (!deptCommunesMap.has(commune.parent)) {
-            deptCommunesMap.set(commune.parent, []);
+        const deptId = departmentOf(commune);
+        if (deptId) {
+          if (!deptCommunesMap.has(deptId)) {
+            deptCommunesMap.set(deptId, []);
           }
-          deptCommunesMap.get(commune.parent)?.push(commune);
+          deptCommunesMap.get(deptId)?.push(commune);
         }
       });
 
       const lists = await directus.request(
         (readItems as any)('election_electoral_lists', {
-          fields: ['id', 'constituency.id', 'constituency.type', 'constituency.parent', 'constituency.nationale_type', 'coalition'],
+          fields: ['id', 'constituency.id', 'constituency.type', 'constituency.nationale_type', 'coalition'],
           filter: {
             election: { _eq: electionId },
             is_substitute: { _eq: false },
@@ -84,8 +94,8 @@ export default defineCachedEventHandler(
 
         if ((constitDef.type === 'national' && constitDef.nationale_type === 'departement') || constitDef.type === 'diaspora') {
           targetDeptId = constitDef.id;
-        } else if ((constitDef.type === 'national' && constitDef.nationale_type === 'commune') && constitDef.parent) {
-          targetDeptId = constitDef.parent;
+        } else if (constitDef.type === 'national' && constitDef.nationale_type === 'commune') {
+          targetDeptId = departmentOf(constitDef);
         }
 
         if (targetDeptId) {
@@ -110,7 +120,7 @@ export default defineCachedEventHandler(
             id: dept.id,
             name: geo?.name || dept.name,
             type: dept.type,
-            region: geo?.region?.name ?? dept.region,
+            region: geo?.region?.name ?? null,
             seats: dept.seats,
             communes_count: attachedCommunes.length,
             coalitions_count: uniqueCoalitions.size,

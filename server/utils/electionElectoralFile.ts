@@ -53,7 +53,7 @@ export async function resolveElectoralFileId(
       readItems('election_electoral_files', {
         fields: ['id'],
         filter: { scope: { _eq: scope }, status: { _eq: 'published' } },
-        sort: ['-year', '-revision_date', '-id'],
+        sort: ['-year', '-id'],
         limit: 1,
       }),
     )
@@ -76,20 +76,21 @@ export async function getConstituencyNamesById(
   const rows = (await cmsClient
     .request(
       readItems('election_constituencies', {
-        fields: ['id', 'name', 'slug', 'population', 'region'],
+        fields: ['id', 'name', 'slug', ...GEO_UNIT_FIELDS],
         filter: { id: { _in: uniqueIds } },
         limit: -1,
         sort: ['id'],
       }),
     )
-    .catch(() => [])) as { id: number; name: string; slug: string | null; population: number | null; region: string | null }[];
+    .catch(() => [])) as ({ id: number; name: string; slug: string | null } & Record<string, unknown>)[];
 
   for (const row of rows) {
+    const geo = resolveGeoUnit(row);
     namesById.set(row.id, {
-      name: row.name,
-      slug: row.slug ?? null,
-      population: row.population ?? null,
-      region: row.region ?? null,
+      name: geo?.name || row.name,
+      slug: geo?.slug ?? row.slug ?? null,
+      population: geo?.population ?? null,
+      region: geo?.region?.name ?? null,
     });
   }
   return namesById;

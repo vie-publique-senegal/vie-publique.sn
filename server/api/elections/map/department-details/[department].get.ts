@@ -39,7 +39,7 @@ export default defineCachedEventHandler(
               "office_number",
               "voters",
               "constituency.name",
-              "constituency.region",
+              "constituency.geo_department.region.name",
             ],
             filter: {
               electoral_file: { _eq: fileId },
@@ -55,13 +55,13 @@ export default defineCachedEventHandler(
           polling_place: string;
           office_number: string;
           voters: number | null;
-          constituency?: { name?: string; region?: string | null } | null;
+          constituency?: { name?: string; geo_department?: { region?: { name?: string } } | null } | null;
         }[];
 
         const pollingStations = stations.map((station) => ({
           id: station.id,
           department: station.constituency?.name || departmentName,
-          region: station.constituency?.region || null,
+          region: station.constituency?.geo_department?.region?.name || null,
           municipality: station.municipality,
           implantation: station.implantation,
           polling_place: station.polling_place,

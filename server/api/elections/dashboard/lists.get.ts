@@ -71,14 +71,26 @@ export default defineCachedEventHandler(
       if (constituencyId) {
         targetConstituencyIds.push(constituencyId);
 
-        const children = await directus.request(
+        // Expansion département → communes via la hiérarchie du référentiel geo
+        const requested = await directus.request(
           (readItems as any)("election_constituencies", {
-              fields: ['id'],
-              filter: { parent: { _eq: constituencyId } }
+              fields: ['id', 'geo_department.id'],
+              filter: { id: { _eq: constituencyId } },
+              limit: 1,
           })
         );
-        if (children && children.length > 0) {
-          targetConstituencyIds.push(...children.map((c: any) => c.id));
+        const geoDeptId = requested?.[0]?.geo_department?.id;
+        if (geoDeptId) {
+          const children = await directus.request(
+            (readItems as any)("election_constituencies", {
+                fields: ['id'],
+                filter: { geo_municipality: { department: { _eq: geoDeptId } } },
+                limit: -1,
+            })
+          );
+          if (children && children.length > 0) {
+            targetConstituencyIds.push(...children.map((c: any) => c.id));
+          }
         }
       }
 
