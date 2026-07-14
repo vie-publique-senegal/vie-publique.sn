@@ -347,6 +347,19 @@ curl -sI "https://www.vie-publique.sn/docs/<uuid>/<nom>.pdf" | grep -i cf-cache-
 | **Menaces bloquées (WAF)** | GraphQL (`threats`) / Analytics → Security | **0,6k–14,3k/j** — pic à 14 342 le 13/07 | Très variable ; surveiller les faux positifs et investiguer les pics (13/07 ?) |
 | **Top crawlers IA** (ChatGPT-User, Claude SearchBot, PerplexityBot…) | AI Crawl Control (dashboard) | _à relever au dashboard_ | Confirmer que les bots IA autorisés consomment bien `llms.txt` et le contenu |
 
+### Anomalies investiguées le 14-15/07/2026 (via MCP GraphQL)
+
+- **Pic de menaces du 13/07 (14,3k)** : scan bloqué majoritairement **US** (11,8k) + FR (2,2k).
+  Absorbé par le WAF, rien à faire — vérifier qu'il ne se répète pas chaque semaine.
+- **Trafic du 14/07 (584k req, +30 % vs pic précédent)** : **311k requêtes** (53 % du jour)
+  d'un **HeadlessChrome/146** depuis une flotte d'IPs **Azure** (40.x/20.x/4.x, ~6-7k req/IP,
+  NON bloqué). Motif : rechargement complet des pages ~2 750×/j (mêmes assets statiques en
+  boucle, tous servis en cache HIT → impact origine faible, ~1 requête HTML/30 s).
+  **Ni Googlebot ni Bingbot** (eux se déclarent dans leur UA ; volumes normaux : 3,7k chacun).
+  À surveiller ; si ça persiste ou pollue les stats (GA4/uniques), créer une règle WAF
+  **Managed Challenge** sur `http.user_agent contains "HeadlessChrome"` — sans risque SEO :
+  les crawlers légitimes n'envoient jamais cet UA.
+
 Requête GraphQL du relevé (à réutiliser tel quel au prochain check, via le MCP `cloudflare-graphql`) :
 
 ```graphql
