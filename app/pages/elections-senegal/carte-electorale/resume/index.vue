@@ -4,6 +4,8 @@
  * Route dédiée (SEO) ; contexte de révision partagé via useElectoralRevision.
  */
 
+const { siteName, siteUrl, keywords, themeColor } = useSiteMetadata();
+
 const {
   currentRevision: selectedRevision,
   revisionLabel,
@@ -11,16 +13,48 @@ const {
   pending: loadingRevision,
 } = useElectoralRevision({ syncUrl: true });
 
+const title = computed(() => selectedRevision.value?.year
+  ? `Résumé - Carte Électorale ${selectedRevision.value.year} | Élections Sénégal`
+  : 'Résumé - Carte Électorale | Élections Sénégal');
+const description = 'Statistiques globales de la carte électorale du Sénégal : électeurs, bureaux et lieux de vote, national et diaspora.';
+const url = `${siteUrl}/elections-senegal/carte-electorale/resume`;
+
 useSeoMeta({
-  title: () => selectedRevision.value?.year
-    ? `Résumé - Carte Électorale ${selectedRevision.value.year} | Élections Sénégal`
-    : 'Résumé - Carte Électorale | Élections Sénégal',
-  description: () =>
-    'Statistiques globales de la carte électorale du Sénégal : électeurs, bureaux et lieux de vote, national et diaspora.',
+  title,
+  description,
   ogTitle: () => selectedRevision.value?.year
     ? `Résumé - Carte Électorale ${selectedRevision.value.year}`
     : 'Résumé - Carte Électorale',
-  ogDescription: () => 'Chiffres clés de la carte électorale du Sénégal.',
+  ogDescription: 'Chiffres clés de la carte électorale du Sénégal.',
+  ogUrl: url,
+  twitterCard: 'summary_large_image',
+  twitterTitle: title,
+  twitterDescription: description,
+  keywords: [...keywords, 'statistiques carte électorale sénégal'].join(', '),
+});
+
+const breadcrumbSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    { '@type': 'ListItem', position: 1, name: 'Accueil', item: siteUrl },
+    { '@type': 'ListItem', position: 2, name: 'Élections', item: `${siteUrl}/elections-senegal` },
+    { '@type': 'ListItem', position: 3, name: 'Carte électorale', item: `${siteUrl}/elections-senegal/carte-electorale` },
+    { '@type': 'ListItem', position: 4, name: 'Résumé', item: url },
+  ],
+};
+
+useHead({
+  link: [{ rel: 'canonical', href: url }],
+  meta: [
+    { name: 'theme-color', content: themeColor },
+    { name: 'author', content: siteName },
+    { property: 'og:type', content: 'website' },
+    { property: 'og:site_name', content: siteName },
+    { name: 'robots', content: 'index, follow' },
+    { name: 'geo.region', content: 'SN' },
+  ],
+  script: [{ type: 'application/ld+json', children: JSON.stringify(breadcrumbSchema) }],
 });
 
 const representativeElectionId = computed(() => {

@@ -11,6 +11,15 @@ const country = computed(() =>
   decodeURIComponent(route.params.country as string)
 );
 
+const { siteUrl } = useSiteMetadata();
+useSeoMeta({
+  title: () => `Carte Électorale - ${country.value} | Élections Sénégal`,
+  description: () => `Bureaux et lieux de vote de la diaspora sénégalaise à ${country.value}.`,
+  ogTitle: () => `Carte Électorale - ${country.value}`,
+  ogDescription: () => `Électeurs, bureaux et lieux de vote sénégalais à ${country.value}.`,
+  ogUrl: `${siteUrl}/elections-senegal/carte-electorale/diaspora/${route.params.country}`,
+});
+
 // Contexte : révision de la carte électorale (?revision=) ou élection (?election=, compat)
 const {
   revisionLabel,

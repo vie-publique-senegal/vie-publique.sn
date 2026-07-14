@@ -6,23 +6,56 @@
  * SEO, cf. nationale/index.vue, diaspora/index.vue, resume/index.vue).
  */
 
+const { siteName, siteUrl, keywords, themeColor } = useSiteMetadata();
+
 const {
   currentRevision: selectedRevision,
   contextQuery,
 } = useElectoralRevision({ syncUrl: true });
 
+const title = computed(() => selectedRevision.value?.year
+  ? `Carte Électorale ${selectedRevision.value.year} | Élections Sénégal`
+  : 'Carte Électorale | Élections Sénégal');
+const description = computed(() => selectedRevision.value?.year
+  ? `Carte électorale ${selectedRevision.value.year} du Sénégal : lieux de vote, bureaux et statistiques par département et pour la diaspora.`
+  : 'Explorez la cartographie électorale du Sénégal : lieux de vote, répartition géographique et statistiques.');
+const url = `${siteUrl}/elections-senegal/carte-electorale`;
+
 useSeoMeta({
-  title: () => selectedRevision.value?.year
-    ? `Carte Électorale ${selectedRevision.value.year} | Élections Sénégal`
-    : 'Carte Électorale | Élections Sénégal',
-  description: () => selectedRevision.value?.year
-    ? `Carte électorale ${selectedRevision.value.year} du Sénégal : lieux de vote, bureaux et statistiques par département et pour la diaspora.`
-    : 'Explorez la cartographie électorale du Sénégal : lieux de vote, répartition géographique et statistiques.',
+  title,
+  description,
   ogTitle: () => selectedRevision.value?.year
     ? `Carte Électorale ${selectedRevision.value.year} — Sénégal`
     : 'Carte Électorale | Élections Sénégal',
-  ogDescription: () =>
-    'Visualisez la carte électorale du Sénégal à travers le territoire national et la diaspora.',
+  ogDescription: 'Visualisez la carte électorale du Sénégal à travers le territoire national et la diaspora.',
+  ogUrl: url,
+  twitterCard: 'summary_large_image',
+  twitterTitle: title,
+  twitterDescription: description,
+  keywords: [...keywords, 'carte électorale sénégal', 'bureaux de vote sénégal', 'lieux de vote sénégal'].join(', '),
+});
+
+const breadcrumbSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    { '@type': 'ListItem', position: 1, name: 'Accueil', item: siteUrl },
+    { '@type': 'ListItem', position: 2, name: 'Élections', item: `${siteUrl}/elections-senegal` },
+    { '@type': 'ListItem', position: 3, name: 'Carte électorale', item: url },
+  ],
+};
+
+useHead({
+  link: [{ rel: 'canonical', href: url }],
+  meta: [
+    { name: 'theme-color', content: themeColor },
+    { name: 'author', content: siteName },
+    { property: 'og:type', content: 'website' },
+    { property: 'og:site_name', content: siteName },
+    { name: 'robots', content: 'index, follow' },
+    { name: 'geo.region', content: 'SN' },
+  ],
+  script: [{ type: 'application/ld+json', children: JSON.stringify(breadcrumbSchema) }],
 });
 </script>
 

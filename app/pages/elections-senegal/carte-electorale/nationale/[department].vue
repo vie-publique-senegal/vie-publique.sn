@@ -6,6 +6,16 @@ const route = useRoute();
 const router = useRouter();
 const department = decodeURIComponent(route.params.department as string);
 
+const { siteUrl } = useSiteMetadata();
+const departmentTitle = department.charAt(0).toUpperCase() + department.slice(1);
+useSeoMeta({
+  title: `Carte Électorale - ${departmentTitle} | Élections Sénégal`,
+  description: `Bureaux et lieux de vote du département de ${departmentTitle} au Sénégal.`,
+  ogTitle: `Carte Électorale - ${departmentTitle}`,
+  ogDescription: `Électeurs, bureaux et lieux de vote du département de ${departmentTitle}.`,
+  ogUrl: `${siteUrl}/elections-senegal/carte-electorale/nationale/${route.params.department}`,
+});
+
 // Contexte : révision de la carte électorale (?revision=) ou élection (?election=, compat)
 const {
   revisionLabel,
