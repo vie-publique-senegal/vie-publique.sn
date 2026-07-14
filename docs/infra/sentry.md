@@ -111,6 +111,9 @@ Pour capturer manuellement un cas métier : `import * as Sentry from '@sentry/nu
 
 ## 5. MCP Sentry — accès aux issues depuis Claude Code
 
+> Liste complète des serveurs MCP du projet et procédure générale :
+> [`guidelines/mcp-servers.md`](../guidelines/mcp-servers.md).
+
 Sentry fournit un [serveur MCP officiel hébergé](https://docs.sentry.io/product/sentry-mcp/)
 qui permet à Claude Code de lire directement les issues, stack traces et événements du dashboard
 (plus besoin de copier-coller les erreurs dans le chat).

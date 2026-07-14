@@ -3,6 +3,37 @@
     "sentry": {
       "type": "http",
       "url": "https://mcp.sentry.dev/mcp"
+    },
+    "github": {
+      "type": "http",
+      "url": "https://api.githubcopilot.com/mcp/"
+    },
+    "cloudflare-docs": {
+      "type": "http",
+      "url": "https://docs.mcp.cloudflare.com/mcp"
+    },
+    "cloudflare-dns-analytics": {
+      "type": "http",
+      "url": "https://dns-analytics.mcp.cloudflare.com/mcp"
+    },
+    "chrome-devtools": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "chrome-devtools-mcp@latest"]
+    },
+    "directus": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@directus/content-mcp@latest"],
+      "env": {
+        "DIRECTUS_URL": "https://cms.vie-publique.sn",
+        "DIRECTUS_TOKEN": "${DIRECTUS_MCP_TOKEN}"
+      }
+    },
+    "google-analytics": {
+      "type": "stdio",
+      "command": "python",
+      "args": ["-m", "pipx", "run", "analytics-mcp"]
     }
   }
 }
