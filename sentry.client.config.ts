@@ -47,6 +47,11 @@ if (dsn) {
       // Webviews Android avec stockage tiers bloqué : l'accès localStorage est
       // refusé au boot (DOMException 18). Environnemental, pas un bug applicatif.
       "Failed to read the 'localStorage' property from 'Window'",
+      // Mise à jour du service worker PWA interrompue par le navigateur
+      // (onglet fermé/rechargé pendant l'update, SW en cours de remplacement).
+      // InvalidStateError environnemental, pas un bug applicatif.
+      'newestWorker is null',
+      'Failed to update a ServiceWorker',
     ],
     // Ne pas remonter les erreurs venant de scripts tiers (GTM, Twitter, Facebook…)
     denyUrls: [
