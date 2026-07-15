@@ -225,29 +225,6 @@ export default defineSitemapEventHandler(async () => {
       console.warn('Erreur sitemap élections:', sitemapError);
     }
 
-    // 7. Révisions électorales (pages dynamiques /elections-senegal/revision-electorale/[slug])
-    try {
-      const revisions = (await directus.request(
-        readItems('election_revisions' as any, {
-          fields: ['slug', 'date_updated'],
-          filter: { status: { _nin: ['draft', 'archived'] } },
-          limit: -1,
-        }),
-      )) as any[];
-
-      for (const revision of revisions) {
-        const lastmod = toISODate(revision.date_updated);
-        urls.push({
-          loc: `/elections-senegal/revision-electorale/${revision.slug}`,
-          ...(lastmod && { lastmod }),
-          changefreq: 'monthly',
-          priority: 0.6,
-        });
-      }
-    } catch (sitemapError) {
-      console.warn('Erreur sitemap révisions électorales:', sitemapError);
-    }
-
     // 8. Pages statiques : Laissées à l'auto-découverte de Nuxt Sitemap
     // Le module @nuxtjs/seo va automatiquement inclure toutes les pages du dossier /pages
   } catch (error) {

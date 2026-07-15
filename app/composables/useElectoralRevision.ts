@@ -30,15 +30,17 @@ export interface RevisionElectionRef {
 }
 
 export interface ElectoralRevision {
-  slug: string;
+  key: string;
   year: number | null;
-  type: string;
+  revision_type: string | null;
+  period_start: string | null;
+  period_end: string | null;
   national: RevisionFileRef | null;
   diaspora: RevisionFileRef | null;
   elections: RevisionElectionRef[];
 }
 
-export const revisionKeyOf = (revision: ElectoralRevision) => revision.slug;
+export const revisionKeyOf = (revision: ElectoralRevision) => revision.key;
 
 const ELECTION_TYPE_LABELS: Record<string, string> = {
   presidential: 'Présidentielle',

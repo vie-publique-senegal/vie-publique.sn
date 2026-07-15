@@ -111,15 +111,6 @@ const navigationLinks = computed(() => {
       iconColor: 'text-purple-600 dark:text-purple-400',
       iconBg: 'bg-purple-100 dark:bg-purple-900/30',
       hoverRing: 'md:hover:ring-purple-200'
-    },
-    {
-      title: 'Révision Électorale',
-      description: "Période d'inscription sur les listes",
-      icon: 'i-heroicons-calendar-days',
-      to: '/elections-senegal/revision-electorale',
-      iconColor: 'text-orange-600 dark:text-orange-400',
-      iconBg: 'bg-orange-100 dark:bg-orange-900/30',
-      hoverRing: 'md:hover:ring-orange-200'
     }
   ];
 

@@ -67,15 +67,6 @@ const officialDocuments = computed(() => (selectedRevision.value ? officialDocum
         <span v-if="revisionTotals" class="text-sm text-gray-500 dark:text-gray-400">
           {{ revisionTotals }}
         </span>
-        <UButton
-          :to="`/elections-senegal/revision-electorale/${selectedRevision.slug}`"
-          size="xs"
-          color="gray"
-          variant="link"
-          trailing-icon="i-heroicons-arrow-right"
-        >
-          En savoir plus sur cette révision
-        </UButton>
       </div>
 
       <!-- Scrutins rattachés (liste extensible, lien vers le tableau de bord de chacun) -->

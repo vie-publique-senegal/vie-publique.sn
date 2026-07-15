@@ -1,17 +1,12 @@
 import { readItems } from "@directus/sdk";
 
-interface RevisionRow {
-  id: number;
-  slug: string;
-  year: number | null;
-  type: string;
-  status: string;
-}
-
 interface FileRow {
   id: number;
   scope: "national" | "diaspora";
-  revision: number | null;
+  year: number | null;
+  revision_type: string | null;
+  period_start: string | null;
+  period_end: string | null;
   document: {
     id: number;
     slug: string | null;
@@ -31,40 +26,35 @@ interface ElectionRow {
 }
 
 /**
- * Révisions de la carte électorale (une ligne election_revisions = national + diaspora),
- * avec les élections rattachées et les documents officiels (arrêtés).
+ * Révisions de la carte électorale (fichiers électoraux national + diaspora
+ * regroupés par année/type/période), avec les élections rattachées et les
+ * documents officiels (arrêtés).
  * Route: GET /api/elections/electoral-files
  *
- * Alimente le sélecteur de révision de la page carte électorale. Seules les révisions
- * ayant au moins un fichier électoral rattaché apparaissent ici (la liste complète des
- * révisions, y compris sans carte électorale associée, vit sur /api/elections/revisions).
+ * Alimente le sélecteur de révision de la page carte électorale.
  */
 export default defineCachedEventHandler(
   async () => {
     const directus = getCmsClient();
 
     try {
-      const [revisionRows, files, elections] = await Promise.all([
-        directus.request(
-          readItems("election_revisions", {
-            fields: ["id", "slug", "year", "type", "status"],
-            filter: { status: { _nin: ["draft", "archived"] } },
-            sort: ["-year", "-id"],
-            limit: -1,
-          })
-        ) as Promise<RevisionRow[]>,
+      const [files, elections] = await Promise.all([
         directus.request(
           readItems("election_electoral_files", {
             fields: [
               "id",
               "scope",
-              "revision",
+              "year",
+              "revision_type",
+              "period_start",
+              "period_end",
               "document.id",
               "document.slug",
               "document.title",
               "document.status",
             ],
-            filter: { revision: { _nnull: true } },
+            filter: { status: { _nin: ["draft", "archived"] } },
+            sort: ["-year", "-id"],
             limit: -1,
           })
         ) as Promise<FileRow[]>,
@@ -94,22 +84,38 @@ export default defineCachedEventHandler(
             : null,
       });
 
-      const filesByRevision = new Map<number, { national: ReturnType<typeof cleanFile> | null; diaspora: ReturnType<typeof cleanFile> | null }>();
-      for (const file of files) {
-        if (!file.revision) continue;
-        if (!filesByRevision.has(file.revision)) {
-          filesByRevision.set(file.revision, { national: null, diaspora: null });
+      const revisionKey = (file: FileRow) => `${file.year}|${file.revision_type}|${file.period_start}`;
+
+      const filesByRevision = new Map<
+        string,
+        {
+          year: number | null;
+          revision_type: string | null;
+          period_start: string | null;
+          period_end: string | null;
+          national: ReturnType<typeof cleanFile> | null;
+          diaspora: ReturnType<typeof cleanFile> | null;
         }
-        const entry = filesByRevision.get(file.revision)!;
+      >();
+      for (const file of files) {
+        const key = revisionKey(file);
+        if (!filesByRevision.has(key)) {
+          filesByRevision.set(key, {
+            year: file.year,
+            revision_type: file.revision_type,
+            period_start: file.period_start,
+            period_end: file.period_end,
+            national: null,
+            diaspora: null,
+          });
+        }
+        const entry = filesByRevision.get(key)!;
         if (file.scope === "diaspora") entry.diaspora = cleanFile(file);
         else entry.national = cleanFile(file);
       }
 
-      const revisions = revisionRows
-        .map((revision) => {
-          const revisionFiles = filesByRevision.get(revision.id);
-          if (!revisionFiles) return null; // pas de carte électorale rattachée : hors de ce sélecteur
-
+      const revisions = Array.from(filesByRevision.entries())
+        .map(([key, revisionFiles]) => {
           const fileIds = [revisionFiles.national?.id, revisionFiles.diaspora?.id].filter(Boolean);
           const revisionElections = elections
             .filter(
@@ -120,20 +126,20 @@ export default defineCachedEventHandler(
             .map((e) => ({ id: e.id, name: e.name, type: e.type, year: e.year, slug: e.slug }));
 
           return {
-            id: revision.id,
-            slug: revision.slug,
-            year: revision.year,
-            type: revision.type,
+            key,
+            year: revisionFiles.year,
+            revision_type: revisionFiles.revision_type,
+            period_start: revisionFiles.period_start,
+            period_end: revisionFiles.period_end,
             national: revisionFiles.national,
             diaspora: revisionFiles.diaspora,
             elections: revisionElections,
           };
         })
-        .filter((r): r is NonNullable<typeof r> => r !== null);
+        .sort((a, b) => (b.year ?? 0) - (a.year ?? 0));
 
       return { revisions };
     } catch (error) {
-      // Schéma absent (prod pré-migration) : pas de révision connue
       console.error("Error fetching electoral files:", error);
       return { revisions: [] };
     }
