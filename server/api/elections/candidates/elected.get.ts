@@ -1,5 +1,5 @@
 // server/api/elections/candidates/elected.get.ts
-import { readItems, aggregate } from "@directus/sdk";
+import { readItems, aggregate } from '@directus/sdk';
 
 /**
  * Endpoint pour récupérer les candidats élus aux élections
@@ -27,8 +27,10 @@ export default defineCachedEventHandler(
       };
 
       // Ajout des filtres optionnels
+      // ⚠️ Syntaxe imbriquée obligatoire : la notation pointée en clé de filtre
+      // ("electoral_list.coalition.name") est rejetée par Directus → 500
       if (coalition) {
-        filter["electoral_list.coalition.name"] = { _eq: coalition };
+        filter.electoral_list = { coalition: { name: { _eq: coalition } } };
       }
 
       if (gender) {
@@ -45,24 +47,24 @@ export default defineCachedEventHandler(
 
       // Récupération des candidats élus
       const candidatesData = await directus.request(
-        readItems("election_candidates", {
+        readItems('election_candidates', {
           fields: [
-            "id",
-            "gender",
-            "first_name",
-            "last_name",
-            "profession",
-            "birthplace",
-            "birthdate",
-            "photo",
-            "biography",
+            'id',
+            'gender',
+            'first_name',
+            'last_name',
+            'profession',
+            'birthplace',
+            'birthdate',
+            'photo',
+            'biography',
             {
               electoral_list: [
-                "name",
-                "type",
+                'name',
+                'type',
                 {
-                  coalition: ["name", "color"],
-                  constituency: ["name"],
+                  coalition: ['name', 'color'],
+                  constituency: ['name'],
                 },
               ],
             },
@@ -70,16 +72,16 @@ export default defineCachedEventHandler(
           filter,
           limit,
           offset,
-          sort: ["last_name", "first_name"],
-        })
+          sort: ['last_name', 'first_name'],
+        }),
       );
 
       // Récupération du total
       const [totalCount] = await directus.request(
-        aggregate("election_candidates", {
-          aggregate: { count: "*" },
+        aggregate('election_candidates', {
+          aggregate: { count: '*' },
           query: { filter },
-        })
+        }),
       );
 
       const total = Number(totalCount.count);
@@ -96,15 +98,20 @@ export default defineCachedEventHandler(
         },
       };
     } catch (error) {
-      console.error("Error fetching elected candidates:", error);
+      reportServerError(error, 'api/elections/candidates/elected', {
+        coalition,
+        gender,
+        search,
+        page,
+      });
       throw createError({
         statusCode: 500,
-        statusMessage: "Erreur lors de la récupération des candidats élus",
+        statusMessage: 'Erreur lors de la récupération des candidats élus',
       });
     }
   },
   {
     maxAge: 60 * 60, // Cache de 1 heure
-    name: "election-candidates-elected",
-  }
+    name: 'election-candidates-elected',
+  },
 );
