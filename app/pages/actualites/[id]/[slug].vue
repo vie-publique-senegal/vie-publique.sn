@@ -433,6 +433,9 @@ useHead({
           <CmsImage
             :src="article.cover_image"
             :alt="article.title"
+            :width="800"
+            loading="eager"
+            sizes="(max-width: 768px) 100vw, 800px"
             class="aspect-video w-full object-cover"
             itemprop="contentUrl"
           />

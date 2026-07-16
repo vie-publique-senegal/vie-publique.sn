@@ -22,8 +22,8 @@
 ### 🟠 Important — Performance
 
 - [x] [PERF-2 — Fonts Google en `@import` bloquant, sans preconnect](#perf-2--fonts-google-en-import-bloquant) — ✅ 16/07/2026 (Poppins n'était utilisée nulle part : `@import` supprimé)
-- [ ] [PERF-3 — Firebase dans le bundle d'entrée (~140 KB br sur toutes les pages)](#perf-3--firebase-dans-le-bundle-dentrée)
-- [ ] [PERF-4 — Import d3 mort dans AppFooter.vue](#perf-4--import-d3-mort-dans-le-footer)
+- [x] [PERF-3 — Firebase dans le bundle d'entrée (~140 KB br sur toutes les pages)](#perf-3--firebase-dans-le-bundle-dentrée) — ✅ 16/07/2026 (imports 100 % dynamiques dans le plugin : SDK téléchargé au 1ᵉʳ usage réel des notifs push ; API $firebase inchangée pour useNotifications ; à vérifier au build : firebase absent du chunk d'entrée)
+- [x] [PERF-4 — Import d3 mort dans AppFooter.vue](#perf-4--import-d3-mort-dans-le-footer) — ✅ 16/07/2026 (`import { lab } from 'd3'` supprimé ; + suppression du plugin vide `pdfjs.client.ts`)
 - [ ] [PERF-5 — pdfjs importé statiquement dans 2 viewers](#perf-5--pdfjs-statique-dans-pdfviewerinlinemodal)
 - [x] [PERF-6 — Images CMS jamais servies en WebP (provider sans `format`)](#perf-6--images-cms-jamais-en-webp) — ✅ 09/07/2026 (`format=webp&quality=80` par défaut ; vérifié en prod le 16/07 : `image/webp` + HIT Cloudflare)
 - [x] [PERF-7 — Pas de SWR HTML + `no-cache` blanket sur `/api/**`](#perf-7--pas-de-swr-html--no-cache-sur-api) — ✅ 16/07/2026 (SWR HTML sur pages chaudes, vérifié en prod : TTFB 312→111 ms, pagination sûre ; volet headers navigateur `/api/**` volontairement non fait — gain faible, cf. cache-strategy.md)

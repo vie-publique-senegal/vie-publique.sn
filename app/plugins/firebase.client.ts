@@ -1,14 +1,24 @@
-import { initializeApp, type FirebaseApp } from 'firebase/app';
-import { getMessaging, getToken, isSupported, onMessage, type Messaging } from 'firebase/messaging';
+import type { FirebaseApp } from 'firebase/app';
+import type { Messaging } from 'firebase/messaging';
 
 let firebaseApp: FirebaseApp | null = null;
 let messaging: Messaging | null = null;
 let messagingPromise: Promise<Messaging | null> | null = null;
 
+/**
+ * PERF-3 : aucun import STATIQUE de firebase/* ici — le SDK (~140 KB br) était
+ * embarqué dans le bundle d'entrée de 100 % des pages pour une feature (push FCM)
+ * que peu d'utilisateurs activent. Tous les `import('firebase/...')` sont
+ * dynamiques : le SDK n'est téléchargé qu'au premier appel réel (activation des
+ * notifications via useNotifications). Les `import type` sont gratuits (effacés
+ * au build). Ne PAS remettre d'import statique en tête de fichier.
+ */
 export default defineNuxtPlugin(() => {
   const config = useRuntimeConfig();
 
-  if (!firebaseApp) {
+  const ensureApp = async (): Promise<FirebaseApp> => {
+    if (firebaseApp) return firebaseApp;
+    const { initializeApp } = await import('firebase/app');
     firebaseApp = initializeApp({
       apiKey: config.public.firebaseApiKey,
       authDomain: config.public.firebaseAuthDomain,
@@ -18,7 +28,8 @@ export default defineNuxtPlugin(() => {
       appId: config.public.firebaseAppId,
       measurementId: config.public.firebaseMeasurementId,
     });
-  }
+    return firebaseApp;
+  };
 
   /**
    * Wait for SW ready with a timeout to avoid hanging forever
@@ -61,6 +72,8 @@ export default defineNuxtPlugin(() => {
     if (!messagingPromise) {
       messagingPromise = (async (): Promise<Messaging | null> => {
         try {
+          const { getMessaging, isSupported } = await import('firebase/messaging');
+
           // getMessaging() lance en interne une promesse de validation non rattachée :
           // sur un navigateur non supporté (IndexedDB bloqué, navigation privée…),
           // elle rejette en "unhandled rejection" que notre try/catch ne voit pas.
@@ -83,7 +96,7 @@ export default defineNuxtPlugin(() => {
           const registration = await waitForSWReady();
           if (!registration) return null;
 
-          messaging = getMessaging(firebaseApp!);
+          messaging = getMessaging(await ensureApp());
           return messaging;
         } catch (error) {
           console.error('[Firebase] initMessaging error:', error);
@@ -111,6 +124,7 @@ export default defineNuxtPlugin(() => {
         return null;
       }
 
+      const { getToken } = await import('firebase/messaging');
       const token = await getToken(msg, {
         vapidKey: config.public.firebaseVapidKey,
         serviceWorkerRegistration: registration,
@@ -129,13 +143,15 @@ export default defineNuxtPlugin(() => {
     const msg = await initMessaging();
     if (!msg) return null;
 
+    const { onMessage } = await import('firebase/messaging');
     return onMessage(msg, callback);
   };
 
   return {
     provide: {
+      // `app` retiré du provide : aucun consommateur (grep 16/07/2026) et
+      // l'exposer forcerait une init eager. Passer par initMessaging/getFcmToken.
       firebase: {
-        app: firebaseApp,
         initMessaging,
         getFcmToken,
         onForegroundMessage,
