@@ -84,6 +84,7 @@
 - [ ] [DOC-6 — Dépendances inutilisées/mal classées (`@ai-sdk/vue`, `@types/marked`, `@nuxt/eslint`)](#doc-6--dépendances-à-nettoyer)
 - [ ] [DOC-7 — Fichiers orphelins (`nuxt.config.build-optimized.ts`, `design.md` racine)](#doc-7--fichiers-orphelins)
 - [ ] [QUAL-7 — Interfaces hors de `types/` + `defineProps` runtime non typés](#qual-7--types-mal-rangés)
+- [x] [QUAL-8 — Annuaire sites publics : migrer le CSV GitHub vers Directus (supprime `papaparse`)](#qual-8--annuaire-csv--directus) — ✅ 16/07/2026 (collection `websites`, 470 items, papaparse désinstallé)
 
 ---
 
@@ -529,6 +530,26 @@ Aussi : `rate-limit.ts:29` se fie au premier élément de `x-forwarded-for` (spo
 ### QUAL-7 — Types mal rangés
 
 157 fichiers définissent des `interface` hors de `types/` (ex. `useBudget.ts` : 7 interfaces exportées ; aucun `types/budget.ts` n'existe). 9 composants avec `defineProps` runtime au lieu du générique TS (`Budget2TableMinistry.vue`, `BudgetChartsTable.vue`, `error.vue`…).
+
+### QUAL-8 — Annuaire CSV → Directus
+
+> ✅ **Corrigé le 16/07/2026** — collection `websites` créée (famille « contenu public », champs
+> `name`/`url`/`type`/`status`), **470 items importés** depuis le CSV, endpoint réécrit en
+> `readItems` + `defineCachedEventHandler` 24 h + dégradation propre (`reportServerError` + 503),
+> `papaparse` **désinstallé**. Reste à faire à l'occasion : (1) supprimer la collection Directus
+> `annuaire` (reliquat de test, 1 item) ; (2) archiver le dépôt GitHub
+> `annuaire-sites-publics-senegal` (plus consommé) ; (3) **définir le processus de mise à jour
+> des données `websites`** — Directus est désormais la source de vérité, mais l'annuaire évolue
+> (nouveaux sites publics, refontes, domaines morts). Piste : flow n8n (ou Flow Directus) qui
+> ingère les sources amont (dépôt GitHub communautaire `senegalouvert/annuaire-sites-publics-senegal`,
+> signalements…) avec **vérification de doublons** (clé = domaine normalisé sans www/protocole)
+> et création en `status: draft` pour validation manuelle avant publication. À décider avant
+> d'automatiser : fréquence, et qui valide les drafts.
+
+_(Ajout 16/07/2026, à l'occasion d'une erreur de build Rollup sur `papaparse`.)_
+
+**Fichier** : `server/api/websites.ts` (consommé par `app/pages/annuaire-sites-publics-senegal/index.vue`)
+L'annuaire des sites publics était chargé depuis un **CSV brut sur un dépôt GitHub personnel** (`raw.githubusercontent.com/malicktech/annuaire-sites-publics-senegal`) puis parsé avec `papaparse`. Problèmes : dépendance à un dépôt externe hors infra, `defineEventHandler` **non caché** (re-téléchargeait le CSV à chaque hit), **aucun try/catch** (GitHub down = 500, contraire à la règle de dégradation propre), et `papaparse` embarqué dans le bundle serveur pour ce seul usage.
 
 ---
 
