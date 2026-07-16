@@ -8,7 +8,7 @@ Pistes de correction : items PERF de [`../audits/audit-complet-2026-07.md`](../a
 
 On ne « fait pas un audit » une fois : on suit une **boucle**.
 
-```
+```text
 Baseline (terrain CrUX + lab) ──► Fix (1 item PERF à la fois)
         ▲                                   │
         │                          Vérif lab immédiate (local)
@@ -58,6 +58,13 @@ Baseline (terrain CrUX + lab) ──► Fix (1 item PERF à la fois)
 | Date | LCP | INP | CLS | FCP | TTFB | CWV | Fixs déployés depuis le relevé précédent |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | 16/07/2026 | 3,6 s 🔴 | 236 ms 🟠 | 0,16 🟠 | 3,6 s 🔴 | 1,3 s 🟠 | ❌ | — (baseline) |
+
+> **Déployés le 16/07/2026** (à créditer au relevé de mi-août) : PERF-2 (suppression `@import`
+> fonts — vérifié : 0 réf. Google Fonts en prod), gtag/pixel FB à l'idle (vérifié : script hors
+> HTML initial, `dataLayer` alimenté à l'idle ; pixel FB plus chargé du tout — son ID était
+> vide, il tournait à vide), SWR HTML PERF-7 (vérifié : TTFB `/` 312 ms → **111 ms** dès le
+> 2ᵉ hit, HTML identique, pagination `?page=` disjointe), QUAL-8 annuaire → Directus.
+> Attendu au prochain relevé : FCP/LCP mobile nettement sous 3 s, TTFB ≤ 0,8 s, INP ≤ 200 ms.
 
 ## 5. Protocole avant/après pour CHAQUE fix perf
 
