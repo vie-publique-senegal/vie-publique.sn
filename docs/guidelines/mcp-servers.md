@@ -50,6 +50,12 @@
    → ADC manquants ; 403 `SERVICE_DISABLED` → API non activées ; réponse vide → accès
    GA4 non donné au compte de service).
 
+   ⚠️ **Démarrage à froid** : au tout premier lancement, `pipx run` télécharge le paquet et
+   ses dépendances Google (long) → le serveur peut rater le timeout de connexion MCP et
+   apparaître déconnecté. Pré-chauffer le cache une fois dans un terminal
+   (`python -m pipx run analytics-mcp`, laisser tourner ~30 s, Ctrl-C) puis relancer la
+   session. Les démarrages suivants sont rapides (cache pipx).
+
 ## Pièges connus
 
 - **Ne PAS ajouter de serveur en portée `local`** pour ce projet : la config locale
