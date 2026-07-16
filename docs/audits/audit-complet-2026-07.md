@@ -25,7 +25,7 @@
 - [ ] [PERF-3 — Firebase dans le bundle d'entrée (~140 KB br sur toutes les pages)](#perf-3--firebase-dans-le-bundle-dentrée)
 - [ ] [PERF-4 — Import d3 mort dans AppFooter.vue](#perf-4--import-d3-mort-dans-le-footer)
 - [ ] [PERF-5 — pdfjs importé statiquement dans 2 viewers](#perf-5--pdfjs-statique-dans-pdfviewerinlinemodal)
-- [ ] [PERF-6 — Images CMS jamais servies en WebP (provider sans `format`)](#perf-6--images-cms-jamais-en-webp)
+- [x] [PERF-6 — Images CMS jamais servies en WebP (provider sans `format`)](#perf-6--images-cms-jamais-en-webp) — ✅ 09/07/2026 (`format=webp&quality=80` par défaut ; vérifié en prod le 16/07 : `image/webp` + HIT Cloudflare)
 - [ ] [PERF-7 — Pas de SWR HTML + `no-cache` blanket sur `/api/**`](#perf-7--pas-de-swr-html--no-cache-sur-api)
 - [ ] [PERF-8 — Triple stack cartographique (maplibre/deck.gl + leaflet + d3-geo), CSS globaux](#perf-8--triple-stack-cartographique)
 
@@ -174,8 +174,14 @@ Import statique `import * as pdfjsLib from 'pdfjs-dist'` → ~113 KB br chargés
 
 ### PERF-6 — Images CMS jamais en WebP
 
+> ✅ **Corrigé le 09/07/2026** (commit `a57c4a69`) : le provider ajoute `format=webp&quality=80`
+> par défaut (exclusions SVG/GIF pour préserver vectoriel et animation). **Vérifié en prod le
+> 16/07/2026** : `curl -I` sur une image de la home → `Content-Type: image/webp` +
+> `Cf-Cache-Status: HIT`. ⚠️ Piège de vérification : tester avec l'URL **décodée** (`&`), pas
+> celle du HTML source (`&amp;`) — sinon Directus ignore les params et sert le JPEG d'origine.
+
 **Fichier** : `app/providers/cms-image.ts`
-Le provider passe `width/height/quality` à Directus mais **jamais `format`** → images servies dans leur format d'origine (JPEG/PNG). Fort impact LCP.
+Le provider passait `width/height/quality` à Directus mais **jamais `format`** → images servies dans leur format d'origine (JPEG/PNG). Fort impact LCP.
 
 **Fix** : transmettre `format` dans le provider + `format: 'webp'` (ou `auto`) par défaut dans `CmsImage.vue`. Secondaire : convertir les `<img>` bruts des composants `Home*` (above the fold) en `CmsImage`/`NuxtImg` avec `sizes`.
 
