@@ -186,7 +186,7 @@ onUnmounted(() => document.removeEventListener('keydown', handleKeydown))
       <div class="flex justify-center pt-2 pb-1">
         <div class="w-10 h-1 rounded-full bg-gray-600" />
       </div>
-      <div class="px-4 pb-5">
+      <div class="px-4 pb-24">
         <div class="flex items-center justify-between mb-3">
           <h4 class="font-semibold text-base">{{ title }}</h4>
           <button
