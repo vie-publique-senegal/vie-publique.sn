@@ -32,6 +32,15 @@ export default defineCachedEventHandler(
       });
     }
 
+    // Les ids documents sont numériques ; un slug ou autre chaîne (vieux liens,
+    // bots) doit donner un 404 propre, pas une erreur Directus convertie en 500
+    if (!/^\d+$/.test(id)) {
+      throw createError({
+        statusCode: 404,
+        statusMessage: 'Document non trouvé',
+      });
+    }
+
     try {
       const directus = getCmsClient();
 
@@ -86,12 +95,21 @@ export default defineCachedEventHandler(
         document: transformedDocument,
       };
     } catch (error: any) {
-      console.error(`Erreur lors de la récupération du document ${id}:`, error);
-
       if (error.statusCode) {
         throw error;
       }
 
+      // Directus répond 403 FORBIDDEN pour un item inexistant (token restreint) :
+      // c'est un « non trouvé », pas une panne à monitorer
+      const cmsStatus = error?.response?.status;
+      if (cmsStatus === 403 || cmsStatus === 404) {
+        throw createError({
+          statusCode: 404,
+          statusMessage: 'Document non trouvé',
+        });
+      }
+
+      reportServerError(error, 'api/documents/[id]', { id });
       throw createError({
         statusCode: 500,
         statusMessage: 'Erreur lors de la récupération du document',
