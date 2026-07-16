@@ -1,5 +1,9 @@
 # TODO: Optimisation du cache API
 
+> ℹ️ La **stratégie de cache globale** (couches, valeurs actuelles, précos chiffrées P1-P7,
+> barème pour un nouvel endpoint) vit dans [`cache-strategy.md`](./cache-strategy.md) — ce doc-ci
+> ne couvre que le chantier `getCacheMaxAge()` dev/prod.
+
 ## Problème
 
 Actuellement, **48 routes API** utilisent `defineCachedEventHandler` avec un `maxAge` fixe, identique en production et en développement. Cela cause des problèmes en développement car les modifications dans Directus ne sont visibles qu'après expiration du cache (parfois jusqu'à 24h).

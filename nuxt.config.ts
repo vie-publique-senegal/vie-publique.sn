@@ -192,6 +192,22 @@ export default defineNuxtConfig({
 
   // Configuration hybride : routeRules + fallback API
   routeRules: {
+    // --- SWR HTML (PERF-7, docs/audits/audit-web-vitals-2026-07.md) ---
+    // Le HTML rendu est caché côté Nitro et resservi instantanément ; à expiration,
+    // le visiteur reçoit la copie "stale" pendant que Nitro re-rend en arrière-plan.
+    // TTL courts sur les pages chaudes : fraîcheur quasi inchangée (les API Directus
+    // derrière sont déjà cachées ~1 h), TTFB sans rendu SSR ni latence Directus.
+    // ⚠️ Vérifié le 16/07/2026 : le cache SWR incluant la query, la pagination
+    // ?page=N reste correcte (IDs disjoints page 1 vs 2 — cf. CLAUDE.md § listes).
+    '/': { swr: 120 },
+    '/actualites': { swr: 120 },
+    '/actualites/**': { swr: 300 },
+    '/dossiers': { swr: 300 },
+    '/dossiers/**': { swr: 600 },
+    '/documents': { swr: 600 },
+    '/documents/**': { swr: 600 },
+    '/conseil-des-ministres': { swr: 300 },
+    '/conseil-des-ministres/**': { swr: 600 },
     // Essayer routeRules en premier
     '/cms/**': {
       proxy: `${process.env.CMS_API_URL || 'https://cms.vie-publique.sn'}/assets/**`,
@@ -644,6 +660,9 @@ export default defineNuxtConfig({
   gtag: {
     enabled: !!process.env.GTAG_ID,
     id: process.env.GTAG_ID,
+    // Init différée à l'idle/1ʳᵉ interaction (app/plugins/analytics-idle.client.ts) :
+    // gtag.js coûtait ~330 ms de main thread mobile pendant l'hydratation (INP).
+    initMode: 'manual',
   },
   image: {
     // Provider pour les images locales et du proxy
