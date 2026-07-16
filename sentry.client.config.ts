@@ -52,6 +52,12 @@ if (dsn) {
       // InvalidStateError environnemental, pas un bug applicatif.
       'newestWorker is null',
       'Failed to update a ServiceWorker',
+      // Scanner de liens Microsoft Outlook (SafeLinks) : son script injecté
+      // rejette cette valeur en visitant la page. Artefact connu, pas notre code.
+      'Object Not Found Matching Id',
+      // Firefox avec cookies/stockage bloqués : localStorage et service worker
+      // lèvent « The operation is insecure ». Environnemental.
+      'The operation is insecure',
     ],
     // Ne pas remonter les erreurs venant de scripts tiers (GTM, Twitter, Facebook…)
     denyUrls: [
