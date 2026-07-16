@@ -5,7 +5,7 @@ import { readItems } from "@directus/sdk";
  * Route: GET /api/elections/pvs-upload/regions
  * Query params: ?election=ID (optionnel, ignoré par le référentiel — conservé pour compat)
  *
- * Source : référentiel election_constituencies (lignes région).
+ * Source : référentiel geo_regions.
  * Fallback : textes region de election_map_national tant que la prod n'est pas migrée.
  */
 export default defineCachedEventHandler(
@@ -17,10 +17,9 @@ export default defineCachedEventHandler(
     try {
       const referentialRegions = (await directus
         .request(
-          readItems("election_constituencies", {
+          readItems("geo_regions", {
             fields: ["name"],
             filter: {
-              nationale_type: { _eq: "region" },
               status: { _neq: "archived" },
             },
             sort: ["name"],

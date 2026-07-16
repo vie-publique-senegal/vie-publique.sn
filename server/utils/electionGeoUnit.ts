@@ -17,25 +17,18 @@
 export const GEO_UNIT_FIELDS = [
   'geo_region.id',
   'geo_region.name',
-  'geo_region.slug',
-  'geo_region.code',
   'geo_region.population',
   'geo_department.id',
   'geo_department.name',
-  'geo_department.slug',
-  'geo_department.code',
   'geo_department.population',
   'geo_department.region.name',
-  'geo_department.region.slug',
   'geo_municipality.id',
   'geo_municipality.name',
   'geo_municipality.slug',
   'geo_municipality.code',
   'geo_municipality.population',
   'geo_municipality.department.name',
-  'geo_municipality.department.slug',
   'geo_municipality.department.region.name',
-  'geo_municipality.department.region.slug',
 ];
 
 export interface GeoUnitRef {
@@ -60,10 +53,22 @@ type Row = Record<string, unknown>;
 const asObject = (value: unknown): Row | null =>
   value && typeof value === 'object' ? (value as Row) : null;
 
+const slugify = (name: string): string =>
+  name
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[\s'-]+/g, ' ')
+    .trim()
+    .replace(/[^a-z0-9 ]/g, '')
+    .trim()
+    .replace(/ +/g, '-');
+
 const asRef = (value: unknown): GeoUnitRef | null => {
   const row = asObject(value);
   if (!row || typeof row.name !== 'string') return null;
-  return { name: row.name, slug: (row.slug as string | null) ?? null };
+  const slug = typeof row.slug === 'string' ? row.slug : slugify(row.name);
+  return { name: row.name, slug };
 };
 
 const identityOf = (row: Row) => ({

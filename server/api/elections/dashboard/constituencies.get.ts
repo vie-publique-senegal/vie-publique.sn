@@ -39,8 +39,8 @@ export default defineCachedEventHandler(
           fields: [
             'id', 'name', 'type', 'nationale_type', 'seats',
             // Identité et hiérarchie via le référentiel geo_*
-            'geo_department.id', 'geo_department.name', 'geo_department.slug',
-            'geo_department.region.name', 'geo_department.region.slug',
+            'geo_department.id', 'geo_department.name',
+            'geo_department.region.name',
             'geo_municipality.department',
           ],
           limit: -1,
