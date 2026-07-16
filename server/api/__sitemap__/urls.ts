@@ -1,9 +1,20 @@
 ﻿import { defineSitemapEventHandler } from '#imports';
 import { readItems } from '@directus/sdk';
 import { AUDIT_INSTITUTION_PAGES } from '~~/types/document';
+import { COMMUNES } from '#shared/communes';
 
 export default defineSitemapEventHandler(async () => {
   const urls: any[] = [];
+
+  // 0. Collectivités territoriales (données statiques — hors du try Directus)
+  // Les pages statiques du module (index, carte, a-propos) sont auto-découvertes.
+  for (const commune of COMMUNES) {
+    urls.push({
+      loc: `/collectivites-territoriales/communes/${commune.slug}`,
+      changefreq: 'monthly',
+      priority: 0.6,
+    });
+  }
 
   const toISODate = (date: string | null | undefined): string | undefined => {
     if (!date) return undefined;

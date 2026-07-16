@@ -7,13 +7,18 @@ const { initState, setupForegroundHandler, validateAndRefreshToken } = useNotifi
 
 const isChatPage = ref(useRoute().path === '/chatbot');
 const isFullscreenPage = ref(
-  useRoute().path.startsWith('/carte/') || useRoute().path.startsWith('/dashboard/'),
+  useRoute().path.startsWith('/carte/') ||
+    useRoute().path.startsWith('/dashboard/') ||
+    useRoute().path.startsWith('/collectivites-territoriales/carte'),
 );
 watch(
   () => useRoute().path,
   (newPath) => {
     isChatPage.value = newPath === '/chatbot';
-    isFullscreenPage.value = newPath.startsWith('/carte/') || newPath.startsWith('/dashboard/');
+    isFullscreenPage.value =
+      newPath.startsWith('/carte/') ||
+      newPath.startsWith('/dashboard/') ||
+      newPath.startsWith('/collectivites-territoriales/carte');
   },
 );
 const links = [
