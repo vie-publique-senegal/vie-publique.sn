@@ -9,7 +9,7 @@ Chaque évolution du module électoral (schéma CMS, règle métier, nouvelle fo
 - ne pas modifier un fichier déjà déployé : une correction ultérieure = un nouveau fichier ;
 - **Création de collections** : par **import de schéma JSON** via le module Schema Management Module (marketplace Directus), fichiers JSON maintenus dans un repo dédié et référencés depuis le fichier de déploiement ;
 - **Champs à ajouter sur des collections existantes** : procédure **manuelle pas-à-pas** décrite dans le fichier de déploiement ;
-- les scripts dans `scripts/elections/` sont réservés aux opérations de **données** (backfills, migrations de contenu).
+- les scripts sont réservés aux opérations de **données** (backfills, migrations de contenu) et vivent dans le repo dédié [vpsn-scripts](https://github.com/vie-publique-senegal/vpsn-scripts), dossier `elections/` — aucun script ne vit dans ce repo applicatif.
 
 ## Contenu attendu
 
@@ -28,6 +28,6 @@ Chaque fichier suit ce plan :
 | (antérieur) | Migration vers le schéma électoral générique | [../elections-deployment.md](../elections-deployment.md) |
 | (antérieur) | Module d'upload des PVs | [../pvs-upload-deploiement.md](../pvs-upload-deploiement.md) |
 | 2026-07 | Migration prod des identités pérennes (persons + entités politiques) - plan en 5 phases fondé sur un audit de la prod | [2026-07-migration-prod.md](./2026-07-migration-prod.md) |
-| 2026-07 | Migration prod de la géographie et des cartes (fichiers électoraux, bureaux, résultats) - plan en 3 phases fondé sur un diagnostic de la prod | [2026-07-migration-prod-geographie.md](./2026-07-migration-prod-geographie.md) |
+| 2026-07 | Migration prod unifiée de la géographie, de la carte électorale et des résultats (référentiel geo, fichiers électoraux, bureaux, résultats par circonscription) - plan en 6 phases fondé sur un audit de la prod | [2026-07-migration-prod-geographie-cartes.md](./2026-07-migration-prod-geographie-cartes.md) |
 
 > Les deux fichiers antérieurs prédatent cette convention et restent à leur emplacement d'origine. Les évolutions futures du module seront versionnées ici.

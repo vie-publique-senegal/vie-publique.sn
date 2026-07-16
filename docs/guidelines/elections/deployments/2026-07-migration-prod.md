@@ -78,7 +78,7 @@ Dans l'admin prod : Settings → Data Model → collection → « Create Field �
 
 ### 4.1 Validation par dry-run
 
-Les deux scripts (`scripts/elections/`) sont en **dry-run par défaut** (aucune écriture sans `--execute`) : le dry-run est le geste de validation. ⚠️ Il **échoue en 403 tant que la phase 1 n'est pas faite** - les champs `person` et `political_entity` n'existent pas encore, c'est attendu.
+Les deux scripts (repo [vpsn-scripts](https://github.com/vie-publique-senegal/vpsn-scripts), dossier `elections/`) sont en **dry-run par défaut** (aucune écriture sans `--execute`) : le dry-run est le geste de validation. ⚠️ Il **échoue en 403 tant que la phase 1 n'est pas faite** - les champs `person` et `political_entity` n'existent pas encore, c'est attendu.
 
 L'exécution réelle utilise un **token d'écriture temporaire créé par l'admin**, révoqué après l'opération.
 
@@ -95,7 +95,7 @@ L'exécution réelle utilise un **token d'écriture temporaire créé par l'admi
 
 - 0 candidat en `draft` ; 0 candidat non archivé sans `person` ; 0 coalition publiée sans `political_entity` ;
 - 0 slug dupliqué (persons et entités) ;
-- Archiver les rapports d'exécution (`scripts/elections/reports/`) avec le fichier de fusions utilisé.
+- Archiver les rapports d'exécution (`elections/reports/` dans le repo vpsn-scripts, dossier local non versionné) avec le fichier de fusions utilisé.
 
 ## 5. Phase 3 - Déploiement du code
 
