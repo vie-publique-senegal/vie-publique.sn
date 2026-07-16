@@ -27,6 +27,15 @@ finissant à J-3** (les données GSC ont ~2-3 jours de retard) :
 2. **Top requêtes** : `dimensions: ["query"], rowLimit: 10` ;
 3. **Top pages** : `dimensions: ["page"], rowLimit: 10`.
 
+**Bing Webmaster Tools** — API JSON avec clé (`bing_api_key` dans le `.env` local, non committé ;
+clé générée dans Bing WT → Settings → API access). Endpoints
+`https://ssl.bing.com/webmaster/api.svc/json/<Méthode>?apikey=…&siteUrl=https://vie-publique.sn/` :
+
+1. **`GetRankAndTrafficStats`** : clics/impressions par jour ;
+2. **`GetCrawlStats`** : pages crawlées, codes HTTP vus par bingbot et surtout **`InIndex`**
+   (nombre de pages dans l'index Bing — LE KPI de la dédup BING-1) ;
+3. **`GetQueryStats` / `GetPageStats`** : top requêtes/pages (lignes par période, à agréger).
+
 ## Baseline 09→15/07/2026
 
 ### Trafic quotidien
@@ -112,6 +121,27 @@ ChatGPT **519** (95 %) · Perplexity 10 · Gemini 9 · Claude 5 · Copilot 4.
 > document brut sur le même sujet. Les **PDF rankent aussi en direct** dans Google (à garder en
 > tête pour la décision BING-7 / archives.sn).
 
+## Baseline Bing Webmaster Tools — relevée le 16/07/2026
+
+### Trafic
+
+- **~310 clics/sem** (55-63/j en semaine), ~1 000 impressions/j ;
+- **1 308 clics cumulés sur 485 jours** : la quasi-totalité date des ~4 dernières semaines →
+  confirme l'« invisibilité Bing » janvier→mi-juin (BING-7) et la **récupération en cours
+  depuis le 17 juin**. Requêtes dominées par la marque (« vie publique sénégal ») — le trafic
+  documentaire n'est pas encore revenu (il est encore sur archives.sn).
+
+### Crawl / index — les KPI de la dédup BING-1
+
+| KPI (jour du relevé) | Valeur | Lecture |
+| --- | --- | --- |
+| **`InIndex`** | **23 886 pages** | ~2× les ~12,6k URLs réelles = la duplication www/non-www pas encore purgée. **Doit fondre vers ~12-13k** à mesure que Bing digère les 301 (fixes des 02 et 14/07) |
+| `Code301` vu par bingbot | ~450/j | Bing rencontre bien les redirections permanentes ✅ |
+| `Code302` | **0** | Plus aucune redirection temporaire ✅ (avant les fixes, c'était la cause de BING-1) |
+| `Code4xx` | 3 100-5 200/j | ⚠️ Élevé — bingbot crawle beaucoup d'URLs mortes (vieux slugs ? spam /recherche ?) → à investiguer dans le dashboard Bing WT |
+| `Code5xx` | ~6/j | Sain |
+| Pages crawlées | 3 500-7 200/j | — |
+
 ## Checklist des prochains relevés
 
 - [ ] **Mi-août 2026** : sessions Bing (attendu : > 400-450/sem si BING-1/7 portent leurs fruits) ;
@@ -123,4 +153,9 @@ ChatGPT **519** (95 %) · Perplexity 10 · Gemini 9 · Claude 5 · Copilot 4.
 - [ ] Ratio GA4 vs uniques Cloudflare (part de bots stable ?) ;
 - [ ] **GSC** : clics/28 j (baseline 50,3k) et position moyenne (5,6-6,4) — effet attendu des
       fixes JSON-LD/SEO et de la fraîcheur des dossiers ;
-- [ ] **GSC** : position de « révision constitutionnelle » (baseline 5,5 — l'opportunité n°1).
+- [ ] **GSC** : position de « révision constitutionnelle » (baseline 5,5 — l'opportunité n°1) ;
+- [ ] **Bing `InIndex`** : baseline **23 886** → attendu **~12-13k** une fois les 301 digérés
+      (si stable > 20k à mi-août, investiguer) ;
+- [ ] **Bing 4xx crawlés** : baseline 3-5k/j — identifier la source dans Bing WT ;
+- [ ] **Bing clics/sem** : baseline ~310 — la vraie récupération se lira sur les requêtes
+      **documentaires** (hors marque), aujourd'hui captées par archives.sn (décision BING-7).
