@@ -32,6 +32,9 @@ const resultDeptPanelData = ref<any>(null);
 const resultCommunesByDept = ref<TableResultItem[]>([]);
 const mapResultHasNoData = ref(false);
 
+const rankingPanelOpen = ref(false);
+const rankingPanelConstituency = ref<{ slug: string; name: string } | null>(null);
+
 const { getTableDataResult } = useElectionMapDataResult();
 
 const loadLocaleResultsData = async () => {
@@ -54,6 +57,8 @@ watch([selectedType, selectedYear], () => {
   resultCommunesByDept.value = [];
   resultDeptPanelOpen.value = false;
   resultDeptPanelData.value = null;
+  rankingPanelOpen.value = false;
+  rankingPanelConstituency.value = null;
   mapResultHasNoData.value = false;
   mapIsReady.value = false;
 });
@@ -66,6 +71,16 @@ const handleResultDeptSelected = async (dept: any) => {
 const closeResultDeptPanel = () => {
   resultDeptPanelOpen.value = false;
   setTimeout(() => { resultDeptPanelData.value = null; }, 300);
+};
+
+const handleOpenRanking = (constituency: { slug: string; name: string }) => {
+  rankingPanelConstituency.value = constituency;
+  rankingPanelOpen.value = true;
+};
+
+const closeRankingPanel = () => {
+  rankingPanelOpen.value = false;
+  setTimeout(() => { rankingPanelConstituency.value = null; }, 300);
 };
 
 const resultCommunesForDept = computed(() => {
@@ -170,6 +185,7 @@ useSeoMeta({
               :election-id="currentElection?.id"
               height="600px"
               @department-selected="handleResultDeptSelected"
+              @open-ranking="handleOpenRanking"
               @map-error="mapResultHasNoData = true"
               @map-ready="mapIsReady = true"
             />
@@ -180,12 +196,19 @@ useSeoMeta({
         </ClientOnly>
       </div>
     </div>
-  </div>
 
-  <ElectionMapResultDepartmentPanel
-    :department="resultDeptPanelData"
-    :is-open="resultDeptPanelOpen"
-    :all-results="resultCommunesForDept"
-    @close="closeResultDeptPanel"
-  />
+    <ElectionMapResultDepartmentPanel
+      :department="resultDeptPanelData"
+      :is-open="resultDeptPanelOpen"
+      :all-results="resultCommunesForDept"
+      @close="closeResultDeptPanel"
+    />
+
+    <ElectionConstituencyRankingPanel
+      :constituency="rankingPanelConstituency"
+      :is-open="rankingPanelOpen"
+      :election-id="currentElection?.id"
+      @close="closeRankingPanel"
+    />
+  </div>
 </template>

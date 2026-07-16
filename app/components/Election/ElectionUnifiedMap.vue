@@ -39,6 +39,7 @@ const emit = defineEmits<{
   'map-ready': [];
   'map-error': [];
   'department-selected': [department: Record<string, unknown>];
+  'open-ranking': [constituency: { slug: string; name: string }];
 }>();
 
 interface NationalStatsRow {
@@ -54,7 +55,24 @@ interface NationalStatsRow {
 interface ResultRow {
   id: number;
   voters: number | null;
+  voters_count?: number | null;
+  null_ballots?: number | null;
+  valid_votes?: number | null;
+  participation_rate?: number | null;
+  winning_votes?: number | null;
+  winning_percentage?: number | null;
+  round_2_voters_count?: number | null;
+  round_2_null_ballots?: number | null;
+  round_2_valid_votes?: number | null;
+  round_2_participation_rate?: number | null;
+  round_2_winning_votes?: number | null;
+  round_2_winning_percentage?: number | null;
   coalition_gagnante?: {
+    name?: string | null;
+    color?: string | null;
+    head_of_list?: { id: number | null; slug: string | null; first_name: string | null; last_name: string | null } | null;
+  } | null;
+  round_2_coalition_gagnante?: {
     name?: string | null;
     color?: string | null;
     head_of_list?: { id: number | null; slug: string | null; first_name: string | null; last_name: string | null } | null;
@@ -134,6 +152,20 @@ const { data: items, status } = await useAsyncData(
         voters: row.voters || 0,
         parentSlug: row.constituencie?.parent?.slug ?? null,
         parentName: row.constituencie?.parent?.name ?? null,
+        votersCount: row.voters_count ?? null,
+        nullBallots: row.null_ballots ?? null,
+        validVotes: row.valid_votes ?? null,
+        participationRate: row.participation_rate ?? null,
+        winningVotes: row.winning_votes ?? null,
+        winningPercentage: row.winning_percentage ?? null,
+        round2WinnerName: row.round_2_coalition_gagnante?.name || null,
+        round2WinnerColor: row.round_2_coalition_gagnante?.color || null,
+        round2VotersCount: row.round_2_voters_count ?? null,
+        round2NullBallots: row.round_2_null_ballots ?? null,
+        round2ValidVotes: row.round_2_valid_votes ?? null,
+        round2ParticipationRate: row.round_2_participation_rate ?? null,
+        round2WinningVotes: row.round_2_winning_votes ?? null,
+        round2WinningPercentage: row.round_2_winning_percentage ?? null,
       }));
   },
   { watch: [dataKey], server: false, default: () => [] },
@@ -277,6 +309,9 @@ function openCommuneDetail(commune: ResultMapItem) {
 function handleAction(payload: { event: string; data: unknown }) {
   if (props.mode === 'offices' && payload.event === 'open-detail') {
     openDepartmentDetail(payload.data as OfficeMapItem);
+  } else if (props.mode !== 'offices' && payload.event === 'open-ranking') {
+    const item = payload.data as ResultMapItem;
+    emit('open-ranking', { slug: item.slug, name: item.name });
   }
 }
 

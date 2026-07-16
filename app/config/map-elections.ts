@@ -42,6 +42,22 @@ export interface ResultMapItem {
   voters: number
   parentSlug?: string | null
   parentName?: string | null
+  /** Indicateurs de résultat (nullables : saisis éditorialement au fil de l'eau) */
+  votersCount?: number | null
+  nullBallots?: number | null
+  validVotes?: number | null
+  participationRate?: number | null
+  winningVotes?: number | null
+  winningPercentage?: number | null
+  /** Second tour (présidentielle) : présent seulement si le scrutin en a eu un */
+  round2WinnerName?: string | null
+  round2WinnerColor?: string | null
+  round2VotersCount?: number | null
+  round2NullBallots?: number | null
+  round2ValidVotes?: number | null
+  round2ParticipationRate?: number | null
+  round2WinningVotes?: number | null
+  round2WinningPercentage?: number | null
 }
 
 /** Agrège des résultats communaux en un item par département (majorité des communes) */
@@ -169,6 +185,18 @@ function buildResultsDataset(
           color: (d) => d.winnerColor || '#94a3b8',
         },
         {
+          key: 'winningPercentage',
+          label: 'Score du vainqueur',
+          showIf: (d) => d.winningPercentage != null,
+          formatter: (value) => `${(value as number).toFixed(1)}%`,
+        },
+        {
+          key: 'winningVotes',
+          label: 'Voix du vainqueur',
+          showIf: (d) => d.winningVotes != null,
+          formatter: (value) => formatNumber(value as number),
+        },
+        {
           key: 'headOfList',
           label: headOfListLabel,
           formatter: (value) => (value ? String(value) : '—'),
@@ -178,7 +206,46 @@ function buildResultsDataset(
           label: 'Électeurs',
           formatter: (value) => formatNumber(value as number),
         },
+        {
+          key: 'participationRate',
+          label: 'Participation',
+          showIf: (d) => d.participationRate != null,
+          formatter: (value) => `${(value as number).toFixed(1)}%`,
+        },
+        {
+          key: 'validVotes',
+          label: 'Suffrages exprimés',
+          showIf: (d) => d.validVotes != null,
+          formatter: (value) => formatNumber(value as number),
+        },
+        {
+          key: 'nullBallots',
+          label: 'Bulletins nuls',
+          showIf: (d) => d.nullBallots != null,
+          formatter: (value) => formatNumber(value as number),
+        },
+        // Bloc second tour : n'apparaît que si cette circonscription/élection en a eu un
+        {
+          key: 'round2WinnerName',
+          label: 'Vainqueur (2d tour)',
+          format: 'badge',
+          color: (d) => d.round2WinnerColor || '#94a3b8',
+          showIf: (d) => !!d.round2WinnerName,
+        },
+        {
+          key: 'round2WinningPercentage',
+          label: 'Score (2d tour)',
+          showIf: (d) => !!d.round2WinnerName && d.round2WinningPercentage != null,
+          formatter: (value) => `${(value as number).toFixed(1)}%`,
+        },
+        {
+          key: 'round2ParticipationRate',
+          label: 'Participation (2d tour)',
+          showIf: (d) => !!d.round2WinnerName && d.round2ParticipationRate != null,
+          formatter: (value) => `${(value as number).toFixed(1)}%`,
+        },
       ],
+      actions: [{ label: 'Voir le classement', event: 'open-ranking' }],
     },
   }
 }
