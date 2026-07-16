@@ -192,6 +192,11 @@ export default defineNuxtConfig({
 
   // Configuration hybride : routeRules + fallback API
   routeRules: {
+    // Service worker : JAMAIS de cache long (revalidation à chaque visite, l'ETag
+    // rend ça gratuit). Sans ça, l'origine envoyait max-age=14400 et Cloudflare
+    // cachait sw.js 4 h au edge → les mises à jour du SW (et donc du precache PWA)
+    // mettaient jusqu'à 4 h à atteindre les utilisateurs après un déploiement.
+    '/sw.js': { headers: { 'cache-control': 'no-cache' } },
     // --- SWR HTML (PERF-7, docs/audits/audit-web-vitals-2026-07.md) ---
     // Le HTML rendu est caché côté Nitro et resservi instantanément ; à expiration,
     // le visiteur reçoit la copie "stale" pendant que Nitro re-rend en arrière-plan.

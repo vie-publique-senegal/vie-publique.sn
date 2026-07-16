@@ -16,7 +16,7 @@
 - [x] [SEC-2 — Endpoints `server/api/debug/*` exposés en production](#sec-2--endpoints-de-debug-exposés-en-production) ✅ corrigé 02/07/2026 : dossier `server/api/debug/` supprimé (aucune référence dans le code ; `/api/health` reste pour le healthcheck)
 - [ ] [SEC-3 — Protection CSRF inopérante (fichier mal placé)](#sec-3--protection-csrf-inopérante)
 - [ ] [SEC-4 — Turnstile jamais vérifié côté serveur + newsletter sans rate limit](#sec-4--turnstile-jamais-vérifié--newsletter-non-protégée)
-- [ ] [PERF-1 — Precache PWA de 45,6 MB](#perf-1--precache-pwa-de-456-mb)
+- [x] [PERF-1 — Precache PWA de 45,6 MB](#perf-1--precache-pwa-de-456-mb) — ✅ 16/07/2026 (precache 123 entrées/43,4 Mo → **9 entrées/493 Ko**, confirmé dans le build prod Coolify ; + fix connexe : `sw.js` servi en `no-cache` — Cloudflare le cachait 4 h, retardant chaque màj du SW)
 - [ ] [QUAL-1 — Couverture de tests ≈ 0,2 % + vitest.config.ts cassé](#qual-1--couverture-de-tests-quasi-nulle)
 
 ### 🟠 Important — Performance

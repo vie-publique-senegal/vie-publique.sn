@@ -54,6 +54,11 @@ Tout le reste (manifest, SW, precache, contenu, styles) est lu **live** → modi
 4. **La route `/sw.js`** : son URL est enregistrée chez tous les clients. Le contenu peut
    évoluer (le precache a été réduit de 43 Mo → 0,5 Mo le 16/07/2026 sans casse — le SW custom
    n'a aucun `matchPrecache` explicite et sa page offline est inline) mais la route doit rester.
+   ⚠️ **`sw.js` doit être servi en `cache-control: no-cache`** (routeRule dans `nuxt.config.ts`) :
+   sans ça, l'origine envoyait `max-age=14400` et **Cloudflare cachait le SW 4 h au edge** →
+   toute mise à jour PWA mettait jusqu'à 4 h à atteindre les utilisateurs (constaté le
+   16/07/2026). Vérif : `curl -sI https://www.vie-publique.sn/sw.js | grep -iE 'cache-control|cf-cache-status'`
+   → attendu `no-cache` et pas de `HIT` longue durée.
 5. **Le domaine `www.vie-publique.sn`** : baké dans le TWA (`host`) et dans iOS
    (`WKAppBoundDomains`). Un changement de domaine = re-build + re-soumission des 2 apps.
 6. **`public/.well-known/apple-app-site-association`** : équivalent iOS (universal links).
