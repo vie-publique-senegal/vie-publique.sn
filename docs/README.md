@@ -31,6 +31,8 @@
 | **URLs / slugs** | [`guidelines/url-structure-analysis.md`](./guidelines/url-structure-analysis.md) | — |
 | **UI / Design** | [`guidelines/design.md`](./guidelines/design.md) | [`/CLAUDE.md`](../CLAUDE.md) (§ UI & Design), [`guidelines/skeleton-loaders.md`](./guidelines/skeleton-loaders.md) |
 | **Performance / temps de build** | [`infra/build-optimization.md`](./infra/build-optimization.md) | [`infra/docker-optimization.md`](./infra/docker-optimization.md) |
+| **Mesure perf / Web Vitals** | [`infra/mesure-performance.md`](./infra/mesure-performance.md) (protocole + journal des relevés) | baseline [`audits/audit-web-vitals-2026-07.md`](./audits/audit-web-vitals-2026-07.md), pistes = items PERF de [`audits/audit-complet-2026-07.md`](./audits/audit-complet-2026-07.md) |
+| **Audience GA4 (baseline KPI)** | [`audits/audit-analytics-2026-07.md`](./audits/audit-analytics-2026-07.md) | KPI edge/CDN : [`infra/cloudfare.md`](./infra/cloudfare.md) (§ KPI) |
 | **CI/CD** | [`infra/ci-cd-github.md`](./infra/ci-cd-github.md) | — |
 | **Déploiement / Docker** | [`infra/deployment.md`](./infra/deployment.md) | [`infra/docker.md`](./infra/docker.md) |
 | **Infra / topologie / supervision** | [`infra/README.md`](./infra/README.md) | [`infra/supervision-infra.md`](./infra/supervision-infra.md), [`infra/cloudfare.md`](./infra/cloudfare.md) |
