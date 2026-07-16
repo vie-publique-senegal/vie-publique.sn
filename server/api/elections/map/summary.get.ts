@@ -27,6 +27,8 @@ export default defineCachedEventHandler(
       }
 
       // Récupérer les stats nationales
+      // ⚠️ Ne jamais passer `filter: undefined` : le SDK le sérialise en
+      // `filter=undefined` littéral → Directus 400 « Invalid JSON for filter »
       const nationalStats = await directus.request(
         aggregate('election_map_national', {
           aggregate: {
@@ -34,9 +36,7 @@ export default defineCachedEventHandler(
             count: ['office_number'],
             countDistinct: ['polling_place', 'department', 'municipality'],
           },
-          query: {
-            filter: Object.keys(filter).length > 0 ? filter : undefined,
-          },
+          query: Object.keys(filter).length > 0 ? { filter } : {},
         }),
       );
 
@@ -48,9 +48,7 @@ export default defineCachedEventHandler(
             count: ['office_number'],
             countDistinct: ['polling_place', 'country', 'locality', 'diplomatic_representation'],
           },
-          query: {
-            filter: Object.keys(filter).length > 0 ? filter : undefined,
-          },
+          query: Object.keys(filter).length > 0 ? { filter } : {},
         }),
       );
 
@@ -101,7 +99,7 @@ export default defineCachedEventHandler(
         },
       };
     } catch (error) {
-      console.error('Error fetching election map summary:', error);
+      reportServerError(error, 'api/elections/map/summary', { electionId });
       throw createError({
         statusCode: 500,
         statusMessage: 'Erreur lors de la récupération du résumé de la carte électorale',
@@ -111,6 +109,6 @@ export default defineCachedEventHandler(
   {
     maxAge: 60 * 60, // Cache de 1 heure
     name: 'election-carte-summary',
-    getKey: (event) => buildCacheKey("election-carte-summary", getQuery(event)),
+    getKey: (event) => buildCacheKey('election-carte-summary', getQuery(event)),
   },
 );
