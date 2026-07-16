@@ -36,10 +36,19 @@
    lancement du processus, pas de la session Claude).
 4. **`google-analytics`** : nécessite pipx (`python -m pip install --user pipx`) et des
    [Application Default Credentials](https://cloud.google.com/docs/authentication/provide-credentials-adc)
-   Google avec le scope `analytics.readonly` et les API *Analytics Admin* + *Analytics Data*
-   activées sur un projet GCP — voir le
-   [README officiel](https://github.com/googleanalytics/google-analytics-mcp). Tant que
-   l'ADC n'est pas configuré, le serveur démarre mais ses outils échouent (sans effet de bord).
+   Google. Méthode retenue (2026-07) : **service account** — pas de gcloud, pas d'expiration :
+   1. projet GCP `vie-publique-sn` → activer les API **Analytics Data** + **Analytics Admin** ;
+   2. IAM → Comptes de service → `ga-mcp-readonly` (**aucun rôle GCP**) → clé JSON,
+      rangée **hors de tout repo git** ;
+   3. GA4 → Admin → Gestion des accès à la propriété → ajouter l'e-mail du compte de
+      service en rôle **Lecteur** (l'accès aux données se donne DANS Analytics, pas en IAM) ;
+   4. variable d'environnement **utilisateur** `GOOGLE_APPLICATION_CREDENTIALS` = chemin du
+      JSON, puis **redémarrer VS Code entièrement**.
+
+   ⚠️ « Connected » dans `/mcp` ne prouve PAS l'auth : ce serveur stdio démarre sans
+   credentials et n'échoue qu'à l'appel des outils (« default credentials were not found »
+   → ADC manquants ; 403 `SERVICE_DISABLED` → API non activées ; réponse vide → accès
+   GA4 non donné au compte de service).
 
 ## Pièges connus
 
