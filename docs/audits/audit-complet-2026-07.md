@@ -27,7 +27,7 @@
 - [ ] [PERF-5 — pdfjs importé statiquement dans 2 viewers](#perf-5--pdfjs-statique-dans-pdfviewerinlinemodal)
 - [x] [PERF-6 — Images CMS jamais servies en WebP (provider sans `format`)](#perf-6--images-cms-jamais-en-webp) — ✅ 09/07/2026 (`format=webp&quality=80` par défaut ; vérifié en prod le 16/07 : `image/webp` + HIT Cloudflare)
 - [x] [PERF-7 — Pas de SWR HTML + `no-cache` blanket sur `/api/**`](#perf-7--pas-de-swr-html--no-cache-sur-api) — ✅ 16/07/2026 (SWR HTML sur pages chaudes, vérifié en prod : TTFB 312→111 ms, pagination sûre ; volet headers navigateur `/api/**` volontairement non fait — gain faible, cf. cache-strategy.md)
-- [ ] [PERF-8 — Triple stack cartographique (maplibre/deck.gl + leaflet + d3-geo), CSS globaux](#perf-8--triple-stack-cartographique)
+- [ ] [PERF-8 — Triple stack cartographique (maplibre/deck.gl + leaflet + d3-geo), CSS globaux](#perf-8--triple-stack-cartographique) ⏳ partiel 17/07/2026 : **volet CSS fait** — entry.css 552→457 kB, maplibre-gl.css (70 kB) et leaflet.css (15 kB) rattachés aux chunks des composants cartes (7 pages testées OK en local) ; reste le volet long terme (migrer les cartes élections Leaflet/d3 vers MapLibre)
 
 ### 🟠 Important — Sécurité
 

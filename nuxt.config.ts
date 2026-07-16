@@ -413,6 +413,13 @@ export default defineNuxtConfig({
     '@nuxt/eslint',
     '@pinia/nuxt',
     '@nuxtjs/leaflet',
+    // PERF-8 : @nuxtjs/leaflet pousse leaflet.css dans le CSS GLOBAL (module.mjs:38,
+    // sans option pour désactiver) → ce mini-module inline, exécuté juste après,
+    // retire cette injection. Le CSS est importé à la place dans les composants
+    // Election/ElectionMap* qui rendent réellement une carte Leaflet.
+    (_inlineOptions: unknown, nuxt: { options: { css: string[] } }) => {
+      nuxt.options.css = nuxt.options.css.filter((c) => !String(c).includes('leaflet'));
+    },
     '@vite-pwa/nuxt',
     '@vueuse/nuxt',
     '@nuxtjs/mdc',
@@ -479,7 +486,12 @@ export default defineNuxtConfig({
       nodeEnv: process.env.NODE_ENV || 'development',
     },
   },
-  css: ['~/assets/css/app.css', 'maplibre-gl/dist/maplibre-gl.css'],
+  // PERF-8 : PAS de CSS cartographique ici — le tableau `css:` est GLOBAL (bundlé
+  // dans entry.css, render-blocking sur 100 % des pages). maplibre-gl.css (~70 Ko)
+  // est importé dans app/components/map/SenegalMap.vue et leaflet.css dans les
+  // composants Election/ElectionMap* : Vite les rattache au chunk du composant,
+  // chargé uniquement sur les pages cartes (CSS garanti avant le rendu du composant).
+  css: ['~/assets/css/app.css'],
   colorMode: {
     preference: 'dark', // default value of $nuxt.colorMode.preference
   },
