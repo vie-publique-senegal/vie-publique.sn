@@ -59,7 +59,7 @@ const organizationSchema = {
     'https://www.facebook.com/ViePubliqueSenegal',
     'https://www.instagram.com/viepubliquesn/',
     'https://www.linkedin.com/company/vie-publique-sn/',
-    'https://github.com/vie-publique-senegal',
+    'https://github.com/Code-for-Senegal/vie-publique.sn',
     'https://play.google.com/store/apps/details?id=sn.viepublique.app',
     'https://apps.apple.com/app/id6757257552',
   ],
