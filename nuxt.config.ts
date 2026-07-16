@@ -405,8 +405,9 @@ export default defineNuxtConfig({
     '@nuxt/ui',
     'nuxt-gtag',
     '@nuxtjs/seo',
-    // FIXME? Temporairement désactivé - incompatible avec Nuxt 4
-    // '@nuxtjs/web-vitals',
+    // RUM : assuré par Cloudflare Web Analytics (beacon injecté par le proxy,
+    // dashboard zone → Analytics → Web analytics). @nuxtjs/web-vitals désinstallé
+    // (mort : dernière release 04/2024, jamais compatible Nuxt 4) — PERF-11.
     '@nuxt/image',
     '@vueuse/motion/nuxt',
     '@nuxt/eslint',

@@ -33,9 +33,13 @@ Baseline (terrain CrUX + lab) ──► Fix (1 item PERF à la fois)
 | **Sentry** | Nouvelles erreurs / régressions après déploiement | **Continu** (alertes) + revue lors du relevé mensuel | MCP `sentry` ou dashboard — périmètre erreurs uniquement ([`sentry.md`](./sentry.md)) | issues Sentry |
 | **Uptime Kuma** | Disponibilité, latence des sondes | **Continu** (alertes) | kuma.vpsn.cloud ([`monitoring.md`](./monitoring.md)) | — |
 
-> **RUM manquant** : il n'y a **aucune mesure Web Vitals réelle côté client** (PERF-11).
-> Tant que ce n'est pas rétabli, CrUX (28 j, p75, Chrome only) est notre seule donnée terrain —
-> raison de plus pour respecter la cadence ci-dessus.
+> **RUM actif : Cloudflare Web Analytics** (découvert déjà en place le 16/07/2026 — beacon
+> injecté par le proxy, invisible en curl). Dashboard : zone Cloudflare → Analytics → Web
+> analytics. C'est la source la plus rapide entre deux fenêtres CrUX : LCP/INP/CLS p75 en
+> quasi temps réel, ventilés par URL/navigateur/pays, avec **Debug View** qui nomme les
+> éléments fautifs (c'est lui qui a révélé PERF-12, les images rich text non optimisées).
+> L'ajouter au relevé **hebdo** (avec les KPI Cloudflare §2) : % bon LCP/INP/CLS + p75.
+> ⚠️ Plan Free = rétention courte : relever régulièrement, ne pas espérer d'historique long.
 
 ## 3. La session d'audit mensuelle (~30 min, checklist)
 

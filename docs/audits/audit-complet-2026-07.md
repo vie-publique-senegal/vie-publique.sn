@@ -26,7 +26,7 @@
 - [ ] [PERF-4 — Import d3 mort dans AppFooter.vue](#perf-4--import-d3-mort-dans-le-footer)
 - [ ] [PERF-5 — pdfjs importé statiquement dans 2 viewers](#perf-5--pdfjs-statique-dans-pdfviewerinlinemodal)
 - [x] [PERF-6 — Images CMS jamais servies en WebP (provider sans `format`)](#perf-6--images-cms-jamais-en-webp) — ✅ 09/07/2026 (`format=webp&quality=80` par défaut ; vérifié en prod le 16/07 : `image/webp` + HIT Cloudflare)
-- [ ] [PERF-7 — Pas de SWR HTML + `no-cache` blanket sur `/api/**`](#perf-7--pas-de-swr-html--no-cache-sur-api)
+- [x] [PERF-7 — Pas de SWR HTML + `no-cache` blanket sur `/api/**`](#perf-7--pas-de-swr-html--no-cache-sur-api) — ✅ 16/07/2026 (SWR HTML sur pages chaudes, vérifié en prod : TTFB 312→111 ms, pagination sûre ; volet headers navigateur `/api/**` volontairement non fait — gain faible, cf. cache-strategy.md)
 - [ ] [PERF-8 — Triple stack cartographique (maplibre/deck.gl + leaflet + d3-geo), CSS globaux](#perf-8--triple-stack-cartographique)
 
 ### 🟠 Important — Sécurité
@@ -80,7 +80,8 @@
 - [ ] [SEC-10 — Dépendances vulnérables (`@grpc/grpc-js` High via firebase-admin)](#sec-10--dépendances-vulnérables)
 - [ ] [PERF-9 — Shiki : 18 langages pour le chatbot (chunks 225 KB + WASM 607 KB)](#perf-9--shiki-surdimensionné)
 - [ ] [PERF-10 — `councyl-minister.ts` non caché + `limit: -1` sur ~20 endpoints](#perf-10--endpoints-non-cachésnon-bornés)
-- [ ] [PERF-11 — Web Vitals désactivé : aucune mesure RUM en prod](#perf-11--pas-de-mesure-rum)
+- [x] [PERF-11 — Web Vitals désactivé : aucune mesure RUM en prod](#perf-11--pas-de-mesure-rum) — ✅ 16/07/2026 : RUM déjà couvert par Cloudflare Web Analytics (actif, données live) ; module mort `@nuxtjs/web-vitals` désinstallé ; protocole de relevé dans docs/infra/mesure-performance.md
+- [x] PERF-12 — Images du rich text Directus en URL CMS directe (JPEG/PNG original, sans lazy) — ✅ 16/07/2026 : découvert via le Debug View RUM (LCP jusqu'à 38 s) ; réécriture `rewriteCmsContent()` (app/utils/cms-content.ts) appliquée aux 11 rendus `v-html` (proxy /cms + webp 800px + lazy/async, GIF/SVG et liens fichiers préservés) _(ajout post-audit)_
 - [ ] [DOC-6 — Dépendances inutilisées/mal classées (`@ai-sdk/vue`, `@types/marked`, `@nuxt/eslint`)](#doc-6--dépendances-à-nettoyer)
 - [ ] [DOC-7 — Fichiers orphelins (`nuxt.config.build-optimized.ts`, `design.md` racine)](#doc-7--fichiers-orphelins)
 - [ ] [QUAL-7 — Interfaces hors de `types/` + `defineProps` runtime non typés](#qual-7--types-mal-rangés)
