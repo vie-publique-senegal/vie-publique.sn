@@ -1,13 +1,14 @@
-# Baseline Analytics GA4 — juillet 2026
+# Baseline Analytics (GA4 + Search Console) — juillet 2026
 
-> **Rôle** : photo de référence de l'audience (relevée les **9→15 juillet 2026**, propriété GA4
-> `439183057`) pour mesurer l'effet des correctifs au fil du temps. À re-relever **toutes les
-> 3-4 semaines** ou après un correctif majeur, via le MCP `google-analytics`
-> (setup : [`guidelines/mcp-servers.md`](../guidelines/mcp-servers.md) §4).
+> **Rôle** : photo de référence de l'audience (GA4, **9→15/07/2026**, propriété `439183057`)
+> et de la visibilité Google (Search Console, **16/06→13/07/2026**, propriété
+> `sc-domain:vie-publique.sn`) pour mesurer l'effet des correctifs au fil du temps.
+> À re-relever **toutes les 3-4 semaines** ou après un correctif majeur.
 > Pendant edge/CDN : section KPI de [`infra/cloudfare.md`](../infra/cloudfare.md).
 
-## Méthode de relevé (MCP)
+## Méthode de relevé
 
+**GA4** — MCP `google-analytics` (setup : [`guidelines/mcp-servers.md`](../guidelines/mcp-servers.md) §4),
 `run_report` sur `property_id: 439183057`, plage 7 jours glissants :
 
 1. **Trafic/jour** : dimension `date`, métriques `activeUsers, sessions, screenPageViews` ;
@@ -15,6 +16,16 @@
 3. **Moteurs organiques** : dimension `sessionSource` filtrée `sessionDefaultChannelGroup = Organic Search` ;
 4. **Sources IA** : idem filtré `= AI Assistant` ;
 5. **Top pages** : dimension `pagePath`, métriques `screenPageViews, activeUsers`.
+
+**Search Console** — pas de MCP officiel : API REST avec le **même service account**
+(`ga-mcp-readonly@vie-publique-sn`, ajouté en « Utilisateur restreint » dans GSC, scope OAuth
+`webmasters.readonly`, API *Search Console* activée sur le projet GCP). Endpoint
+`POST /webmasters/v3/sites/sc-domain%3Avie-publique.sn/searchAnalytics/query`, plage **28 jours
+finissant à J-3** (les données GSC ont ~2-3 jours de retard) :
+
+1. **Totaux/jour** : `dimensions: ["date"]` ;
+2. **Top requêtes** : `dimensions: ["query"], rowLimit: 10` ;
+3. **Top pages** : `dimensions: ["page"], rowLimit: 10`.
 
 ## Baseline 09→15/07/2026
 
@@ -66,6 +77,41 @@ ChatGPT **519** (95 %) · Perplexity 10 · Gemini 9 · Claude 5 · Copilot 4.
 | `/documents/13845/proposition-loi-17-2026-…` | 735 | 434 | — |
 | `/documents/13846/projet-de-loi-15-2026-code-du-travail` | 613 | 305 | — |
 
+## Baseline Search Console 16/06→13/07/2026 (28 j)
+
+### Totaux
+
+- **50 338 clics**, **1,29 M impressions**, CTR ~3,9 %, **position moyenne 5,6–6,4** ;
+- ~1 000–2 400 clics/jour (creux le week-end, cohérent avec GA4).
+
+### Top requêtes
+
+| Requête | Clics | Impressions | Position |
+| --- | --- | --- | --- |
+| vie publique sn (marque) | 540 | 634 | **1,0** |
+| revision constitution senegal | 482 | 1 665 | 1,8 |
+| journal officiel senegal | 280 | 511 | 2,4 |
+| abdou mbow | 215 | 3 786 | 4,6 |
+| **révision constitutionnelle** | 125 | **14 230** | 5,5 |
+
+> 💡 **Opportunité n°1** : « révision constitutionnelle » = 14 230 impressions pour 125 clics
+> (CTR 0,9 %) en position 5,5. Chaque place gagnée sur cette requête vaut des centaines de
+> clics/mois — travailler le title/snippet du dossier et sa fraîcheur.
+
+### Top pages
+
+| Page | Clics | Impressions | Position |
+| --- | --- | --- | --- |
+| `/dossiers/revision-constitution-senegal-2026` | **5 228** | 73 281 | 3,5 |
+| `/documents/13845/proposition-loi-17-2026-…` | 2 507 | 32 160 | 4,0 |
+| `/documents/13846/…code-du-travail-senegal` | 1 545 | 11 542 | 3,8 |
+| `/` | 1 127 | 22 949 | 7,9 |
+| `/docs/…reglement-interieur…pdf` (PDF direct) | 695 | 6 484 | 4,7 |
+
+> Le format **`/dossiers` est le champion SEO du site** : la page dossier fait 2× les clics du
+> document brut sur le même sujet. Les **PDF rankent aussi en direct** dans Google (à garder en
+> tête pour la décision BING-7 / archives.sn).
+
 ## Checklist des prochains relevés
 
 - [ ] **Mi-août 2026** : sessions Bing (attendu : > 400-450/sem si BING-1/7 portent leurs fruits) ;
@@ -74,4 +120,7 @@ ChatGPT **519** (95 %) · Perplexity 10 · Gemini 9 · Claude 5 · Copilot 4.
       se lira dans les vues/visiteur des pages de destination) ;
 - [ ] **Organic Social** après déroulé de la checklist diffusion RSS (`docs/modules/rss/flux-rss.md`) ;
 - [ ] Élucider le canal **Unassigned** (12 %) ;
-- [ ] Ratio GA4 vs uniques Cloudflare (part de bots stable ?).
+- [ ] Ratio GA4 vs uniques Cloudflare (part de bots stable ?) ;
+- [ ] **GSC** : clics/28 j (baseline 50,3k) et position moyenne (5,6-6,4) — effet attendu des
+      fixes JSON-LD/SEO et de la fraîcheur des dossiers ;
+- [ ] **GSC** : position de « révision constitutionnelle » (baseline 5,5 — l'opportunité n°1).
