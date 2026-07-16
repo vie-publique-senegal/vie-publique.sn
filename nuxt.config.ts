@@ -655,6 +655,17 @@ export default defineNuxtConfig({
       name: 'Vie Publique Sénégal',
       url: 'https://www.vie-publique.sn',
       logo: 'https://www.vie-publique.sn/social-image.png',
+      // Entité Wikidata + profils officiels (voir docs/modules/a-propos/wikipedia-wikidata.md)
+      sameAs: [
+        'https://www.wikidata.org/wiki/Q140571616',
+        'https://x.com/ViePubliqueSN',
+        'https://www.facebook.com/ViePubliqueSenegal',
+        'https://www.instagram.com/viepubliquesn/',
+        'https://www.linkedin.com/company/vie-publique-sn/',
+        'https://github.com/vie-publique-senegal',
+        'https://play.google.com/store/apps/details?id=sn.viepublique.app',
+        'https://apps.apple.com/app/id6757257552',
+      ],
     },
   },
   gtag: {

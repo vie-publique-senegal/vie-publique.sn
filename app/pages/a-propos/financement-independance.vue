@@ -54,10 +54,14 @@ const organizationSchema = {
     contactType: 'Customer Service',
   },
   sameAs: [
-    'https://twitter.com/ViePubliqueSN',
+    'https://www.wikidata.org/wiki/Q140571616',
+    'https://x.com/ViePubliqueSN',
     'https://www.facebook.com/ViePubliqueSenegal',
-    'https://www.linkedin.com/company/vie-publique-sn',
-    'https://github.com/Code-for-Senegal/vie-publique.sn',
+    'https://www.instagram.com/viepubliquesn/',
+    'https://www.linkedin.com/company/vie-publique-sn/',
+    'https://github.com/vie-publique-senegal',
+    'https://play.google.com/store/apps/details?id=sn.viepublique.app',
+    'https://apps.apple.com/app/id6757257552',
   ],
 };
 
@@ -200,7 +204,7 @@ const partnersProjects = ref<PartnerProject[]>([
       ]"
     />
 
-    <article class="prose prose-sm mx-auto sm:prose lg:prose-lg dark:prose-invert">
+    <article class="prose prose-sm mx-auto dark:prose-invert sm:prose lg:prose-lg">
       <h1>Financement & indépendance</h1>
 
       <p class="text-sm text-gray-600 dark:text-gray-400">
