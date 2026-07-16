@@ -21,7 +21,7 @@
 
 ### 🟠 Important — Performance
 
-- [ ] [PERF-2 — Fonts Google en `@import` bloquant, sans preconnect](#perf-2--fonts-google-en-import-bloquant)
+- [x] [PERF-2 — Fonts Google en `@import` bloquant, sans preconnect](#perf-2--fonts-google-en-import-bloquant) — ✅ 16/07/2026 (Poppins n'était utilisée nulle part : `@import` supprimé)
 - [ ] [PERF-3 — Firebase dans le bundle d'entrée (~140 KB br sur toutes les pages)](#perf-3--firebase-dans-le-bundle-dentrée)
 - [ ] [PERF-4 — Import d3 mort dans AppFooter.vue](#perf-4--import-d3-mort-dans-le-footer)
 - [ ] [PERF-5 — pdfjs importé statiquement dans 2 viewers](#perf-5--pdfjs-statique-dans-pdfviewerinlinemodal)
@@ -145,10 +145,12 @@ Nettoyage bonus : le bloc `pwa.workbox` (nuxt.config.ts:776-780) est ignoré en 
 
 ### PERF-2 — Fonts Google en `@import` bloquant
 
-**Fichier** : `app/assets/css/app.css:2`
-`@import url('https://fonts.googleapis.com/css2?family=Poppins:...')` dans le CSS bundlé = chaîne critique CSS → fonts.googleapis.com → fonts.gstatic.com, **sans aucun preconnect** (`app.head.link` vide). Impact estimé : −300 à 800 ms de FCP/LCP.
+> ✅ **Corrigé le 16/07/2026** (voir « Fix appliqué » ci-dessous).
 
-**Fix** : module `@nuxt/fonts` (self-host automatique) ou woff2 dans `public/fonts` + `@font-face`. Réduire à 3 graisses (400/500/700). A minima : preconnect vers fonts.gstatic.com.
+**Fichier** : `app/assets/css/app.css:2`
+`@import url('https://fonts.googleapis.com/css2?family=Poppins:...')` dans le CSS bundlé = chaîne critique CSS → fonts.googleapis.com → fonts.gstatic.com, **sans aucun preconnect** (`app.head.link` vide). Impact estimé : −300 à 800 ms de FCP/LCP. Trace lab du 16/07 : chaîne critique mesurée à **1 970 ms**, render delay = 91 % du LCP ([`audit-web-vitals-2026-07.md`](./audit-web-vitals-2026-07.md)).
+
+**Fix appliqué** : suppression pure de l'`@import` — l'investigation a montré que **Poppins n'était utilisée par AUCUN sélecteur** (aucun `font-family: Poppins` dans le code ni dans le CSS buildé) : le site rendait déjà en polices système, la webfont était du poids mort à 100 %. Zéro changement visuel. _(Le seul `font-family` custom, `'Quicksand'` sur les spans de nav dans `app.vue`, n'est lui-même jamais chargé → fallback `sans-serif` ; toléré.)_ Si une webfont devient nécessaire un jour → `@nuxt/fonts` (self-host), jamais un `@import`.
 
 ### PERF-3 — Firebase dans le bundle d'entrée
 

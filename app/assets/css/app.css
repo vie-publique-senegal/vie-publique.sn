@@ -1,5 +1,8 @@
 /* assets/css/main.css */
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+/* Pas de webfont : le site rend en polices système (aucun sélecteur n'utilisait Poppins).
+   Ne pas réintroduire d'@import Google Fonts ici : chaîne render-blocking mesurée à ~2 s
+   sur mobile (PERF-2, docs/audits/audit-web-vitals-2026-07.md). Si une webfont devient
+   nécessaire → module @nuxt/fonts (self-host), jamais un @import CSS. */
 
 /* ========================================
    DARK MODE "DIM" - Twitter/X Inspired
