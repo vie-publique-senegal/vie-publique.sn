@@ -629,7 +629,7 @@ const backLabel = computed(() => {
           <div class="p-6">
             <div
               class="prose-a:text-primary-600 dark:prose-a:text-primary-400 prose prose-sm max-w-none sm:prose prose-headings:text-gray-900 prose-p:text-gray-600 prose-strong:text-gray-900 prose-li:text-gray-600 prose-img:rounded-xl prose-img:shadow-md dark:prose-headings:text-white dark:prose-p:text-gray-300 dark:prose-strong:text-white dark:prose-li:text-gray-300 dark:prose-hr:border-gray-700"
-              v-html="person.long_bio"
+              v-html="rewriteCmsContent(person.long_bio)"
             ></div>
           </div>
         </div>

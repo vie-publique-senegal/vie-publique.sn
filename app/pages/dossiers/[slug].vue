@@ -299,12 +299,12 @@ useHead({
               <div
                 v-if="dossier.intro_html"
                 class="prose prose-base max-w-none text-gray-700 dark:prose-invert prose-headings:font-semibold prose-p:text-[17px] prose-p:leading-[1.65] prose-a:text-sky-600 dark:text-gray-300 dark:prose-a:text-sky-400 sm:prose-p:text-lg"
-                v-html="dossier.intro_html"
+                v-html="rewriteCmsContent(dossier.intro_html)"
               />
               <div
                 v-if="dossier.content_html"
                 class="prose prose-base mt-6 max-w-none text-gray-700 dark:prose-invert prose-headings:font-semibold prose-h2:mt-8 prose-p:text-[17px] prose-p:leading-[1.65] prose-a:text-sky-600 prose-img:rounded-xl dark:text-gray-300 dark:prose-a:text-sky-400 sm:prose-p:text-lg"
-                v-html="dossier.content_html"
+                v-html="rewriteCmsContent(dossier.content_html)"
               />
             </DossierSection>
 

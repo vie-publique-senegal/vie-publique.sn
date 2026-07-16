@@ -352,7 +352,7 @@ const formatDateISO = (date: string) => {
               <div
                 itemprop="articleBody"
                 class="prose prose-sm max-w-none dark:prose-invert prose-headings:font-semibold prose-h2:mt-8 prose-h2:text-xl prose-p:leading-relaxed prose-a:text-emerald-600 dark:prose-a:text-emerald-400"
-                v-html="article.content"
+                v-html="rewriteCmsContent(article.content)"
               ></div>
             </div>
 
