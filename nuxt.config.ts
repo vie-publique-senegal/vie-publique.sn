@@ -713,17 +713,7 @@ export default defineNuxtConfig({
           src: 'pwa-512x512.png',
           sizes: '512x512',
           type: 'image/png',
-        },
-        {
-          src: 'pwa-512x512.png',
-          sizes: '512x512',
-          type: 'image/png',
           purpose: 'any',
-        },
-        {
-          src: 'pwa-1024x1024.png',
-          sizes: '1024x1024',
-          type: 'image/png',
         },
         {
           src: 'pwa-1024x1024.png',
@@ -836,21 +826,22 @@ export default defineNuxtConfig({
         client_mode: ['navigate-existing', 'auto'],
       },
     },
-    // Note: avec strategies: 'injectManifest', les options workbox
-    // (clientsClaim, skipWaiting, navigateFallback) sont IGNORÉES.
-    // Le SW custom (sw.ts) gère tout directement.
-    workbox: {
-      globPatterns: ['**/*.{js,css,html,png,svg,ico}'],
-      maximumFileSizeToCacheInBytes: 10 * 1024 * 1024,
-      cleanupOutdatedCaches: true,
-    },
     injectManifest: {
-      // Precache UNIQUEMENT les assets essentiels (icônes, favicon).
-      // Les JS/CSS hashés (/_nuxt/*) sont gérés par CacheFirst en runtime :
-      // cache miss → réseau → cache. Pas besoin de les precacher.
-      // Precacher tout JS/CSS ralentit l'installation du SW et si un seul
-      // fichier échoue → le SW ne s'installe pas → l'ancien reste actif.
-      globPatterns: ['**/*.{png,svg,ico,webp}'],
+      // Precache UNIQUEMENT les assets essentiels du shell PWA (~0,5 MB) :
+      // icônes du manifest, favicon, badge de notification. PAS de glob large :
+      // '**/*.{png,svg,ico,webp}' précachait 123 images = 43 MB re-téléchargés
+      // à chaque mise à jour du SW (PERF-1). Les autres images ET les JS/CSS
+      // hashés (/_nuxt/*) sont couverts en runtime par les routes CacheFirst
+      // de app/service-worker/sw.ts. Precacher trop ralentit l'installation du
+      // SW et un seul fichier en échec bloque son installation.
+      globPatterns: [
+        'pwa-192x192.png',
+        'pwa-256x256.png',
+        'pwa-512x512.png',
+        'pwa-1024x1024.png',
+        'favicon.ico',
+        'badge-72x72.png',
+      ],
       maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
     },
     client: {

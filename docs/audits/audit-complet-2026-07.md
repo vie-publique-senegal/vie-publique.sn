@@ -191,9 +191,10 @@ Le provider passait `width/height/quality` à Directus mais **jamais `format`** 
 
 - Aucune règle `swr`/`isr`/`prerender` de page → chaque hit sur `/`, `/actualites`, `/documents/**` refait un rendu SSR complet.
 - `'/api/**': { headers: { 'cache-control': 'no-cache' } }` interdit tout cache navigateur/CDN même pour les GET stables cachés 1h côté Nitro.
-- Aucun `staleMaxAge` (SWR Nitro) sur les 93 handlers cachés : à l'expiration, le premier visiteur paie la latence Directus complète.
+- ~~Aucun `staleMaxAge` (SWR Nitro) sur les 93 handlers cachés : à l'expiration, le premier visiteur paie la latence Directus complète.~~ **Rectifié le 16/07/2026 : constat faux** — `swr: true` est le défaut Nitro, le stale est déjà servi pendant la revalidation (vérifié dans `nitropack/dist/runtime/internal/cache.mjs`).
 
-**Fix** : `routeRules` : `'/': { swr: 300 }`, `'/documents/**': { swr: 600 }`, `'/actualites/**': { swr: 300 }`… ; `staleMaxAge: 86400` sur les handlers 1h ; `s-maxage`/`stale-while-revalidate` ciblés sur les GET publics (garder `no-cache` pour POST/santé).
+**Fix** : `routeRules` : `'/': { swr: 300 }`, `'/documents/**': { swr: 600 }`, `'/actualites/**': { swr: 300 }`… ; ~~`staleMaxAge: 86400` sur les handlers 1h~~ (inutile, cf. rectification ci-dessus) ; `s-maxage`/`stale-while-revalidate` ciblés sur les GET publics (garder `no-cache` pour POST/santé) — partie header navigateur non faite (gain faible, cf. `docs/guidelines/cache-strategy.md` §1).
+**✅ SWR HTML appliqué le 16/07/2026** (`/` 120 s, actualites/dossiers/documents/conseil-des-ministres 300-600 s) — vérifié en prod : TTFB 312 ms → 111 ms au 2ᵉ hit, pagination `?page=` sûre (clé de cache = URL complète avec query).
 
 ### PERF-8 — Triple stack cartographique
 
