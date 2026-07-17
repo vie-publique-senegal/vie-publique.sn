@@ -75,7 +75,7 @@ export default defineSitemapEventHandler(async () => {
           sort: ['last_name'],
         }),
       );
-  
+
       const slugify = (text: string) => {
         return text
           .toString()
@@ -87,7 +87,7 @@ export default defineSitemapEventHandler(async () => {
           .replace(/[^\w-]+/g, '')
           .replace(/--+/g, '-');
       };
-  
+
       for (const deputy of deputies) {
         const fullName = `${deputy.first_name} ${deputy.last_name}`;
         const slug = slugify(fullName);
@@ -183,7 +183,7 @@ export default defineSitemapEventHandler(async () => {
     try {
       const elections = (await directus.request(
         readItems('elections' as any, {
-          fields: ['slug', 'type', 'status', 'election_date', 'pv_upload_active'],
+          fields: ['id', 'slug', 'type', 'status', 'election_date', 'pv_upload_active'],
           filter: { status: { _nin: ['draft', 'archived'] } },
           limit: -1,
         }),
@@ -219,6 +219,104 @@ export default defineSitemapEventHandler(async () => {
             changefreq: isCompleted ? 'monthly' : 'weekly',
             priority,
           });
+        }
+
+        const changefreq = isCompleted ? 'monthly' : 'weekly';
+        const isLocale = String(election.type) === 'locale';
+
+        // 6b. Présidentielle / législatives : fiches candidat et pages coalition
+        // (routes /candidats/[candidateSlug] et /candidats/coalition/[coalitionSlug]).
+        if (!isLocale) {
+          try {
+            const lists = (await directus.request(
+              readItems('election_electoral_lists' as any, {
+                fields: ['coalition.political_entity.slug', 'candidates.person.slug'],
+                filter: { election: { _eq: election.id }, status: { _eq: 'published' } },
+                limit: -1,
+              }),
+            )) as any[];
+
+            const coalitionSlugs = new Set<string>();
+            const candidateSlugs = new Set<string>();
+            for (const list of lists) {
+              const coalitionSlug = list.coalition?.political_entity?.slug;
+              if (coalitionSlug) coalitionSlugs.add(coalitionSlug);
+              for (const candidate of list.candidates || []) {
+                const personSlug = candidate?.person?.slug;
+                if (personSlug) candidateSlugs.add(personSlug);
+              }
+            }
+
+            for (const slug of coalitionSlugs) {
+              urls.push({
+                loc: `${base}/candidats/coalition/${slug}`,
+                ...(lastmod && { lastmod }),
+                changefreq,
+                priority: 0.6,
+              });
+            }
+            for (const slug of candidateSlugs) {
+              urls.push({
+                loc: `${base}/candidats/${slug}`,
+                ...(lastmod && { lastmod }),
+                changefreq,
+                priority: 0.6,
+              });
+            }
+          } catch (sitemapError) {
+            console.warn(
+              `Erreur sitemap candidats/coalitions (élection ${election.slug}):`,
+              sitemapError,
+            );
+          }
+        }
+
+        // 6c. Locales : pages circonscription (route /candidats/circonscription/[constituencySlug]),
+        // limitées aux départements ayant au moins une liste publiée.
+        if (isLocale) {
+          try {
+            const lists = (await directus.request(
+              readItems('election_electoral_lists' as any, {
+                fields: ['constituency.id'],
+                filter: { election: { _eq: election.id }, status: { _eq: 'published' } },
+                limit: -1,
+              }),
+            )) as any[];
+
+            const constituencyIds = [
+              ...new Set(lists.map((l) => l.constituency?.id).filter(Boolean)),
+            ];
+
+            if (constituencyIds.length > 0) {
+              const constituencies = (await directus.request(
+                readItems('election_constituencies' as any, {
+                  fields: ['id', 'slug', 'type', 'nationale_type'],
+                  filter: { id: { _in: constituencyIds } },
+                  limit: -1,
+                }),
+              )) as any[];
+
+              for (const constituency of constituencies) {
+                if (
+                  constituency.type === 'national' &&
+                  constituency.nationale_type === 'departement' &&
+                  constituency.slug
+                ) {
+                  urls.push({
+                    loc: `${base}/candidats/circonscription/${constituency.slug}`,
+                    ...(lastmod && { lastmod }),
+                    changefreq,
+                    priority: 0.5,
+                  });
+                }
+              }
+            }
+          } catch (sitemapError) {
+            console.warn(
+              `Erreur sitemap circonscriptions (élection ${election.slug}):`,
+              sitemapError,
+            );
+          }
         }
       }
     } catch (sitemapError) {

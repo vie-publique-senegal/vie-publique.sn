@@ -10,7 +10,6 @@ const {
   currentRevision: selectedRevision,
   diasporaFileId,
   contextQuery,
-  pending: loadingRevision,
 } = useElectoralRevision({ syncUrl: true });
 
 const title = computed(() =>
@@ -103,13 +102,7 @@ const representativeElectionId = computed(() => {
     </div>
 
     <div class="w-full max-w-7xl">
-      <div v-if="loadingRevision" class="flex h-[400px] w-full items-center justify-center">
-        <div
-          class="border-t-primary-600 h-10 w-10 animate-spin rounded-full border-4 border-gray-200"
-        />
-      </div>
       <ElectionDiasporaZones
-        v-else
         :electoral-file-id="diasporaFileId"
         :election-id="representativeElectionId"
       />

@@ -23,7 +23,7 @@ const selectedElectionIds = computed(() => {
   const electionsWithDocsIds = new Set(config.value?.election_ids_with_documents || []);
 
   // Trouver TOUTES les élections correspondantes (pas seulement la première)
-  const matchingElections = config.value.elections.filter(e => {
+  const matchingElections = config.value.elections.filter((e) => {
     // Ne garder que les élections qui ont des documents
     if (!electionsWithDocsIds.has(e.id)) return false;
     if (selectedType.value !== 'all' && e.type !== selectedType.value) return false;
@@ -34,14 +34,18 @@ const selectedElectionIds = computed(() => {
   if (matchingElections.length === 0) return null;
 
   // Retourner les IDs séparés par des virgules
-  return matchingElections.map(e => e.id).join(',');
+  return matchingElections.map((e) => e.id).join(',');
 });
 
-const { items: documents, loading, pagination } = useCmsCollection<Document>({
+const {
+  items: documents,
+  loading,
+  pagination,
+} = useCmsCollection<Document>({
   collection: 'documents',
   filters: computed(() => {
     const filters: any = {
-      type: 'election'
+      type: 'election',
     };
     if (selectedElectionIds.value) {
       filters.election_ids = selectedElectionIds.value;
@@ -51,7 +55,7 @@ const { items: documents, loading, pagination } = useCmsCollection<Document>({
   search: searchQuery,
   sort: sortBy,
   page: currentPage,
-  limit: 12
+  limit: 12,
 });
 
 const itemsPerPage = 12;
@@ -66,7 +70,7 @@ const setSearchQuery = (q: string) => {
 
 const searchQueryUI = computed({
   get: () => searchQuery.value,
-  set: (val) => setSearchQuery(val)
+  set: (val) => setSearchQuery(val),
 });
 
 watch(currentPage, (newPage) => {
@@ -85,33 +89,29 @@ watch([selectedType, selectedYear], () => {
       ...route.query,
       type: selectedType.value === 'all' ? undefined : selectedType.value,
       year: selectedYear.value === 'all' ? undefined : selectedYear.value,
-      page: '1'
-    }
+      page: '1',
+    },
   });
 });
 
 const typeOptions = computed(() => {
   if (!config.value?.elections) return [{ label: 'Tous les types', value: 'all' }];
 
-  const electionsWithDocsIds = new Set(
-    config.value?.election_ids_with_documents || []
-  );
+  const electionsWithDocsIds = new Set(config.value?.election_ids_with_documents || []);
 
   const typesWithDocs = new Set(
-    config.value.elections
-      .filter(e => electionsWithDocsIds.has(e.id))
-      .map(e => e.type)
+    config.value.elections.filter((e) => electionsWithDocsIds.has(e.id)).map((e) => e.type),
   );
 
   const typeLabels: Record<string, string> = {
-    'presidential': 'Présidentielle',
-    'legislative': 'Législatives',
-    'locale': 'Locales'
+    presidential: 'Présidentielle',
+    legislative: 'Législatives',
+    locale: 'Locales',
   };
 
-  const options = Array.from(typesWithDocs).map(type => ({
+  const options = Array.from(typesWithDocs).map((type) => ({
     label: typeLabels[type] || type,
-    value: type
+    value: type,
   }));
 
   return [{ label: 'Tous les types', value: 'all' }, ...options];
@@ -120,25 +120,23 @@ const typeOptions = computed(() => {
 const yearOptions = computed(() => {
   if (!config.value?.elections) return [{ label: 'Toutes les années', value: 'all' }];
 
-  const electionsWithDocsIds = new Set(
-    config.value?.election_ids_with_documents || []
-  );
+  const electionsWithDocsIds = new Set(config.value?.election_ids_with_documents || []);
 
   const yearsWithDocs = new Set(
     config.value.elections
-      .filter(e => {
+      .filter((e) => {
         if (!electionsWithDocsIds.has(e.id)) return false;
         if (selectedType.value !== 'all' && e.type !== selectedType.value) return false;
         return true;
       })
-      .map(e => e.year)
+      .map((e) => e.year),
   );
 
   const options = Array.from(yearsWithDocs)
     .sort((a, b) => b - a)
-    .map(year => ({
+    .map((year) => ({
       label: year.toString(),
-      value: year.toString()
+      value: year.toString(),
     }));
 
   return [{ label: 'Toutes les années', value: 'all' }, ...options];
@@ -153,66 +151,71 @@ const sortOptions = [
 // SEO avec Open Graph
 useSeoMeta({
   title: 'Législation Électorale | Élections Sénégal',
-  description: 'Consultez les textes de loi, décrets et documents officiels régissant les élections au Sénégal.',
+  description:
+    'Consultez les textes de loi, décrets et documents officiels régissant les élections au Sénégal.',
   ogTitle: 'Législation Électorale - Sénégal',
-  ogDescription: 'Accédez à tous les textes juridiques et documents officiels du processus électoral sénégalais.',
+  ogDescription:
+    'Accédez à tous les textes juridiques et documents officiels du processus électoral sénégalais.',
 });
 </script>
 
 <template>
-  <div class="min-h-screen pb-16">
-    <!-- Header Compact -->
-    <div class="bg-white dark:bg-gray-900 border-b dark:border-gray-800 pt-8 pb-6 shadow-sm">
-      <div class="container mx-auto px-4 max-w-6xl">
-        <!-- Breadcrumb -->
-        <AppBreadcrumb
-          class="mb-6"
-          :items="[
-            { label: 'Élections', to: '/elections-senegal' },
-            { label: 'Législation' }
-          ]"
-        />
-
-        <div class="flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div class="space-y-1">
-            <h1 class="text-2xl font-black uppercase tracking-tight text-gray-900 dark:text-white">Législation Électorale</h1>
-            <p class="text-xs text-gray-500 font-bold uppercase tracking-wider italic">Textes de lois, décrets et arrêtés officiels</p>
-          </div>
-
-          <div class="flex flex-wrap items-center gap-3">
-            <USelect
-              v-model="selectedType"
-              :options="typeOptions"
-              size="md"
-              class="w-full md:w-48"
-              placeholder="Type d'élection"
-            />
-            <USelect
-              v-model="selectedYear"
-              :options="yearOptions"
-              size="md"
-              class="w-full md:w-32"
-              placeholder="Année"
-            />
-          </div>
-        </div>
-      </div>
+  <div class="min-h-screen pb-20 dark:bg-gray-900">
+    <div class="container mx-auto px-4 pt-4">
+      <AppBreadcrumb
+        :items="[{ label: 'Élections', to: '/elections-senegal' }, { label: 'Législation' }]"
+      />
     </div>
 
-    <div class="container mx-auto px-4 max-w-6xl py-10">
+    <header class="container mx-auto px-4 py-3 md:py-6">
+      <div class="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+        <div>
+          <h1 class="text-xl font-bold text-gray-900 dark:text-white md:text-3xl">
+            Législation électorale
+          </h1>
+          <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400 md:mt-1 md:text-sm">
+            Textes de lois, décrets et arrêtés officiels
+          </p>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2">
+          <USelect
+            v-model="selectedType"
+            :options="typeOptions"
+            size="sm"
+            class="w-full md:w-40"
+            placeholder="Type d'élection"
+          />
+          <USelect
+            v-model="selectedYear"
+            :options="yearOptions"
+            size="sm"
+            class="w-full md:w-28"
+            placeholder="Année"
+          />
+        </div>
+      </div>
+    </header>
+
+    <main class="container mx-auto px-4">
       <!-- Search & Sort -->
-      <div class="mb-10 flex flex-col md:flex-row gap-4 items-center">
-        <div class="relative flex-1 w-full">
-           <UInput
+      <div class="mb-6 flex flex-col items-center gap-3 md:flex-row">
+        <div class="relative w-full flex-1">
+          <UInput
             v-model="searchQueryUI"
             icon="i-heroicons-magnifying-glass"
             placeholder="Rechercher un décret, une loi..."
-            size="lg"
+            size="md"
             class="w-full"
-            :ui="{ rounded: 'rounded-xl' }"
           />
         </div>
-        <USelectMenu v-model="sortBy" :options="sortOptions" value-attribute="value" size="lg" class="w-full md:w-48" />
+        <USelectMenu
+          v-model="sortBy"
+          :options="sortOptions"
+          value-attribute="value"
+          size="md"
+          class="w-full md:w-48"
+        />
       </div>
 
       <!-- Results Grid -->
@@ -230,18 +233,29 @@ useSeoMeta({
         </div>
       </div>
 
-      <div v-else-if="documents.length === 0" class="text-center py-32 bg-white dark:bg-gray-900 rounded-[2rem] border-2 border-dashed border-gray-100 dark:border-gray-800">
-         <UIcon name="i-heroicons-document-magnifying-glass" class="h-16 w-16 text-gray-200 mx-auto mb-6" />
-         <h3 class="text-xl font-black text-gray-400 uppercase italic">Aucun document trouvé</h3>
-         <p class="text-gray-500 mt-2 italic text-sm">Essayez de modifier vos filtres ou votre recherche.</p>
-         <UButton
-           v-if="selectedType !== 'all' || selectedYear !== 'all'"
-           @click="selectedType = 'all'; selectedYear = 'all'"
-           variant="soft"
-           class="mt-6 rounded-full"
-         >
-           Voir tout
-         </UButton>
+      <div
+        v-else-if="documents.length === 0"
+        class="rounded-2xl bg-white py-16 text-center ring-1 ring-gray-200 dark:bg-gray-800 dark:ring-gray-700"
+      >
+        <UIcon
+          name="i-heroicons-document-magnifying-glass"
+          class="mx-auto mb-4 h-12 w-12 text-gray-300 dark:text-gray-600"
+        />
+        <h3 class="text-base font-bold text-gray-600 dark:text-gray-400">Aucun document trouvé</h3>
+        <p class="mt-1 text-sm text-gray-500 dark:text-gray-500">
+          Essayez de modifier vos filtres ou votre recherche.
+        </p>
+        <UButton
+          v-if="selectedType !== 'all' || selectedYear !== 'all'"
+          variant="soft"
+          class="mt-4"
+          @click="
+            selectedType = 'all';
+            selectedYear = 'all';
+          "
+        >
+          Voir tout
+        </UButton>
       </div>
 
       <div v-else>
@@ -268,7 +282,7 @@ useSeoMeta({
               >
                 <UIcon
                   name="i-heroicons-document-text"
-                  class="h-8 w-8 text-gray-300 sm:h-10 sm:w-10 dark:text-gray-500"
+                  class="h-8 w-8 text-gray-300 dark:text-gray-500 sm:h-10 sm:w-10"
                 />
               </div>
             </div>
@@ -276,16 +290,22 @@ useSeoMeta({
             <!-- Contenu -->
             <div class="p-2 sm:p-3">
               <h3
-                class="line-clamp-2 text-xs font-semibold leading-tight text-gray-900 sm:text-sm dark:text-white"
+                class="line-clamp-2 text-xs font-semibold leading-tight text-gray-900 dark:text-white sm:text-sm"
               >
                 {{ doc.title }}
               </h3>
               <time
                 v-if="doc.publish_date"
                 :datetime="doc.publish_date"
-                class="mt-1 block text-[10px] text-gray-400 sm:text-xs dark:text-gray-500"
+                class="mt-1 block text-[10px] text-gray-400 dark:text-gray-500 sm:text-xs"
               >
-                {{ new Date(doc.publish_date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' }) }}
+                {{
+                  new Date(doc.publish_date).toLocaleDateString('fr-FR', {
+                    day: 'numeric',
+                    month: 'short',
+                    year: 'numeric',
+                  })
+                }}
               </time>
             </div>
           </NuxtLink>
@@ -301,7 +321,7 @@ useSeoMeta({
           />
         </div>
       </div>
-    </div>
+    </main>
   </div>
 </template>
 

@@ -148,7 +148,7 @@ useHead({
           v-for="election in elections"
           :key="`${election.type}-${election.year}`"
           :to="election.to || undefined"
-          class="group block rounded-2xl bg-white p-4 ring-1 ring-gray-200 transition-all dark:bg-gray-800 dark:ring-gray-700 md:p-5"
+          class="group flex h-full flex-col rounded-2xl bg-white p-4 ring-1 ring-gray-200 transition-all dark:bg-gray-800 dark:ring-gray-700 md:p-5"
           :class="
             election.to ? 'md:hover:ring-primary-300 active:scale-[0.99] md:hover:shadow-lg' : ''
           "
@@ -210,7 +210,7 @@ useHead({
 
           <p
             v-if="election.to"
-            class="text-primary-600 dark:text-primary-400 mt-3 flex items-center gap-1 text-xs font-medium"
+            class="text-primary-600 dark:text-primary-400 mt-auto flex items-center gap-1 pt-3 text-xs font-medium"
           >
             {{ election.status === 'completed' ? 'Voir les résultats' : 'Voir le tableau de bord' }}
             <UIcon

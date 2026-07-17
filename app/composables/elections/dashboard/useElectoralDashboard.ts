@@ -39,16 +39,14 @@ export const useElectoralDashboard = () => {
   );
 
   const getActiveTabFromRoute = () => {
+    // segments[0]=elections-senegal, [1]=slug d'élection, [2]=onglet : toujours
+    // vrai quelle que soit la profondeur ensuite (ex. candidats/coalition/[slug]).
     const segments = route.path.split('/').filter(Boolean);
-    const last = segments[segments.length - 1];
-    if (last && VALID_TABS.has(last)) return last;
+    const tab = segments[2];
+    if (tab && VALID_TABS.has(tab)) return tab;
     return 'candidats';
   };
 
-  const parseIdParam = (value: unknown): number | null => {
-    const parsed = parseInt(String(value ?? ''), 10);
-    return Number.isNaN(parsed) ? null : parsed;
-  };
   const VALID_LEGISLATIVE_VIEWS = new Set(['list', 'head', 'ballot']);
 
   const selectedYear = useState<number>('election-selected-year', () => 0);
@@ -56,16 +54,9 @@ export const useElectoralDashboard = () => {
   const activeTab = useState<string>('election-active-tab', getActiveTabFromRoute);
   // Les états pilotés par l'URL sont initialisés depuis la query dès le premier rendu (serveur compris) :
   // le SSR doit produire la même vue que le client, sinon mismatch d'hydratation au refresh (ex. ?view=head).
-  const selectedConstituencyId = useState<number | null>('election-selected-constituency-id', () =>
-    route.query.constituency ? parseIdParam(route.query.constituency) : null,
-  );
-  const selectedCoalitionId = useState<number | null>('election-selected-coalition-id', () =>
-    route.query.coalition ? parseIdParam(route.query.coalition) : null,
-  );
-  const selectedFilterConstituencyId = useState<number | null>(
-    'election-selected-filter-constituency-id',
-    () => null,
-  );
+  // Coalition/circonscription ne sont plus pilotées par query (?coalition=/?constituency=) mais par
+  // des routes dédiées (candidats/coalition/[slug], candidats/circonscription/[slug]) : chaque page
+  // résout elle-même son id depuis le slug, sans état partagé ici.
   const searchQuery = useState<string>('election-search-query', () =>
     route.query.q ? String(route.query.q) : '',
   );
@@ -108,26 +99,6 @@ export const useElectoralDashboard = () => {
     { immediate: true },
   );
 
-  const selectConstituency = (id: number) => {
-    selectedConstituencyId.value = id;
-    searchQuery.value = '';
-  };
-
-  const clearConstituency = () => {
-    selectedConstituencyId.value = null;
-    selectedCoalitionId.value = null;
-    selectedFilterConstituencyId.value = null;
-  };
-
-  const selectCoalition = (id: number) => {
-    selectedCoalitionId.value = id;
-    searchQuery.value = '';
-  };
-
-  const clearCoalition = () => {
-    selectedCoalitionId.value = null;
-  };
-
   const currentElection = computed(() => {
     if (!config.value?.elections) return null;
     return (
@@ -158,20 +129,6 @@ export const useElectoralDashboard = () => {
         if (tabFromRoute) activeTab.value = tabFromRoute;
       }
 
-      if (route.query.coalition) {
-        const coalitionId = parseInt(route.query.coalition as string);
-        selectedCoalitionId.value = Number.isNaN(coalitionId) ? null : coalitionId;
-      } else {
-        selectedCoalitionId.value = null;
-      }
-
-      if (route.query.constituency) {
-        const constituencyId = parseInt(route.query.constituency as string);
-        selectedConstituencyId.value = Number.isNaN(constituencyId) ? null : constituencyId;
-      } else {
-        selectedConstituencyId.value = null;
-      }
-
       searchQuery.value = route.query.q ? String(route.query.q) : '';
 
       if (route.query.view && VALID_LEGISLATIVE_VIEWS.has(String(route.query.view))) {
@@ -185,41 +142,24 @@ export const useElectoralDashboard = () => {
 
     watch(() => route.fullPath, syncFromRoute, { immediate: true });
 
-    const buildDashboardQuery = (
-      tab: string,
-      search: string,
-      coal: number | null,
-      consti: number | null,
-      view: string,
-    ) => {
+    // Coalition/circonscription/commune ne sont plus des query params ici (routes
+    // dédiées) ; seuls la recherche (q) et le mode d'affichage législatives (view)
+    // restent en query.
+    const buildDashboardQuery = (tab: string, search: string, view: string) => {
       const query: any = { ...route.query };
-      const isCandidatesTab = tab === 'candidats';
       const isStatistiquesTab = tab === 'statistiques';
 
       delete query.tab;
+      delete query.coalition;
+      delete query.constituency;
+      delete query.commune_id;
 
-      const isLegislativeMainListView =
-        selectedType.value === 'legislative' &&
-        tab === 'candidats' &&
-        (coal === null || coal === undefined) &&
-        (consti === null || consti === undefined);
+      const isLegislativeMainListView = selectedType.value === 'legislative' && tab === 'candidats';
       if (view && isLegislativeMainListView) query.view = view;
       else delete query.view;
 
       if (!isStatistiquesTab) {
         delete query.stats_type;
-      }
-
-      if (isCandidatesTab && coal !== null && coal !== undefined) query.coalition = String(coal);
-      else delete query.coalition;
-
-      if (isCandidatesTab && consti !== null && consti !== undefined)
-        query.constituency = String(consti);
-      else delete query.constituency;
-
-      // Nettoyer commune_id quand on n'est pas sur candidats ou qu'on n'a pas de constituency
-      if (!isCandidatesTab || consti === null || consti === undefined) {
-        delete query.commune_id;
       }
 
       if (search) query.q = search;
@@ -239,8 +179,6 @@ export const useElectoralDashboard = () => {
       const query = buildDashboardQuery(
         currentTab,
         searchQuery.value || '',
-        selectedCoalitionId.value,
-        selectedConstituencyId.value,
         legislativeViewType.value || '',
       );
 
@@ -253,32 +191,26 @@ export const useElectoralDashboard = () => {
       }
     });
 
-    watch(
-      [searchQuery, selectedCoalitionId, selectedConstituencyId, legislativeViewType],
-      ([search, coal, consti, view]) => {
-        if (isSyncingFromRoute) return;
-        if (!isElectionSlugPage.value) return;
-        if (isCandidateProfilePage.value) return;
-        if (!currentElection.value?.slug) return;
+    watch([searchQuery, legislativeViewType], ([search, view]) => {
+      if (isSyncingFromRoute) return;
+      if (!isElectionSlugPage.value) return;
+      if (isCandidateProfilePage.value) return;
+      if (!currentElection.value?.slug) return;
 
-        const currentTab = activeTab.value || 'candidats';
-        const query = buildDashboardQuery(currentTab, search || '', coal, consti, view || '');
-        const isDifferent = JSON.stringify(route.query) !== JSON.stringify(query);
+      const currentTab = activeTab.value || 'candidats';
+      const query = buildDashboardQuery(currentTab, search || '', view || '');
+      const isDifferent = JSON.stringify(route.query) !== JSON.stringify(query);
 
-        if (isDifferent) {
-          router.replace({ query });
-        }
-      },
-    );
+      if (isDifferent) {
+        router.replace({ query });
+      }
+    });
   }
 
   return {
     selectedYear,
     selectedType,
     activeTab,
-    selectedConstituencyId,
-    selectedCoalitionId,
-    selectedFilterConstituencyId,
     searchQuery,
     legislativeViewType,
     config,
@@ -286,9 +218,5 @@ export const useElectoralDashboard = () => {
     currentElectionDocuments,
     loadingConfig,
     configError,
-    selectConstituency,
-    clearConstituency,
-    selectCoalition,
-    clearCoalition,
   };
 };

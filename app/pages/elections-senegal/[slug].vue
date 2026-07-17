@@ -45,10 +45,11 @@ const isCandidateProfilePage = computed(() =>
   /^\/elections-senegal\/[^/]+\/candidats\/[^/]+$/.test(route.path),
 );
 
-// Tab actif = dernier segment du path
+// Tab actif = segment juste après le slug d'élection (segments[0]=elections-senegal,
+// [1]=slug, [2]=onglet), quelle que soit la profondeur ensuite (ex. candidats/coalition/[slug]).
 const currentTab = computed(() => {
   const segments = route.path.split('/').filter(Boolean);
-  const last = segments[segments.length - 1];
+  const tab = segments[2];
   const VALID_TABS = new Set([
     'candidats',
     'carte',
@@ -58,7 +59,7 @@ const currentTab = computed(() => {
     'statistiques',
     'guide',
   ]);
-  return VALID_TABS.has(last) ? last : '';
+  return VALID_TABS.has(tab) ? tab : '';
 });
 
 const getAllowedTabsForElection = (election: any) => {

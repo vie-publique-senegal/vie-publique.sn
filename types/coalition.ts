@@ -27,4 +27,5 @@ export interface Coalition {
   sieges_departement?: number;
   round_2_voix?: number | null;
   round_2_pourcentage?: number | null;
+  political_entity?: { id: number; slug: string | null } | null;
 }

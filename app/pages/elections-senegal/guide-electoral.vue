@@ -47,7 +47,7 @@ useHead({
 </script>
 
 <template>
-  <div class="min-h-screen bg-gray-50 pb-20 dark:bg-gray-900">
+  <div class="min-h-screen pb-20 dark:bg-gray-900">
     <div class="container mx-auto max-w-6xl px-4 pt-4">
       <AppBreadcrumb
         :items="[{ label: 'Élections', to: '/elections-senegal' }, { label: 'Guide Électoral' }]"
