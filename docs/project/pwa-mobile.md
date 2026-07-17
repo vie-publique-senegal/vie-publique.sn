@@ -58,7 +58,11 @@ Tout le reste (manifest, SW, precache, contenu, styles) est lu **live** → modi
    sans ça, l'origine envoyait `max-age=14400` et **Cloudflare cachait le SW 4 h au edge** →
    toute mise à jour PWA mettait jusqu'à 4 h à atteindre les utilisateurs (constaté le
    16/07/2026). Vérif : `curl -sI https://www.vie-publique.sn/sw.js | grep -iE 'cache-control|cf-cache-status'`
-   → attendu `no-cache` et pas de `HIT` longue durée.
+   → attendu `no-cache` et pas de `HIT` longue durée. **Cause racine (17/07/2026)** : le
+   réglage Cloudflare **Browser Cache TTL** était sur « 4 hours » et écrasait le `no-cache`
+   de l'origine — il est passé à « Respect Existing Headers »
+   (cf. [`../infra/cloudfare.md`](../infra/cloudfare.md) § Browser Cache TTL). Ne pas le remettre
+   sur une durée fixe.
 5. **Le domaine `www.vie-publique.sn`** : baké dans le TWA (`host`) et dans iOS
    (`WKAppBoundDomains`). Un changement de domaine = re-build + re-soumission des 2 apps.
 6. **`public/.well-known/apple-app-site-association`** : équivalent iOS (universal links).
