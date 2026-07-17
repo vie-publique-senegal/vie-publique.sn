@@ -677,9 +677,29 @@ Nomination   ←→ Document source (décret)
 
 L'API `government/current` ne filtre **pas** sur le `status` de l'appointment (uniquement sur `public_persons.status = published`). En revanche, l'API `stats` et la page `/personnalites-senegal` filtrent sur `public_person_appointments.status = published`. Les appointments doivent être publiés pour apparaître de manière cohérente sur toutes les pages.
 
-### 9.2 Champ M2O `current_appointment`
+### 9.2 Champ M2O `current_appointment` = « dernière nomination connue » (PAS « poste en cours »)
 
-Le champ `current_appointment` sur `public_persons` est un raccourci M2O vers `public_person_appointments`. Il doit être renseigné manuellement dans Directus pour que la personne apparaisse sur la page gouvernement et dans les filtres par catégorie. Si ce champ est `null`, la personne est invisible même si un appointment `is_current = true` existe dans la table des nominations.
+Le champ `current_appointment` sur `public_persons` est un raccourci M2O **dénormalisé** vers
+`public_person_appointments`. Malgré son nom, sa sémantique effective dans tout le code est
+**« dernière nomination connue »** — c'est le booléen `is_current` (+ `end_date`) sur la
+nomination qui porte le vrai statut « en cours / terminé » :
+
+- l'annuaire `/personnalites-senegal` et `/nomination-senegal` s'appuient sur ce M2O pour le
+  tri (`-current_appointment.appointment_date`), les filtres et l'affichage — Directus ne sait
+  pas trier une liste paginée par un champ O2M, c'est la raison d'être de ce pointeur ;
+- toutes les vues « actuel strict » (`/gouvernement-senegal`, `llms.txt`, compteurs stats)
+  filtrent en plus sur `current_appointment.is_current = true` — un pointeur vers une
+  nomination terminée ne peut donc PAS y faire apparaître un ex-ministre ;
+- l'UI liste et la fiche détail affichent le badge « Fin de fonction » quand `is_current = false`.
+
+**⚠️ Règle éditoriale à la fin d'une fonction** (ex. remaniement) : sur la nomination, mettre
+`is_current = false` + `end_date` (+ `end_reason`), mais **NE JAMAIS vider `current_appointment`**
+sur la personne — le laisser pointer sur la nomination terminée (ou la repointer sur la nouvelle
+nomination si la personne enchaîne sur un autre poste). Si ce champ est `null`, la personne
+devient **invisible dans l'annuaire** même si ses nominations existent (bug rencontré en
+juillet 2026 : 20 ex-ministres des gouvernements précédents avaient disparu de
+`/personnalites-senegal` parce que leur `current_appointment` avait été vidé au lieu d'être
+laissé sur la nomination terminée).
 
 ### 9.3 Unicité du Premier Ministre actif
 

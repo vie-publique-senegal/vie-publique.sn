@@ -1,4 +1,4 @@
-import { aggregate } from '@directus/sdk';
+import { aggregate, readItems } from '@directus/sdk';
 
 export default defineCachedEventHandler(
   async () => {
@@ -9,17 +9,18 @@ export default defineCachedEventHandler(
         status: { _eq: 'published' },
       };
 
-      // Agrégation par catégorie de poste (via les nominations actives publiées)
-      const categoryStats = await directus.request(
-        aggregate('public_person_appointments', {
-          aggregate: { count: ['id'] },
-          groupBy: ['position_category', 'position_category_slug'],
-          query: {
-            filter: {
-              status: { _eq: 'published' },
-              is_current: { _eq: true },
-            },
-          },
+      // Comptage par catégorie de la DERNIÈRE nomination (current_appointment), en cours ou
+      // terminée : c'est ce que renvoie le filtre catégorie de la liste — les compteurs doivent
+      // compter la même chose (sinon écart pastille/résultats dès qu'une fonction se termine).
+      // groupBy sur champ relationnel non supporté par Directus → requête plate + regroupement JS.
+      const personsCategories = await directus.request(
+        readItems('public_persons', {
+          fields: [
+            'current_appointment.position_category',
+            'current_appointment.position_category_slug',
+          ],
+          filter: personFilter,
+          limit: -1,
         }),
       );
 
@@ -33,20 +34,27 @@ export default defineCachedEventHandler(
       );
 
       // Transformation - Catégories (clé = slug, valeur = { label, count })
+      type PersonCategoryRow = {
+        current_appointment?: {
+          position_category?: string | null;
+          position_category_slug?: string | null;
+        } | null;
+      };
       const totalsByCategory: Record<string, { label: string; count: number }> = {};
-      categoryStats.forEach((stat: any) => {
-        if (stat.position_category && stat.position_category_slug) {
-          totalsByCategory[stat.position_category_slug] = {
-            label: stat.position_category,
-            count: parseInt(stat.count.id),
-          };
+      (personsCategories as PersonCategoryRow[]).forEach((person) => {
+        const label = person.current_appointment?.position_category;
+        const slug = person.current_appointment?.position_category_slug;
+        if (!label || !slug) return;
+        if (!totalsByCategory[slug]) {
+          totalsByCategory[slug] = { label, count: 0 };
         }
+        totalsByCategory[slug].count++;
       });
 
       // Transformation - Genre
       let maleCount = 0;
       let femaleCount = 0;
-      genderStats.forEach((stat: any) => {
+      (genderStats as Array<{ sexe?: string | null; count: { id: string } }>).forEach((stat) => {
         if (stat.sexe === 'male') {
           maleCount = parseInt(stat.count.id);
         } else if (stat.sexe === 'female') {
@@ -81,7 +89,7 @@ export default defineCachedEventHandler(
   },
   {
     maxAge: process.env.NODE_ENV === 'production' ? 5 * 60 : 0, // 5 min en prod (à augmenter après stabilisation)
-    name: 'public-persons-stats',
+    name: 'public-persons-stats-v2',
     getKey: () => 'public-persons-stats',
   },
 );
