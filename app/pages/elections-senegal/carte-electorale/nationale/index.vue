@@ -17,8 +17,10 @@ const {
 const title = computed(() =>
   selectedRevision.value?.year
     ? `Carte Électorale Nationale ${selectedRevision.value.year} | Élections Sénégal`
-    : 'Carte Électorale Nationale | Élections Sénégal');
-const description = 'Carte électorale nationale du Sénégal : électeurs, bureaux et lieux de vote par département.';
+    : 'Carte Électorale Nationale | Élections Sénégal',
+);
+const description =
+  'Carte électorale nationale du Sénégal : électeurs, bureaux et lieux de vote par département.';
 const url = `${siteUrl}/elections-senegal/carte-electorale/nationale`;
 
 useSeoMeta({
@@ -28,12 +30,17 @@ useSeoMeta({
     selectedRevision.value?.year
       ? `Carte Électorale Nationale ${selectedRevision.value.year}`
       : 'Carte Électorale Nationale',
-  ogDescription: 'Explorez la répartition des électeurs et des bureaux de vote par département au Sénégal.',
+  ogDescription:
+    'Explorez la répartition des électeurs et des bureaux de vote par département au Sénégal.',
   ogUrl: url,
   twitterCard: 'summary_large_image',
   twitterTitle: title,
   twitterDescription: description,
-  keywords: [...keywords, 'carte électorale nationale sénégal', 'bureaux de vote par département'].join(', '),
+  keywords: [
+    ...keywords,
+    'carte électorale nationale sénégal',
+    'bureaux de vote par département',
+  ].join(', '),
 });
 
 const breadcrumbSchema = {
@@ -42,8 +49,7 @@ const breadcrumbSchema = {
   itemListElement: [
     { '@type': 'ListItem', position: 1, name: 'Accueil', item: siteUrl },
     { '@type': 'ListItem', position: 2, name: 'Élections', item: `${siteUrl}/elections-senegal` },
-    { '@type': 'ListItem', position: 3, name: 'Carte électorale', item: `${siteUrl}/elections-senegal/carte-electorale` },
-    { '@type': 'ListItem', position: 4, name: 'Nationale', item: url },
+    { '@type': 'ListItem', position: 3, name: 'Carte électorale - Nationale', item: url },
   ],
 };
 
@@ -57,7 +63,7 @@ useHead({
     { name: 'robots', content: 'index, follow' },
     { name: 'geo.region', content: 'SN' },
   ],
-  script: [{ type: 'application/ld+json', children: JSON.stringify(breadcrumbSchema) }],
+  script: [{ type: 'application/ld+json', innerHTML: JSON.stringify(breadcrumbSchema) }],
 });
 
 const optionMap = 'Vue Carte';
@@ -120,16 +126,16 @@ const representativeElectionId = computed(() => {
         class="mb-6"
         :items="[
           { label: 'Élections', to: '/elections-senegal' },
-          {
-            label: 'Carte électorale',
-            to: { path: '/elections-senegal/carte-electorale', query: contextQuery },
-          },
+          { label: 'Carte électorale' },
           { label: 'Nationale' },
         ]"
       />
 
-      <h1 class="text-xl font-bold text-gray-900 dark:text-white md:text-3xl">Carte Électorale - Nationale</h1>
+      <h1 class="text-xl font-bold text-gray-900 dark:text-white md:text-3xl">
+        Carte Électorale - Nationale
+      </h1>
       <p class="mt-0.5 max-w-3xl text-xs text-gray-500 dark:text-gray-400 md:mt-1 md:text-sm">
+        La carte électorale fixe les lieux et bureaux de vote d'une révision du fichier électoral.
         Sélectionnez un département pour des informations détaillées.
       </p>
 

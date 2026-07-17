@@ -1,76 +1,70 @@
 <script setup lang="ts">
 /**
- * Page Guide Électoral - Sénégal
+ * Guide Électoral - Sénégal : vidéos tutorielles filtrables par type de
+ * scrutin et par langue (filtres et lightbox gérés par le composant
+ * ElectionsDashboardGuideElectoralVideos, avec sync des filtres dans l'URL).
  */
 
-const route = useRoute();
-const router = useRouter();
+const { siteUrl, siteName } = useSiteMetadata();
+const url = `${siteUrl}/elections-senegal/guide-electoral`;
 
-const selectedType = ref<string>((route.query.type as string) || 'all');
-
-const electionTypes = [
-    { label: 'Toutes les élections', value: 'all' },
-    { label: 'Présidentielles', value: 'presidential' },
-    { label: 'Législatives', value: 'legislative' },
-    { label: 'Locales', value: 'local' }
-];
-
-watch(selectedType, (newType) => {
-    router.replace({ query: { ...route.query, type: newType === 'all' ? undefined : newType } });
-});
-
-// SEO avec Open Graph
 useSeoMeta({
   title: 'Guide Électoral | Élections Sénégal',
-  description: 'Apprenez comment voter au Sénégal : vidéos tutoriels, étapes du scrutin et conseils pour exercer votre droit de vote.',
+  description:
+    'Apprenez comment voter au Sénégal : vidéos tutoriels en plusieurs langues, étapes du scrutin et conseils pour exercer votre droit de vote.',
   ogTitle: 'Guide Électoral - Élections Sénégal',
-  ogDescription: 'Découvrez le processus de vote au Sénégal avec nos vidéos explicatives et guides pratiques.',
+  ogDescription:
+    'Découvrez le processus de vote au Sénégal avec nos vidéos explicatives et guides pratiques.',
+  ogUrl: url,
+});
+
+useHead({
+  link: [{ rel: 'canonical', href: url }],
+  meta: [
+    { property: 'og:type', content: 'website' },
+    { property: 'og:site_name', content: siteName },
+  ],
+  script: [
+    {
+      type: 'application/ld+json',
+      innerHTML: JSON.stringify({
+        '@context': 'https://schema.org',
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+          { '@type': 'ListItem', position: 1, name: 'Accueil', item: siteUrl },
+          {
+            '@type': 'ListItem',
+            position: 2,
+            name: 'Élections',
+            item: `${siteUrl}/elections-senegal`,
+          },
+          { '@type': 'ListItem', position: 3, name: 'Guide électoral', item: url },
+        ],
+      }),
+    },
+  ],
 });
 </script>
 
 <template>
-  <div class="min-h-screen pb-16">
-    <!-- Header Compact -->
-    <div class="bg-white dark:bg-gray-900 border-b dark:border-gray-800 pt-8 pb-6 shadow-sm">
-      <div class="container mx-auto px-4 max-w-6xl">
-        <!-- Breadcrumb -->
-        <AppBreadcrumb
-          class="mb-6"
-          :items="[
-            { label: 'Élections', to: '/elections-senegal' },
-            { label: 'Guide Électoral' }
-          ]"
-        />
-
-        <div class="flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div class="space-y-1">
-            <h1 class="text-2xl font-black uppercase tracking-tight text-gray-900 dark:text-white">Guide de l'Électeur</h1>
-            <p class="text-xs text-gray-500 font-bold uppercase tracking-wider italic">Apprenez comment voter et découvrez les étapes du scrutin</p>
-          </div>
-
-          <div class="flex flex-wrap items-center gap-3">
-             <USelect
-                v-model="selectedType"
-                :options="electionTypes"
-                size="md"
-                class="w-full md:w-64"
-                placeholder="Type d'élection"
-                icon="i-heroicons-funnel"
-            />
-          </div>
-        </div>
-      </div>
+  <div class="min-h-screen bg-gray-50 pb-20 dark:bg-gray-900">
+    <div class="container mx-auto max-w-6xl px-4 pt-4">
+      <AppBreadcrumb
+        :items="[{ label: 'Élections', to: '/elections-senegal' }, { label: 'Guide Électoral' }]"
+      />
     </div>
 
-    <div class="container mx-auto px-4 max-w-6xl py-12">
-      <!-- Component reusing existing guide logic -->
-      <ElectionsDashboardGuideElectoralVideos :type-election="selectedType" />
-    </div>
+    <header class="container mx-auto max-w-6xl px-4 py-3 md:py-6">
+      <h1 class="text-xl font-bold text-gray-900 dark:text-white md:text-3xl">
+        Guide de l'Électeur
+      </h1>
+      <p class="mt-0.5 max-w-2xl text-xs text-gray-500 dark:text-gray-400 md:mt-1 md:text-sm">
+        Apprenez comment voter et découvrez les étapes du scrutin, en vidéo et en plusieurs langues.
+      </p>
+    </header>
+
+    <main class="container mx-auto max-w-6xl px-4">
+      <ElectionsDashboardGuideElectoralVideos />
+    </main>
   </div>
 </template>
-
-<style scoped>
-.container {
-  max-width: 1200px;
-}
-</style>

@@ -124,7 +124,10 @@ export const useElectoralRevision = (options: UseElectoralRevisionOptions = {}) 
   );
 
   const revisionOptions = computed(() =>
-    revisions.value.map((r) => ({ label: `Carte électorale ${r.year ?? ''}`.trim(), value: revisionKeyOf(r) })),
+    revisions.value.map((r) => ({
+      label: `Carte électorale ${r.year ?? ''}`.trim(),
+      value: revisionKeyOf(r),
+    })),
   );
 
   /** Navigue vers une autre révision, sur la page courante. */
@@ -139,10 +142,15 @@ export const useElectoralRevision = (options: UseElectoralRevisionOptions = {}) 
       (rev) => {
         if (!rev) return;
         const key = revisionKeyOf(rev);
-        const hasOnlyCanonicalRevision =
-          revisionParam.value === key && Object.keys(route.query).length === 1;
-        if (!hasOnlyCanonicalRevision) {
-          router.replace({ path: route.path, query: { revision: key } });
+        // `revision` est le paramètre canonique ; `election` est conservé car il
+        // porte le contexte de navigation venu du dashboard (backTo, electionName).
+        const targetQuery: Record<string, string> = { revision: key };
+        if (electionIdParam.value) targetQuery.election = electionIdParam.value;
+        const isCanonical =
+          revisionParam.value === key &&
+          Object.keys(route.query).length === Object.keys(targetQuery).length;
+        if (!isCanonical) {
+          router.replace({ path: route.path, query: targetQuery });
         }
       },
       { immediate: true },
@@ -169,9 +177,8 @@ export const useElectoralRevision = (options: UseElectoralRevisionOptions = {}) 
   /** Query de contexte à propager sur les liens internes de la carte électorale */
   const contextQuery = computed(() => {
     const query: Record<string, string> = {};
-    if (revisionParam.value && currentRevisionKey.value) query.revision = currentRevisionKey.value;
-    else if (electionIdParam.value) query.election = electionIdParam.value;
-    else if (currentRevisionKey.value) query.revision = currentRevisionKey.value;
+    if (currentRevisionKey.value) query.revision = currentRevisionKey.value;
+    if (electionIdParam.value) query.election = electionIdParam.value;
     return query;
   });
 

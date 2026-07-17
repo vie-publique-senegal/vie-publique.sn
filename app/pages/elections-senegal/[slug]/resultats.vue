@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { useElectoralDashboard } from '~/composables/elections/dashboard/useElectoralDashboard';
 import { useElectoralCoalitions } from '~/composables/elections/dashboard/useElectoralCoalitions';
-import { type TableResultItem, useElectionMapDataResult } from '~/composables/useElectionMapJsonResult';
+import {
+  type TableResultItem,
+  useElectionMapDataResult,
+} from '~/composables/useElectionMapJsonResult';
 
 const { selectedYear, selectedType, currentElection, loadingConfig } = useElectoralDashboard();
 
@@ -15,15 +18,20 @@ const { coalitions, loading: loadingCoalitions } = useElectoralCoalitions({
 });
 
 // Seules les élections présidentielles peuvent avoir 2 tours (rounds=2)
-const isPresidential2Rounds = computed(() =>
-  currentElection.value?.type === 'presidential' && currentElection.value?.rounds === 2
+const isPresidential2Rounds = computed(
+  () => currentElection.value?.type === 'presidential' && currentElection.value?.rounds === 2,
 );
 
 // La section second tour s'affiche uniquement si l'élection est présidentielle à 2 tours
 // ET qu'au moins une coalition a des données de second tour renseignées
-const isPresidentialWithRound2 = computed(() =>
-  isPresidential2Rounds.value &&
-  coalitions.value.some(c => (c.round_2_voix != null && c.round_2_voix > 0) || (c.round_2_pourcentage != null && c.round_2_pourcentage > 0))
+const isPresidentialWithRound2 = computed(
+  () =>
+    isPresidential2Rounds.value &&
+    coalitions.value.some(
+      (c) =>
+        (c.round_2_voix != null && c.round_2_voix > 0) ||
+        (c.round_2_pourcentage != null && c.round_2_pourcentage > 0),
+    ),
 );
 
 const resultViewType = ref('list');
@@ -43,9 +51,13 @@ const loadLocaleResultsData = async () => {
   resultCommunesByDept.value = data;
 };
 
-watch([resultViewType, isLocalElection], async ([view, isLocale]) => {
-  if (view === 'map' && isLocale) await loadLocaleResultsData();
-}, { immediate: true });
+watch(
+  [resultViewType, isLocalElection],
+  async ([view, isLocale]) => {
+    if (view === 'map' && isLocale) await loadLocaleResultsData();
+  },
+  { immediate: true },
+);
 
 const mapIsReady = ref(false);
 
@@ -63,6 +75,13 @@ watch([selectedType, selectedYear], () => {
   mapIsReady.value = false;
 });
 
+// Quand la carte signale qu'elle n'a pas de données, on masque le toggle
+// et on rebascule sur la liste : pas d'onglet Carte cassé pour l'utilisateur.
+const handleMapResultError = () => {
+  mapResultHasNoData.value = true;
+  resultViewType.value = 'list';
+};
+
 const handleResultDeptSelected = async (dept: any) => {
   resultDeptPanelData.value = dept;
   resultDeptPanelOpen.value = true;
@@ -70,7 +89,9 @@ const handleResultDeptSelected = async (dept: any) => {
 
 const closeResultDeptPanel = () => {
   resultDeptPanelOpen.value = false;
-  setTimeout(() => { resultDeptPanelData.value = null; }, 300);
+  setTimeout(() => {
+    resultDeptPanelData.value = null;
+  }, 300);
 };
 
 const handleOpenRanking = (constituency: { slug: string; name: string }) => {
@@ -80,7 +101,9 @@ const handleOpenRanking = (constituency: { slug: string; name: string }) => {
 
 const closeRankingPanel = () => {
   rankingPanelOpen.value = false;
-  setTimeout(() => { rankingPanelConstituency.value = null; }, 300);
+  setTimeout(() => {
+    rankingPanelConstituency.value = null;
+  }, 300);
 };
 
 const resultCommunesForDept = computed(() => {
@@ -88,36 +111,57 @@ const resultCommunesForDept = computed(() => {
   if (resultDeptPanelData.value.communes?.length > 0) return resultDeptPanelData.value.communes;
   if (!resultCommunesByDept.value.length) return [];
   const deptKey = resultDeptPanelData.value.departement.trim().toLowerCase();
-  return resultCommunesByDept.value.filter(r =>
-    r.departement && r.departement.trim().toLowerCase() === deptKey
+  return resultCommunesByDept.value.filter(
+    (r) => r.departement && r.departement.trim().toLowerCase() === deptKey,
   );
 });
 
 useSeoMeta({
-  title: () => currentElection.value?.name
-    ? `Résultats · ${currentElection.value.name} | Vie-Publique SN`
-    : 'Résultats | Élections Sénégal',
-  description: () => currentElection.value?.name
-    ? `Résultats officiels de ${currentElection.value.name} : classement des coalitions et carte des résultats.`
-    : 'Résultats des élections au Sénégal.',
-  ogTitle: () => currentElection.value?.name
-    ? `Résultats · ${currentElection.value.name}`
-    : 'Résultats des Élections au Sénégal',
-  ogDescription: () => currentElection.value?.name
-    ? `Résultats officiels de ${currentElection.value.name} : classement des coalitions et carte des résultats.`
-    : 'Résultats des élections au Sénégal.',
+  title: () =>
+    currentElection.value?.name
+      ? `Résultats · ${currentElection.value.name} | Vie-Publique SN`
+      : 'Résultats | Élections Sénégal',
+  description: () =>
+    currentElection.value?.name
+      ? `Résultats officiels de ${currentElection.value.name} : classement des coalitions et carte des résultats.`
+      : 'Résultats des élections au Sénégal.',
+  ogTitle: () =>
+    currentElection.value?.name
+      ? `Résultats · ${currentElection.value.name}`
+      : 'Résultats des Élections au Sénégal',
+  ogDescription: () =>
+    currentElection.value?.name
+      ? `Résultats officiels de ${currentElection.value.name} : classement des coalitions et carte des résultats.`
+      : 'Résultats des élections au Sénégal.',
 });
 </script>
 
 <template>
-  <div class="max-w-7xl mx-auto space-y-3 animate-in fade-in duration-700">
+  <div class="animate-in fade-in mx-auto max-w-7xl space-y-3 duration-700">
     <div class="flex items-center justify-between">
-      <h2 class="text-xl sm:text-2xl font-black uppercase tracking-tighter">Résultats Globaux</h2>
-      <div class="bg-gray-100 dark:bg-gray-800 p-1 rounded-xl flex gap-1">
-        <UButton :color="resultViewType === 'list' ? 'white' : 'gray'" :variant="resultViewType === 'list' ? 'solid' : 'ghost'" size="xs" class="rounded-lg transition-all" icon="i-heroicons-table-cells" @click="resultViewType = 'list'">
+      <h2 class="text-lg font-bold text-gray-900 dark:text-white sm:text-2xl">Résultats globaux</h2>
+      <div
+        v-if="currentElection?.id && !mapResultHasNoData"
+        class="flex gap-1 rounded-xl bg-gray-100 p-1 dark:bg-gray-800"
+      >
+        <UButton
+          :color="resultViewType === 'list' ? 'white' : 'gray'"
+          :variant="resultViewType === 'list' ? 'solid' : 'ghost'"
+          size="xs"
+          class="rounded-lg transition-all"
+          icon="i-heroicons-table-cells"
+          @click="resultViewType = 'list'"
+        >
           <span class="hidden sm:inline">Liste</span>
         </UButton>
-        <UButton :color="resultViewType === 'map' ? 'white' : 'gray'" :variant="resultViewType === 'map' ? 'solid' : 'ghost'" size="xs" class="rounded-lg transition-all" icon="i-heroicons-map" @click="resultViewType = 'map'">
+        <UButton
+          :color="resultViewType === 'map' ? 'white' : 'gray'"
+          :variant="resultViewType === 'map' ? 'solid' : 'ghost'"
+          size="xs"
+          class="rounded-lg transition-all"
+          icon="i-heroicons-map"
+          @click="resultViewType = 'map'"
+        >
           <span class="hidden sm:inline">Carte</span>
         </UButton>
       </div>
@@ -126,23 +170,46 @@ useSeoMeta({
     <div class="min-h-[400px]">
       <div v-if="resultViewType === 'list'">
         <div v-if="selectedType === 'locale'">
-          <ElectionsDashboardStatsElectionResultatsLocalesTable :election-type="selectedType" :election-year="selectedYear" />
+          <ElectionsDashboardStatsElectionResultatsLocalesTable
+            :election-type="selectedType"
+            :election-year="selectedYear"
+          />
         </div>
         <template v-else>
           <div v-if="loadingCoalitions" class="space-y-3">
             <USkeleton v-for="i in 6" :key="i" class="h-16 w-full rounded-xl" />
           </div>
-          <div v-else-if="!coalitions || coalitions.length === 0" class="flex flex-col items-center justify-center h-64 text-center px-4">
-            <UIcon name="i-heroicons-chart-bar" class="w-12 h-12 sm:w-16 sm:h-16 text-gray-200 dark:text-gray-800 mb-4" />
-            <h3 class="text-base sm:text-lg font-bold text-gray-400">Aucun résultat disponible</h3>
-            <p class="text-xs sm:text-sm text-gray-500">Les résultats ne sont pas encore publiés.</p>
+          <div
+            v-else-if="!coalitions || coalitions.length === 0"
+            class="flex h-64 flex-col items-center justify-center px-4 text-center"
+          >
+            <UIcon
+              name="i-heroicons-chart-bar"
+              class="mb-4 h-12 w-12 text-gray-200 dark:text-gray-800 sm:h-16 sm:w-16"
+            />
+            <h3 class="text-base font-bold text-gray-400 sm:text-lg">Aucun résultat disponible</h3>
+            <p class="text-xs text-gray-500 sm:text-sm">
+              Les résultats ne sont pas encore publiés.
+            </p>
           </div>
           <div v-else>
-            <ElectionsDashboardResultChart v-if="['presidential', 'legislative'].includes(selectedType)" :results="coalitions" :type="selectedType" class="mb-6" />
-            <ElectionsDashboardResultClassement :coalitions="coalitions" :loading="loadingCoalitions" :type="selectedType" />
+            <ElectionsDashboardResultChart
+              v-if="['presidential', 'legislative'].includes(selectedType)"
+              :results="coalitions"
+              :type="selectedType"
+              class="mb-6"
+            />
+            <ElectionsDashboardResultClassement
+              :coalitions="coalitions"
+              :loading="loadingCoalitions"
+              :type="selectedType"
+            />
 
             <!-- Section Second Tour (présidentielle uniquement) -->
-            <div v-if="isPresidentialWithRound2" class="mt-8 pt-6 border-t border-gray-100 dark:border-gray-800">
+            <div
+              v-if="isPresidentialWithRound2"
+              class="mt-8 border-t border-gray-100 pt-6 dark:border-gray-800"
+            >
               <ElectionsDashboardResultRound2
                 :coalitions="coalitions"
                 :loading="loadingCoalitions"
@@ -153,31 +220,55 @@ useSeoMeta({
         </template>
       </div>
 
-      <div v-else-if="resultViewType === 'map'" class="w-full h-full min-h-[400px] sm:min-h-[500px]">
+      <div
+        v-else-if="resultViewType === 'map'"
+        class="h-full min-h-[400px] w-full sm:min-h-[500px]"
+      >
         <!-- Loading state pendant le chargement de la config -->
         <div v-if="loadingConfig" class="flex flex-col items-center justify-center py-20">
           <div class="relative h-12 w-12">
-            <div class="absolute inset-0 border-4 border-primary-100 dark:border-primary-900 rounded-full"></div>
-            <div class="absolute inset-0 border-4 border-primary-600 rounded-full border-t-transparent animate-spin"></div>
+            <div
+              class="border-primary-100 dark:border-primary-900 absolute inset-0 rounded-full border-4"
+            ></div>
+            <div
+              class="border-primary-600 absolute inset-0 animate-spin rounded-full border-4 border-t-transparent"
+            ></div>
           </div>
-          <p class="text-sm font-medium text-gray-400 animate-pulse mt-3">Chargement...</p>
+          <p class="mt-3 animate-pulse text-sm font-medium text-gray-400">Chargement...</p>
         </div>
         <!-- Erreur si pas de données après chargement -->
-        <div v-else-if="!currentElection?.id || mapResultHasNoData" class="flex flex-col items-center justify-center py-20 text-center">
-          <div class="bg-gray-100 dark:bg-gray-800 p-6 rounded-full mb-6">
+        <div
+          v-else-if="!currentElection?.id || mapResultHasNoData"
+          class="flex flex-col items-center justify-center py-20 text-center"
+        >
+          <div class="mb-6 rounded-full bg-gray-100 p-6 dark:bg-gray-800">
             <UIcon name="i-heroicons-map" class="h-16 w-16 text-gray-300 dark:text-gray-600" />
           </div>
-          <h3 class="text-lg font-bold text-gray-500 dark:text-gray-400 mb-2">Carte des résultats non disponible</h3>
-          <p class="text-sm text-gray-400 dark:text-gray-500 max-w-md">Les données cartographiques des résultats pour cette élection ne sont pas encore disponibles.</p>
+          <h3 class="mb-2 text-lg font-bold text-gray-500 dark:text-gray-400">
+            Carte des résultats non disponible
+          </h3>
+          <p class="max-w-md text-sm text-gray-400 dark:text-gray-500">
+            Les données cartographiques des résultats pour cette élection ne sont pas encore
+            disponibles.
+          </p>
         </div>
         <ClientOnly v-else>
-          <div class="relative w-full min-h-[500px] sm:min-h-[600px]">
-            <div v-if="!mapIsReady" class="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3">
+          <div class="relative min-h-[500px] w-full sm:min-h-[600px]">
+            <div
+              v-if="!mapIsReady"
+              class="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3"
+            >
               <div class="relative h-12 w-12">
-                <div class="absolute inset-0 border-4 border-primary-100 dark:border-primary-900 rounded-full"></div>
-                <div class="absolute inset-0 border-4 border-primary-600 rounded-full border-t-transparent animate-spin"></div>
+                <div
+                  class="border-primary-100 dark:border-primary-900 absolute inset-0 rounded-full border-4"
+                ></div>
+                <div
+                  class="border-primary-600 absolute inset-0 animate-spin rounded-full border-4 border-t-transparent"
+                ></div>
               </div>
-              <p class="text-sm font-medium text-gray-400 animate-pulse">Chargement de la carte...</p>
+              <p class="animate-pulse text-sm font-medium text-gray-400">
+                Chargement de la carte...
+              </p>
             </div>
             <ElectionUnifiedMap
               :key="`result-map-${selectedType}-${selectedYear}`"
@@ -186,7 +277,7 @@ useSeoMeta({
               height="600px"
               @department-selected="handleResultDeptSelected"
               @open-ranking="handleOpenRanking"
-              @map-error="mapResultHasNoData = true"
+              @map-error="handleMapResultError"
               @map-ready="mapIsReady = true"
             />
           </div>
