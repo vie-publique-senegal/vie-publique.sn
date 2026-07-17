@@ -34,6 +34,23 @@ const isPresidentialWithRound2 = computed(
     ),
 );
 
+// Disponibilité des données carte vérifiée en amont (même source que la carte) :
+// le toggle Carte n'apparaît jamais si l'élection n'a aucun résultat cartographique.
+const { data: mapResultRows } = useFetch<any[]>('/api/carte/result', {
+  key: computed(() => `map-result-availability-${currentElection.value?.id ?? 'none'}`),
+  query: computed(() => ({ election: currentElection.value?.id })),
+  immediate: true,
+  default: () => [],
+});
+
+const mapResultAvailable = computed(() => {
+  if (!currentElection.value?.id) return false;
+  const wantedLevel = isLocalElection.value ? 'commune' : 'departement';
+  return (mapResultRows.value || []).some(
+    (row) => row?.constituencie?.slug && row?.constituencie?.nationale_type === wantedLevel,
+  );
+});
+
 const resultViewType = ref('list');
 const resultDeptPanelOpen = ref(false);
 const resultDeptPanelData = ref<any>(null);
@@ -81,6 +98,10 @@ const handleMapResultError = () => {
   mapResultHasNoData.value = true;
   resultViewType.value = 'list';
 };
+
+watch(mapResultAvailable, (available) => {
+  if (!available && resultViewType.value === 'map') resultViewType.value = 'list';
+});
 
 const handleResultDeptSelected = async (dept: any) => {
   resultDeptPanelData.value = dept;
@@ -141,7 +162,7 @@ useSeoMeta({
     <div class="flex items-center justify-between">
       <h2 class="text-lg font-bold text-gray-900 dark:text-white sm:text-2xl">Résultats globaux</h2>
       <div
-        v-if="currentElection?.id && !mapResultHasNoData"
+        v-if="mapResultAvailable && !mapResultHasNoData"
         class="flex gap-1 rounded-xl bg-gray-100 p-1 dark:bg-gray-800"
       >
         <UButton

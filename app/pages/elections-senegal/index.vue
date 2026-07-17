@@ -117,9 +117,7 @@ const navigationLinks = computed(() => {
       title: 'Carte Électorale',
       description: 'Lieux et bureaux de vote',
       icon: 'i-heroicons-map',
-      to: election.value
-        ? `/elections-senegal/carte-electorale?election=${election.value.id}`
-        : '/elections-senegal/carte-electorale',
+      to: '/elections-senegal/carte-electorale',
       iconColor: 'text-purple-600 dark:text-purple-400',
       iconBg: 'bg-purple-100 dark:bg-purple-900/30',
       hoverRing: 'md:hover:ring-purple-200',

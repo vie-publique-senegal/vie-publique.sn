@@ -135,164 +135,193 @@ useHead({
 </script>
 
 <template>
-  <div class="container mx-auto px-4 py-8">
-    <AppBreadcrumb
-      class="mb-6 text-xs"
-      :items="[
-        { label: 'Élections', to: '/elections-senegal' },
-        { label: currentElection?.name || 'Élection', to: candidatsUrl },
-        { label: 'Candidats', to: candidatsUrl },
-        { label: candidateName },
-      ]"
-    />
-
-    <div v-if="pending" class="space-y-4">
-      <USkeleton class="h-72 w-full rounded-2xl" />
-      <USkeleton class="h-56 w-full rounded-2xl" />
-    </div>
-
-    <UAlert
-      v-else-if="error"
-      color="red"
-      variant="soft"
-      icon="i-heroicons-exclamation-triangle"
-      title="Impossible de charger ce profil"
-      description="Une erreur est survenue lors du chargement des informations du candidat."
-    />
-
-    <div
-      v-else-if="!candidate"
-      class="rounded-2xl border bg-white py-20 text-center dark:border-gray-800 dark:bg-gray-900"
-    >
-      <UIcon
-        name="i-heroicons-user-circle"
-        class="mx-auto mb-4 h-16 w-16 text-gray-300 dark:text-gray-700"
+  <div class="min-h-screen bg-gray-50 pb-20 dark:bg-gray-900">
+    <!-- Breadcrumb -->
+    <div class="container mx-auto px-4 pt-4">
+      <AppBreadcrumb
+        class="text-xs"
+        :items="[
+          { label: 'Élections', to: '/elections-senegal' },
+          { label: currentElection?.name || 'Élection', to: candidatsUrl },
+          { label: 'Candidats', to: candidatsUrl },
+          { label: candidateName },
+        ]"
       />
-      <h1 class="mb-2 text-2xl font-black">Profil introuvable</h1>
-      <p class="mb-6 text-sm text-gray-500">
-        Le candidat demandé n'existe pas ou n'est pas encore publié pour cette élection.
-      </p>
-      <UButton :to="candidatsUrl" icon="i-heroicons-arrow-left" variant="soft"
-        >Retour aux candidats</UButton
-      >
     </div>
 
-    <div v-else class="space-y-6">
-      <UCard :ui="{ body: { padding: 'p-4 md:p-6' } }">
-        <div class="flex items-start gap-4 md:gap-6">
-          <div
-            class="h-24 w-24 shrink-0 overflow-hidden rounded-2xl bg-gray-100 dark:bg-gray-800 md:h-36 md:w-36"
+    <!-- Sticky header mobile (retour + nom + partage) -->
+    <header
+      class="sticky top-0 z-40 border-b border-gray-200 bg-white/95 backdrop-blur-sm dark:border-gray-800 dark:bg-gray-900/95 md:relative md:border-0 md:bg-transparent md:backdrop-blur-none"
+    >
+      <div class="container mx-auto px-4 py-3 md:py-4">
+        <div class="flex items-center gap-3">
+          <NuxtLink
+            :to="candidatsUrl"
+            class="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800 md:hidden"
+            aria-label="Retour aux candidats"
           >
-            <CmsImage
-              v-if="candidate.photo"
-              :src="candidate.photo"
-              :alt="candidateName"
-              class="h-full w-full object-cover"
-            />
-            <div v-else class="flex h-full w-full items-center justify-center">
-              <UIcon name="i-heroicons-user" class="h-10 w-10 text-gray-300 dark:text-gray-700" />
+            <UIcon name="i-heroicons-arrow-left" class="h-4 w-4 text-gray-600 dark:text-gray-400" />
+          </NuxtLink>
+          <div class="min-w-0 flex-1">
+            <h1 class="truncate text-sm font-semibold text-gray-900 dark:text-white md:text-lg">
+              {{ candidateName }}
+            </h1>
+          </div>
+          <SocialShare v-if="candidate" :title="candidateName" :url="canonicalUrl" />
+        </div>
+      </div>
+    </header>
+
+    <main class="container mx-auto px-4 py-4">
+      <div v-if="pending" class="space-y-4 md:flex md:gap-6 md:space-y-0">
+        <div class="md:w-1/3">
+          <USkeleton class="h-72 w-full rounded-2xl" />
+        </div>
+        <div class="md:w-2/3">
+          <USkeleton class="h-56 w-full rounded-2xl" />
+        </div>
+      </div>
+
+      <UAlert
+        v-else-if="error"
+        color="red"
+        variant="soft"
+        icon="i-heroicons-exclamation-triangle"
+        title="Impossible de charger ce profil"
+        description="Une erreur est survenue lors du chargement des informations du candidat."
+      />
+
+      <div
+        v-else-if="!candidate"
+        class="rounded-2xl bg-white py-20 text-center ring-1 ring-gray-200 dark:bg-gray-800 dark:ring-gray-700"
+      >
+        <UIcon
+          name="i-heroicons-user-circle"
+          class="mx-auto mb-4 h-16 w-16 text-gray-300 dark:text-gray-700"
+        />
+        <h2 class="mb-2 text-xl font-bold text-gray-900 dark:text-white">Profil introuvable</h2>
+        <p class="mb-6 text-sm text-gray-500">
+          Le candidat demandé n'existe pas ou n'est pas encore publié pour cette élection.
+        </p>
+        <UButton :to="candidatsUrl" icon="i-heroicons-arrow-left" variant="soft"
+          >Retour aux candidats</UButton
+        >
+      </div>
+
+      <div v-else class="space-y-4 md:flex md:gap-6 md:space-y-0">
+        <!-- Carte profil - sticky sur desktop -->
+        <div class="md:w-1/3">
+          <div class="md:sticky md:top-20">
+            <div
+              class="rounded-2xl bg-white p-4 ring-1 ring-gray-100 dark:bg-gray-800 dark:ring-gray-700"
+            >
+              <div class="flex flex-col items-center text-center">
+                <CmsImage
+                  v-if="candidate.photo"
+                  :src="candidate.photo"
+                  :quality="50"
+                  :alt="candidateName"
+                  class="mb-4 w-full rounded-xl object-cover"
+                />
+                <div
+                  v-else
+                  class="mb-4 flex h-40 w-40 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700"
+                >
+                  <UIcon
+                    name="i-heroicons-user"
+                    class="h-16 w-16 text-gray-300 dark:text-gray-600"
+                  />
+                </div>
+
+                <p class="text-xl font-bold capitalize text-gray-900 dark:text-white">
+                  {{ (candidate.first_name || '').toLowerCase() }}
+                  <span class="tracking-wider">{{
+                    (candidate.last_name || '').toUpperCase()
+                  }}</span>
+                </p>
+
+                <div
+                  class="mt-2 flex flex-col items-center gap-1.5 text-sm text-gray-600 dark:text-gray-400"
+                >
+                  <div v-if="birthDisplay" class="flex items-center gap-2">
+                    <UIcon name="i-heroicons-cake" class="h-4 w-4 shrink-0" />
+                    <span>{{ birthDisplay }}</span>
+                  </div>
+                  <div v-if="candidate.profession" class="flex items-center gap-2 capitalize">
+                    <UIcon name="i-heroicons-briefcase" class="h-4 w-4 shrink-0" />
+                    <span>{{ candidate.profession.toLowerCase() }}</span>
+                  </div>
+                </div>
+
+                <div
+                  v-if="candidate.facebook || candidate.twitter || candidate.linkedin"
+                  class="mt-3 flex items-center justify-center gap-5"
+                >
+                  <ULink
+                    v-if="candidate.facebook"
+                    :to="candidate.facebook"
+                    target="_blank"
+                    aria-label="Facebook"
+                    class="text-gray-500 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-300"
+                  >
+                    <UIcon name="i-simple-icons-facebook" class="h-6 w-6" />
+                  </ULink>
+                  <ULink
+                    v-if="candidate.twitter"
+                    :to="candidate.twitter"
+                    target="_blank"
+                    aria-label="Twitter/X"
+                    class="text-gray-500 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-300"
+                  >
+                    <UIcon name="i-simple-icons-x" class="h-6 w-6" />
+                  </ULink>
+                  <ULink
+                    v-if="candidate.linkedin"
+                    :to="candidate.linkedin"
+                    target="_blank"
+                    aria-label="LinkedIn"
+                    class="text-gray-500 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-300"
+                  >
+                    <UIcon name="i-simple-icons-linkedin" class="h-6 w-6" />
+                  </ULink>
+                </div>
+
+                <div
+                  v-if="coalition?.name"
+                  class="bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300 mt-4 inline-block rounded-full px-3 py-1 text-sm font-medium"
+                >
+                  {{ coalition.name }}
+                </div>
+              </div>
             </div>
           </div>
+        </div>
 
-          <div class="min-w-0 flex-1">
-            <p
-              class="text-primary-600 dark:text-primary-400 text-xs font-semibold uppercase tracking-wide"
-            >
-              Profil candidat
+        <!-- Contenu principal -->
+        <div class="space-y-4 md:w-2/3">
+          <section
+            class="rounded-2xl bg-white p-4 ring-1 ring-gray-100 dark:bg-gray-800 dark:ring-gray-700 md:p-6"
+          >
+            <div class="mb-3 flex items-center gap-2">
+              <UIcon name="i-heroicons-identification" class="text-primary-600 h-5 w-5" />
+              <h2 class="text-sm font-bold text-gray-900 dark:text-white md:text-base">
+                Biographie
+              </h2>
+            </div>
+            <div
+              v-if="candidateBioHtml"
+              class="prose prose-sm max-w-none leading-relaxed dark:prose-invert"
+              v-html="candidateBioHtml"
+            />
+            <p v-else class="text-sm text-gray-500">
+              La biographie de {{ candidate.first_name }} {{ candidate.last_name }} n'est pas encore
+              disponible.
             </p>
-            <h1
-              class="mt-1 text-xl font-bold leading-snug text-gray-900 dark:text-white md:text-3xl"
-            >
-              {{ candidate.first_name }} {{ candidate.last_name }}
-            </h1>
-            <p
-              v-if="coalition?.name"
-              class="mt-1 truncate text-sm text-gray-500 dark:text-gray-400"
-            >
-              {{ coalition.name }}
-            </p>
-          </div>
+          </section>
         </div>
+      </div>
+    </main>
 
-        <dl class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 md:mt-6 md:gap-4">
-          <div v-if="candidate.profession">
-            <dt class="text-xs font-medium text-gray-500 dark:text-gray-400">Profession</dt>
-            <dd class="mt-0.5 text-sm font-semibold text-gray-900 dark:text-white">
-              {{ candidate.profession }}
-            </dd>
-          </div>
-          <div v-if="coalition?.name">
-            <dt class="text-xs font-medium text-gray-500 dark:text-gray-400">Coalition</dt>
-            <dd class="mt-0.5 text-sm font-semibold text-gray-900 dark:text-white">
-              {{ coalition.name }}
-            </dd>
-          </div>
-          <div v-if="birthDisplay">
-            <dt class="text-xs font-medium text-gray-500 dark:text-gray-400">Naissance</dt>
-            <dd class="mt-0.5 text-sm font-semibold text-gray-900 dark:text-white">
-              {{ birthDisplay }}
-            </dd>
-          </div>
-          <div v-if="candidate.voter_number">
-            <dt class="text-xs font-medium text-gray-500 dark:text-gray-400">N° électeur</dt>
-            <dd class="mt-0.5 text-sm font-semibold text-gray-900 dark:text-white">
-              {{ candidate.voter_number }}
-            </dd>
-          </div>
-        </dl>
-
-        <div
-          v-if="candidate.facebook || candidate.twitter || candidate.linkedin"
-          class="mt-4 flex flex-wrap items-center gap-2"
-        >
-          <UButton
-            v-if="candidate.facebook"
-            :to="candidate.facebook"
-            target="_blank"
-            variant="ghost"
-            icon="i-simple-icons-facebook"
-            size="sm"
-            class="shrink-0"
-            >Facebook</UButton
-          >
-          <UButton
-            v-if="candidate.twitter"
-            :to="candidate.twitter"
-            target="_blank"
-            variant="ghost"
-            icon="i-simple-icons-x"
-            size="sm"
-            class="shrink-0"
-            >Twitter/X</UButton
-          >
-          <UButton
-            v-if="candidate.linkedin"
-            :to="candidate.linkedin"
-            target="_blank"
-            variant="ghost"
-            icon="i-simple-icons-linkedin"
-            size="sm"
-            class="shrink-0"
-            >LinkedIn</UButton
-          >
-        </div>
-      </UCard>
-
-      <UCard :ui="{ body: { padding: 'p-4 md:p-6' } }">
-        <div class="mb-4 flex items-center gap-2">
-          <UIcon name="i-heroicons-identification" class="text-primary-600 h-5 w-5" />
-          <h2 class="text-lg font-bold text-gray-900 dark:text-white md:text-xl">Biographie</h2>
-        </div>
-        <div
-          v-if="candidateBioHtml"
-          class="prose prose-sm max-w-none leading-relaxed dark:prose-invert"
-          v-html="candidateBioHtml"
-        />
-        <p v-else class="text-sm text-gray-500">
-          La biographie de {{ candidate.first_name }} {{ candidate.last_name }} n'est pas encore
-          disponible.
-        </p>
-      </UCard>
-    </div>
+    <ScrollToTopButton />
   </div>
 </template>

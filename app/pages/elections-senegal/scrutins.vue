@@ -19,6 +19,21 @@ const statusMeta: Record<string, { label: string; color: string }> = {
   completed: { label: 'Terminée', color: 'green' },
 };
 
+const formatCount = (value?: number | null) =>
+  value === null || value === undefined ? null : Number(value).toLocaleString('fr-FR');
+
+// Chiffres clés affichables par scrutin (seuls les champs renseignés sortent)
+const statsOf = (e: any) => {
+  const stats: { label: string; value: string }[] = [];
+  if (e.participation_rate)
+    stats.push({ label: 'Participation', value: `${e.participation_rate}%` });
+  if (e.registered_voters)
+    stats.push({ label: 'Inscrits', value: formatCount(e.registered_voters)! });
+  if (e.voters_count) stats.push({ label: 'Votants', value: formatCount(e.voters_count)! });
+  if (Number(e.rounds) === 2) stats.push({ label: 'Tours', value: '2' });
+  return stats.slice(0, 3);
+};
+
 const elections = computed(() =>
   [...(config.value?.elections || [])]
     .sort((a, b) => new Date(b.election_date).getTime() - new Date(a.election_date).getTime())
@@ -31,6 +46,7 @@ const elections = computed(() =>
         month: 'long',
         day: 'numeric',
       }),
+      stats: statsOf(e),
       to: e.slug
         ? `/elections-senegal/${e.slug}/${e.status === 'completed' ? 'resultats' : 'candidats'}`
         : null,
@@ -85,7 +101,7 @@ useHead({
 </script>
 
 <template>
-  <div class="min-h-screen bg-gray-50 pb-20 dark:bg-gray-900">
+  <div class="min-h-screen pb-20 dark:bg-gray-900">
     <div class="container mx-auto px-4 pt-4">
       <AppBreadcrumb
         :items="[{ label: 'Élections', to: '/elections-senegal' }, { label: 'Tous les scrutins' }]"
@@ -125,47 +141,83 @@ useHead({
         </p>
       </div>
 
-      <!-- Liste des scrutins -->
-      <div v-else class="space-y-2 md:space-y-3">
+      <!-- Cards des scrutins -->
+      <div v-else class="space-y-3 md:grid md:grid-cols-2 md:gap-4 md:space-y-0">
         <component
           :is="election.to ? NuxtLinkComponent : 'div'"
           v-for="election in elections"
           :key="`${election.type}-${election.year}`"
           :to="election.to || undefined"
-          class="group flex items-center gap-3 rounded-2xl bg-white p-4 ring-1 ring-gray-200 transition-all dark:bg-gray-800 dark:ring-gray-700 md:p-5"
+          class="group block rounded-2xl bg-white p-4 ring-1 ring-gray-200 transition-all dark:bg-gray-800 dark:ring-gray-700 md:p-5"
           :class="
             election.to ? 'md:hover:ring-primary-300 active:scale-[0.99] md:hover:shadow-lg' : ''
           "
         >
+          <div class="flex items-center gap-3">
+            <div
+              class="bg-primary-100 dark:bg-primary-900/30 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
+            >
+              <UIcon
+                name="i-heroicons-chart-bar"
+                class="text-primary-600 dark:text-primary-400 h-5 w-5"
+              />
+            </div>
+            <div class="min-w-0 flex-1">
+              <h2 class="truncate text-sm font-semibold text-gray-900 dark:text-white md:text-base">
+                {{ election.name || `${election.typeLabel} ${election.year}` }}
+              </h2>
+              <p class="text-xs text-gray-500 dark:text-gray-400">
+                {{ election.typeLabel }} · {{ election.dateLabel }}
+              </p>
+            </div>
+            <UBadge
+              :color="statusMeta[election.status]?.color || 'gray'"
+              variant="subtle"
+              size="xs"
+              class="shrink-0"
+            >
+              {{ statusMeta[election.status]?.label || election.status }}
+            </UBadge>
+          </div>
+
+          <!-- Chiffres clés (affichés uniquement s'ils sont renseignés) -->
           <div
-            class="bg-primary-100 dark:bg-primary-900/30 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
+            v-if="election.stats.length"
+            class="mt-3 grid gap-2"
+            :class="
+              election.stats.length === 1
+                ? 'grid-cols-1'
+                : election.stats.length === 2
+                  ? 'grid-cols-2'
+                  : 'grid-cols-3'
+            "
           >
-            <UIcon
-              name="i-heroicons-chart-bar"
-              class="text-primary-600 dark:text-primary-400 h-5 w-5"
-            />
+            <div
+              v-for="stat in election.stats"
+              :key="stat.label"
+              class="rounded-xl bg-gray-50 p-2.5 dark:bg-gray-700/30"
+            >
+              <p
+                class="text-[10px] font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400"
+              >
+                {{ stat.label }}
+              </p>
+              <p class="mt-0.5 text-sm font-bold text-gray-900 dark:text-white md:text-base">
+                {{ stat.value }}
+              </p>
+            </div>
           </div>
-          <div class="min-w-0 flex-1">
-            <h2 class="truncate text-sm font-semibold text-gray-900 dark:text-white md:text-base">
-              {{ election.name || `${election.typeLabel} ${election.year}` }}
-            </h2>
-            <p class="text-xs text-gray-500 dark:text-gray-400">
-              {{ election.typeLabel }} · {{ election.dateLabel }}
-            </p>
-          </div>
-          <UBadge
-            :color="statusMeta[election.status]?.color || 'gray'"
-            variant="subtle"
-            size="xs"
-            class="shrink-0"
-          >
-            {{ statusMeta[election.status]?.label || election.status }}
-          </UBadge>
-          <UIcon
+
+          <p
             v-if="election.to"
-            name="i-heroicons-chevron-right"
-            class="h-4 w-4 shrink-0 text-gray-300 transition-transform group-hover:translate-x-0.5 dark:text-gray-600"
-          />
+            class="text-primary-600 dark:text-primary-400 mt-3 flex items-center gap-1 text-xs font-medium"
+          >
+            {{ election.status === 'completed' ? 'Voir les résultats' : 'Voir le tableau de bord' }}
+            <UIcon
+              name="i-heroicons-arrow-right"
+              class="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5"
+            />
+          </p>
         </component>
       </div>
     </main>

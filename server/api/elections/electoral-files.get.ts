@@ -1,8 +1,8 @@
-import { readItems } from "@directus/sdk";
+import { readItems } from '@directus/sdk';
 
 interface FileRow {
   id: number;
-  scope: "national" | "diaspora";
+  scope: 'national' | 'diaspora';
   year: number | null;
   revision_type: string | null;
   period_start: string | null;
@@ -40,51 +40,52 @@ export default defineCachedEventHandler(
     try {
       const [files, elections] = await Promise.all([
         directus.request(
-          readItems("election_electoral_files", {
+          readItems('election_electoral_files', {
             fields: [
-              "id",
-              "scope",
-              "year",
-              "revision_type",
-              "period_start",
-              "period_end",
-              "document.id",
-              "document.slug",
-              "document.title",
-              "document.status",
+              'id',
+              'scope',
+              'year',
+              'revision_type',
+              'period_start',
+              'period_end',
+              'document.id',
+              'document.slug',
+              'document.title',
+              'document.status',
             ],
-            filter: { status: { _nin: ["draft", "archived"] } },
-            sort: ["-year", "-id"],
+            filter: { status: { _nin: ['draft', 'archived'] } },
+            sort: ['-year', '-id'],
             limit: -1,
-          })
+          }),
         ) as Promise<FileRow[]>,
         directus.request(
-          readItems("elections", {
+          readItems('elections', {
             fields: [
-              "id",
-              "name",
-              "type",
-              "year",
-              "slug",
-              "electoral_file_national",
-              "electoral_file_diaspora",
+              'id',
+              'name',
+              'type',
+              'year',
+              'slug',
+              'electoral_file_national',
+              'electoral_file_diaspora',
             ],
-            filter: { status: { _nin: ["draft", "archived"] } },
-            sort: ["-year", "-id"],
+            filter: { status: { _nin: ['draft', 'archived'] } },
+            sort: ['-year', '-id'],
             limit: -1,
-          })
+          }),
         ) as Promise<ElectionRow[]>,
       ]);
 
       const cleanFile = (file: FileRow) => ({
         id: file.id,
         document:
-          file.document?.id && file.document.status === "published"
+          file.document?.id && file.document.status === 'published'
             ? { id: file.document.id, slug: file.document.slug, title: file.document.title }
             : null,
       });
 
-      const revisionKey = (file: FileRow) => `${file.year}|${file.revision_type}|${file.period_start}`;
+      const revisionKey = (file: FileRow) =>
+        `${file.year}|${file.revision_type}|${file.period_start}`;
 
       const filesByRevision = new Map<
         string,
@@ -110,18 +111,39 @@ export default defineCachedEventHandler(
           });
         }
         const entry = filesByRevision.get(key)!;
-        if (file.scope === "diaspora") entry.diaspora = cleanFile(file);
+        if (file.scope === 'diaspora') entry.diaspora = cleanFile(file);
         else entry.national = cleanFile(file);
       }
 
+      // Clé publique lisible et URL-safe (ex. « 2024-exceptionnelle ») : le
+      // regroupement interne reste year|type|period_start, mais c'est ce slug
+      // qui circule dans les URLs (?revision=). Suffixe numérique en cas de
+      // collision (deux révisions du même type la même année).
+      const usedSlugs = new Map<string, number>();
+      const revisionSlug = (revisionFiles: {
+        year: number | null;
+        revision_type: string | null;
+      }) => {
+        const base =
+          [revisionFiles.year, revisionFiles.revision_type]
+            .filter(Boolean)
+            .join('-')
+            .toLowerCase()
+            .replace(/[^a-z0-9-]+/g, '-') || 'revision';
+        const count = (usedSlugs.get(base) || 0) + 1;
+        usedSlugs.set(base, count);
+        return count === 1 ? base : `${base}-${count}`;
+      };
+
       const revisions = Array.from(filesByRevision.entries())
-        .map(([key, revisionFiles]) => {
+        .map(([, revisionFiles]) => {
+          const key = revisionSlug(revisionFiles);
           const fileIds = [revisionFiles.national?.id, revisionFiles.diaspora?.id].filter(Boolean);
           const revisionElections = elections
             .filter(
               (e) =>
                 (e.electoral_file_national && fileIds.includes(e.electoral_file_national)) ||
-                (e.electoral_file_diaspora && fileIds.includes(e.electoral_file_diaspora))
+                (e.electoral_file_diaspora && fileIds.includes(e.electoral_file_diaspora)),
             )
             .map((e) => ({ id: e.id, name: e.name, type: e.type, year: e.year, slug: e.slug }));
 
@@ -140,13 +162,13 @@ export default defineCachedEventHandler(
 
       return { revisions };
     } catch (error) {
-      console.error("Error fetching electoral files:", error);
+      console.error('Error fetching electoral files:', error);
       return { revisions: [] };
     }
   },
   {
     maxAge: 10 * 60,
-    name: "elections-electoral-files-v2",
-    getKey: () => "elections-electoral-files-v2",
-  }
+    name: 'elections-electoral-files-v3',
+    getKey: () => 'elections-electoral-files-v3',
+  },
 );

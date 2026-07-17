@@ -130,27 +130,43 @@ export const useElectoralRevision = (options: UseElectoralRevisionOptions = {}) 
     })),
   );
 
+  /** Révision par défaut = la plus récente ; l'URL sans paramètre lui correspond. */
+  const defaultRevisionKey = computed(() =>
+    revisions.value.length ? revisionKeyOf(revisions.value[0]) : null,
+  );
+
   /** Navigue vers une autre révision, sur la page courante. */
   const setRevision = (key: string) => {
     if (key === currentRevisionKey.value) return;
-    router.push({ path: route.path, query: { revision: key } });
+    router.push({
+      path: route.path,
+      query: key === defaultRevisionKey.value ? {} : { revision: key },
+    });
   };
 
   if (options.syncUrl) {
+    // URL SEO friendly : le chemin nu est canonique pour la révision par défaut ;
+    // `?revision=<slug>` n'apparaît que pour une révision plus ancienne. Les autres
+    // paramètres (dont `election`, contexte de retour dashboard) sont laissés tels quels.
     watch(
       currentRevision,
       (rev) => {
         if (!rev) return;
         const key = revisionKeyOf(rev);
-        // `revision` est le paramètre canonique ; `election` est conservé car il
-        // porte le contexte de navigation venu du dashboard (backTo, electionName).
-        const targetQuery: Record<string, string> = { revision: key };
-        if (electionIdParam.value) targetQuery.election = electionIdParam.value;
-        const isCanonical =
-          revisionParam.value === key &&
-          Object.keys(route.query).length === Object.keys(targetQuery).length;
-        if (!isCanonical) {
-          router.replace({ path: route.path, query: targetQuery });
+        const isDefault = key === defaultRevisionKey.value;
+        const query = { ...route.query };
+        let changed = false;
+        if (isDefault) {
+          if ('revision' in query) {
+            delete query.revision;
+            changed = true;
+          }
+        } else if (query.revision !== key) {
+          query.revision = key;
+          changed = true;
+        }
+        if (changed) {
+          router.replace({ path: route.path, query });
         }
       },
       { immediate: true },
@@ -174,10 +190,13 @@ export const useElectoralRevision = (options: UseElectoralRevisionOptions = {}) 
   const nationalFileId = computed(() => currentRevision.value?.national?.id ?? null);
   const diasporaFileId = computed(() => currentRevision.value?.diaspora?.id ?? null);
 
-  /** Query de contexte à propager sur les liens internes de la carte électorale */
+  /** Query de contexte à propager sur les liens internes de la carte électorale
+   * (vide pour la révision par défaut : les chemins nus restent canoniques). */
   const contextQuery = computed(() => {
     const query: Record<string, string> = {};
-    if (currentRevisionKey.value) query.revision = currentRevisionKey.value;
+    if (currentRevisionKey.value && currentRevisionKey.value !== defaultRevisionKey.value) {
+      query.revision = currentRevisionKey.value;
+    }
     if (electionIdParam.value) query.election = electionIdParam.value;
     return query;
   });
