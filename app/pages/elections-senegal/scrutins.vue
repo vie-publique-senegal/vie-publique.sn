@@ -7,6 +7,15 @@ import { useElectoralDashboard } from '~/composables/elections/dashboard/useElec
 
 const { config, loadingConfig } = useElectoralDashboard();
 
+const route = useRoute();
+const router = useRouter();
+const itemsPerPage = 10;
+const currentPage = ref(Math.max(1, Number(route.query.page) || 1));
+
+watch(currentPage, (page) => {
+  router.replace({ query: { ...route.query, page: page > 1 ? String(page) : undefined } });
+});
+
 const typeLabels: Record<string, string> = {
   presidential: 'Présidentielle',
   legislative: 'Législatives',
@@ -52,6 +61,22 @@ const elections = computed(() =>
         : null,
     })),
 );
+
+const totalPages = computed(() => Math.max(1, Math.ceil(elections.value.length / itemsPerPage)));
+
+// Ramène la page dans les bornes si l'URL pointe vers une page qui n'existe plus
+watch(
+  totalPages,
+  (pages) => {
+    if (currentPage.value > pages) currentPage.value = pages;
+  },
+  { immediate: true },
+);
+
+const paginatedElections = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage;
+  return elections.value.slice(start, start + itemsPerPage);
+});
 
 const NuxtLinkComponent = resolveComponent('NuxtLink');
 
@@ -145,7 +170,7 @@ useHead({
       <div v-else class="space-y-3 md:grid md:grid-cols-2 md:gap-4 md:space-y-0">
         <component
           :is="election.to ? NuxtLinkComponent : 'div'"
-          v-for="election in elections"
+          v-for="election in paginatedElections"
           :key="`${election.type}-${election.year}`"
           :to="election.to || undefined"
           class="group flex h-full flex-col rounded-2xl bg-white p-4 ring-1 ring-gray-200 transition-all dark:bg-gray-800 dark:ring-gray-700 md:p-5"
@@ -219,6 +244,20 @@ useHead({
             />
           </p>
         </component>
+      </div>
+
+      <!-- Pagination -->
+      <div v-if="elections.length > itemsPerPage" class="mt-6 flex justify-center md:mt-8">
+        <UPagination
+          v-model="currentPage"
+          :total="elections.length"
+          :page-count="itemsPerPage"
+          size="sm"
+          :ui="{
+            wrapper: 'flex items-center gap-1',
+            rounded: 'rounded-lg',
+          }"
+        />
       </div>
     </main>
 
