@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { useElectoralDashboardLists } from '~/composables/elections/dashboard/useElectoralDashboardLists';
-import { useElectoralFormatting } from '~/composables/elections/dashboard/useElectoralFormatting';
 
 const props = defineProps<{
   constituencyId: string | number;

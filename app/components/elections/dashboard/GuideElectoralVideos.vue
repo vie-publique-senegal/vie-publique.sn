@@ -17,11 +17,11 @@ const selectedType = ref('all');
 const route = useRoute();
 const router = useRouter();
 
-const electionTypes = [
-  { label: 'Présidentielles', value: 'presidential' },
-  { label: 'Législatives', value: 'legislative' },
-  { label: 'Locales', value: 'local' },
-];
+const electionTypeLabels: Record<string, string> = {
+  presidential: 'Présidentielles',
+  legislative: 'Législatives',
+  local: 'Locales',
+};
 
 if (!props.typeElection) {
   if (route.query.lang) selectedLanguage.value = route.query.lang as string;
@@ -33,11 +33,37 @@ if (!props.typeElection) {
 
   watch(selectedType, (newType) => {
     router.replace({ query: { ...route.query, type: newType === 'all' ? undefined : newType } });
+    // Repartir d'une langue valide pour le nouveau type sélectionné
+    selectedLanguage.value = 'all';
   });
 }
 
 const { videos, loading, languages } = useGuideElectoral({
   type: computed(() => props.typeElection || 'all'),
+});
+
+// Types réellement présents dans les données (uniquement hors dashboard d'un scrutin)
+const availableTypes = computed(() => {
+  if (!videos.value) return [];
+  const types = [...new Set(videos.value.map((v) => v.type_election))].filter(Boolean);
+  return types.map((value) => ({ value, label: electionTypeLabels[value] || value }));
+});
+
+// Vidéos du type courant, utilisées pour déterminer les langues disponibles
+const videosForSelectedType = computed(() => {
+  if (!videos.value) return [];
+  const effectiveType = props.typeElection || selectedType.value;
+  if (!effectiveType || effectiveType === 'all') return videos.value;
+  return videos.value.filter((v) => v.type_election === effectiveType);
+});
+
+// Langues réellement présentes pour le type courant (pas la liste des choix du schéma CMS)
+const availableLanguages = computed(() => {
+  const langs = [...new Set(videosForSelectedType.value.map((v) => v.langue))].filter(Boolean);
+  return langs.map((value) => ({
+    value,
+    label: languages.value[value] || value.toUpperCase(),
+  }));
 });
 
 const filteredVideos = computed(() => {
@@ -126,8 +152,8 @@ onMounted(() => {
     </div>
 
     <template v-else>
-      <!-- Filtre type (uniquement hors dashboard d'un scrutin) -->
-      <div v-if="!props.typeElection" class="flex flex-wrap items-center gap-2">
+      <!-- Filtre type (uniquement hors dashboard d'un scrutin, et si plusieurs types ont des vidéos) -->
+      <div v-if="!props.typeElection && availableTypes.length > 1" class="flex flex-wrap items-center gap-2">
         <span class="shrink-0 text-[10px] font-bold uppercase tracking-widest text-gray-400"
           >Type :</span
         >
@@ -143,7 +169,7 @@ onMounted(() => {
           Tous
         </button>
         <button
-          v-for="type in electionTypes"
+          v-for="type in availableTypes"
           :key="type.value"
           class="rounded-full border px-3 py-1 text-xs font-semibold transition-colors"
           :class="
@@ -157,8 +183,8 @@ onMounted(() => {
         </button>
       </div>
 
-      <!-- Filtre langue -->
-      <div v-if="Object.keys(languages).length" class="flex flex-wrap items-center gap-2">
+      <!-- Filtre langue (uniquement si plusieurs langues ont des vidéos pour le type courant) -->
+      <div v-if="availableLanguages.length > 1" class="flex flex-wrap items-center gap-2">
         <span class="shrink-0 text-[10px] font-bold uppercase tracking-widest text-gray-400"
           >Langue :</span
         >
@@ -174,17 +200,17 @@ onMounted(() => {
           Toutes
         </button>
         <button
-          v-for="(label, lang) in languages"
-          :key="lang"
+          v-for="lang in availableLanguages"
+          :key="lang.value"
           class="rounded-full border px-3 py-1 text-xs font-semibold transition-colors"
           :class="
-            selectedLanguage === lang
+            selectedLanguage === lang.value
               ? 'border-primary-600 bg-primary-600 text-white'
               : 'hover:border-primary-400 border-gray-200 bg-white text-gray-600 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300'
           "
-          @click="selectedLanguage = lang"
+          @click="selectedLanguage = lang.value"
         >
-          {{ label }}
+          {{ lang.label }}
         </button>
       </div>
 
@@ -213,7 +239,7 @@ onMounted(() => {
               v-if="getYouTubeVideoId(video.url_youtube)"
               :src="`https://img.youtube.com/vi/${getYouTubeVideoId(video.url_youtube)}/hqdefault.jpg`"
               :alt="videoTitle(video)"
-              class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+              class="h-full w-full scale-125 object-cover transition-transform duration-300 group-hover:scale-[1.35]"
               loading="lazy"
             />
             <div class="absolute inset-0 flex items-center justify-center">
