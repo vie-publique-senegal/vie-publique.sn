@@ -20,6 +20,8 @@ export const useElectionPvsFilters = (electionId?: number | undefined) => {
       countries: (data.value as any)?.data?.diaspora?.countries || [],
       diplomaticRepresentations:
         (data.value as any)?.data?.diaspora?.diplomaticRepresentations || [],
+      representationsByCountry:
+        (data.value as any)?.data?.diaspora?.representationsByCountry || {},
       localities: (data.value as any)?.data?.diaspora?.localities || [],
     },
   }));

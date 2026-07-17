@@ -91,7 +91,7 @@ export default defineCachedEventHandler(
         })
       )) as any[];
 
-      const total = totalRows?.[0]?.count || 0;
+      const total = Number(totalRows?.[0]?.count) || 0;
 
       return {
         data,
@@ -115,7 +115,18 @@ export default defineCachedEventHandler(
     name: "election-pvs-list",
     getKey: (event) => {
       const query = getQuery(event);
-      return `pvs-${query.page || 1}-${query.source || "all"}-${query.election || "all"}`;
+      return [
+        "pvs",
+        query.page || 1,
+        query.limit || 12,
+        query.source || "all",
+        query.election || "all",
+        query.region || "all",
+        query.department || "all",
+        query.municipality || "all",
+        query.country || "all",
+        query.diplomatic_representation || "all",
+      ].join("-");
     },
   }
 );

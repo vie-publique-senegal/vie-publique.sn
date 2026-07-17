@@ -38,6 +38,9 @@ export interface PvOptions {
  * Composable pour gérer les PVs (liste, filtres, pagination)
  */
 export const useElectionPvsUpload = (options: PvOptions = {}) => {
+  const route = useRoute();
+  const router = useRouter();
+
   const filters = reactive<PvFilters>({
     source: undefined,
     election: undefined,
@@ -46,8 +49,20 @@ export const useElectionPvsUpload = (options: PvOptions = {}) => {
     country: undefined,
     diplomatic_representation: undefined,
   });
-  const currentPage = ref(1);
+
+  const initialPage = Math.max(1, Number(route.query.page) || 1);
+  const currentPage = ref(initialPage);
   const itemsPerPage = options.limit || 12;
+
+  // Garder la page synchronisée avec l'URL (?page=)
+  watch(currentPage, (page) => {
+    router.replace({
+      query: {
+        ...route.query,
+        page: page > 1 ? String(page) : undefined,
+      },
+    });
+  });
 
   const query = computed(() => {
     const params: Record<string, any> = {

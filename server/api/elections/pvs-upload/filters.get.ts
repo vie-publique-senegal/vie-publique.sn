@@ -61,6 +61,19 @@ export default defineEventHandler(async (event) => {
     ]
       .filter(Boolean)
       .sort();
+    const representationsByCountry = countries.reduce((acc: Record<string, string[]>, country) => {
+      const representations = [
+        ...new Set(
+          diasporaPvs
+            .filter((p) => p.country === country)
+            .map((p) => p.diplomatic_representation)
+            .filter(Boolean)
+        ),
+      ].sort();
+
+      acc[country] = representations;
+      return acc;
+    }, {});
     const localities = [...new Set(diasporaPvs.map((p) => p.locality))].filter(Boolean).sort();
 
     return {
@@ -73,6 +86,7 @@ export default defineEventHandler(async (event) => {
         diaspora: {
           countries,
           diplomaticRepresentations,
+          representationsByCountry,
           localities,
         },
       },

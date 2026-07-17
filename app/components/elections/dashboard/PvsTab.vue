@@ -1,5 +1,5 @@
 <template>
-  <div class="space-y-6">
+  <div ref="pvsTopRef" class="space-y-6">
     <!-- Header avec actions -->
     <div class="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
       <div>
@@ -121,7 +121,7 @@
           <select
             :value="filters.country || ''"
             class="focus:ring-primary/40 w-full appearance-none rounded-xl border border-gray-200 bg-gray-50 py-2 pl-3 pr-8 text-sm text-gray-700 focus:outline-none focus:ring-2 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
-            @change="(e) => setFilter('country', (e.target as HTMLSelectElement).value || undefined)"
+            @change="handleCountryChange"
           >
             <option value="">Tous les pays</option>
             <option v-for="country in availableFilters.diaspora.countries" :key="country" :value="country">
@@ -135,14 +135,15 @@
         </div>
 
         <!-- Représentation diplomatique -->
-        <div v-if="availableFilters.diaspora.diplomaticRepresentations.length > 0" class="relative min-w-[180px]">
+        <div v-if="filters.country" class="relative min-w-[180px]">
           <select
             :value="filters.diplomatic_representation || ''"
+            :disabled="availableDiasporaRepresentations.length === 0"
             class="focus:ring-primary/40 w-full appearance-none rounded-xl border border-gray-200 bg-gray-50 py-2 pl-3 pr-8 text-sm text-gray-700 focus:outline-none focus:ring-2 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300"
             @change="(e) => setFilter('diplomatic_representation', (e.target as HTMLSelectElement).value || undefined)"
           >
             <option value="">Toutes les représentations</option>
-            <option v-for="rep in availableFilters.diaspora.diplomaticRepresentations" :key="rep" :value="rep">
+            <option v-for="rep in availableDiasporaRepresentations" :key="rep" :value="rep">
               {{ rep }}
             </option>
           </select>
@@ -420,6 +421,12 @@ const {
   autoFetch: true,
 });
 
+// Scroll fluide vers le haut de la liste lors d'un changement de page
+const pvsTopRef = ref<HTMLElement | null>(null);
+watch(currentPage, () => {
+  pvsTopRef.value?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+});
+
 // Modals
 const showLoginModal = ref(false);
 const showUploadModal = ref(false);
@@ -465,6 +472,20 @@ const handleDepartmentChange = (e: Event) => {
   const value = (e.target as HTMLSelectElement).value || undefined;
   setFilter('municipality', undefined);
   setFilter('department', value);
+};
+
+const availableDiasporaRepresentations = computed<string[]>(() => {
+  const selectedCountry = filters.country;
+  if (!selectedCountry) return [];
+
+  const map = availableFilters.value.diaspora.representationsByCountry || {};
+  return map[selectedCountry] || [];
+});
+
+const handleCountryChange = (e: Event) => {
+  const value = (e.target as HTMLSelectElement).value || undefined;
+  setFilter('diplomatic_representation', undefined);
+  setFilter('country', value);
 };
 
 // Handler pour changement de source (réinitialiser les filtres géographiques)
