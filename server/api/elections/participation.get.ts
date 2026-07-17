@@ -7,6 +7,8 @@ interface ParticipationRow {
   participation_12h: number | null;
   participation_14h: number | null;
   participation_17h: number | null;
+  participation_rate: number | null;
+  round_2_participation_rate: number | null;
   constituency: {
     name: string;
     nationale_type: string | null;
@@ -40,6 +42,8 @@ export default defineCachedEventHandler(
               "participation_12h",
               "participation_14h",
               "participation_17h",
+              "participation_rate",
+              "round_2_participation_rate",
               "constituency.name",
               "constituency.nationale_type",
               ...GEO_UNIT_FIELDS.map((f) => `constituency.${f}`),
@@ -65,6 +69,8 @@ export default defineCachedEventHandler(
               participation_12h: row.participation_12h,
               participation_14h: row.participation_14h,
               participation_17h: row.participation_17h,
+              participation_rate: row.participation_rate,
+              round_2_participation_rate: row.round_2_participation_rate,
             };
           })
           .sort(

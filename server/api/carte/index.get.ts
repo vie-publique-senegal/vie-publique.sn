@@ -15,6 +15,14 @@ interface ResultRow {
   participation_12h: number | null;
   participation_14h: number | null;
   participation_17h: number | null;
+  voters_count: number | null;
+  null_ballots: number | null;
+  valid_votes: number | null;
+  participation_rate: number | null;
+  round_2_voters_count: number | null;
+  round_2_null_ballots: number | null;
+  round_2_valid_votes: number | null;
+  round_2_participation_rate: number | null;
   election: { id: number; type: string; year: number } | null;
   constituency: {
     id: number;
@@ -53,6 +61,14 @@ export default defineCachedEventHandler(
               'participation_12h',
               'participation_14h',
               'participation_17h',
+              'voters_count',
+              'null_ballots',
+              'valid_votes',
+              'participation_rate',
+              'round_2_voters_count',
+              'round_2_null_ballots',
+              'round_2_valid_votes',
+              'round_2_participation_rate',
               'election.id',
               'election.type',
               'election.year',
@@ -155,6 +171,14 @@ export default defineCachedEventHandler(
           participation_12h: row.participation_12h,
           participation_14h: row.participation_14h,
           participation_17h: row.participation_17h,
+          voters_count: row.voters_count,
+          null_ballots: row.null_ballots,
+          valid_votes: row.valid_votes,
+          participation_rate: row.participation_rate,
+          round_2_voters_count: row.round_2_voters_count,
+          round_2_null_ballots: row.round_2_null_ballots,
+          round_2_valid_votes: row.round_2_valid_votes,
+          round_2_participation_rate: row.round_2_participation_rate,
         };
       });
     } catch (error) {

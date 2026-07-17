@@ -19,6 +19,26 @@ export default defineCachedEventHandler(
         'id',
         'voters',
         'seat',
+        'voters_count',
+        'null_ballots',
+        'valid_votes',
+        'participation_rate',
+        'winning_votes',
+        'winning_percentage',
+        'round_2_voters_count',
+        'round_2_null_ballots',
+        'round_2_valid_votes',
+        'round_2_participation_rate',
+        'round_2_winning_votes',
+        'round_2_winning_percentage',
+        'round_2_winning_coalition.color',
+        'round_2_winning_coalition.logo',
+        ...ENTITY_IDENTITY_FIELDS.map((f) => `round_2_winning_coalition.political_entity.${f}`),
+        'round_2_winning_coalition.head_of_list.id',
+        'round_2_winning_coalition.head_of_list.person.id',
+        'round_2_winning_coalition.head_of_list.person.slug',
+        'round_2_winning_coalition.head_of_list.person.first_name',
+        'round_2_winning_coalition.head_of_list.person.last_name',
         'winning_coalition.color',
         'winning_coalition.logo',
         ...ENTITY_IDENTITY_FIELDS.map((f) => `winning_coalition.political_entity.${f}`),
@@ -113,6 +133,12 @@ export default defineCachedEventHandler(
             : null;
           delete mapped.constituency;
           delete mapped.winning_coalition;
+          // Second tour : même traitement identité/tête de liste que coalition_gagnante
+          const round2 = mapped.round_2_winning_coalition as Record<string, unknown> | null | undefined;
+          mapped.round_2_coalition_gagnante = round2
+            ? { ...mergeEntityIdentity(round2), head_of_list: headOfListOf(round2) }
+            : (round2 ?? null);
+          delete mapped.round_2_winning_coalition;
           return mapped;
         });
       }
@@ -131,7 +157,6 @@ export default defineCachedEventHandler(
         'coalition_gagnante.head_of_list.person.first_name',
         'coalition_gagnante.head_of_list.person.last_name',
         'constituencie.name',
-        'constituencie.region',
         'constituencie.type',
         'constituencie.nationale_type',
         'election.id',

@@ -129,6 +129,8 @@ export interface PopupFieldConfig<T = any> {
   prefix?: string;
   /** Fonction de formatage custom */
   formatter?: (value: any, item: T) => string;
+  /** N'afficher ce champ que si cette condition est vraie (ex. donnée de second tour absente) */
+  showIf?: (d: T) => boolean;
 }
 
 export interface PopupConfig<T = any> {
