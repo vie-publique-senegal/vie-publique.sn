@@ -247,7 +247,7 @@ useHead({
 <template>
   <div class="min-h-screen pb-20 dark:bg-gray-900">
     <!-- Breadcrumb -->
-    <div class="container mx-auto hidden px-4 pt-4 md:block">
+    <div class="container mx-auto px-4 pt-4">
       <AppBreadcrumb
         :items="[{ label: 'Élections', to: '/elections-senegal' }, { label: 'Législation' }]"
       />
