@@ -96,15 +96,6 @@ const heroContextLabel = computed(() => {
 const navigationLinks = computed(() => {
   const links = [
     {
-      title: 'Guide Électoral',
-      description: 'Comment voter ?',
-      icon: 'i-heroicons-book-open',
-      to: '/elections-senegal/guide-electoral',
-      iconColor: 'text-blue-600 dark:text-blue-400',
-      iconBg: 'bg-blue-100 dark:bg-blue-900/30',
-      hoverRing: 'md:hover:ring-blue-200',
-    },
-    {
       title: 'Législation',
       description: 'Textes de lois et décrets',
       icon: 'i-heroicons-scale',
@@ -121,6 +112,15 @@ const navigationLinks = computed(() => {
       iconColor: 'text-purple-600 dark:text-purple-400',
       iconBg: 'bg-purple-100 dark:bg-purple-900/30',
       hoverRing: 'md:hover:ring-purple-200',
+    },
+    {
+      title: 'Guide Électoral',
+      description: 'Comment voter ?',
+      icon: 'i-heroicons-book-open',
+      to: '/elections-senegal/guide-electoral',
+      iconColor: 'text-blue-600 dark:text-blue-400',
+      iconBg: 'bg-blue-100 dark:bg-blue-900/30',
+      hoverRing: 'md:hover:ring-blue-200',
     },
     {
       title: 'Toutes les élections',
