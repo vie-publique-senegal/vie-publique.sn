@@ -68,10 +68,10 @@ useSeoMeta({
   <div class="animate-in fade-in mx-auto max-w-7xl duration-700">
     <div class="overflow-hidden">
       <div class="mb-4">
-        <h2 class="text-lg font-bold text-gray-900 dark:text-white sm:text-2xl">
+        <h2 class="text-lg font-bold text-gray-900 dark:text-white sm:text-xl">
           Carte électorale
         </h2>
-        <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400 sm:text-sm">
+        <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
           Répartition des électeurs, lieux et bureaux de vote - territoire national et diaspora.
         </p>
       </div>

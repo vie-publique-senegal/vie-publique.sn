@@ -160,10 +160,10 @@ useSeoMeta({
 
     <!-- Header mobile-first -->
     <header class="container mx-auto px-4 py-3 md:py-6">
-      <h1 class="text-xl font-bold text-gray-900 dark:text-white md:text-3xl">
+      <h1 class="text-lg font-bold text-gray-900 dark:text-white sm:text-xl">
         Élections au Sénégal
       </h1>
-      <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400 md:mt-1 md:text-sm">
+      <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
         Résultats, candidats et ressources électorales
       </p>
     </header>

@@ -57,8 +57,8 @@ useSeoMeta({
   <div class="max-w-7xl mx-auto space-y-6 animate-in fade-in duration-700">
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-gray-200 dark:border-gray-800">
       <div>
-        <h2 class="text-2xl font-black uppercase tracking-tighter">Statistiques</h2>
-        <p class="text-gray-500 dark:text-gray-400">Analyses démographiques et socioprofessionnelles.</p>
+        <h2 class="text-lg font-bold text-gray-900 dark:text-white sm:text-xl">Statistiques</h2>
+        <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">Analyses démographiques et socioprofessionnelles.</p>
       </div>
       <USelect v-model="statsType" :options="statsTypes" placeholder="Choisir une statistique" class="w-full md:w-72" />
     </div>

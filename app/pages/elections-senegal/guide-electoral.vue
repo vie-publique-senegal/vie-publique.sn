@@ -55,10 +55,10 @@ useHead({
     </div>
 
     <header class="container mx-auto max-w-6xl px-4 py-3 md:py-6">
-      <h1 class="text-xl font-bold text-gray-900 dark:text-white md:text-3xl">
+      <h1 class="text-lg font-bold text-gray-900 dark:text-white sm:text-xl">
         Guide de l'Électeur
       </h1>
-      <p class="mt-0.5 max-w-2xl text-xs text-gray-500 dark:text-gray-400 md:mt-1 md:text-sm">
+      <p class="mt-0.5 max-w-2xl text-xs text-gray-500 dark:text-gray-400">
         Apprenez comment voter et découvrez les étapes du scrutin, en vidéo et en plusieurs langues.
       </p>
     </header>

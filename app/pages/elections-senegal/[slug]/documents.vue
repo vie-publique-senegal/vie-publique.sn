@@ -54,10 +54,10 @@ useSeoMeta({
   <div class="animate-in fade-in mx-auto max-w-7xl space-y-4 duration-700">
     <div class="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
       <div>
-        <h2 class="text-lg font-bold text-gray-900 dark:text-white sm:text-2xl">
+        <h2 class="text-lg font-bold text-gray-900 dark:text-white sm:text-xl">
           Documents Officiels
         </h2>
-        <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400 sm:text-sm">
+        <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
           Retrouvez les textes et documents liés à ce scrutin.
         </p>
       </div>
