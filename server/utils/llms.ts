@@ -99,6 +99,7 @@ export const getLlmsStats = defineCachedFunction(
         ...publishedFilter,
         current_appointment: {
           is_current: { _eq: true },
+          status: { _eq: 'published' },
           position_category: { _in: ['Ministre', "Secrétaire d'État"] },
         },
       }),
@@ -151,6 +152,7 @@ export const getLlmsStats = defineCachedFunction(
             status: { _eq: 'published' },
             current_appointment: {
               is_current: { _eq: true },
+              status: { _eq: 'published' },
               position_category: { _in: ['Président de la République', 'Premier Ministre'] },
             },
           },
@@ -198,7 +200,7 @@ export const getLlmsStats = defineCachedFunction(
   },
   {
     maxAge: process.env.NODE_ENV === 'production' ? 60 * 60 : 0, // 1 h en prod
-    name: 'llms-stats-v2',
+    name: 'llms-stats-v3',
     getKey: () => 'all',
   },
 );
@@ -391,6 +393,7 @@ Pour signaler une erreur ou demander un accès aux données : contact@vie-publiq
 ## Données structurées et accès machine
 
 - Sitemap : ${siteUrl}/sitemap.xml (toutes les URLs avec dates de dernière modification)
+- Flux RSS : ${siteUrl}/rss.xml (global) · ${siteUrl}/actualites/rss.xml · ${siteUrl}/conseil-des-ministres/rss.xml · ${siteUrl}/documents/rss.xml · ${siteUrl}/documents/journal-officiel-senegal/rss.xml (Journal officiel)
 ${counterpart}
 - Les pages exposent des données structurées schema.org en JSON-LD : Organization, WebSite, WebPage, BreadcrumbList, NewsArticle, Article, Person, FAQPage
 - Les articles et documents portent leurs dates de publication et de mise à jour

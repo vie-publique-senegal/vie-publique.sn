@@ -24,6 +24,7 @@ export default defineCachedEventHandler(
       // Champs personne à récupérer (inclut current_appointment M2O comme fallback)
       const personFields = [
         'id',
+        'status',
         'full_name',
         'slug',
         'sexe',
@@ -40,6 +41,7 @@ export default defineCachedEventHandler(
         'linkedin',
         'website',
         'current_appointment.id',
+        'current_appointment.status',
         'current_appointment.position_title',
         'current_appointment.position_category',
         'current_appointment.position_category_slug',
@@ -66,7 +68,7 @@ export default defineCachedEventHandler(
       }
 
       // Vérifier que la personne est publiée (readItem ne filtre pas par status)
-      if (personData && personData.status === 'archived') {
+      if (personData && personData.status !== 'published') {
         personData = null;
       }
 
@@ -162,7 +164,8 @@ export default defineCachedEventHandler(
         appointments.find((a) => a.is_current) || null;
 
       // Fallback vers le M2O si aucun is_current trouvé dans la liste
-      if (!currentAppointment && personData.current_appointment) {
+      // (uniquement s'il est publié : une nomination draft est invisible partout)
+      if (!currentAppointment && personData.current_appointment?.status === 'published') {
         const ca = personData.current_appointment;
         const existingInList = appointments.find((a) => a.id === ca.id);
         if (existingInList) {
@@ -229,7 +232,7 @@ export default defineCachedEventHandler(
   },
   {
     maxAge: process.env.NODE_ENV === 'production' ? 5 * 60 : 0, // 5 min en prod (à augmenter après stabilisation)
-    name: 'public-person-detail',
+    name: 'public-person-detail-v2',
     getKey: (event) => `public-person-${getRouterParam(event, 'id')}`,
   },
 );

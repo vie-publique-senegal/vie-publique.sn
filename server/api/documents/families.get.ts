@@ -41,7 +41,7 @@ export default defineCachedEventHandler(
     }
   },
   {
-    maxAge: 60 * 5,
+    maxAge: getCacheMaxAge(CacheDuration.LONG, 0), // 24 h : référentiel quasi statique (préco P5, docs/guidelines/cache-strategy.md)
     name: 'documents-families',
     getKey: () => 'documents-families',
   },

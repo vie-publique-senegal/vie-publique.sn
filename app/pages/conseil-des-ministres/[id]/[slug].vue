@@ -296,7 +296,9 @@ const formatDateISO = (date: string) => {
             <CmsImage
               :src="article.cover_image"
               :alt="article.title"
-              :quality="100"
+              :width="800"
+              loading="eager"
+              sizes="(max-width: 768px) 100vw, 800px"
               class="aspect-video w-full object-cover"
               itemprop="contentUrl url"
             />
@@ -352,7 +354,7 @@ const formatDateISO = (date: string) => {
               <div
                 itemprop="articleBody"
                 class="prose prose-sm max-w-none dark:prose-invert prose-headings:font-semibold prose-h2:mt-8 prose-h2:text-xl prose-p:leading-relaxed prose-a:text-emerald-600 dark:prose-a:text-emerald-400"
-                v-html="article.content"
+                v-html="rewriteCmsContent(article.content)"
               ></div>
             </div>
 

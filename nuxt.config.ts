@@ -27,6 +27,10 @@ const securityConfig =
               'https://*.vie-publique.sn',
               'https://www.google-analytics.com',
               'https://*.google-analytics.com',
+              // GA4 envoie aussi vers ses endpoints régionaux + doubleclick (Google Signals)
+              'https://analytics.google.com',
+              'https://*.analytics.google.com',
+              'https://stats.g.doubleclick.net',
               'https://www.google.com',
               'https://fonts.googleapis.com',
               'https://*.googleapis.com',
@@ -44,6 +48,12 @@ const securityConfig =
               // Microsoft Clarity
               'https://www.clarity.ms',
               'https://*.clarity.ms',
+              // Sentry (monitoring d'erreurs) — hôtes d'ingestion selon la région du projet
+              'https://*.ingest.sentry.io',
+              'https://*.ingest.us.sentry.io',
+              'https://*.ingest.de.sentry.io',
+              // Cloudflare Web Analytics (beacon injecté par le proxy Cloudflare)
+              'https://cloudflareinsights.com',
             ],
             'script-src': [
               "'self'",
@@ -59,6 +69,8 @@ const securityConfig =
               'https://www.gstatic.com',
               // Microsoft Clarity
               'https://www.clarity.ms',
+              // Cloudflare Web Analytics (beacon injecté par le proxy Cloudflare)
+              'https://static.cloudflareinsights.com',
             ],
             'script-src-attr': ["'unsafe-inline'", "'unsafe-hashes'"],
             'style-src': [
@@ -180,6 +192,27 @@ export default defineNuxtConfig({
 
   // Configuration hybride : routeRules + fallback API
   routeRules: {
+    // Service worker : JAMAIS de cache long (revalidation à chaque visite, l'ETag
+    // rend ça gratuit). Sans ça, l'origine envoyait max-age=14400 et Cloudflare
+    // cachait sw.js 4 h au edge → les mises à jour du SW (et donc du precache PWA)
+    // mettaient jusqu'à 4 h à atteindre les utilisateurs après un déploiement.
+    '/sw.js': { headers: { 'cache-control': 'no-cache' } },
+    // --- SWR HTML (PERF-7, docs/audits/audit-web-vitals-2026-07.md) ---
+    // Le HTML rendu est caché côté Nitro et resservi instantanément ; à expiration,
+    // le visiteur reçoit la copie "stale" pendant que Nitro re-rend en arrière-plan.
+    // TTL courts sur les pages chaudes : fraîcheur quasi inchangée (les API Directus
+    // derrière sont déjà cachées ~1 h), TTFB sans rendu SSR ni latence Directus.
+    // ⚠️ Vérifié le 16/07/2026 : le cache SWR incluant la query, la pagination
+    // ?page=N reste correcte (IDs disjoints page 1 vs 2 — cf. CLAUDE.md § listes).
+    '/': { swr: 120 },
+    '/actualites': { swr: 120 },
+    '/actualites/**': { swr: 300 },
+    '/dossiers': { swr: 300 },
+    '/dossiers/**': { swr: 600 },
+    '/documents': { swr: 600 },
+    '/documents/**': { swr: 600 },
+    '/conseil-des-ministres': { swr: 300 },
+    '/conseil-des-ministres/**': { swr: 600 },
     // Essayer routeRules en premier
     '/cms/**': {
       proxy: `${process.env.CMS_API_URL || 'https://cms.vie-publique.sn'}/assets/**`,
@@ -372,17 +405,26 @@ export default defineNuxtConfig({
     '@nuxt/ui',
     'nuxt-gtag',
     '@nuxtjs/seo',
-    // FIXME? Temporairement désactivé - incompatible avec Nuxt 4
-    // '@nuxtjs/web-vitals',
+    // RUM : assuré par Cloudflare Web Analytics (beacon injecté par le proxy,
+    // dashboard zone → Analytics → Web analytics). @nuxtjs/web-vitals désinstallé
+    // (mort : dernière release 04/2024, jamais compatible Nuxt 4) — PERF-11.
     '@nuxt/image',
     '@vueuse/motion/nuxt',
     '@nuxt/eslint',
     '@pinia/nuxt',
     '@nuxtjs/leaflet',
+    // PERF-8 : @nuxtjs/leaflet pousse leaflet.css dans le CSS GLOBAL (module.mjs:38,
+    // sans option pour désactiver) → ce mini-module inline, exécuté juste après,
+    // retire cette injection. Le CSS est importé à la place dans les composants
+    // Election/ElectionMap* qui rendent réellement une carte Leaflet.
+    (_inlineOptions: unknown, nuxt: { options: { css: string[] } }) => {
+      nuxt.options.css = nuxt.options.css.filter((c) => !String(c).includes('leaflet'));
+    },
     '@vite-pwa/nuxt',
     '@vueuse/nuxt',
     '@nuxtjs/mdc',
     'nuxt-security',
+    '@sentry/nuxt/module',
   ],
   devtools: { enabled: true },
   runtimeConfig: {
@@ -430,6 +472,10 @@ export default defineNuxtConfig({
       firebaseAppId: process.env.NUXT_PUBLIC_FIREBASE_APP_ID,
       firebaseMeasurementId: process.env.NUXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
       firebaseVapidKey: process.env.NUXT_PUBLIC_FIREBASE_VAPID_KEY,
+      // Sentry (monitoring d'erreurs) — DSN vide = désactivé (voir docs/infra/sentry.md)
+      sentry: {
+        dsn: process.env.NUXT_PUBLIC_SENTRY_DSN || '',
+      },
       // Feature Flags
       appEnv: process.env.NUXT_PUBLIC_APP_ENV || 'production',
       featureFlagsEnabled: process.env.NUXT_FEATURE_FLAGS_ENABLED !== 'false',
@@ -440,7 +486,12 @@ export default defineNuxtConfig({
       nodeEnv: process.env.NODE_ENV || 'development',
     },
   },
-  css: ['~/assets/css/app.css', 'maplibre-gl/dist/maplibre-gl.css'],
+  // PERF-8 : PAS de CSS cartographique ici — le tableau `css:` est GLOBAL (bundlé
+  // dans entry.css, render-blocking sur 100 % des pages). maplibre-gl.css (~70 Ko)
+  // est importé dans app/components/map/SenegalMap.vue et leaflet.css dans les
+  // composants Election/ElectionMap* : Vite les rattache au chunk du composant,
+  // chargé uniquement sur les pages cartes (CSS garanti avant le rendu du composant).
+  css: ['~/assets/css/app.css'],
   colorMode: {
     preference: 'dark', // default value of $nuxt.colorMode.preference
   },
@@ -456,7 +507,16 @@ export default defineNuxtConfig({
       viewport: 'width=device-width, initial-scale=1',
       // Note: @vite-pwa/nuxt injecte automatiquement <link rel="manifest">
       // Ne PAS l'ajouter manuellement ici (doublon sinon)
-      link: [],
+      link: [
+        // Autodiscovery du flux RSS global (les flux par rubrique sont déclarés
+        // par leurs pages de listing respectives) — voir docs/modules/rss/flux-rss.md
+        {
+          rel: 'alternate',
+          type: 'application/rss+xml',
+          title: 'Vie-Publique.sn — Dernières publications',
+          href: '/rss.xml',
+        },
+      ],
       meta: [
         {
           name: 'keywords',
@@ -541,6 +601,18 @@ export default defineNuxtConfig({
     },
   },
   security: securityConfig as any,
+
+  // Sentry (monitoring d'erreurs) — voir docs/infra/sentry.md
+  sentry: {
+    // Injecte l'init serveur en tête du bundle Nitro : pas besoin de changer
+    // la commande de démarrage (node .output/server/index.mjs) ni le Dockerfile.
+    autoInjectServerSentry: 'top-level-import',
+    // Pas d'upload de source maps pour l'instant (nécessiterait SENTRY_AUTH_TOKEN au build)
+    sourceMapsUploadOptions: {
+      enabled: false,
+    },
+  },
+
   site: {
     url: process.env.NUXT_PUBLIC_SITE_URL || 'https://www.vie-publique.sn',
     name: 'Vie Publique Sénégal',
@@ -559,6 +631,17 @@ export default defineNuxtConfig({
 
   // Robots.txt
   robots: {
+    groups: [
+      // Groupe * : reçoit aussi les allow/disallow top-level (fusion faite par le module).
+      // Content-Signal (contentsignals.org) : search + ai-input autorisés, ai-train refusé.
+      {
+        userAgent: '*',
+        contentSignal: 'search=yes,ai-input=yes,ai-train=no,use=reference',
+      },
+      // Crawlers explicitement bloqués (scraping massif sans opt-out exploitable)
+      { userAgent: 'Bytespider', disallow: '/' },
+      { userAgent: 'CCBot', disallow: '/' },
+    ],
     allow: '/',
     disallow: [
       '/budget-senegal/old',
@@ -590,11 +673,25 @@ export default defineNuxtConfig({
       name: 'Vie Publique Sénégal',
       url: 'https://www.vie-publique.sn',
       logo: 'https://www.vie-publique.sn/social-image.png',
+      // Entité Wikidata + profils officiels (voir docs/modules/a-propos/wikipedia-wikidata.md)
+      sameAs: [
+        'https://www.wikidata.org/wiki/Q140571616',
+        'https://x.com/ViePubliqueSN',
+        'https://www.facebook.com/ViePubliqueSenegal',
+        'https://www.instagram.com/viepubliquesn/',
+        'https://www.linkedin.com/company/vie-publique-sn/',
+        'https://github.com/Code-for-Senegal/vie-publique.sn',
+        'https://play.google.com/store/apps/details?id=sn.viepublique.app',
+        'https://apps.apple.com/app/id6757257552',
+      ],
     },
   },
   gtag: {
     enabled: !!process.env.GTAG_ID,
     id: process.env.GTAG_ID,
+    // Init différée à l'idle/1ʳᵉ interaction (app/plugins/analytics-idle.client.ts) :
+    // gtag.js coûtait ~330 ms de main thread mobile pendant l'hydratation (INP).
+    initMode: 'manual',
   },
   image: {
     // Provider pour les images locales et du proxy
@@ -645,17 +742,7 @@ export default defineNuxtConfig({
           src: 'pwa-512x512.png',
           sizes: '512x512',
           type: 'image/png',
-        },
-        {
-          src: 'pwa-512x512.png',
-          sizes: '512x512',
-          type: 'image/png',
           purpose: 'any',
-        },
-        {
-          src: 'pwa-1024x1024.png',
-          sizes: '1024x1024',
-          type: 'image/png',
         },
         {
           src: 'pwa-1024x1024.png',
@@ -768,21 +855,22 @@ export default defineNuxtConfig({
         client_mode: ['navigate-existing', 'auto'],
       },
     },
-    // Note: avec strategies: 'injectManifest', les options workbox
-    // (clientsClaim, skipWaiting, navigateFallback) sont IGNORÉES.
-    // Le SW custom (sw.ts) gère tout directement.
-    workbox: {
-      globPatterns: ['**/*.{js,css,html,png,svg,ico}'],
-      maximumFileSizeToCacheInBytes: 10 * 1024 * 1024,
-      cleanupOutdatedCaches: true,
-    },
     injectManifest: {
-      // Precache UNIQUEMENT les assets essentiels (icônes, favicon).
-      // Les JS/CSS hashés (/_nuxt/*) sont gérés par CacheFirst en runtime :
-      // cache miss → réseau → cache. Pas besoin de les precacher.
-      // Precacher tout JS/CSS ralentit l'installation du SW et si un seul
-      // fichier échoue → le SW ne s'installe pas → l'ancien reste actif.
-      globPatterns: ['**/*.{png,svg,ico,webp}'],
+      // Precache UNIQUEMENT les assets essentiels du shell PWA (~0,5 MB) :
+      // icônes du manifest, favicon, badge de notification. PAS de glob large :
+      // '**/*.{png,svg,ico,webp}' précachait 123 images = 43 MB re-téléchargés
+      // à chaque mise à jour du SW (PERF-1). Les autres images ET les JS/CSS
+      // hashés (/_nuxt/*) sont couverts en runtime par les routes CacheFirst
+      // de app/service-worker/sw.ts. Precacher trop ralentit l'installation du
+      // SW et un seul fichier en échec bloque son installation.
+      globPatterns: [
+        'pwa-192x192.png',
+        'pwa-256x256.png',
+        'pwa-512x512.png',
+        'pwa-1024x1024.png',
+        'favicon.ico',
+        'badge-72x72.png',
+      ],
       maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
     },
     client: {

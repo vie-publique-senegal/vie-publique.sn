@@ -168,18 +168,28 @@ useHead({
     { name: 'geo.region', content: 'SN' },
     { name: 'geo.placename', content: 'Dakar' },
   ],
-  script: [
-    {
-      key: 'ld-events',
-      type: 'application/ld+json',
-      innerHTML: computed(() => JSON.stringify(eventSchemas.value)),
-    },
-    {
-      key: 'ld-videos',
-      type: 'application/ld+json',
-      innerHTML: computed(() => JSON.stringify(videoSchemas.value)),
-    },
-  ],
+  // Ne pas émettre de nœud JSON-LD vide (`[]`) quand il n'y a pas de séance :
+  // certains parseurs tiers (extensions mobiles) plantent sur un tableau vide.
+  script: computed(() => [
+    ...(eventSchemas.value.length
+      ? [
+          {
+            key: 'ld-events',
+            type: 'application/ld+json',
+            innerHTML: JSON.stringify(eventSchemas.value),
+          },
+        ]
+      : []),
+    ...(videoSchemas.value.length
+      ? [
+          {
+            key: 'ld-videos',
+            type: 'application/ld+json',
+            innerHTML: JSON.stringify(videoSchemas.value),
+          },
+        ]
+      : []),
+  ]),
 });
 </script>
 

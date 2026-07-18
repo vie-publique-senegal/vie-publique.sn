@@ -6,7 +6,13 @@ const { decree, entity, children, breadcrumb, pending, error } = useEtatOrganisa
 
 watchEffect(() => {
   if (error.value) {
-    throw createError({ statusCode: 404, statusMessage: 'Entité publique introuvable' });
+    // Ne traduire en 404 que si l'API a vraiment répondu 404 : une erreur
+    // transitoire (réseau mobile, CMS indisponible) sur une entité existante
+    // ne doit pas être présentée comme « introuvable » (vu via Sentry).
+    if (error.value.statusCode === 404) {
+      throw createError({ statusCode: 404, statusMessage: 'Entité publique introuvable' });
+    }
+    throw createError({ statusCode: 503, statusMessage: 'Erreur de chargement de la page' });
   }
 });
 
@@ -399,7 +405,7 @@ useHead({
                     <div
                       class="prose-a:text-primary-600 dark:prose-a:text-primary-400 prose prose-sm max-w-none overflow-hidden transition-all prose-headings:text-gray-900 prose-p:text-gray-600 prose-strong:text-gray-900 prose-li:text-gray-600 prose-img:rounded-xl dark:prose-headings:text-white dark:prose-p:text-gray-300 dark:prose-strong:text-white dark:prose-li:text-gray-300"
                       :class="isBodyLong && !bodyExpanded ? 'max-h-64' : ''"
-                      v-html="entity.body"
+                      v-html="rewriteCmsContent(entity.body)"
                     />
                     <div
                       v-if="isBodyLong && !bodyExpanded"

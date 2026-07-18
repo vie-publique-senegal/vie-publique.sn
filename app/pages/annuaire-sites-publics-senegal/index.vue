@@ -1,46 +1,46 @@
 <script setup lang="ts">
 /* SEO */
-const seoTitle = "Annuaire sites web du Sénégal";
-const seoDescription = "Annuaire de sites internets publics du Sénégal";
-const seoImgPath = "https://www.vie-publique.sn/images/share-linkedin.png";
-const seoPageUrl = "https://www.vie-publique.sn/annuaire-sites-publics-senegal";
+const seoTitle = 'Annuaire sites web du Sénégal';
+const seoDescription = 'Annuaire de sites internets publics du Sénégal';
+const seoImgPath = 'https://www.vie-publique.sn/images/share-linkedin.png';
+const seoPageUrl = 'https://www.vie-publique.sn/annuaire-sites-publics-senegal';
 useHead({
   title: seoTitle,
   meta: [
     {
-      name: "description",
+      name: 'description',
       content: seoDescription,
     },
     // Twitter Card Meta Tags
     {
-      name: "twitter:title",
+      name: 'twitter:title',
       content: seoTitle,
     },
     {
-      name: "twitter:description",
+      name: 'twitter:description',
       content: seoDescription,
     },
-    { name: "twitter:card", content: "summary_large_image" },
-    { name: "twitter:image", content: seoImgPath },
+    { name: 'twitter:card', content: 'summary_large_image' },
+    { name: 'twitter:image', content: seoImgPath },
     // Open Graph Meta Tags
     {
-      property: "og:title",
+      property: 'og:title',
       content: seoTitle,
     },
     {
-      property: "og:description",
+      property: 'og:description',
       content: seoDescription,
     },
-    { property: "og:image", content: seoImgPath },
-    { property: "og:url", content: seoPageUrl },
-    { property: "og:type", content: "website" },
+    { property: 'og:image', content: seoImgPath },
+    { property: 'og:url', content: seoPageUrl },
+    { property: 'og:type', content: 'website' },
   ],
 });
 
 /* Get Datas */
 
 const nuxtApp = useNuxtApp();
-const { data, error } = await useFetch("/api/websites", {
+const { data, error } = await useFetch('/api/websites', {
   watch: false,
 
   transform(input) {
@@ -67,18 +67,18 @@ const { data, error } = await useFetch("/api/websites", {
 });
 
 if (error.value) {
-  console.error("Failed to fetch websites data:", error.value);
+  console.error('Failed to fetch websites data:', error.value);
 }
 
 /* Filters */
 
-const searchQuery = ref("");
-const selectedType = ref("");
+const searchQuery = ref('');
+const selectedType = ref('');
 
 const filteredSites = computed(() => {
   return data.value.sites.filter(
     (site: any) =>
-      (site.nom.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
+      (site.name.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
         site.url.toLowerCase().includes(searchQuery.value.toLowerCase())) &&
       (selectedType.value ? site.type === selectedType.value : true),
   );
@@ -95,10 +95,7 @@ const page = ref(1);
 const pageCount = 20;
 
 const rowsFilteredSites = computed(() => {
-  return filteredSites.value.slice(
-    (page.value - 1) * pageCount,
-    page.value * pageCount,
-  );
+  return filteredSites.value.slice((page.value - 1) * pageCount, page.value * pageCount);
 });
 
 // Réinitialiser la page lors du changement de type
@@ -108,19 +105,14 @@ watch(selectedType, () => {
 </script>
 
 <template>
-  <div class="min-h-screen flex flex-col items-center px-4 pb-16">
-    <AppBreadcrumb
-      :items="[
-        { label: 'Annuaire des sites publics' },
-      ]"
-    />
+  <div class="flex min-h-screen flex-col items-center px-4 pb-16">
+    <AppBreadcrumb :items="[{ label: 'Annuaire des sites publics' }]" />
 
-    <div class="prose prose-sm sm:prose mx-auto my-2">
+    <div class="prose prose-sm mx-auto my-2 sm:prose">
       <h1 class="text-center dark:text-white">Annuaire sites internets</h1>
     </div>
     <p class="mb-4 text-center text-sm text-gray-500">
-      Liste non exhaustive de {{ data.sites.length }} site web publics du
-      Sénégal
+      Liste non exhaustive de {{ data.sites.length }} site web publics du Sénégal
     </p>
 
     <div class="w-full max-w-4xl">
@@ -155,7 +147,7 @@ watch(selectedType, () => {
             {{ site.url }}
           </ULink>
           <div>
-            <p class="text-sm">{{ site.nom }}</p>
+            <p class="text-sm">{{ site.name }}</p>
             <span
               class="siteweb-type my-1 inline-block bg-gray-200 px-2 py-1 text-xs font-medium text-gray-800"
             >
@@ -165,9 +157,7 @@ watch(selectedType, () => {
         </UCard>
       </div>
 
-      <div
-        class="flex justify-end border-t border-gray-200 px-3 py-3.5 dark:border-gray-700"
-      >
+      <div class="flex justify-end border-t border-gray-200 px-3 py-3.5 dark:border-gray-700">
         <UPagination
           v-model="page"
           size="md"

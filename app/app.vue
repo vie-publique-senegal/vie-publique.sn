@@ -75,9 +75,11 @@ onMounted(() => {
 
   // Handle chunk loading errors (404 after deployment) — force reload avec garde
   window.addEventListener('error', (event) => {
-    if (event.message?.includes('Loading chunk') ||
-        event.message?.includes('Failed to fetch dynamically imported module') ||
-        event.message?.includes('Importing a module script failed')) {
+    if (
+      event.message?.includes('Loading chunk') ||
+      event.message?.includes('Failed to fetch dynamically imported module') ||
+      event.message?.includes('Importing a module script failed')
+    ) {
       console.warn('[PWA] Chunk loading failed');
       if (canAutoReload()) {
         window.location.reload();
@@ -88,9 +90,11 @@ onMounted(() => {
   // Also catch unhandled promise rejections for dynamic imports
   window.addEventListener('unhandledrejection', (event) => {
     const reason = event.reason?.message || String(event.reason);
-    if (reason?.includes('Failed to fetch dynamically imported module') ||
-        reason?.includes('Importing a module script failed') ||
-        reason?.includes('Loading chunk')) {
+    if (
+      reason?.includes('Failed to fetch dynamically imported module') ||
+      reason?.includes('Importing a module script failed') ||
+      reason?.includes('Loading chunk')
+    ) {
       console.warn('[PWA] Dynamic import failed');
       event.preventDefault();
       if (canAutoReload()) {
@@ -146,17 +150,23 @@ onMounted(() => {
 
     <Toaster position="bottom-center" />
   </div>
-  <UContainer v-if="!isFullscreenPage" class="px-0 pb-20 sm:px-10 md:px-14 lg:px-28 lg:pb-0 xl:px-40">
+  <UContainer
+    v-if="!isFullscreenPage"
+    class="px-0 pb-20 sm:px-10 md:px-14 lg:px-28 lg:pb-0 xl:px-40"
+  >
     <NuxtLayout>
       <NuxtPage />
     </NuxtLayout>
+
+    <!-- Promo app mobile : visible uniquement côté web (masquée dans l'app/PWA) -->
+    <AppMobileAppBanner />
 
     <AppFooter />
 
     <!-- Navigation mobile fixe en bas -->
     <AppBottomNav v-show="!isChatPage && !isFullscreenPage" />
   </UContainer>
-  <div v-else class="w-full" style="height: calc(100vh - 64px); height: calc(100dvh - 64px);">
+  <div v-else class="w-full" style="height: calc(100vh - 64px); height: calc(100dvh - 64px)">
     <NuxtLayout>
       <NuxtPage />
     </NuxtLayout>

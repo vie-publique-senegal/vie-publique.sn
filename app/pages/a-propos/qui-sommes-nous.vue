@@ -67,10 +67,14 @@ const organizationSchema = {
     contactType: 'Customer Service',
   },
   sameAs: [
-    'https://twitter.com/ViePubliqueSN',
+    'https://www.wikidata.org/wiki/Q140571616',
+    'https://x.com/ViePubliqueSN',
     'https://www.facebook.com/ViePubliqueSenegal',
-    'https://www.linkedin.com/company/vie-publique-sn',
+    'https://www.instagram.com/viepubliquesn/',
+    'https://www.linkedin.com/company/vie-publique-sn/',
     'https://github.com/Code-for-Senegal/vie-publique.sn',
+    'https://play.google.com/store/apps/details?id=sn.viepublique.app',
+    'https://apps.apple.com/app/id6757257552',
   ],
 };
 

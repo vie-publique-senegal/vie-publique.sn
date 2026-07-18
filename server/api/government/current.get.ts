@@ -41,6 +41,7 @@ export default defineCachedEventHandler(
                   _in: governmentCategories,
                 },
                 is_current: { _eq: true },
+                status: { _eq: 'published' },
               },
             },
             sort: ['current_appointment.position_category', 'full_name'],
@@ -108,6 +109,6 @@ export default defineCachedEventHandler(
   },
   {
     maxAge: process.env.NODE_ENV === 'production' ? 5 * 60 : 0, // 5 min en prod, pas de cache en dev
-    name: 'government-current',
+    name: 'government-current-v2',
   },
 );
