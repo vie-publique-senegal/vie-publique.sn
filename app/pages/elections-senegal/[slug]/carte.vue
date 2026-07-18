@@ -21,8 +21,6 @@ const mapTabs = [
   { label: 'Résumé', icon: 'i-heroicons-chart-bar', slot: 'resume' },
 ];
 
-const mapIsReady = ref(false);
-
 // Panel département (carte unifiée et carte locale legacy)
 const selectedDepartmentData = ref<any>(null);
 const isDepartmentPanelOpen = ref(false);
@@ -38,10 +36,6 @@ const closeDepartmentPanel = () => {
     selectedDepartmentData.value = null;
   }, 300);
 };
-
-watch([selectedMapOption, selectedType, selectedYear], () => {
-  mapIsReady.value = false;
-});
 
 watch([selectedType, selectedYear], () => {
   mapCarteHasNoData.value = false;
@@ -120,22 +114,6 @@ useSeoMeta({
                 </div>
 
                 <div v-if="selectedMapOption === optionMap" class="relative min-h-[600px]">
-                  <div
-                    v-if="!mapIsReady"
-                    class="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3"
-                  >
-                    <div class="relative h-12 w-12">
-                      <div
-                        class="border-primary-100 dark:border-primary-900 absolute inset-0 rounded-full border-4"
-                      ></div>
-                      <div
-                        class="border-primary-600 absolute inset-0 animate-spin rounded-full border-4 border-t-transparent"
-                      ></div>
-                    </div>
-                    <p class="animate-pulse text-sm font-medium text-gray-400">
-                      Chargement de la carte...
-                    </p>
-                  </div>
                   <!-- Les élections locales gardent la carte legacy (bureaux rattachés au département,
                        pas de choroplèthe communale en mode bureaux) -->
                   <ElectionMapComponent4
@@ -143,7 +121,6 @@ useSeoMeta({
                     :election-id="currentElection?.id"
                     :is-local-election="true"
                     @map-error="mapCarteHasNoData = true"
-                    @map-ready="mapIsReady = true"
                     @department-selected="handleDepartmentSelected"
                   />
                   <ElectionUnifiedMap
@@ -152,7 +129,6 @@ useSeoMeta({
                     :election-id="currentElection?.id"
                     height="600px"
                     @map-error="mapCarteHasNoData = true"
-                    @map-ready="mapIsReady = true"
                     @department-selected="handleDepartmentSelected"
                   />
                 </div>

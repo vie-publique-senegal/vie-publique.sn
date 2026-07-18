@@ -43,13 +43,14 @@ const officialDocuments = computed(() => (selectedRevision.value ? officialDocum
 
 <template>
   <div class="mb-6">
-    <div v-if="revisions.length > 1" class="mb-3 flex justify-end">
+    <!-- Mobile : sélecteur au-dessus du box (position conservée) -->
+    <div v-if="revisions.length > 1" class="mb-3 flex justify-end md:hidden">
       <USelect
         :model-value="currentRevisionKey"
         :options="revisionOptions"
         :loading="loadingRevisions"
         size="md"
-        class="w-full md:w-56"
+        class="w-full"
         placeholder="Révision"
         @update:model-value="setRevision"
       />
@@ -59,14 +60,28 @@ const officialDocuments = computed(() => (selectedRevision.value ? officialDocum
       v-if="selectedRevision"
       class="flex flex-col gap-4 rounded-xl border border-gray-200 bg-gray-50/60 p-4 dark:border-gray-800 dark:bg-gray-900/60"
     >
-      <div class="flex flex-wrap items-center gap-3">
-        <UIcon name="i-heroicons-map" class="w-5 h-5 shrink-0 text-primary-600" />
-        <span class="font-bold dark:text-white">
-          Carte électorale {{ selectedRevision.year }}
-        </span>
-        <span v-if="revisionTotals" class="text-sm text-gray-500 dark:text-gray-400">
-          {{ revisionTotals }}
-        </span>
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div class="flex flex-wrap items-center gap-3">
+          <UIcon name="i-heroicons-map" class="w-5 h-5 shrink-0 text-primary-600" />
+          <span class="font-bold dark:text-white">
+            Carte électorale {{ selectedRevision.year }}
+          </span>
+          <span v-if="revisionTotals" class="text-sm text-gray-500 dark:text-gray-400">
+            {{ revisionTotals }}
+          </span>
+        </div>
+
+        <!-- Desktop : sélecteur intégré au box d'infos/stats -->
+        <USelect
+          v-if="revisions.length > 1"
+          :model-value="currentRevisionKey"
+          :options="revisionOptions"
+          :loading="loadingRevisions"
+          size="md"
+          class="hidden w-56 md:block"
+          placeholder="Révision"
+          @update:model-value="setRevision"
+        />
       </div>
 
       <!-- Scrutins rattachés (liste extensible, lien vers le tableau de bord de chacun) -->

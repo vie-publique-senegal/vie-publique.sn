@@ -77,11 +77,9 @@ const listViewTypes = [
 
 const mapDataAvailable = ref(true);
 const listDataAvailable = ref(true);
-const mapIsReady = ref(false);
 
 const handleMapReady = () => {
   mapDataAvailable.value = true;
-  mapIsReady.value = true;
 };
 const handleMapError = () => {
   mapDataAvailable.value = false;
@@ -92,10 +90,6 @@ const handleListEmpty = () => {
 const handleListReady = () => {
   listDataAvailable.value = true;
 };
-
-watch(selectedOptions, (newVal) => {
-  if (newVal === optionMap) mapIsReady.value = false;
-});
 
 // Panel département
 const selectedDepartmentData = ref<Record<string, unknown> | null>(null);
@@ -189,22 +183,6 @@ const representativeElectionId = computed(() => {
               </p>
             </div>
             <div v-else class="relative min-h-[600px]">
-              <div
-                v-if="!mapIsReady"
-                class="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3"
-              >
-                <div class="relative h-12 w-12">
-                  <div
-                    class="border-primary-100 dark:border-primary-900 absolute inset-0 rounded-full border-4"
-                  ></div>
-                  <div
-                    class="border-primary-600 absolute inset-0 animate-spin rounded-full border-4 border-t-transparent"
-                  ></div>
-                </div>
-                <p class="animate-pulse text-sm font-medium text-gray-400">
-                  Chargement de la carte...
-                </p>
-              </div>
               <ElectionUnifiedMap
                 mode="offices"
                 :electoral-file-id="nationalFileId"

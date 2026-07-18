@@ -76,12 +76,6 @@ watch(
   { immediate: true },
 );
 
-const mapIsReady = ref(false);
-
-watch(resultViewType, (newView) => {
-  if (newView === 'map') mapIsReady.value = false;
-});
-
 watch([selectedType, selectedYear], () => {
   resultCommunesByDept.value = [];
   resultDeptPanelOpen.value = false;
@@ -89,7 +83,6 @@ watch([selectedType, selectedYear], () => {
   rankingPanelOpen.value = false;
   rankingPanelConstituency.value = null;
   mapResultHasNoData.value = false;
-  mapIsReady.value = false;
 });
 
 // Quand la carte signale qu'elle n'a pas de données, on masque le toggle
@@ -291,22 +284,6 @@ useSeoMeta({
         </div>
         <ClientOnly v-else>
           <div class="relative min-h-[500px] w-full sm:min-h-[600px]">
-            <div
-              v-if="!mapIsReady"
-              class="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3"
-            >
-              <div class="relative h-12 w-12">
-                <div
-                  class="border-primary-100 dark:border-primary-900 absolute inset-0 rounded-full border-4"
-                ></div>
-                <div
-                  class="border-primary-600 absolute inset-0 animate-spin rounded-full border-4 border-t-transparent"
-                ></div>
-              </div>
-              <p class="animate-pulse text-sm font-medium text-gray-400">
-                Chargement de la carte...
-              </p>
-            </div>
             <ElectionUnifiedMap
               :key="`result-map-${selectedType}-${selectedYear}`"
               :mode="isLocalElection ? 'results-locale' : 'results'"
@@ -315,7 +292,6 @@ useSeoMeta({
               @department-selected="handleResultDeptSelected"
               @open-ranking="handleOpenRanking"
               @map-error="handleMapResultError"
-              @map-ready="mapIsReady = true"
             />
           </div>
           <template #fallback>
