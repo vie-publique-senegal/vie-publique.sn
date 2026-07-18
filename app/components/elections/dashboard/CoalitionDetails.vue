@@ -132,12 +132,12 @@ function openCandidateProfile(candidate: Candidate) {
     />
 
     <!-- Filters & Search (seulement pour législatives et locales) -->
-    <div v-if="!isPresidential" class="flex flex-col gap-4 pb-4 pt-2 border-b border-gray-200 dark:border-gray-800">
-      <div class="max-w-3xl mx-auto w-full">
+    <div v-if="!isPresidential" class="flex flex-col gap-4 pb-4 pt-2 border-b border-gray-200 dark:border-gray-800 sm:flex-row sm:items-center sm:gap-6">
+      <div class="w-full sm:flex-1">
         <ElectionsDashboardFiltersCandidateSearchBar v-model="searchQuery" />
       </div>
 
-      <div v-if="!isLocal" class="max-w-3xl mx-auto w-full overflow-x-auto no-scrollbar">
+      <div v-if="!isLocal" class="w-full overflow-x-auto no-scrollbar sm:flex-1">
         <ElectionsDashboardFiltersCandidateFilterTabs
           v-if="!searchQuery"
           v-model="filterType"
