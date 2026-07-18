@@ -1,6 +1,6 @@
 # PRD - Annuaire des Personnalités Publiques
 
-**Dernière mise à jour** : 2026-05-30
+**Dernière mise à jour** : 2026-07-18
 **Status** : Migration terminée (positions -> public_persons + public_person_appointments)
 
 ---
@@ -236,11 +236,14 @@ Nouveau : `public_person_appointments.predecessor` = FK vers `public_persons` + 
 
 | Endpoint | Méthode | Source | Cache | Usage |
 |----------|---------|--------|-------|-------|
-| `/api/public-persons` | GET | `public_persons` + `current_appointment` | 1h | Liste paginée avec nomination actuelle |
-| `/api/public-persons/:id` | GET | `public_persons` + appointments | 1h | Détail + historique nominations |
-| `/api/public-persons/stats` | GET | `public_person_appointments` | 1h | Stats par catégorie, genre |
+| `/api/public-persons` | GET | `public_persons` + `current_appointment` | 5 min (prod) | Liste paginée avec nomination actuelle |
+| `/api/public-persons/:id` | GET | `public_persons` + appointments | 5 min (prod) | Détail + historique nominations |
+| `/api/public-persons/stats` | GET | `public_person_appointments` | 5 min (prod) | Stats par catégorie, genre |
 | ~~`/api/public-persons/resolve/:id/:slug`~~ | ~~GET~~ | - | - | ~~Supprimé (IDs préservés, pas besoin de résolution)~~ |
-| `/api/government/current` | GET | `public_persons` + `public_person_appointments` | 6h | Gouvernement actuel (migré) |
+| `/api/government/current` | GET | `public_persons` + `public_person_appointments` | 5 min (prod) | Gouvernement actuel (migré) |
+
+> Cache : 5 min en prod, 0 en dev (`maxAge` conditionné à `NODE_ENV`), « à augmenter après
+> stabilisation » — voir les `defineCachedEventHandler` de chaque endpoint.
 
 ### 4.3 Nouveaux composables
 
@@ -379,8 +382,7 @@ Alimentée par les nouvelles collections, avec refonte complète du design et du
 
 **Data flow** :
 
-- API : `GET /api/government/current` → filtre `public_persons` où `current_appointment.position_category _in ['Premier Ministre', 'Ministre', "Secrétaire d'État"]` et `is_current = true`
-- Le filtre ne vérifie **pas** le `status` de l'appointment (uniquement `public_persons.status = published`)
+- API : `GET /api/government/current` → filtre `public_persons` où `current_appointment.position_category _in ['Premier Ministre', 'Ministre', "Secrétaire d'État"]`, `is_current = true` et `status = published` (voir §9.1)
 - Le champ M2O `current_appointment` sur `public_persons` doit être renseigné pour que la personne apparaisse
 - PM : `position_category = "Premier Ministre"` → card hero photo-centric
 - Ministres : `position_category = "Ministre"` → grille portrait cards
@@ -673,9 +675,29 @@ Nomination   ←→ Document source (décret)
 
 ## 9. Points d'attention CMS
 
-### 9.1 Cohérence des statuts d'appointments
+### 9.1 Cohérence des statuts d'appointments : « draft invisible partout »
 
-L'API `government/current` ne filtre **pas** sur le `status` de l'appointment (uniquement sur `public_persons.status = published`). En revanche, l'API `stats` et la page `/personnalites-senegal` filtrent sur `public_person_appointments.status = published`. Les appointments doivent être publiés pour apparaître de manière cohérente sur toutes les pages.
+**Règle (appliquée 2026-07-18)** : une nomination en statut `draft` (ou `archived`) est invisible
+sur **toutes** les vues. Tous les endpoints filtrent `public_person_appointments.status = published` :
+
+- **liste** `/api/public-persons` : le filtre de base exige `current_appointment.status = published`
+  → une personne dont la nomination pointée par le M2O est draft **disparaît de l'annuaire**
+  (même si elle a d'anciennes nominations publiées), et réapparaît à la publication ;
+- **stats** `/api/public-persons/stats` : même filtre de base que la liste (pastilles/total alignés) ;
+- **détail** `/api/public-persons/[id]` : l'historique filtre `status = published`, le fallback M2O
+  ignore une nomination non publiée, et une **personne** non publiée renvoie 404 ;
+- **gouvernement** `/api/government/current` et **llms.txt** : `status = published` sur la nomination.
+
+**⚠️ Piège éditorial constaté (2026-07-17, cas réel)** : publier une nouvelle nomination en
+oubliant de passer son statut à `published` — le M2O `current_appointment` avait été repointé
+dessus, la nomination draft s'affichait dans l'annuaire (avant le fix) mais pas en fiche détail
+(incohérence entre les deux pages). Depuis le fix : la personne disparaît simplement de l'annuaire
+tant que la nomination n'est pas publiée. **Checklist nouvelle nomination : (1) créer la
+nomination et la passer `published`, (2) repointer `current_appointment`, (3) clôturer l'ancienne
+nomination (`is_current = false` + `end_date`, voir §9.2).**
+
+Avant ce fix, l'API `government/current` ne filtrait pas le `status` de l'appointment ; c'est
+désormais homogène partout.
 
 ### 9.2 Champ M2O `current_appointment` = « dernière nomination connue » (PAS « poste en cours »)
 
