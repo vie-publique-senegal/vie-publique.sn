@@ -2,11 +2,13 @@
 
 > **Specs de référence** : [Document de spécifications - Dashboard Électoral](https://docs.google.com/document/d/1_O5dHPXORhyltH0f-yIhU-319FdjxhlsOVDsyIEHYok/edit?tab=t.0#heading=h.s087gd8gcxn2)
 >
-> **Dernière mise à jour** : 2026-07-05
+> **Dernière mise à jour** : 2026-07-17
 
 Ce document décrit le fonctionnement du dashboard électoral de Vie-Publique.sn, ses règles métier et sa gestion des déploiements. Il complète :
 
 - [elections-model.md](./elections-model.md) - modèle de données CMS (collections, champs, relations)
+- [elections-geographie.md](./elections-geographie.md) - fichier électoral, bureaux de vote, circonscriptions, résultats et cartes
+- [elections-geo-resolution.md](./elections-geo-resolution.md) - résolution du référentiel géographique générique (`geo_regions`/`geo_departments`/`geo_municipalities`)
 - [elections-insertion.md](./elections-insertion.md) - procédure d'insertion des données par type d'élection
 - [elections-pages-architecture.md](./elections-pages-architecture.md) - structure des pages et URLs
 - [pvs-upload-deploiement.md](./pvs-upload-deploiement.md) - module d'upload des PVs
@@ -21,10 +23,11 @@ Le module électoral couvre :
 | Espace | URL | Rôle |
 |--------|-----|------|
 | Landing | `/elections-senegal` | Élection en vedette + accès rapide (guide, législation, carte) + actualités |
+| Historique des scrutins | `/elections-senegal/scrutins` | Liste paginée de toutes les élections publiées, lien vers leur tableau de bord |
 | Dashboard élection | `/elections-senegal/[slug]/...` | Tableau de bord d'UNE élection, organisé en onglets |
-| Guide électoral | `/elections-senegal/guide-electoral` | Vidéos tutoriels |
+| Guide électoral | `/elections-senegal/guide-electoral` | Vidéos tutoriels, filtrables par type de scrutin et langue |
 | Législation | `/elections-senegal/legislation` | Documents électoraux filtrables |
-| Carte électorale | `/elections-senegal/carte-electorale` | Lieux et bureaux de vote (national + diaspora) |
+| Carte électorale | `/elections-senegal/carte-electorale` | **Redirige (301)** vers `/elections-senegal/carte-electorale/nationale` (query propagée) ; le contenu vit dans les sous-pages `nationale`/`diaspora`/`resume` |
 
 Chaque élection est identifiée par un **slug CMS** (ex. `legislatives-2024`) et par le couple **type + année** (`legislative` / `presidential` / `locale` + `year`).
 
@@ -32,7 +35,7 @@ Chaque élection est identifiée par un **slug CMS** (ex. `legislatives-2024`) e
 
 | Onglet | URL | Contenu |
 |--------|-----|---------|
-| Candidats | `/[slug]/candidats` | Listes, coalitions et candidats (+ fiche candidat `/candidats/[candidateSlug]`) |
+| Candidats | `/[slug]/candidats` | Listes, coalitions et candidats + routes dédiées : fiche candidat `/candidats/[candidateSlug]`, fiche coalition `/candidats/coalition/[coalitionSlug]`, fiche circonscription `/candidats/circonscription/[constituencySlug]` (et son croisement `.../coalition/[coalitionSlug]`) — chaque page résout son id depuis le slug, plus de query params `?coalition=`/`?constituency=` |
 | Carte | `/[slug]/carte` | Carte des résultats |
 | Résultats | `/[slug]/resultats` | KPIs, classement des coalitions, second tour |
 | PVs | `/[slug]/pvs` | Procès-verbaux (si activé) |
@@ -60,7 +63,9 @@ Caractéristiques :
 
 ### 2.2 État partagé
 
-Le composable `useElectoralDashboard()` centralise l'état via `useState` (partagé entre pages) : `selectedYear`, `selectedType`, `activeTab`, circonscription/coalition sélectionnées, recherche. Sur les pages `[slug]`, l'élection est résolue depuis le slug qui **pilote** `selectedType`/`selectedYear` (sync immédiate, `flush: 'sync'`) ; le composable ne définit pas de valeur par défaut sur ces pages.
+Le composable `useElectoralDashboard()` centralise l'état via `useState` (partagé entre pages) : `selectedYear`, `selectedType`, `activeTab`, `searchQuery`, `legislativeViewType` (vue liste/tête de liste/bulletin des législatives). Sur les pages `[slug]`, l'élection est résolue depuis le slug qui **pilote** `selectedType`/`selectedYear` ; ces états pilotés par l'URL sont initialisés depuis `route.query` dès le SSR (pour éviter tout mismatch d'hydratation au refresh, ex. `?view=head`). Coalition et circonscription **ne sont plus des query params** (`?coalition=`/`?constituency=`) : elles ont leurs propres routes dédiées (voir tableau des onglets ci-dessus), chaque page résolvant son id depuis le slug d'URL.
+
+⚠️ **Nouvelle page statique sous `/elections-senegal`** : toute page qui n'est pas un dashboard par slug d'élection (ex. `scrutins`, `guide-electoral`) doit être ajoutée à `STATIC_ELECTION_PATHS` dans `useElectoralDashboard.ts`, sinon elle est traitée comme un slug d'élection inconnu.
 
 ---
 
@@ -130,7 +135,11 @@ L'onglet PVs n'apparaît que si `pv_upload_active = true` sur l'élection. Le fo
 | `useElectoralDashboard()` | Config, état partagé, élection courante |
 | `useElectoralCoalitions()` | Coalitions (liste ou détail), avec classement et recherche |
 | `useElectoralConstituencies()` | Circonscriptions |
+| `useElectoralCandidateProfile()` | Fiche candidat |
+| `useElectoralDashboardLists()` | Listes électorales |
 | `useElectoralProfessions()` / `useElectoralStatsList()` | Statistiques |
+| `useElectoralRevision()` | Résolution du contexte carte électorale (`?revision=` canonique, `?election=` compat) |
+| `useElectionPvsFilters()` / `useElectionPvsUpload()` | Filtres et upload du module PVs |
 
 ### 4.2 API serveur (`server/api/elections/`)
 
@@ -140,7 +149,11 @@ L'onglet PVs n'apparaît que si `pv_upload_active = true` sur l'élection. Le fo
 | `dashboard/coalitions`, `dashboard/constituencies`, `dashboard/lists` | Données du dashboard |
 | `dashboard/stats*` | KPIs et statistiques |
 | `dashboard/candidates/[slug]` | Fiche candidat |
-| `map/*`, `diaspora/*` | Carte électorale nationale et diaspora |
+| `coalitions/*`, `lists/[coalitionId]`, `candidates/elected` | Fiches coalition/circonscription et élus |
+| `electoral-files` | Révisions publiées (fichiers électoraux national + diaspora) |
+| `map/*`, `diaspora/*`, `participation` | Carte électorale nationale et diaspora, relevés de participation |
+| `/api/carte`, `/api/carte/result` | Agrégats géographiques et résultats (gagnant seul) par circonscription (voir [elections-geographie.md](./elections-geographie.md)) |
+| `results/constituency/[slug]` | Classement complet des coalitions pour une circonscription |
 | `pvs/*`, `pvs-upload/*`, `auth/*` | Module PVs |
 
 ---

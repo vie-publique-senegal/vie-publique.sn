@@ -1,5 +1,7 @@
 # Carte électorale, fichier électoral et résultats - architecture
 
+**Dernière mise à jour** : 2026-07-17
+
 > Comment le site modélise et sert la géographie électorale du Sénégal : le fichier
 > électoral (et sa carte électorale), les bureaux de vote, les circonscriptions,
 > les contours cartographiques et les résultats par circonscription.
@@ -29,8 +31,9 @@ seul » - le détail des voix par coalition et circonscription n'est pas modéli
 | `election_electoral_files` | Une ligne = un fichier électoral (une révision × un scope). Champs : `name`, `scope` (`national`/`diaspora`), `year`, `revision_date`, `document` (M2O → `documents`, l'arrêté officiel consultable), `notes` | Pérenne, partagé entre élections |
 | `elections` | Les scrutins. Deux FK nullables pointent la révision utilisée : `electoral_file_national` et `electoral_file_diaspora` | Par scrutin |
 | `election_polling_stations` | Une ligne = un bureau de vote d'un fichier électoral. FK `electoral_file` + FK `constituency` (département au national, zone à l'étranger). Textes descriptifs conservés : `municipality`, `implantation` (national), `country`, `locality`, `diplomatic_representation` (diaspora) | Par fichier électoral |
-| `election_constituencies` | Référentiel hiérarchique des circonscriptions : régions → départements → communes, plus les 8 zones de la diaspora. Champs clés : `slug` (clé publique de jointure), `code` (pcode officiel), `parent`, `population`, `seats` | Pérenne (change aux redécoupages) |
+| `election_constituencies` | Référentiel hiérarchique des circonscriptions : régions → départements → communes, plus les 8 zones de la diaspora. Champs propres : `slug` (clé publique de jointure), `nationale_type`, `seats`. Identité (nom, code, population, hiérarchie parent/région) déléguée au référentiel générique `geo_regions`/`geo_departments`/`geo_municipalities` via un des 3 FK `geo_region`/`geo_department`/`geo_municipality`, résolue par `resolveGeoUnit()` (voir [elections-geo-resolution.md](./elections-geo-resolution.md)) | Pérenne (change aux redécoupages) |
 | `election_constituency_results` | Une ligne = le résultat d'une élection dans une circonscription : FK `election` + `constituency`, `winning_coalition` (la participation gagnante), `winning_list`, `voters`, `seat`, relevés horaires `participation_10h/12h/14h/17h`. Unicité métier : 1 ligne par (élection, circonscription) | Par élection × circonscription |
+| `election_constituency_coalition_results` | Détail du classement complet : une ligne = le score d'une coalition dans une circonscription pour un tour (FK `result` → `election_constituency_results`, `coalition`, `round`, `votes`, `percentage`). Saisie éditoriale au fil de l'eau, peut être vide sans que ce soit une erreur | Par élection × circonscription × coalition × tour |
 
 Ce que ce modèle garantit :
 
@@ -105,14 +108,21 @@ Endpoints principaux :
 - `GET /api/carte/result?election=<id>` : les lignes `election_constituency_results`
   de l'élection. Clés de réponse historiques conservées pour le front :
   `coalition_gagnante` (identité fusionnée via l'entité politique de la participation),
-  `constituencie` (avec `slug`, `nationale_type`, `parent`), `winning_list` (candidats
-  avec identité fusionnée via leur person). **Les polygones ne sont plus servis** :
-  le front joint les contours statiques par `constituencie.slug` ;
+  `constituencie` (avec `slug`, `nationale_type`, `region`, `parent` — ces trois
+  derniers résolus via `resolveGeoUnit()`/`GEO_UNIT_FIELDS`, pas des champs directs
+  de `election_constituencies`), `winning_list` (candidats avec identité fusionnée
+  via leur person). **Les polygones ne sont plus servis** : le front joint les
+  contours statiques par `constituencie.slug` ;
 - `GET /api/carte?election=<id>` : électeurs/bureaux/lieux/population par
   circonscription (bureaux et lieux **recalculés** par agrégation des
   `election_polling_stations` du fichier de l'élection - plus de valeurs dénormalisées) ;
 - `GET /api/elections/participation` : relevés horaires de participation par
-  département (paramètre `election` optionnel).
+  département (paramètre `election` optionnel) ;
+- `GET /api/elections/results/constituency/[slug]?election=<id>` : classement complet
+  des coalitions pour une circonscription (source `election_constituency_coalition_results`,
+  complète le « gagnant seul » déjà exposé par `/api/carte/result`) ; réponse
+  `{ constituency, round1: [...], round2: [...] | null }`, vide si la collection n'a
+  pas été saisie pour cette circonscription.
 
 Si une élection n'a aucune ligne de résultat (environnement non migré), ces trois
 endpoints retombent sur la collection legacy `carte` à l'identique.
@@ -192,7 +202,9 @@ carte (`fallback` du `colorScale`) sans erreur visible.
 
 - `election_constituencies.slug` : unique, nullable (ex. `kaolack`,
   `medina-yoro-foulah`, pour les 45 collisions de noms communaux → suffixe
-  département type `kaolack-kaolack`) ;
+  département type `kaolack-kaolack`) — porté directement par `election_constituencies`
+  (contrairement au nom/code/population/parent, délégués au référentiel `geo_*`
+  depuis le 2026-07-14, voir section 2) ;
 - `election_polling_stations.constituency` et `election_constituency_results.constituency`
   sont des **FK numériques** vers `election_constituencies.id` — jamais de texte.
   Le `slug` n'est donc jamais stocké sur ces deux collections : il est résolu **à
@@ -222,8 +234,9 @@ carte (`fallback` du `colorScale`) sans erreur visible.
    (`voters`, `office_number`, `polling_place` distincts) mais **aucun nom, aucun slug** ;
 5. `getConstituencyNamesById()` ([server/utils/electionElectoralFile.ts:68](../../../server/utils/electionElectoralFile.ts))
    fait une **deuxième requête**, sur `election_constituencies`, filtrée sur les ids
-   obtenus à l'étape 4, pour récupérer `name`/`slug`/`population`/`region` — c'est
-   **le seul endroit où le `slug` apparaît** dans toute la chaîne bureaux/agrégats ;
+   obtenus à l'étape 4, demandant `id`/`name`/`slug` + `GEO_UNIT_FIELDS` puis
+   passe chaque ligne dans `resolveGeoUnit()` pour obtenir `population`/`region` —
+   c'est **le seul endroit où le `slug` apparaît** dans toute la chaîne bureaux/agrégats ;
 6. La réponse `{ department, slug, population, region, count, sum, countDistinct }`
    est mappée côté client en `OfficeMapItem { slug, name, voters, offices, places, ... }` ;
 7. `buildElectionMapConfig()` ([app/config/map-elections.ts:97](../../../app/config/map-elections.ts))
@@ -245,11 +258,12 @@ Même schéma, source différente :
    `GET /api/carte/result?election=<id>` ;
 2. Le serveur ([server/api/carte/result.get.ts:52-59](../../../server/api/carte/result.get.ts))
    lit `election_constituency_results` avec les champs `constituency.slug`,
-   `constituency.nationale_type`, `constituency.parent.slug` **directement dans la
-   requête Directus** (pas de deuxième requête ici : `election_constituency_results`
-   pointe déjà le référentiel par FK, et Directus résout les champs liés en un seul
-   appel) ; la clé de réponse `constituency` est renommée `constituencie` pour
-   compat avec l'ancien contrat ;
+   `constituency.nationale_type` + `GEO_UNIT_FIELDS` (préfixés `constituency.`)
+   **directement dans la requête Directus** (pas de deuxième requête ici :
+   `election_constituency_results` pointe déjà le référentiel par FK, et Directus
+   résout les champs liés en un seul appel), puis `resolveGeoUnit()` calcule
+   `parent`/`region` à partir de ces champs ; la clé de réponse `constituency` est
+   renommée `constituencie` pour compat avec l'ancien contrat ;
 3. Côté client, `ElectionUnifiedMap.vue` filtre les lignes reçues sur
    `constituencie.nationale_type === 'departement'` (mode `results`) ou
    `'commune'` (mode `results-locale`) — **c'est ce champ qui distingue une carte
@@ -261,8 +275,9 @@ Même schéma, source différente :
    `senegal-communes-contours.geojson` (mode `results-locale`) ;
 6. Pour le drill-down départemental du mode `results-locale`,
    `aggregateResultsByDepartment()` ([app/config/map-elections.ts:48](../../../app/config/map-elections.ts))
-   regroupe les communes par `parentSlug` — donc par le **`parent` du référentiel**
-   (FK `election_constituencies.parent`), jamais par un rapprochement de noms.
+   regroupe les communes par `parentSlug` — donc par le **`parent` résolu par
+   `resolveGeoUnit()`** (via `geo_municipality.department`), jamais par un
+   rapprochement de noms.
 
 ### 6bis.5 En une phrase
 

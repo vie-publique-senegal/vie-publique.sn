@@ -1,5 +1,16 @@
 # 🚀 Migration du Schéma Électoral – Guide de Déploiement
 
+> ⚠️ **Document historique** (mai 2026), antérieur à la convention `deployments/` (voir
+> [deployments/README.md](./deployments/README.md)). Son contenu est **partiellement
+> obsolète** : le champ `parent` sur `election_constituencies` mentionné ci-dessous a
+> depuis été **supprimé** (2026-07-14, remplacé par le référentiel `geo_regions`/
+> `geo_departments`/`geo_municipalities`, voir [elections-model.md](./elections-model.md#5️⃣-election_constituencies--circonscriptions-électorales)),
+> et les évolutions ultérieures du schéma (identités pérennes persons/entités
+> politiques, géographie/cartes) sont documentées dans
+> [deployments/2026-07-migration-prod.md](./deployments/2026-07-migration-prod.md) et
+> [deployments/2026-07-migration-prod-geographie-cartes.md](./deployments/2026-07-migration-prod-geographie-cartes.md).
+> Conservé pour l'historique des champs `slug`/`short_bio`/`long_bio` candidats/élections.
+>
 > Guide complet pour migrer du schéma existant vers le nouveau schéma électoral générique
 
 ### Ajouter les champs manquants

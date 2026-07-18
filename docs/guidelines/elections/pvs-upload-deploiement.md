@@ -1,5 +1,7 @@
 # Document de Livraison Dev → Prod — Système d'upload de PVs
 
+**Dernière mise à jour** : 2026-07-17
+
 > Procédure opérationnelle pour déployer en production le système d'upload de PVs (National + Diaspora) sans régression.
 
 
@@ -44,10 +46,13 @@ Le rôle `Observateur electoral` doit être associé à la permission/policy `Up
 Ce sont les droits configurés dans `Upload PVs` qui doivent porter les permissions sur les collections ci-dessous.
 
 - `elections` : lecture
-- `election_map_national` : lecture
-- `election_map_diaspora` : lecture
+- `geo_regions`, `election_constituencies`, `election_polling_stations` : lecture (source des filtres géographiques National — région/département/commune)
+- `election_map_national` : lecture (repli legacy tant que `election_polling_stations` n'est pas peuplé sur l'environnement)
+- `election_map_diaspora` : lecture (source des filtres Diaspora — pays/localité/représentation diplomatique, pas encore basculée sur le référentiel pérenne)
 - `election_pvs` : lecture + création
 - `directus_files` : upload(création) + lecture (pour voir les fichiers uploadés)
+
+> Les endpoints de filtres (`pvs-upload/regions|departments|municipalities|countries|diplomatic-representations|polling-places`) lisent en priorité le référentiel pérenne (`geo_regions`, `election_constituencies`, `election_polling_stations`) et ne retombent sur `election_map_national`/`election_map_diaspora` qu'en repli, tant qu'un environnement n'a pas ses données migrées (voir [elections-geographie.md](./elections-geographie.md)).
 
 ### Activation d'une élection
 
