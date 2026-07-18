@@ -11,9 +11,23 @@ const route = useRoute();
 const router = useRouter();
 const itemsPerPage = 10;
 const currentPage = ref(Math.max(1, Number(route.query.page) || 1));
+const searchQuery = ref((route.query.q as string) || '');
 
 watch(currentPage, (page) => {
   router.replace({ query: { ...route.query, page: page > 1 ? String(page) : undefined } });
+});
+
+// Comparaison insensible à la casse ET aux accents (ex: "legislatives" doit
+// matcher "Législatives").
+const normalizeSearchable = (value: string) =>
+  value
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .toLowerCase();
+
+watch(searchQuery, (q) => {
+  currentPage.value = 1;
+  router.replace({ query: { ...route.query, q: q || undefined, page: undefined } });
 });
 
 const typeLabels: Record<string, string> = {
@@ -62,7 +76,21 @@ const elections = computed(() =>
     })),
 );
 
-const totalPages = computed(() => Math.max(1, Math.ceil(elections.value.length / itemsPerPage)));
+const filteredElections = computed(() => {
+  if (!searchQuery.value.trim()) return elections.value;
+
+  const query = normalizeSearchable(searchQuery.value.trim());
+  return elections.value.filter((e) => {
+    const haystack = normalizeSearchable(
+      `${e.name || ''} ${e.typeLabel} ${e.year} ${e.dateLabel}`,
+    );
+    return haystack.includes(query);
+  });
+});
+
+const totalPages = computed(() =>
+  Math.max(1, Math.ceil(filteredElections.value.length / itemsPerPage)),
+);
 
 // Ramène la page dans les bornes si l'URL pointe vers une page qui n'existe plus
 watch(
@@ -75,7 +103,7 @@ watch(
 
 const paginatedElections = computed(() => {
   const start = (currentPage.value - 1) * itemsPerPage;
-  return elections.value.slice(start, start + itemsPerPage);
+  return filteredElections.value.slice(start, start + itemsPerPage);
 });
 
 const NuxtLinkComponent = resolveComponent('NuxtLink');
@@ -143,6 +171,37 @@ useHead({
     </header>
 
     <main class="container mx-auto px-4">
+      <!-- Recherche -->
+      <div class="group relative mb-4 md:mb-6">
+        <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5">
+          <UIcon
+            name="i-heroicons-magnifying-glass-20-solid"
+            class="h-5 w-5 text-gray-400 transition-colors group-focus-within:text-gray-500"
+          />
+        </div>
+        <input
+          v-model="searchQuery"
+          type="search"
+          placeholder="Rechercher une élection..."
+          class="block w-full rounded-xl border-0 bg-gray-100 py-3 pl-11 pr-10 text-sm text-gray-900 ring-1 ring-transparent transition-all placeholder:text-gray-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-gray-400 sm:py-2.5 dark:bg-gray-800 dark:text-white dark:placeholder:text-gray-400 dark:focus:bg-gray-800/80 dark:focus:ring-gray-500"
+        />
+        <button
+          v-if="searchQuery"
+          type="button"
+          class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 transition-colors hover:text-gray-600 dark:hover:text-gray-300"
+          @click="searchQuery = ''"
+        >
+          <span
+            class="flex h-5 w-5 items-center justify-center rounded-full bg-gray-300 dark:bg-gray-600"
+          >
+            <UIcon
+              name="i-heroicons-x-mark-20-solid"
+              class="h-3.5 w-3.5 text-gray-600 dark:text-gray-300"
+            />
+          </span>
+        </button>
+      </div>
+
       <!-- Skeleton chargement -->
       <div v-if="loadingConfig" class="space-y-2 md:space-y-3">
         <div
@@ -152,7 +211,7 @@ useHead({
         />
       </div>
 
-      <!-- État vide -->
+      <!-- État vide : aucune élection en base -->
       <div
         v-else-if="!elections.length"
         class="flex flex-col items-center justify-center rounded-2xl bg-white py-16 text-center ring-1 ring-gray-200 dark:bg-gray-800 dark:ring-gray-700"
@@ -163,6 +222,20 @@ useHead({
         />
         <p class="text-sm text-gray-500 dark:text-gray-400">
           Aucune élection disponible pour le moment.
+        </p>
+      </div>
+
+      <!-- État vide : recherche sans résultat -->
+      <div
+        v-else-if="!filteredElections.length"
+        class="flex flex-col items-center justify-center rounded-2xl bg-white py-16 text-center ring-1 ring-gray-200 dark:bg-gray-800 dark:ring-gray-700"
+      >
+        <UIcon
+          name="i-heroicons-magnifying-glass"
+          class="mb-4 h-12 w-12 text-gray-300 dark:text-gray-600"
+        />
+        <p class="text-sm text-gray-500 dark:text-gray-400">
+          Aucune élection ne correspond à votre recherche.
         </p>
       </div>
 
@@ -247,10 +320,10 @@ useHead({
       </div>
 
       <!-- Pagination -->
-      <div v-if="elections.length > itemsPerPage" class="mt-6 flex justify-center md:mt-8">
+      <div v-if="filteredElections.length > itemsPerPage" class="mt-6 flex justify-center md:mt-8">
         <UPagination
           v-model="currentPage"
-          :total="elections.length"
+          :total="filteredElections.length"
           :page-count="itemsPerPage"
           size="sm"
           :ui="{
