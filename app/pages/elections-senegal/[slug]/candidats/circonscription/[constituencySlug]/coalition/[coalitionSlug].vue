@@ -55,7 +55,7 @@ const constituencyUrl = computed(
 useSeoMeta({
   title: () =>
     matchedList.value?.coalition?.name && constituency.value
-      ? `${matchedList.value.coalition.name} · ${constituency.value.name} | Vie-Publique SN`
+      ? `${matchedList.value.coalition.name} · ${constituency.value.name}`
       : 'Coalition | Élections Sénégal',
   description: () =>
     matchedList.value?.coalition?.name && constituency.value

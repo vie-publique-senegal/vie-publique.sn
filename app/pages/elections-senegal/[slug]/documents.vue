@@ -33,7 +33,7 @@ const paginatedDocuments = computed(() => {
 useSeoMeta({
   title: () =>
     currentElection.value?.name
-      ? `Documents · ${currentElection.value.name} | Vie-Publique SN`
+      ? `Documents · ${currentElection.value.name}`
       : 'Documents Officiels | Élections Sénégal',
   description: () =>
     currentElection.value?.name

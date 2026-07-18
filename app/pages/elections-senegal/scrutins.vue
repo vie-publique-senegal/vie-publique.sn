@@ -81,9 +81,7 @@ const filteredElections = computed(() => {
 
   const query = normalizeSearchable(searchQuery.value.trim());
   return elections.value.filter((e) => {
-    const haystack = normalizeSearchable(
-      `${e.name || ''} ${e.typeLabel} ${e.year} ${e.dateLabel}`,
-    );
+    const haystack = normalizeSearchable(`${e.name || ''} ${e.typeLabel} ${e.year} ${e.dateLabel}`);
     return haystack.includes(query);
   });
 });
@@ -110,6 +108,7 @@ const NuxtLinkComponent = resolveComponent('NuxtLink');
 
 const { siteUrl, siteName } = useSiteMetadata();
 const url = `${siteUrl}/elections-senegal/scrutins`;
+const ogImage = `${siteUrl}/images/share-linkedin.png`;
 
 const title = 'Toutes les élections au Sénégal | Historique des scrutins';
 const description =
@@ -121,8 +120,11 @@ useSeoMeta({
   ogTitle: title,
   ogDescription: description,
   ogUrl: url,
+  ogImage,
+  twitterCard: 'summary_large_image',
   twitterTitle: title,
   twitterDescription: description,
+  twitterImage: ogImage,
 });
 
 useHead({
@@ -183,7 +185,7 @@ useHead({
           v-model="searchQuery"
           type="search"
           placeholder="Rechercher une élection..."
-          class="block w-full rounded-xl border-0 bg-gray-100 py-3 pl-11 pr-10 text-sm text-gray-900 ring-1 ring-transparent transition-all placeholder:text-gray-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-gray-400 sm:py-2.5 dark:bg-gray-800 dark:text-white dark:placeholder:text-gray-400 dark:focus:bg-gray-800/80 dark:focus:ring-gray-500"
+          class="block w-full rounded-xl border-0 bg-gray-100 py-3 pl-11 pr-10 text-sm text-gray-900 ring-1 ring-transparent transition-all placeholder:text-gray-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-gray-400 dark:bg-gray-800 dark:text-white dark:placeholder:text-gray-400 dark:focus:bg-gray-800/80 dark:focus:ring-gray-500 sm:py-2.5"
         />
         <button
           v-if="searchQuery"

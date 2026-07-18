@@ -32,7 +32,7 @@ const candidatsUrl = computed(() => `/elections-senegal/${currentElection.value?
 useSeoMeta({
   title: () =>
     coalition.value
-      ? `${coalition.value.name} · ${currentElection.value?.name || ''} | Vie-Publique SN`
+      ? `${coalition.value.name} · ${currentElection.value?.name || ''}`
       : 'Coalition | Élections Sénégal',
   description: () =>
     coalition.value

@@ -30,9 +30,11 @@ useSeoMeta({
       : 'Résumé - Carte Électorale',
   ogDescription: 'Chiffres clés de la carte électorale du Sénégal.',
   ogUrl: url,
+  ogImage: `${siteUrl}/images/share-linkedin.png`,
   twitterCard: 'summary_large_image',
   twitterTitle: title,
   twitterDescription: description,
+  twitterImage: `${siteUrl}/images/share-linkedin.png`,
   keywords: [...keywords, 'statistiques carte électorale sénégal'].join(', '),
 });
 

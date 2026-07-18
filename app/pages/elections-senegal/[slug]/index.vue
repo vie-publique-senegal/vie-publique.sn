@@ -6,13 +6,16 @@ const { config } = useElectoralDashboard();
 
 const electionSlug = route.params.slug as string;
 
-const election = computed(() =>
-  config.value?.elections?.find((e: any) => e.slug === electionSlug) || null
+const election = computed(
+  () => config.value?.elections?.find((e: any) => e.slug === electionSlug) || null,
 );
 
 const defaultTab = computed(() =>
-  election.value?.status === 'completed' ? 'resultats' : 'candidats'
+  election.value?.status === 'completed' ? 'resultats' : 'candidats',
 );
+
+// Page de transition (redirection vers l'onglet par défaut) : ne pas indexer
+useSeoMeta({ robots: 'noindex, follow' });
 
 // Rediriger vers l'onglet par défaut dès que l'élection est connue
 watchEffect(() => {
@@ -24,6 +27,8 @@ watchEffect(() => {
 
 <template>
   <div class="flex items-center justify-center py-32">
-    <div class="h-12 w-12 animate-spin rounded-full border-4 border-gray-300 border-t-primary-600"></div>
+    <div
+      class="border-t-primary-600 h-12 w-12 animate-spin rounded-full border-4 border-gray-300"
+    ></div>
   </div>
 </template>

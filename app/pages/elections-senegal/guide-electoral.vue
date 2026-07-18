@@ -7,15 +7,24 @@
 
 const { siteUrl, siteName } = useSiteMetadata();
 const url = `${siteUrl}/elections-senegal/guide-electoral`;
+const ogImage = `${siteUrl}/images/share-linkedin.png`;
+
+const title = 'Guide Électoral | Élections Sénégal';
+const description =
+  'Apprenez comment voter au Sénégal : vidéos tutoriels en plusieurs langues, étapes du scrutin et conseils pour exercer votre droit de vote.';
 
 useSeoMeta({
-  title: 'Guide Électoral | Élections Sénégal',
-  description:
-    'Apprenez comment voter au Sénégal : vidéos tutoriels en plusieurs langues, étapes du scrutin et conseils pour exercer votre droit de vote.',
+  title,
+  description,
   ogTitle: 'Guide Électoral - Élections Sénégal',
   ogDescription:
     'Découvrez le processus de vote au Sénégal avec nos vidéos explicatives et guides pratiques.',
   ogUrl: url,
+  ogImage,
+  twitterCard: 'summary_large_image',
+  twitterTitle: title,
+  twitterDescription: description,
+  twitterImage: ogImage,
 });
 
 useHead({

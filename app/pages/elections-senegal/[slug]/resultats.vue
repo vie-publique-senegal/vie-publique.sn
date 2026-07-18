@@ -146,7 +146,7 @@ const resultCommunesForDept = computed(() => {
 useSeoMeta({
   title: () =>
     currentElection.value?.name
-      ? `Résultats · ${currentElection.value.name} | Vie-Publique SN`
+      ? `Résultats · ${currentElection.value.name}`
       : 'Résultats | Élections Sénégal',
   description: () =>
     currentElection.value?.name
@@ -165,7 +165,10 @@ useSeoMeta({
 
 <template>
   <div class="animate-in fade-in mx-auto max-w-7xl space-y-3 duration-700">
-    <div v-if="hasListResults || (mapResultAvailable && !mapResultHasNoData)" class="flex items-center justify-between">
+    <div
+      v-if="hasListResults || (mapResultAvailable && !mapResultHasNoData)"
+      class="flex items-center justify-between"
+    >
       <h2 v-if="hasListResults" class="text-lg font-bold text-gray-900 dark:text-white sm:text-xl">
         Résultats globaux
       </h2>

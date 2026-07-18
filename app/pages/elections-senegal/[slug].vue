@@ -144,13 +144,13 @@ const onTypeChange = (type: string) => {
 };
 
 const { siteUrl } = useSiteMetadata();
-const ogImage = `${siteUrl}/og-image.png`;
+const ogImage = `${siteUrl}/images/share-linkedin.png`;
 
 useSeoMeta({
   title: () =>
     currentElection.value?.name
-      ? `${currentElection.value.name} | Vie-Publique SN`
-      : 'Élections Sénégal | Vie-Publique SN',
+      ? `${currentElection.value.name}`
+      : 'Élections Sénégal',
   description: () =>
     currentElection.value?.name
       ? `Candidats, résultats, carte et documents pour ${currentElection.value.name}.`

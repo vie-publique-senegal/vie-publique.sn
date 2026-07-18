@@ -31,9 +31,11 @@ useSeoMeta({
   ogDescription:
     "Explorez la répartition des électeurs sénégalais de l'étranger par circonscription et par pays.",
   ogUrl: url,
+  ogImage: `${siteUrl}/images/share-linkedin.png`,
   twitterCard: 'summary_large_image',
   twitterTitle: title,
   twitterDescription: description,
+  twitterImage: `${siteUrl}/images/share-linkedin.png`,
   keywords: [...keywords, 'carte électorale diaspora sénégal', 'vote sénégalais étranger'].join(
     ', ',
   ),

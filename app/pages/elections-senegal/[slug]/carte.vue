@@ -47,7 +47,7 @@ watch([selectedType, selectedYear], () => {
 useSeoMeta({
   title: () =>
     currentElection.value?.name
-      ? `Carte · ${currentElection.value.name} | Vie-Publique SN`
+      ? `Carte · ${currentElection.value.name}`
       : 'Carte Électorale | Élections Sénégal',
   description: () =>
     currentElection.value?.name
@@ -68,9 +68,7 @@ useSeoMeta({
   <div class="animate-in fade-in mx-auto max-w-7xl duration-700">
     <div class="overflow-hidden">
       <div class="mb-4">
-        <h2 class="text-lg font-bold text-gray-900 dark:text-white sm:text-xl">
-          Carte électorale
-        </h2>
+        <h2 class="text-lg font-bold text-gray-900 dark:text-white sm:text-xl">Carte électorale</h2>
         <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
           Répartition des électeurs, lieux et bureaux de vote - territoire national et diaspora.
         </p>

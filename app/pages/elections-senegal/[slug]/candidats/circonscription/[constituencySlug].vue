@@ -47,7 +47,7 @@ const handleSelectCoalition = (payload: SelectCoalitionPayload) => {
 useSeoMeta({
   title: () =>
     constituency.value
-      ? `${constituency.value.name} · ${currentElection.value?.name || ''} | Vie-Publique SN`
+      ? `${constituency.value.name} · ${currentElection.value?.name || ''}`
       : 'Circonscription | Élections Sénégal',
   description: () =>
     constituency.value

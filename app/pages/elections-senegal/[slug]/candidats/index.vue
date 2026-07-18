@@ -97,7 +97,7 @@ const goToConstituency = (id: number) => {
 useSeoMeta({
   title: () =>
     currentElection.value?.name
-      ? `Candidats · ${currentElection.value.name} | Vie-Publique SN`
+      ? `Candidats · ${currentElection.value.name}`
       : 'Candidats | Élections Sénégal',
   description: () =>
     currentElection.value?.name
@@ -171,7 +171,7 @@ useSeoMeta({
               :placeholder="
                 selectedType === 'locale' ? 'Rechercher...' : 'Rechercher une coalition...'
               "
-              class="block w-full rounded-xl border-0 bg-gray-100 py-3 pl-11 pr-10 text-sm text-gray-900 ring-1 ring-transparent transition-all placeholder:text-gray-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-gray-400 sm:py-2.5 dark:bg-gray-800 dark:text-white dark:placeholder:text-gray-400 dark:focus:bg-gray-800/80 dark:focus:ring-gray-500"
+              class="block w-full rounded-xl border-0 bg-gray-100 py-3 pl-11 pr-10 text-sm text-gray-900 ring-1 ring-transparent transition-all placeholder:text-gray-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-gray-400 dark:bg-gray-800 dark:text-white dark:placeholder:text-gray-400 dark:focus:bg-gray-800/80 dark:focus:ring-gray-500 sm:py-2.5"
             />
             <button
               v-if="searchQuery"
@@ -179,8 +179,13 @@ useSeoMeta({
               class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 transition-colors hover:text-gray-600 dark:hover:text-gray-300"
               @click="searchQuery = ''"
             >
-              <span class="flex h-5 w-5 items-center justify-center rounded-full bg-gray-300 dark:bg-gray-600">
-                <UIcon name="i-heroicons-x-mark-20-solid" class="h-3.5 w-3.5 text-gray-600 dark:text-gray-300" />
+              <span
+                class="flex h-5 w-5 items-center justify-center rounded-full bg-gray-300 dark:bg-gray-600"
+              >
+                <UIcon
+                  name="i-heroicons-x-mark-20-solid"
+                  class="h-3.5 w-3.5 text-gray-600 dark:text-gray-300"
+                />
               </span>
             </button>
           </div>

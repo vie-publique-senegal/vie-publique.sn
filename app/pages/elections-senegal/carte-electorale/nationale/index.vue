@@ -33,9 +33,11 @@ useSeoMeta({
   ogDescription:
     'Explorez la répartition des électeurs et des bureaux de vote par département au Sénégal.',
   ogUrl: url,
+  ogImage: `${siteUrl}/images/share-linkedin.png`,
   twitterCard: 'summary_large_image',
   twitterTitle: title,
   twitterDescription: description,
+  twitterImage: `${siteUrl}/images/share-linkedin.png`,
   keywords: [
     ...keywords,
     'carte électorale nationale sénégal',

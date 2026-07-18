@@ -194,13 +194,53 @@ const sortOptions = [
 ];
 
 // SEO avec Open Graph
+const { siteUrl, siteName } = useSiteMetadata();
+const url = `${siteUrl}/elections-senegal/legislation`;
+const ogImage = `${siteUrl}/images/share-linkedin.png`;
+
+const title = 'Législation Électorale | Élections Sénégal';
+const description =
+  'Consultez les textes de loi, décrets et documents officiels régissant les élections au Sénégal.';
+
 useSeoMeta({
-  title: 'Législation Électorale | Élections Sénégal',
-  description:
-    'Consultez les textes de loi, décrets et documents officiels régissant les élections au Sénégal.',
+  title,
+  description,
   ogTitle: 'Législation Électorale - Sénégal',
   ogDescription:
     'Accédez à tous les textes juridiques et documents officiels du processus électoral sénégalais.',
+  ogUrl: url,
+  ogImage,
+  twitterCard: 'summary_large_image',
+  twitterTitle: title,
+  twitterDescription: description,
+  twitterImage: ogImage,
+});
+
+useHead({
+  link: [{ rel: 'canonical', href: url }],
+  meta: [
+    { property: 'og:type', content: 'website' },
+    { property: 'og:site_name', content: siteName },
+  ],
+  script: [
+    {
+      type: 'application/ld+json',
+      innerHTML: JSON.stringify({
+        '@context': 'https://schema.org',
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+          { '@type': 'ListItem', position: 1, name: 'Accueil', item: siteUrl },
+          {
+            '@type': 'ListItem',
+            position: 2,
+            name: 'Élections',
+            item: `${siteUrl}/elections-senegal`,
+          },
+          { '@type': 'ListItem', position: 3, name: 'Législation électorale', item: url },
+        ],
+      }),
+    },
+  ],
 });
 </script>
 

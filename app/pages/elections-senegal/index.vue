@@ -137,6 +137,10 @@ const navigationLinks = computed(() => {
 });
 
 // SEO
+const { siteUrl, siteName } = useSiteMetadata();
+const url = `${siteUrl}/elections-senegal`;
+const ogImage = `${siteUrl}/images/share-linkedin.png`;
+
 const title = 'Élections au Sénégal | Résultats, candidats et carte électorale';
 const description =
   "Suivez les élections au Sénégal : résultats officiels, coalitions et candidats, carte électorale, guide de l'électeur et législation électorale.";
@@ -146,8 +150,33 @@ useSeoMeta({
   description,
   ogTitle: title,
   ogDescription: description,
+  ogUrl: url,
+  ogImage,
+  twitterCard: 'summary_large_image',
   twitterTitle: title,
   twitterDescription: description,
+  twitterImage: ogImage,
+});
+
+useHead({
+  link: [{ rel: 'canonical', href: url }],
+  meta: [
+    { property: 'og:type', content: 'website' },
+    { property: 'og:site_name', content: siteName },
+  ],
+  script: [
+    {
+      type: 'application/ld+json',
+      innerHTML: JSON.stringify({
+        '@context': 'https://schema.org',
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+          { '@type': 'ListItem', position: 1, name: 'Accueil', item: siteUrl },
+          { '@type': 'ListItem', position: 2, name: 'Élections', item: url },
+        ],
+      }),
+    },
+  ],
 });
 </script>
 

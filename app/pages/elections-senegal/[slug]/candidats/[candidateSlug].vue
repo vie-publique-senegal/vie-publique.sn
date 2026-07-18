@@ -88,12 +88,12 @@ const canonicalUrl = computed(
 // Photo du candidat en image de partage quand elle existe (URL absolue requise)
 const ogImageUrl = computed(() => {
   const photo = candidate.value?.photo ? String(candidate.value.photo) : '';
-  if (!photo) return `${siteUrl}/og-image.png`;
+  if (!photo) return `${siteUrl}/images/share-linkedin.png`;
   return photo.startsWith('http') ? photo : `${siteUrl}${photo.startsWith('/') ? '' : '/'}${photo}`;
 });
 
 useSeoMeta({
-  title: () => `${candidateName.value} - Profil candidat | Vie-Publique SN`,
+  title: () => `${candidateName.value} - Profil candidat`,
   description: () =>
     candidateBio.value
       ? `${candidateName.value} - ${candidateBio.value.slice(0, 155)}`
