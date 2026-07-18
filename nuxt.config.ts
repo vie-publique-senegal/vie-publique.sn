@@ -181,11 +181,8 @@ export default defineNuxtConfig({
             changeOrigin: true,
             rewrite: (path) => path.replace(/^\/cms/, ''),
           },
-          '/docs': {
-            target: `${process.env.CMS_API_URL}/assets`,
-            changeOrigin: true,
-            rewrite: (path) => path.replace(/^\/docs/, ''),
-          },
+          // NB : pas d'entrée '/docs' ici — servie par server/routes/docs/[...path].ts
+          // (proxy + canonical), qui doit s'exécuter aussi en dev.
         }
       : {},
   },
@@ -218,10 +215,8 @@ export default defineNuxtConfig({
       proxy: `${process.env.CMS_API_URL || 'https://cms.vie-publique.sn'}/assets/**`,
       headers: { 'cache-control': 'max-age=31536000, immutable' },
     },
-    '/docs/**': {
-      proxy: `${process.env.CMS_API_URL || 'https://cms.vie-publique.sn'}/assets/**`,
-      headers: { 'cache-control': 'max-age=86400' },
-    },
+    // '/docs/**' : servi par server/routes/docs/[...path].ts (proxy + Link canonical
+    // par fichier — une routeRule proxy ne permet que des headers statiques).
     // Headers pour les API de fallback
     '/api/**': {
       headers: { 'cache-control': 'no-cache' },
