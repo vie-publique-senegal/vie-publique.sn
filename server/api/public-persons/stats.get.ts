@@ -5,8 +5,11 @@ export default defineCachedEventHandler(
     try {
       const directus = getCmsClient();
 
+      // Même base que le filtre de la liste (index.get.ts) : personne publiée AVEC une nomination
+      // actuelle publiée — une nomination draft est invisible partout, donc pas comptée non plus.
       const personFilter = {
         status: { _eq: 'published' },
+        current_appointment: { id: { _nnull: true }, status: { _eq: 'published' } },
       };
 
       // Comptage par catégorie de la DERNIÈRE nomination (current_appointment), en cours ou
@@ -89,7 +92,7 @@ export default defineCachedEventHandler(
   },
   {
     maxAge: process.env.NODE_ENV === 'production' ? 5 * 60 : 0, // 5 min en prod (à augmenter après stabilisation)
-    name: 'public-persons-stats-v2',
+    name: 'public-persons-stats-v3',
     getKey: () => 'public-persons-stats',
   },
 );

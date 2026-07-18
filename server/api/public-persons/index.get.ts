@@ -16,9 +16,10 @@ export default defineCachedEventHandler(
 
       // Construction du filtre dynamique
       // Exclure les personnes sans nomination actuelle (M2O current_appointment non renseigné)
+      // ou dont la nomination actuelle n'est pas publiée (une nomination draft est invisible partout)
       const filter: any = {
         status: { _eq: 'published' },
-        current_appointment: { id: { _nnull: true } },
+        current_appointment: { id: { _nnull: true }, status: { _eq: 'published' } },
       };
 
       // Filtre par genre
@@ -137,7 +138,7 @@ export default defineCachedEventHandler(
   },
   {
     maxAge: process.env.NODE_ENV === 'production' ? 5 * 60 : 0, // 5 min en prod (à augmenter après stabilisation)
-    name: 'public-persons',
+    name: 'public-persons-v2',
     getKey: (event) => buildCacheKey('public-persons', getQuery(event)),
   },
 );

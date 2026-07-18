@@ -99,6 +99,7 @@ export const getLlmsStats = defineCachedFunction(
         ...publishedFilter,
         current_appointment: {
           is_current: { _eq: true },
+          status: { _eq: 'published' },
           position_category: { _in: ['Ministre', "Secrétaire d'État"] },
         },
       }),
@@ -151,6 +152,7 @@ export const getLlmsStats = defineCachedFunction(
             status: { _eq: 'published' },
             current_appointment: {
               is_current: { _eq: true },
+              status: { _eq: 'published' },
               position_category: { _in: ['Président de la République', 'Premier Ministre'] },
             },
           },
@@ -198,7 +200,7 @@ export const getLlmsStats = defineCachedFunction(
   },
   {
     maxAge: process.env.NODE_ENV === 'production' ? 60 * 60 : 0, // 1 h en prod
-    name: 'llms-stats-v2',
+    name: 'llms-stats-v3',
     getKey: () => 'all',
   },
 );
