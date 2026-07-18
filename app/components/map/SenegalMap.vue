@@ -300,9 +300,12 @@ onUnmounted(() => window.removeEventListener('resize', checkMobile))
 
 .senegal-map :deep(.maplibregl-canvas) { outline: none; }
 
-/* On fournit nos propres contrôles */
-.senegal-map :deep(.maplibregl-ctrl-top-right),
-.senegal-map :deep(.maplibregl-ctrl-top-left) { display: none; }
+/* On fournit nos propres contrôles — ne cacher que les contrôles MapLibre
+   (.maplibregl-ctrl), jamais les conteneurs de coin : en mode non-interleaved
+   (mobile), le canvas deck.gl vit dans .maplibregl-ctrl-top-left et un
+   display:none sur le conteneur le rendrait 0×0 (couches invisibles). */
+.senegal-map :deep(.maplibregl-ctrl-top-right .maplibregl-ctrl),
+.senegal-map :deep(.maplibregl-ctrl-top-left .maplibregl-ctrl) { display: none; }
 
 .senegal-map :deep(.maplibregl-ctrl-attrib) {
   font-size: 9px;
