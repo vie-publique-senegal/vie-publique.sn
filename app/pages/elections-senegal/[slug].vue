@@ -63,19 +63,21 @@ const currentTab = computed(() => {
 });
 
 const getAllowedTabsForElection = (election: any) => {
-  const electionTypeRaw = String(election?.type || selectedType.value || '').toLowerCase();
-  const isLegislativeElection = electionTypeRaw.includes('legislative');
+  // L'onglet Stats est ouvert aux législatives et présidentielles (la page
+  // /statistiques masque elle-même chaque analyse sans données via son
+  // registre de stats).
+  const isLocaleElection = String(election?.type || selectedType.value || '') === 'locale';
 
   if (election?.status === 'completed') {
     const completedTabs = new Set(['candidats', 'resultats', 'documents']);
     if (election?.pv_upload_active) completedTabs.add('pvs');
-    if (isLegislativeElection) completedTabs.add('statistiques');
+    if (!isLocaleElection) completedTabs.add('statistiques');
     return completedTabs;
   }
 
   const allowedTabs = new Set(['candidats', 'carte', 'resultats', 'documents', 'guide']);
   if (election?.pv_upload_active) allowedTabs.add('pvs');
-  if (isLegislativeElection) allowedTabs.add('statistiques');
+  if (!isLocaleElection) allowedTabs.add('statistiques');
   return allowedTabs;
 };
 
@@ -148,9 +150,7 @@ const ogImage = `${siteUrl}/images/share-linkedin.png`;
 
 useSeoMeta({
   title: () =>
-    currentElection.value?.name
-      ? `${currentElection.value.name}`
-      : 'Élections Sénégal',
+    currentElection.value?.name ? `${currentElection.value.name}` : 'Élections Sénégal',
   description: () =>
     currentElection.value?.name
       ? `Candidats, résultats, carte et documents pour ${currentElection.value.name}.`
