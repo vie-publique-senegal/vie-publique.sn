@@ -350,7 +350,7 @@ export const buildLlmsSections = (siteUrl: string, stats: LlmsStats): string => 
 - [Élections au Sénégal](${siteUrl}/elections-senegal) : données électorales, législation et guides
 - [Carte électorale](${siteUrl}/elections-senegal/carte-electorale) : circonscriptions nationales et de la diaspora
 - [Guide électoral](${siteUrl}/elections-senegal/guide-electoral) : comprendre le processus électoral sénégalais
-- [Résultats des législatives 2024](${siteUrl}/elections/legislatives/resultats) : résultats détaillés des élections législatives du 17 novembre 2024
+- [Résultats des législatives 2024](${siteUrl}/elections-senegal/dashboard/legislative/2024?tab=resultats) : résultats détaillés des élections législatives du 17 novembre 2024
 
 ## L'association
 

@@ -290,6 +290,49 @@ export default defineNuxtConfig({
       redirect: { to: '/conseil-des-ministres', statusCode: 301 },
     },
     '/medias/liste-officielle': { redirect: { to: '/medias', statusCode: 301 }, prerender: true },
+    // Ancien système soirée électorale législatives 2024 (/elections/**) → dashboard
+    // multi-élections /elections-senegal (pages supprimées 2026-07, docs/modules/elections/).
+    // Les règles spécifiques priment sur les wildcards (radix router Nitro).
+    '/elections': { redirect: { to: '/elections-senegal', statusCode: 301 } },
+    '/elections/legislatives/guide-electoral': {
+      redirect: { to: '/elections-senegal/guide-electoral', statusCode: 301 },
+    },
+    // bureaux-temoins n'a pas d'équivalent dans la nouvelle arbo → racine carte
+    '/elections/legislatives/carte-electorale/bureaux-temoins': {
+      redirect: { to: '/elections-senegal/carte-electorale', statusCode: 301 },
+    },
+    // nationale/[department] et diaspora/[country] existent à l'identique côté nouveau
+    '/elections/legislatives/carte-electorale': {
+      redirect: { to: '/elections-senegal/carte-electorale', statusCode: 301 },
+    },
+    '/elections/legislatives/carte-electorale/**': {
+      redirect: { to: '/elections-senegal/carte-electorale/**', statusCode: 301 },
+    },
+    '/elections/legislatives/resultats/deputes': {
+      redirect: { to: '/assemblee-nationale/deputes', statusCode: 301 },
+    },
+    '/elections/legislatives/resultats': {
+      redirect: {
+        to: '/elections-senegal/dashboard/legislative/2024?tab=resultats',
+        statusCode: 301,
+      },
+    },
+    '/elections/legislatives/resultats/**': {
+      redirect: {
+        to: '/elections-senegal/dashboard/legislative/2024?tab=resultats',
+        statusCode: 301,
+      },
+    },
+    '/elections/legislatives/statistiques': {
+      redirect: {
+        to: '/elections-senegal/dashboard/legislative/2024?tab=statistiques',
+        statusCode: 301,
+      },
+    },
+    // Catch-all (dont /elections/legislatives et /elections/legislatives/[id])
+    '/elections/**': {
+      redirect: { to: '/elections-senegal/dashboard/legislative/2024', statusCode: 301 },
+    },
     '/code-senegal': { redirect: { to: '/documents/codes', statusCode: 301 } },
     '/code-senegal/**': { redirect: { to: '/documents/codes', statusCode: 301 } },
     // Legacy /portraits/<slug> : résolu vers /personnalites/<id>/<slug> par le
@@ -644,7 +687,6 @@ export default defineNuxtConfig({
       '/publications/enquetes',
       '/publications/institutions',
       '/barometre-politique',
-      '/elections/legislatives/resultats/global',
       '/publications/recrutement',
       '/quiz',
       '/chatbot',

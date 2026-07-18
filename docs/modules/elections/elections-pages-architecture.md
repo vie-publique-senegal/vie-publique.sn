@@ -1,6 +1,33 @@
 # 🏗️ Architecture des Pages Élections
 
-**Dernière mise à jour** : 2026-02-15
+**Dernière mise à jour** : 2026-07-18
+
+---
+
+## ⚠️ Ancien système supprimé (2026-07)
+
+L'ancien système « soirée électorale » des législatives 2024 (`app/pages/elections/**`,
+composants `Election*` de résultats/tendances/PV, composables `useCoalitions` & co) a été
+**supprimé** le 2026-07-18. Toutes les URLs `/elections/**` sont redirigées en **301** vers le
+dashboard (`routeRules` de `nuxt.config.ts`) :
+
+| Ancienne URL | Redirection 301 |
+| --- | --- |
+| `/elections` | `/elections-senegal` |
+| `/elections/legislatives` (+ `[id]`, `taux-participation`) | `/elections-senegal/dashboard/legislative/2024` |
+| `/elections/legislatives/resultats/**` | `…/dashboard/legislative/2024?tab=resultats` |
+| `/elections/legislatives/resultats/deputes` | `/assemblee-nationale/deputes` |
+| `/elections/legislatives/statistiques` | `…/dashboard/legislative/2024?tab=statistiques` |
+| `/elections/legislatives/guide-electoral` | `/elections-senegal/guide-electoral` |
+| `/elections/legislatives/carte-electorale/**` | `/elections-senegal/carte-electorale/**` (bureaux-temoins → racine carte) |
+
+Deux stats de l'ancienne page ont été **portées dans l'onglet Stats du dashboard** :
+« Présence des listes par département » (composant
+`app/components/elections/dashboard/stats/DepartmentalPresence.vue`, API dashboard) et
+« Métiers des députés élus » (`ElectionCandidatProfessionDeputies.vue`, données 2024 codées en
+dur → option visible uniquement sur législatives 2024). Les artefacts de soirée électorale
+(tendances live, bureaux témoins, projection hémicycle, grille PV) n'ont volontairement pas
+été repris.
 
 ---
 
