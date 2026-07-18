@@ -357,18 +357,16 @@ const showPdfViewer = ref(false);
             </h3>
           </div>
 
-          <div v-if="candidate.documents" class="p-4 md:p-6">
-            <div v-if="candidate.documents.file" class="space-y-6">
-              <!-- PDF Viewer Integration (même viewer que les pages documents ; Lazy pour ne
-                   jamais évaluer pdfjs côté SSR — DOMMatrix n'existe pas dans Node) -->
-              <ClientOnly>
-                <LazyPdfViewerInline
-                  :src="programFileUrl"
-                  max-height="700px"
-                  @open-fullscreen="showPdfViewer = true"
-                />
-              </ClientOnly>
-            </div>
+          <div v-if="candidate.documents?.file" class="space-y-6 p-4 md:p-6">
+            <!-- PDF Viewer Integration (même viewer que les pages documents ; Lazy pour ne
+                 jamais évaluer pdfjs côté SSR) -->
+            <ClientOnly>
+              <LazyPdfViewerInline
+                :src="programFileUrl"
+                max-height="700px"
+                @open-fullscreen="showPdfViewer = true"
+              />
+            </ClientOnly>
           </div>
           <div v-else class="flex flex-col items-center justify-center space-y-3 py-10 text-center">
             <div class="rounded-full bg-orange-50 p-3 dark:bg-orange-900/20">
