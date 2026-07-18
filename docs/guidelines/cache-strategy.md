@@ -30,29 +30,32 @@ chantier `getCacheMaxAge()` dev/prod : [`todo-cache-optimization.md`](./todo-cac
 | Personnalités, podcasts | — | 5 min | 5 min |
 | Annuaire sites publics | — | 24 h (Directus `websites` — migré 16/07/2026, QUAL-8) | 24 h |
 
-Aucun handler API n'a de `staleMaxAge` : à expiration, **le premier visiteur paie la latence
-Directus complète** (et un 500 si Directus est down à ce moment-là, hors dégradation propre).
+Les handlers API ont `swr: true` **par défaut** (Nitro) : à expiration du `maxAge`, le stale
+est servi instantanément pendant la revalidation en arrière-plan. Seul le cache **froid**
+(redémarrage) fait payer la latence Directus au premier visiteur — structurel, acceptable.
 
 ## 3. Précos (valeurs recommandées et pourquoi)
 
 > Une préco = un changement mesurable. Dérouler dans l'ordre, re-mesurer entre chaque
 > (protocole : [`../infra/mesure-performance.md`](../infra/mesure-performance.md) §5).
 
-### P1 — `staleMaxAge: 86400` (24 h) sur tous les handlers cachés — **la plus rentable**
+### ~~P1 — `staleMaxAge: 86400` sur tous les handlers~~ — ❌ ANNULÉE le 16/07/2026 : inutile
 
-**Valeur** : `staleMaxAge: 86400` partout où il y a un `maxAge` (93 handlers), sans toucher aux `maxAge`.
-**Pourquoi 24 h** : `staleMaxAge` ne change PAS la fraîcheur nominale (le `maxAge` continue de
-déclencher la revalidation) ; il autorise seulement Nitro à **servir la copie périmée pendant
-qu'il revalide en arrière-plan** au lieu de faire attendre le visiteur. 24 h couvre une panne
-Directus d'une journée : le site continue de servir du contenu (légèrement daté) au lieu de
-tomber. C'est le pattern SWR appliqué à la couche API — gain : plus AUCUN visiteur ne paie la
-latence Directus, et une résilience gratuite.
+**Vérification dans le code de Nitro** (`nitropack/dist/runtime/internal/cache.mjs`) : les
+handlers `defineCachedEventHandler` ont **`swr: true` par défaut**. À l'expiration du `maxAge`,
+Nitro sert **déjà** la copie périmée instantanément et revalide en arrière-plan — personne ne
+paie la latence Directus, et une panne Directus n'affecte pas les entrées déjà en cache (la
+revalidation échoue silencieusement, le stale continue d'être servi). `staleMaxAge` ne sert
+qu'à des cas exotiques (`swr: false`). L'affirmation initiale de l'audit (« à l'expiration, le
+premier visiteur paie la latence Directus complète ») était fausse. **Seul vrai trou** : le
+cache **froid** (redémarrage/redéploiement du conteneur) — premier hit de chaque clé = latence
+Directus complète ; c'est structurel et acceptable.
 
 ### P2 — Détails news : `maxAge` 1 h → **15 min** (`news/[id]`)
 
 **Pourquoi 15 min** : les corrections éditoriales (titre, coquille) arrivent surtout dans
-l'heure qui suit la publication — 1 h de cache les fige trop longtemps. 15 min + `staleMaxAge`
-24 h (P1) garde le même coût Directus (revalidation en fond) avec une fraîcheur 4× meilleure.
+l'heure qui suit la publication — 1 h de cache les fige trop longtemps. Le `swr: true` par
+défaut de Nitro revalide en arrière-plan : fraîcheur 4× meilleure sans latence visiteur.
 Ne PAS descendre sous 5 min : inutile (le SWR HTML de 300-600 s redevient le facteur limitant).
 
 ### P3 — Étendre le SWR HTML à l'Assemblée : `swr: 600`
@@ -74,7 +77,8 @@ annuaire.
 **Cibles** : `documents/types`, `documents/years`, `documents/families`, `news/categories`,
 `dossiers/types`. **Pourquoi 24 h** : ces listes changent quelques fois par an (nouvelle
 catégorie, nouvelle année). Les cacher 5 min = ~288 requêtes Directus/jour chacune pour rien.
-Avec P1 (`staleMaxAge`), même une modification rare apparaît en ≤ 24 h sans latence visiteur.
+Grâce au `swr: true` par défaut, même une modification rare apparaît en ≤ 24 h sans latence
+visiteur (revalidation en arrière-plan).
 _(`years` bascule au 1ᵉʳ janvier : avec 24 h de cache, la nouvelle année apparaît dans la
 journée — acceptable ; sinon 6 h.)_
 
@@ -101,7 +105,7 @@ d'usage constaté à ce jour.
 | Référentiels (types, catégories, années) | 24 h | — | `documents/types` |
 | Config / flags | 5 min | — | `features/flags` |
 
-Toujours : `staleMaxAge: 86400`, `getCacheMaxAge()` pour le différentiel dev/prod
+Toujours : `getCacheMaxAge()` pour le différentiel dev/prod
 ([`todo-cache-optimization.md`](./todo-cache-optimization.md)), dégradation propre
 (`reportServerError`, jamais de 500 global), et **bumper le `name` du handler** quand la
 structure de réponse change (sinon l'ancien cache ressert l'ancien format).

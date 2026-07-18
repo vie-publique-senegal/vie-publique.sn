@@ -259,7 +259,7 @@ useHead({
               <div
                 class="prose-a:text-primary-600 dark:prose-a:text-primary-400 prose prose-sm max-w-none overflow-hidden transition-all prose-headings:text-gray-900 prose-p:text-gray-600 prose-strong:text-gray-900 prose-li:text-gray-600 prose-img:rounded-xl dark:prose-headings:text-white dark:prose-p:text-gray-300 dark:prose-strong:text-white dark:prose-li:text-gray-300"
                 :class="isBodyLong && !bodyExpanded ? 'max-h-64' : ''"
-                v-html="institution.body"
+                v-html="rewriteCmsContent(institution.body)"
               />
               <div
                 v-if="isBodyLong && !bodyExpanded"

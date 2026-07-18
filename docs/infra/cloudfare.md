@@ -97,10 +97,20 @@ Conserve le comportement recommandé par Cloudflare.
 ## Browser Cache TTL
 
 ```
-4 heures
+Respect Existing Headers
 ```
 
-Laisse le navigateur conserver les ressources statiques.
+_(Changé le 17/07/2026 — était « 4 heures ».)_
+
+**Pourquoi** : la valeur « 4 heures » **écrase les en-têtes `Cache-Control` envoyés par
+l'origine** sur toutes les réponses cachables. Conséquence constatée : le `no-cache` posé
+par Nitro sur `/sw.js` (routeRule) était réécrit en `max-age=14400` → chaque mise à jour du
+service worker (donc de la PWA et des apps mobiles) mettait **jusqu'à 4 h** à atteindre les
+utilisateurs. Avec « Respect Existing Headers », c'est l'application qui décide : assets
+`/_nuxt/**` et images `/cms/**` gardent leur `max-age` long explicite (routeRules), `sw.js`
+son `no-cache`, et le HTML n'est pas caché navigateur (correct pour du SSR/SWR).
+⚠️ Corollaire : toute nouvelle ressource statique doit définir son `Cache-Control` côté
+app (routeRules) — Cloudflare n'ajoute plus de valeur par défaut.
 
 ---
 
@@ -405,7 +415,7 @@ query {
 | Mixed Crawlers | Autorisés |
 | Always Use HTTPS | ✅ (301 au edge, 14/07/2026) |
 | Cache Rules | `cache-images-pdf` (`/cms/*` + `/docs/*`, 14/07/2026) |
-| Browser Cache TTL | 4 h |
+| Browser Cache TTL | Respect Existing Headers (17/07/2026 — « 4 h » écrasait le no-cache de sw.js) |
 | Development Mode | OFF |
 | Always Online | OFF |
 

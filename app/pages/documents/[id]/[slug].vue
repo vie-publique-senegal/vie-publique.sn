@@ -393,7 +393,7 @@ const showPdfViewer = ref(false);
             <div
               v-if="document.content_html"
               class="prose prose-sm prose-gray max-w-none rounded-xl bg-white p-4 shadow-sm ring-1 ring-gray-100 dark:prose-invert dark:bg-gray-800 dark:ring-gray-700 sm:p-6"
-              v-html="document.content_html"
+              v-html="rewriteCmsContent(document.content_html)"
             />
 
             <!-- Viewer PDF inline (toujours visible) -->

@@ -37,7 +37,6 @@
     "@nuxtjs/leaflet": "^1.2.4",
     "@nuxtjs/mdc": "^0.17.0",
     "@nuxtjs/seo": "^3.2.2",
-    "@nuxtjs/web-vitals": "^0.2.7",
     "@pinia/nuxt": "^0.5.4",
     "@sentry/nuxt": "^10.65.0",
     "@tailwindcss/typography": "^0.5.13",

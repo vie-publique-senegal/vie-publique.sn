@@ -142,6 +142,30 @@ ChatGPT **519** (95 %) · Perplexity 10 · Gemini 9 · Claude 5 · Copilot 4.
 | `Code5xx` | ~6/j | Sain |
 | Pages crawlées | 3 500-7 200/j | — |
 
+## Baseline Backlinks — relevée le 17/07/2026 (scan Ahrefs gratuit)
+
+| KPI | Valeur | Détail |
+| --- | --- | --- |
+| Groupes de liens entrants | **190** | scan gratuit Ahrefs Site Explorer (`http+https`, subdomains) |
+| Meilleurs référents | **fr.wikipedia.org (DR 97)** | articles _Dakar_ et _Sine Saloum_, en **référence bibliographique** |
+| Pages ciblées | `/documents/4884/JO-3656-du-19-janvier-1964`, `/documents/7565/loi-n-84-22…` | le corpus documentaire attire les citations |
+| Nature | `NOFOLLOW` (systématique sur Wikipédia) | pas de jus direct, mais **signal d'entité/E-E-A-T** — synergie avec le `sameAs` Wikidata (Q140571616) posé le 16/07 |
+
+**Sources de relevé (cadence trimestrielle — les backlinks bougent lentement)** :
+
+1. **Ahrefs Webmaster Tools (gratuit, à activer)** : vérifier vie-publique.sn via GSC/DNS sur
+   <https://ahrefs.com/webmaster-tools> → rapport backlinks complet du site sans abonnement
+   (l'abonnement payant ne sert qu'à analyser les concurrents — pas nécessaire).
+2. **GSC → Liens** (UI uniquement — ce rapport n'existe PAS dans l'API Search Console, aucun
+   outil ne peut le requêter) : échantillonné et en retard, mais gratuit.
+3. **Bing Webmaster Tools** : rapport backlinks gratuit, accessible par API (utilisable dans
+   les relevés automatisés).
+
+**Lecture stratégique** : être cité en source par Wikipédia valide la stratégie « URLs stables +
+textes officiels de référence » (conventions d'URL CLAUDE.md) et pèse dans le dossier BING-7
+(archives.sn) : c'est vie-publique.sn que Wikipédia référence. Encourager ces citations
+(exactitude des métadonnées de documents, permanence des URLs) plutôt que chercher des liens.
+
 ## Checklist des prochains relevés
 
 - [ ] **Mi-août 2026** : sessions Bing (attendu : > 400-450/sem si BING-1/7 portent leurs fruits) ;
@@ -159,3 +183,6 @@ ChatGPT **519** (95 %) · Perplexity 10 · Gemini 9 · Claude 5 · Copilot 4.
 - [ ] **Bing 4xx crawlés** : baseline 3-5k/j — identifier la source dans Bing WT ;
 - [ ] **Bing clics/sem** : baseline ~310 — la vraie récupération se lira sur les requêtes
       **documentaires** (hors marque), aujourd'hui captées par archives.sn (décision BING-7).
+- [ ] **Backlinks (trimestriel, prochain ~octobre 2026)** : baseline 190 groupes (Ahrefs) —
+      activer Ahrefs Webmaster Tools gratuit d'ici là ; surveiller de nouveaux référents de
+      presse/institutionnels.

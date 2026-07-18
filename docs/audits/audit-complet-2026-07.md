@@ -16,18 +16,18 @@
 - [x] [SEC-2 — Endpoints `server/api/debug/*` exposés en production](#sec-2--endpoints-de-debug-exposés-en-production) ✅ corrigé 02/07/2026 : dossier `server/api/debug/` supprimé (aucune référence dans le code ; `/api/health` reste pour le healthcheck)
 - [ ] [SEC-3 — Protection CSRF inopérante (fichier mal placé)](#sec-3--protection-csrf-inopérante)
 - [ ] [SEC-4 — Turnstile jamais vérifié côté serveur + newsletter sans rate limit](#sec-4--turnstile-jamais-vérifié--newsletter-non-protégée)
-- [ ] [PERF-1 — Precache PWA de 45,6 MB](#perf-1--precache-pwa-de-456-mb)
+- [x] [PERF-1 — Precache PWA de 45,6 MB](#perf-1--precache-pwa-de-456-mb) — ✅ 16/07/2026 (precache 123 entrées/43,4 Mo → **9 entrées/493 Ko**, confirmé dans le build prod Coolify ; + fix connexe : `sw.js` servi en `no-cache` — Cloudflare le cachait 4 h, retardant chaque màj du SW)
 - [ ] [QUAL-1 — Couverture de tests ≈ 0,2 % + vitest.config.ts cassé](#qual-1--couverture-de-tests-quasi-nulle)
 
 ### 🟠 Important — Performance
 
 - [x] [PERF-2 — Fonts Google en `@import` bloquant, sans preconnect](#perf-2--fonts-google-en-import-bloquant) — ✅ 16/07/2026 (Poppins n'était utilisée nulle part : `@import` supprimé)
-- [ ] [PERF-3 — Firebase dans le bundle d'entrée (~140 KB br sur toutes les pages)](#perf-3--firebase-dans-le-bundle-dentrée)
-- [ ] [PERF-4 — Import d3 mort dans AppFooter.vue](#perf-4--import-d3-mort-dans-le-footer)
+- [x] [PERF-3 — Firebase dans le bundle d'entrée (~140 KB br sur toutes les pages)](#perf-3--firebase-dans-le-bundle-dentrée) — ✅ 16/07/2026 (imports 100 % dynamiques dans le plugin : SDK téléchargé au 1ᵉʳ usage réel des notifs push ; API $firebase inchangée pour useNotifications ; à vérifier au build : firebase absent du chunk d'entrée)
+- [x] [PERF-4 — Import d3 mort dans AppFooter.vue](#perf-4--import-d3-mort-dans-le-footer) — ✅ 16/07/2026 (`import { lab } from 'd3'` supprimé ; + suppression du plugin vide `pdfjs.client.ts`)
 - [ ] [PERF-5 — pdfjs importé statiquement dans 2 viewers](#perf-5--pdfjs-statique-dans-pdfviewerinlinemodal)
 - [x] [PERF-6 — Images CMS jamais servies en WebP (provider sans `format`)](#perf-6--images-cms-jamais-en-webp) — ✅ 09/07/2026 (`format=webp&quality=80` par défaut ; vérifié en prod le 16/07 : `image/webp` + HIT Cloudflare)
-- [ ] [PERF-7 — Pas de SWR HTML + `no-cache` blanket sur `/api/**`](#perf-7--pas-de-swr-html--no-cache-sur-api)
-- [ ] [PERF-8 — Triple stack cartographique (maplibre/deck.gl + leaflet + d3-geo), CSS globaux](#perf-8--triple-stack-cartographique)
+- [x] [PERF-7 — Pas de SWR HTML + `no-cache` blanket sur `/api/**`](#perf-7--pas-de-swr-html--no-cache-sur-api) — ✅ 16/07/2026 (SWR HTML sur pages chaudes, vérifié en prod : TTFB 312→111 ms, pagination sûre ; volet headers navigateur `/api/**` volontairement non fait — gain faible, cf. cache-strategy.md)
+- [ ] [PERF-8 — Triple stack cartographique (maplibre/deck.gl + leaflet + d3-geo), CSS globaux](#perf-8--triple-stack-cartographique) ⏳ partiel 17/07/2026 : **volet CSS fait** — entry.css 552→457 kB, maplibre-gl.css (70 kB) et leaflet.css (15 kB) rattachés aux chunks des composants cartes (7 pages testées OK en local) ; reste le volet long terme (migrer les cartes élections Leaflet/d3 vers MapLibre)
 
 ### 🟠 Important — Sécurité
 
@@ -80,7 +80,8 @@
 - [ ] [SEC-10 — Dépendances vulnérables (`@grpc/grpc-js` High via firebase-admin)](#sec-10--dépendances-vulnérables)
 - [ ] [PERF-9 — Shiki : 18 langages pour le chatbot (chunks 225 KB + WASM 607 KB)](#perf-9--shiki-surdimensionné)
 - [ ] [PERF-10 — `councyl-minister.ts` non caché + `limit: -1` sur ~20 endpoints](#perf-10--endpoints-non-cachésnon-bornés)
-- [ ] [PERF-11 — Web Vitals désactivé : aucune mesure RUM en prod](#perf-11--pas-de-mesure-rum)
+- [x] [PERF-11 — Web Vitals désactivé : aucune mesure RUM en prod](#perf-11--pas-de-mesure-rum) — ✅ 16/07/2026 : RUM déjà couvert par Cloudflare Web Analytics (actif, données live) ; module mort `@nuxtjs/web-vitals` désinstallé ; protocole de relevé dans docs/infra/mesure-performance.md
+- [x] PERF-12 — Images du rich text Directus en URL CMS directe (JPEG/PNG original, sans lazy) — ✅ 16/07/2026 : découvert via le Debug View RUM (LCP jusqu'à 38 s) ; réécriture `rewriteCmsContent()` (app/utils/cms-content.ts) appliquée aux 11 rendus `v-html` (proxy /cms + webp 800px + lazy/async, GIF/SVG et liens fichiers préservés) _(ajout post-audit)_
 - [ ] [DOC-6 — Dépendances inutilisées/mal classées (`@ai-sdk/vue`, `@types/marked`, `@nuxt/eslint`)](#doc-6--dépendances-à-nettoyer)
 - [ ] [DOC-7 — Fichiers orphelins (`nuxt.config.build-optimized.ts`, `design.md` racine)](#doc-7--fichiers-orphelins)
 - [ ] [QUAL-7 — Interfaces hors de `types/` + `defineProps` runtime non typés](#qual-7--types-mal-rangés)
@@ -191,9 +192,10 @@ Le provider passait `width/height/quality` à Directus mais **jamais `format`** 
 
 - Aucune règle `swr`/`isr`/`prerender` de page → chaque hit sur `/`, `/actualites`, `/documents/**` refait un rendu SSR complet.
 - `'/api/**': { headers: { 'cache-control': 'no-cache' } }` interdit tout cache navigateur/CDN même pour les GET stables cachés 1h côté Nitro.
-- Aucun `staleMaxAge` (SWR Nitro) sur les 93 handlers cachés : à l'expiration, le premier visiteur paie la latence Directus complète.
+- ~~Aucun `staleMaxAge` (SWR Nitro) sur les 93 handlers cachés : à l'expiration, le premier visiteur paie la latence Directus complète.~~ **Rectifié le 16/07/2026 : constat faux** — `swr: true` est le défaut Nitro, le stale est déjà servi pendant la revalidation (vérifié dans `nitropack/dist/runtime/internal/cache.mjs`).
 
-**Fix** : `routeRules` : `'/': { swr: 300 }`, `'/documents/**': { swr: 600 }`, `'/actualites/**': { swr: 300 }`… ; `staleMaxAge: 86400` sur les handlers 1h ; `s-maxage`/`stale-while-revalidate` ciblés sur les GET publics (garder `no-cache` pour POST/santé).
+**Fix** : `routeRules` : `'/': { swr: 300 }`, `'/documents/**': { swr: 600 }`, `'/actualites/**': { swr: 300 }`… ; ~~`staleMaxAge: 86400` sur les handlers 1h~~ (inutile, cf. rectification ci-dessus) ; `s-maxage`/`stale-while-revalidate` ciblés sur les GET publics (garder `no-cache` pour POST/santé) — partie header navigateur non faite (gain faible, cf. `docs/guidelines/cache-strategy.md` §1).
+**✅ SWR HTML appliqué le 16/07/2026** (`/` 120 s, actualites/dossiers/documents/conseil-des-ministres 300-600 s) — vérifié en prod : TTFB 312 ms → 111 ms au 2ᵉ hit, pagination `?page=` sûre (clé de cache = URL complète avec query).
 
 ### PERF-8 — Triple stack cartographique
 

@@ -60,7 +60,7 @@ export default defineCachedEventHandler(
     }
   },
   {
-    maxAge: 60 * 5, // 5 minutes
+    maxAge: getCacheMaxAge(CacheDuration.LONG, 0), // 24 h : référentiel quasi statique (préco P5, docs/guidelines/cache-strategy.md)
     name: 'news-categories',
     getKey: () => 'news-categories',
   },

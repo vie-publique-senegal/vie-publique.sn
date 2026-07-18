@@ -37,7 +37,7 @@ export default defineCachedEventHandler(
     }
   },
   {
-    maxAge: getCacheMaxAge(CacheDuration.SHORT, 0),
+    maxAge: getCacheMaxAge(CacheDuration.LONG, 0), // 24 h : référentiel quasi statique (préco P5, docs/guidelines/cache-strategy.md)
     name: 'dossiers-types',
     getKey: () => 'dossiers-types',
   },

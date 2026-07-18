@@ -192,6 +192,11 @@ export default defineNuxtConfig({
 
   // Configuration hybride : routeRules + fallback API
   routeRules: {
+    // Service worker : JAMAIS de cache long (revalidation à chaque visite, l'ETag
+    // rend ça gratuit). Sans ça, l'origine envoyait max-age=14400 et Cloudflare
+    // cachait sw.js 4 h au edge → les mises à jour du SW (et donc du precache PWA)
+    // mettaient jusqu'à 4 h à atteindre les utilisateurs après un déploiement.
+    '/sw.js': { headers: { 'cache-control': 'no-cache' } },
     // --- SWR HTML (PERF-7, docs/audits/audit-web-vitals-2026-07.md) ---
     // Le HTML rendu est caché côté Nitro et resservi instantanément ; à expiration,
     // le visiteur reçoit la copie "stale" pendant que Nitro re-rend en arrière-plan.
@@ -400,13 +405,21 @@ export default defineNuxtConfig({
     '@nuxt/ui',
     'nuxt-gtag',
     '@nuxtjs/seo',
-    // FIXME? Temporairement désactivé - incompatible avec Nuxt 4
-    // '@nuxtjs/web-vitals',
+    // RUM : assuré par Cloudflare Web Analytics (beacon injecté par le proxy,
+    // dashboard zone → Analytics → Web analytics). @nuxtjs/web-vitals désinstallé
+    // (mort : dernière release 04/2024, jamais compatible Nuxt 4) — PERF-11.
     '@nuxt/image',
     '@vueuse/motion/nuxt',
     '@nuxt/eslint',
     '@pinia/nuxt',
     '@nuxtjs/leaflet',
+    // PERF-8 : @nuxtjs/leaflet pousse leaflet.css dans le CSS GLOBAL (module.mjs:38,
+    // sans option pour désactiver) → ce mini-module inline, exécuté juste après,
+    // retire cette injection. Le CSS est importé à la place dans les composants
+    // Election/ElectionMap* qui rendent réellement une carte Leaflet.
+    (_inlineOptions: unknown, nuxt: { options: { css: string[] } }) => {
+      nuxt.options.css = nuxt.options.css.filter((c) => !String(c).includes('leaflet'));
+    },
     '@vite-pwa/nuxt',
     '@vueuse/nuxt',
     '@nuxtjs/mdc',
@@ -473,7 +486,12 @@ export default defineNuxtConfig({
       nodeEnv: process.env.NODE_ENV || 'development',
     },
   },
-  css: ['~/assets/css/app.css', 'maplibre-gl/dist/maplibre-gl.css'],
+  // PERF-8 : PAS de CSS cartographique ici — le tableau `css:` est GLOBAL (bundlé
+  // dans entry.css, render-blocking sur 100 % des pages). maplibre-gl.css (~70 Ko)
+  // est importé dans app/components/map/SenegalMap.vue et leaflet.css dans les
+  // composants Election/ElectionMap* : Vite les rattache au chunk du composant,
+  // chargé uniquement sur les pages cartes (CSS garanti avant le rendu du composant).
+  css: ['~/assets/css/app.css'],
   colorMode: {
     preference: 'dark', // default value of $nuxt.colorMode.preference
   },
@@ -655,6 +673,17 @@ export default defineNuxtConfig({
       name: 'Vie Publique Sénégal',
       url: 'https://www.vie-publique.sn',
       logo: 'https://www.vie-publique.sn/social-image.png',
+      // Entité Wikidata + profils officiels (voir docs/modules/a-propos/wikipedia-wikidata.md)
+      sameAs: [
+        'https://www.wikidata.org/wiki/Q140571616',
+        'https://x.com/ViePubliqueSN',
+        'https://www.facebook.com/ViePubliqueSenegal',
+        'https://www.instagram.com/viepubliquesn/',
+        'https://www.linkedin.com/company/vie-publique-sn/',
+        'https://github.com/Code-for-Senegal/vie-publique.sn',
+        'https://play.google.com/store/apps/details?id=sn.viepublique.app',
+        'https://apps.apple.com/app/id6757257552',
+      ],
     },
   },
   gtag: {
@@ -713,17 +742,7 @@ export default defineNuxtConfig({
           src: 'pwa-512x512.png',
           sizes: '512x512',
           type: 'image/png',
-        },
-        {
-          src: 'pwa-512x512.png',
-          sizes: '512x512',
-          type: 'image/png',
           purpose: 'any',
-        },
-        {
-          src: 'pwa-1024x1024.png',
-          sizes: '1024x1024',
-          type: 'image/png',
         },
         {
           src: 'pwa-1024x1024.png',
@@ -836,21 +855,22 @@ export default defineNuxtConfig({
         client_mode: ['navigate-existing', 'auto'],
       },
     },
-    // Note: avec strategies: 'injectManifest', les options workbox
-    // (clientsClaim, skipWaiting, navigateFallback) sont IGNORÉES.
-    // Le SW custom (sw.ts) gère tout directement.
-    workbox: {
-      globPatterns: ['**/*.{js,css,html,png,svg,ico}'],
-      maximumFileSizeToCacheInBytes: 10 * 1024 * 1024,
-      cleanupOutdatedCaches: true,
-    },
     injectManifest: {
-      // Precache UNIQUEMENT les assets essentiels (icônes, favicon).
-      // Les JS/CSS hashés (/_nuxt/*) sont gérés par CacheFirst en runtime :
-      // cache miss → réseau → cache. Pas besoin de les precacher.
-      // Precacher tout JS/CSS ralentit l'installation du SW et si un seul
-      // fichier échoue → le SW ne s'installe pas → l'ancien reste actif.
-      globPatterns: ['**/*.{png,svg,ico,webp}'],
+      // Precache UNIQUEMENT les assets essentiels du shell PWA (~0,5 MB) :
+      // icônes du manifest, favicon, badge de notification. PAS de glob large :
+      // '**/*.{png,svg,ico,webp}' précachait 123 images = 43 MB re-téléchargés
+      // à chaque mise à jour du SW (PERF-1). Les autres images ET les JS/CSS
+      // hashés (/_nuxt/*) sont couverts en runtime par les routes CacheFirst
+      // de app/service-worker/sw.ts. Precacher trop ralentit l'installation du
+      // SW et un seul fichier en échec bloque son installation.
+      globPatterns: [
+        'pwa-192x192.png',
+        'pwa-256x256.png',
+        'pwa-512x512.png',
+        'pwa-1024x1024.png',
+        'favicon.ico',
+        'badge-72x72.png',
+      ],
       maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
     },
     client: {

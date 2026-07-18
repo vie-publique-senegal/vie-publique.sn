@@ -53,6 +53,8 @@
 </template>
 
 <script setup lang="ts">
+// PERF-8 : leaflet.css importé ici (l'injection globale du module est désactivée dans nuxt.config)
+import 'leaflet/dist/leaflet.css';
 import type { TransformedRegion, LatLng } from "~/types/election-map";
 
 interface Props {

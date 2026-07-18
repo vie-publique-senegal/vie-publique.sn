@@ -129,7 +129,10 @@ section qui porte l'admissibilité de l'article. -->
 ## 5. Suivi
 
 - [x] Date de fondation tranchée : **2024** (lancement public avril 2024) — llms.txt harmonisé
-- [ ] Créer l'item Wikidata + reporter le QID dans le `sameAs` du schema Organization
+- [x] Créer l'item Wikidata + reporter le QID dans le `sameAs` du schema Organization —
+      **[Q140571616](https://www.wikidata.org/wiki/Q140571616)**, ajouté le 2026-07-16 dans
+      `schemaOrg.identity` (nuxt.config.ts, nœud global) + schémas locaux `qui-sommes-nous.vue`
+      et `financement-independance.vue`
 - [ ] Constituer le tableau des sources presse (et provoquer 1–2 articles via relations presse)
 - [ ] Brouillon Wikipédia + relecture Projet:Sénégal
 - [ ] Après publication : ajouter le lien Wikipédia au `sameAs` + à `llms.txt`
