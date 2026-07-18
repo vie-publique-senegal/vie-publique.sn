@@ -19,9 +19,13 @@ const props = defineProps<{
       <UIcon name="i-heroicons-document-magnifying-glass" class="h-12 w-12 text-gray-300 mx-auto mb-4" />
       <p class="text-gray-500 font-bold">Aucun document spécifique n'est encore rattaché à ce scrutin.</p>
       <p class="text-xs text-gray-400 mt-2">Consultez la bibliothèque complète pour les textes généraux.</p>
-      <UButton to="/elections-senegal/legislation" class="mt-6 rounded-full" color="black" variant="soft">
+      <NuxtLink
+        to="/elections-senegal/legislation"
+        class="text-primary-600 dark:text-primary-400 mt-6 inline-flex items-center gap-1 text-sm font-bold underline underline-offset-4 hover:text-primary-700 dark:hover:text-primary-300"
+      >
         Toute la législation
-      </UButton>
+        <UIcon name="i-heroicons-arrow-right" class="h-3.5 w-3.5" />
+      </NuxtLink>
     </div>
 
     <div v-else class="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4">

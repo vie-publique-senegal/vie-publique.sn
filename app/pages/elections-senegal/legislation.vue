@@ -62,10 +62,12 @@ const itemsPerPage = 12;
 const totalItems = computed(() => pagination.value?.total || 0);
 const totalPages = computed(() => pagination.value?.totalPages || 1);
 
+const defaultSort = '-publish_date';
+
 const setSearchQuery = (q: string) => {
   searchQuery.value = q;
   currentPage.value = 1;
-  router.replace({ query: { ...route.query, q: q || undefined, page: '1' } });
+  router.replace({ query: { ...route.query, q: q || undefined, page: undefined } });
 };
 
 const searchQueryUI = computed({
@@ -74,12 +76,18 @@ const searchQueryUI = computed({
 });
 
 watch(currentPage, (newPage) => {
-  router.replace({ query: { ...route.query, page: newPage.toString() } });
+  router.replace({ query: { ...route.query, page: newPage > 1 ? newPage.toString() : undefined } });
 });
 
 watch(sortBy, (newSort) => {
   currentPage.value = 1;
-  router.replace({ query: { ...route.query, sort: newSort, page: '1' } });
+  router.replace({
+    query: {
+      ...route.query,
+      sort: newSort === defaultSort ? undefined : newSort,
+      page: undefined,
+    },
+  });
 });
 
 watch([selectedType, selectedYear], () => {
@@ -89,7 +97,7 @@ watch([selectedType, selectedYear], () => {
       ...route.query,
       type: selectedType.value === 'all' ? undefined : selectedType.value,
       year: selectedYear.value === 'all' ? undefined : selectedYear.value,
-      page: '1',
+      page: undefined,
     },
   });
 });
@@ -256,6 +264,13 @@ useSeoMeta({
         >
           Voir tout
         </UButton>
+        <NuxtLink
+          to="/documents/public"
+          class="text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 mt-4 inline-flex items-center gap-1 text-sm font-bold underline underline-offset-4"
+        >
+          Consulter la bibliothèque complète des documents
+          <UIcon name="i-heroicons-arrow-right" class="h-3.5 w-3.5" />
+        </NuxtLink>
       </div>
 
       <div v-else>
@@ -317,7 +332,10 @@ useSeoMeta({
             v-model="currentPage"
             :total="totalItems"
             :page-count="itemsPerPage"
-            :ui="{ rounded: 'rounded-full' }"
+            :ui="{
+              wrapper: 'flex items-center gap-1',
+              rounded: 'rounded-lg',
+            }"
           />
         </div>
       </div>

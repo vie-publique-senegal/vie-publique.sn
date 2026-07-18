@@ -73,12 +73,17 @@ const getSortIcon = (field: string) => {
 const formatNumber = (num: number) => {
   return new Intl.NumberFormat('fr-FR').format(num);
 };
+
+defineExpose({
+  hasData: computed(() => (tableData.value?.length || 0) > 0),
+  loading: computed(() => pending.value || loading.value),
+});
 </script>
 
 <template>
   <div class="flex flex-col gap-3">
-    <!-- Search Bar -->
-    <div class="flex items-center gap-3">
+    <!-- Search Bar (uniquement si des résultats existent) -->
+    <div v-if="tableData && tableData.length > 0" class="flex items-center gap-3">
       <UInput
         v-model="searchQuery"
         icon="i-heroicons-magnifying-glass"
@@ -92,8 +97,11 @@ const formatNumber = (num: number) => {
       </UBadge>
     </div>
 
-    <!-- Sort controls -->
-    <div class="flex items-center gap-3 text-[10px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400 px-1">
+    <!-- Sort controls (uniquement si des résultats existent) -->
+    <div
+      v-if="tableData && tableData.length > 0"
+      class="flex items-center gap-3 text-[10px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400 px-1"
+    >
       <button class="flex items-center gap-1 hover:text-primary-600 transition-colors" @click="toggleSort('commune')">
         Commune
         <UIcon :name="getSortIcon('commune')" class="h-3 w-3" />
@@ -114,11 +122,18 @@ const formatNumber = (num: number) => {
       <p class="mt-4 text-sm text-gray-500 animate-pulse">Chargement des résultats...</p>
     </div>
 
-    <!-- Empty State -->
+    <!-- Empty State : aucune donnée pour cette élection -->
+    <div v-else-if="!tableData || !tableData.length" class="flex flex-col items-center justify-center py-16">
+      <UIcon name="i-heroicons-chart-bar" class="w-10 h-10 text-gray-300 dark:text-gray-700 mb-3" />
+      <h3 class="text-base font-bold text-gray-500">Aucun résultat disponible</h3>
+      <p class="text-xs text-gray-400">Les résultats ne sont pas encore publiés.</p>
+    </div>
+
+    <!-- Empty State : recherche sans résultat -->
     <div v-else-if="!sortedData.length" class="flex flex-col items-center justify-center py-16">
-      <UIcon name="i-heroicons-table-cells" class="w-10 h-10 text-gray-300 dark:text-gray-700 mb-3" />
+      <UIcon name="i-heroicons-magnifying-glass" class="w-10 h-10 text-gray-300 dark:text-gray-700 mb-3" />
       <h3 class="text-base font-bold text-gray-500">Aucun résultat trouvé</h3>
-      <p class="text-xs text-gray-400">Aucune donnée disponible pour cette sélection.</p>
+      <p class="text-xs text-gray-400">Essayez une autre recherche.</p>
     </div>
 
     <!-- Results List -->

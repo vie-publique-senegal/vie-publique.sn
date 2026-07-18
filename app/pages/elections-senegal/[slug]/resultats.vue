@@ -127,6 +127,19 @@ const closeRankingPanel = () => {
   }, 300);
 };
 
+const localesTableRef = ref<{ hasData: boolean; loading: boolean } | null>(null);
+
+// Détermine s'il y a des résultats à afficher pour l'onglet "Liste", pour savoir
+// si le header "Résultats globaux" (+ toggle Liste/Carte) doit rester visible.
+const hasListResults = computed(() => {
+  if (selectedType.value === 'locale') {
+    if (localesTableRef.value?.loading) return true;
+    return !!localesTableRef.value?.hasData;
+  }
+  if (loadingCoalitions.value) return true;
+  return !!(coalitions.value && coalitions.value.length > 0);
+});
+
 const resultCommunesForDept = computed(() => {
   if (!resultDeptPanelData.value) return [];
   if (resultDeptPanelData.value.communes?.length > 0) return resultDeptPanelData.value.communes;
@@ -159,8 +172,10 @@ useSeoMeta({
 
 <template>
   <div class="animate-in fade-in mx-auto max-w-7xl space-y-3 duration-700">
-    <div class="flex items-center justify-between">
-      <h2 class="text-lg font-bold text-gray-900 dark:text-white sm:text-2xl">Résultats globaux</h2>
+    <div v-if="hasListResults || (mapResultAvailable && !mapResultHasNoData)" class="flex items-center justify-between">
+      <h2 v-if="hasListResults" class="text-lg font-bold text-gray-900 dark:text-white sm:text-2xl">
+        Résultats globaux
+      </h2>
       <div
         v-if="mapResultAvailable && !mapResultHasNoData"
         class="flex gap-1 rounded-xl bg-gray-100 p-1 dark:bg-gray-800"
@@ -192,6 +207,7 @@ useSeoMeta({
       <div v-if="resultViewType === 'list'">
         <div v-if="selectedType === 'locale'">
           <ElectionsDashboardStatsElectionResultatsLocalesTable
+            ref="localesTableRef"
             :election-type="selectedType"
             :election-year="selectedYear"
           />
