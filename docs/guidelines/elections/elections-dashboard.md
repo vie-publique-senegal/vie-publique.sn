@@ -2,7 +2,7 @@
 
 > **Specs de référence** : [Document de spécifications - Dashboard Électoral](https://docs.google.com/document/d/1_O5dHPXORhyltH0f-yIhU-319FdjxhlsOVDsyIEHYok/edit?tab=t.0#heading=h.s087gd8gcxn2)
 >
-> **Dernière mise à jour** : 2026-07-17
+> **Dernière mise à jour** : 2026-07-18
 
 Ce document décrit le fonctionnement du dashboard électoral de Vie-Publique.sn, ses règles métier et sa gestion des déploiements. Il complète :
 
@@ -40,7 +40,7 @@ Chaque élection est identifiée par un **slug CMS** (ex. `legislatives-2024`) e
 | Résultats | `/[slug]/resultats` | KPIs, classement des coalitions, second tour |
 | PVs | `/[slug]/pvs` | Procès-verbaux (si activé) |
 | Documents | `/[slug]/documents` | Documents liés à l'élection |
-| Statistiques | `/[slug]/statistiques` | Répartition par profession, sexe, âge |
+| Statistiques | `/[slug]/statistiques` | Analyses par élection (profession, sexe, présence des listes…), pilotées par un **registre de stats** — voir [3.9](#39-statistiques-registre-de-stats) |
 | Guide | `/[slug]/guide` | Vidéos tutoriels |
 
 ---
@@ -96,7 +96,9 @@ Priorité de sélection sur `/elections-senegal` :
 | Élection `completed` | `candidats`, `resultats`, `documents` |
 | Autres statuts | `candidats`, `carte`, `resultats`, `documents`, `guide` |
 | + si `pv_upload_active = true` | + `pvs` |
-| + si type législative | + `statistiques` |
+| + si type **législative ou présidentielle** | + `statistiques` |
+
+> L'onglet `statistiques` est ouvert aux scrutins **législatifs et présidentiels**.
 
 Le libellé de l'onglet « candidats » dépend du type : **Candidats** (présidentielle), **Coalitions** (législatives), **Circonscriptions** (locales).
 
@@ -124,6 +126,74 @@ Le libellé de l'onglet « candidats » dépend du type : **Candidats** (présid
 
 L'onglet PVs n'apparaît que si `pv_upload_active = true` sur l'élection. Le fonctionnement détaillé (upload, filtres géographiques, authentification) est décrit dans [pvs-upload-deploiement.md](./pvs-upload-deploiement.md).
 
+### 3.9 Statistiques (registre de stats)
+
+La page `/[slug]/statistiques` ([app/pages/elections-senegal/[slug]/statistiques.vue](../../../app/pages/elections-senegal/%5Bslug%5D/statistiques.vue)) n'affiche pas une liste fixe de graphiques : elle est pilotée par un **registre de statistiques** défini dans la page elle-même (`STATS_REGISTRY`). Chaque entrée décrit une analyse possible, indépendamment du fait qu'elle ait ou non des données pour l'élection affichée.
+
+#### Structure d'une entrée du registre
+
+```ts
+interface StatDefinition {
+  value: string;      // clé technique, reflétée dans ?stats_type=
+  label: string;       // libellé affiché dans le sélecteur
+  enabled: boolean;     // interrupteur global : proposée un jour, ou jamais ?
+  types?: string[];     // types de scrutin concernés (absent = tous)
+}
+```
+
+- **`enabled: false`** = la stat n'est **jamais** proposée, quelle que soit l'élection — utilisé quand la donnée n'existe pas encore dans le CMS pour aucun scrutin (ex. `ageDistribution`, désactivée car les dates de naissance des candidats sont renseignées à moins de 3 % — voir [elections-model.md](./elections-model.md), collection `election_persons`). À réactiver le jour où la donnée existe réellement, pas avant.
+- **`types`** restreint une stat *activée* aux scrutins où elle a un sens métier (ex. « présence des listes par circonscription » et « profession des élus » n'existent que pour les législatives — une présidentielle n'a ni listes départementales ni 165 élus).
+
+#### Filtrage à deux niveaux : `enabled`/`types` puis données réelles
+
+Le registre ne suffit pas à décider si une stat doit apparaître dans le sélecteur : une stat `enabled: true` et compatible avec le `type` du scrutin peut quand même n'avoir **aucune donnée** pour l'élection précise affichée (ex. une législative ancienne sans élus renseignés en base). La page calcule donc :
+
+1. `enabledStats` — filtre le registre sur `enabled` + `types` (dépend du **type** de scrutin) ;
+2. `statDataState` — pour chaque stat, l'état `{ loading, hasData }` déduit de la réponse de son `useAsyncData`/`useFetch` (dépend de l'**élection précise**) ;
+3. `availableStats` — l'intersection des deux : c'est la liste réellement proposée dans le `USelect`.
+
+**Règle d'affichage** (validée avec l'utilisateur le 2026-07-18) :
+
+- une stat sans données pour l'élection courante **n'apparaît pas** dans le sélecteur, même si elle est `enabled` ;
+- si `availableStats.length <= 1`, le sélecteur **lui-même est masqué** (pas d'utilité à choisir entre zéro ou une seule option) — la stat unique (ou l'état vide global) s'affiche directement.
+
+**Exemple concret** : sur `legislatives-2022`, l'endpoint `professions?elected=true` ne renvoie aucune ligne (élus non renseignés pour ce scrutin) → « Profession des élus » disparaît du sélecteur bien que la stat soit `enabled` et de `type: legislative`. Sur `presidentielles-2024`, ce sont `professionElus` et `listsPresence` qui disparaissent car exclus par `types`.
+
+#### Stat effectivement affichée : `activeStat` (piège hydratation SSR)
+
+La stat demandée par `?stats_type=` peut ne pas être dans `availableStats` (lien externe obsolète, changement d'élection via les sélecteurs année/type). Le recalage vers la première stat disponible **doit être un `computed` (`activeStat`), jamais un `watch`** : un `watch` ne se ré-exécute pas côté serveur une fois les données résolues, ce qui produit un HTML SSR différent du rendu client (sélecteur figé sur le placeholder, mismatch d'hydratation Vue). Le `computed` est réévalué à chaque rendu — SSR et client convergent forcément vers la même valeur.
+
+```ts
+const activeStat = computed(() => {
+  if (availableStats.value.some((stat) => stat.value === statsType.value)) {
+    return statsType.value;
+  }
+  return availableStats.value[0]?.value ?? null;
+});
+```
+
+L'écriture de `?stats_type=` dans l'URL passe par un handler explicite (`@update:model-value="onStatChange"` sur le `USelect`), pas par un `v-model` + `watch(statsType, …)`.
+
+#### Ajouter une nouvelle stat
+
+1. Ajouter l'endpoint API (`server/api/elections/dashboard/stats/<nom>.get.ts`), filtrable par `year`/`type` (voir `genders.get.ts`/`professions.get.ts` comme modèles) ;
+2. Ajouter le composable de lecture dans `app/composables/elections/dashboard/` ;
+3. Créer le composant d'affichage dans **`app/components/elections/dashboard/stats/`** (jamais ailleurs — convention validée pour ce module) ;
+4. Ajouter une entrée dans `STATS_REGISTRY` (`enabled: true`, `types` si la stat ne concerne pas tous les scrutins) ;
+5. Brancher son `useAsyncData` dans `statDataState` (`{ loading, hasData }`) et son rendu conditionnel dans le template.
+
+#### Stats existantes (2026-07-18)
+
+| `value` | Libellé | `types` | Endpoint | Composant |
+|---|---|---|---|---|
+| `professionCandidat` | Profession des candidats | tous | `dashboard/stats/professions` | `ProfessionsRanking` |
+| `genderDistribution` | Répartition des candidats par sexe | tous | `dashboard/stats/genders` (via `election_persons.gender`) | `CandidatesGenderStats` |
+| `professionElus` | Profession des élus | `legislative` | `dashboard/stats/professions?elected=true` | `ProfessionsRanking` |
+| `listsPresence` | Présence des listes par circonscription | `legislative` | `dashboard/stats/lists` + `dashboard/coalitions` | `CoalitionListsPresence` |
+| `ageDistribution` | Répartition par âge | — | *(désactivée, `enabled: false`)* | — |
+
+Tous les composants d'affichage de stats vivent dans `app/components/elections/dashboard/stats/` et partagent le même langage visuel : listes plates (pas de `UCard`/ombre), fine barre de progression bleue (`#2a78d6` clair / `#3987e5` sombre), compte + pourcentage tabulaires alignés à droite.
+
 ---
 
 ## 4. Architecture technique
@@ -137,7 +207,9 @@ L'onglet PVs n'apparaît que si `pv_upload_active = true` sur l'élection. Le fo
 | `useElectoralConstituencies()` | Circonscriptions |
 | `useElectoralCandidateProfile()` | Fiche candidat |
 | `useElectoralDashboardLists()` | Listes électorales |
-| `useElectoralProfessions()` / `useElectoralStatsList()` | Statistiques |
+| `useElectoralProfessions()` | Profession des candidats/élus (param `elected`) — voir 3.9 |
+| `useElectoralGenderStats()` | Répartition des candidats par sexe — voir 3.9 |
+| `useElectoralStatsList()` | Présence des listes électorales par coalition — voir 3.9 |
 | `useElectoralRevision()` | Résolution du contexte carte électorale (`?revision=` canonique, `?election=` compat) |
 | `useElectionPvsFilters()` / `useElectionPvsUpload()` | Filtres et upload du module PVs |
 
@@ -147,7 +219,7 @@ L'onglet PVs n'apparaît que si `pv_upload_active = true` sur l'élection. Le fo
 |----------|-------------|
 | `dashboard/config` | Configuration centrale (cache 5 min) |
 | `dashboard/coalitions`, `dashboard/constituencies`, `dashboard/lists` | Données du dashboard |
-| `dashboard/stats*` | KPIs et statistiques |
+| `dashboard/stats/professions` (param `elected`), `dashboard/stats/genders`, `dashboard/stats/lists` | Statistiques du registre de la page `/statistiques` — voir 3.9 |
 | `dashboard/candidates/[slug]` | Fiche candidat |
 | `coalitions/*`, `lists/[coalitionId]`, `candidates/elected` | Fiches coalition/circonscription et élus |
 | `electoral-files` | Révisions publiées (fichiers électoraux national + diaspora) |
