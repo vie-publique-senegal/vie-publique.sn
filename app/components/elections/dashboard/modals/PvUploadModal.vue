@@ -89,7 +89,7 @@
               required
               class="block w-full appearance-none rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 px-4 py-2.5 pr-8 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/40"
             >
-              <option class="bg-white dark:bg-[#0e1110] dark:text-gray-200" value="">— Sélectionner —</option>
+              <option class="bg-white dark:bg-[#0e1110] dark:text-gray-200" value="">- Sélectionner -</option>
               <option class="bg-white dark:bg-[#0e1110] dark:text-gray-200" value="1">1er tour</option>
               <option class="bg-white dark:bg-[#0e1110] dark:text-gray-200" value="2">2ème tour</option>
             </select>
@@ -125,7 +125,7 @@
                 @change="onRegionChange"
               >
                 <option class="bg-white dark:bg-[#0e1110] dark:text-gray-200" value="">
-                  — Sélectionner une région —
+                  - Sélectionner une région -
                 </option>
                 <option
                   v-for="region in regions"
@@ -157,7 +157,7 @@
                 @change="onDepartmentChange"
               >
                 <option class="bg-white dark:bg-[#0e1110] dark:text-gray-200" value="">
-                  {{ form.region ? '— Sélectionner un département —' : '— Choisir une région d\'abord —' }}
+                  {{ form.region ? '- Sélectionner un département -' : '- Choisir une région d\'abord -' }}
                 </option>
                 <option
                   v-for="dept in departments"
@@ -190,8 +190,8 @@
                 <option class="bg-white dark:bg-[#0e1110] dark:text-gray-200" value="">
                   {{
                     form.department
-                      ? '— Sélectionner une commune —'
-                      : '— Choisir un département d\'abord —'
+                      ? '- Sélectionner une commune -'
+                      : '- Choisir un département d\'abord -'
                   }}
                 </option>
                 <option
@@ -225,8 +225,8 @@
                 <option class="bg-white dark:bg-[#0e1110] dark:text-gray-200" value="">
                   {{
                     form.municipality
-                      ? '— Sélectionner un lieu de vote —'
-                      : '— Choisir une commune d\'abord —'
+                      ? '- Sélectionner un lieu de vote -'
+                      : '- Choisir une commune d\'abord -'
                   }}
                 </option>
                 <option
@@ -271,7 +271,7 @@
                 @change="onCountryChange"
               >
                 <option class="bg-white dark:bg-[#0e1110] dark:text-gray-200" value="">
-                  — Sélectionner un pays —
+                  - Sélectionner un pays -
                 </option>
                 <option
                   v-for="country in countries"
@@ -302,7 +302,7 @@
                 class="block w-full appearance-none rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 px-4 py-2.5 pr-8 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/40 disabled:opacity-50"
               >
                 <option class="bg-white dark:bg-[#0e1110] dark:text-gray-200" value="">
-                  {{ form.country ? '— Sélectionner —' : '— Choisir un pays d\'abord —' }}
+                  {{ form.country ? '- Sélectionner -' : '- Choisir un pays d\'abord -' }}
                 </option>
                 <option
                   v-for="rep in diplomaticRepresentations"
@@ -377,7 +377,7 @@
             <p v-else class="text-xs text-gray-400">
               Glisser-déposer ou <span class="font-bold text-primary">cliquer</span> pour sélectionner
             </p>
-            <p class="mt-1 text-[10px] text-gray-400">JPG, PNG, WEBP — max 20 Mo</p>
+            <p class="mt-1 text-[10px] text-gray-400">JPG, PNG, WEBP - max 20 Mo</p>
           </div>
 
           <!-- Preview de l'image -->

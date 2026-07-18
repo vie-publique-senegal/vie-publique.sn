@@ -239,11 +239,11 @@ onUnmounted(() => {
              <div class="space-y-1">
                 <p class="text-xs font-black dark:text-white flex justify-between">
                    <span class="text-gray-400 font-bold uppercase text-[8px]">Incipit:</span>
-                   {{ formatDate(election.campaign_start_date) || '—' }}
+                   {{ formatDate(election.campaign_start_date) || '-' }}
                 </p>
                 <p class="text-xs font-black dark:text-white flex justify-between">
                    <span class="text-gray-400 font-bold uppercase text-[8px]">Clôture:</span>
-                   {{ formatDate(election.campaign_end_date) || '—' }}
+                   {{ formatDate(election.campaign_end_date) || '-' }}
                 </p>
              </div>
           </div>

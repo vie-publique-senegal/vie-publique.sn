@@ -1,9 +1,11 @@
-import type { ElectionStatsProfession } from "~~/types/election-stats-profession";
+import type { ElectionStatsProfession } from '~~/types/election-stats-profession';
 
 interface UseProfessionsOptions {
   coalitionId?: string | Ref<string | undefined>;
   year?: number | Ref<number>;
   type?: string | Ref<string>;
+  /** true = restreindre aux candidats élus */
+  elected?: boolean;
 }
 
 /**
@@ -11,7 +13,7 @@ interface UseProfessionsOptions {
  * Architecture SSR : les appels passent par le serveur Nuxt
  */
 export const useElectoralProfessions = (options: UseProfessionsOptions = {}) => {
-  console.debug("useElectoralProfessions");
+  console.debug('useElectoralProfessions');
 
   const coalitionId = isRef(options.coalitionId) ? options.coalitionId : ref(options.coalitionId);
   const year = isRef(options.year) ? options.year : ref(options.year);
@@ -22,11 +24,12 @@ export const useElectoralProfessions = (options: UseProfessionsOptions = {}) => 
     if (coalitionId.value) params.coalition = coalitionId.value;
     if (year.value) params.year = year.value;
     if (type.value) params.type = type.value;
+    if (options.elected) params.elected = 'true';
     return params;
   });
 
   return useAsyncData(
-    `candidatesProfessionsDashboard${coalitionId.value ? `-${coalitionId.value}` : ""}-${year.value || 'all'}-${type.value || 'all'}`,
+    `candidatesProfessionsDashboard${coalitionId.value ? `-${coalitionId.value}` : ''}-${year.value || 'all'}-${type.value || 'all'}${options.elected ? '-elected' : ''}`,
     () =>
       $fetch<{ data: ElectionStatsProfession[] }>('/api/elections/dashboard/stats/professions', {
         query: query.value,
@@ -35,7 +38,7 @@ export const useElectoralProfessions = (options: UseProfessionsOptions = {}) => 
       transform: (response) => response.data,
       server: true,
       lazy: false,
-      watch: [coalitionId, year, type]
+      watch: [coalitionId, year, type],
     },
   );
 };

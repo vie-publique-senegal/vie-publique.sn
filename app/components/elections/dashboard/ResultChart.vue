@@ -291,7 +291,7 @@ const hoveredGroup = ref<HemicycleGroup | null>(null);
                 @mouseenter="hoveredGroup = group"
                 @mouseleave="hoveredGroup = null"
               >
-                <title>{{ group.name }} — {{ group.seats }} siège{{ group.seats > 1 ? 's' : '' }}</title>
+                <title>{{ group.name }} - {{ group.seats }} siège{{ group.seats > 1 ? 's' : '' }}</title>
                 <circle
                   v-for="(pos, si) in group.positions"
                   :key="si"
@@ -306,7 +306,7 @@ const hoveredGroup = ref<HemicycleGroup | null>(null);
           <!-- Info au survol -->
           <div class="h-6 text-center mt-1">
             <span v-if="hoveredGroup" class="text-sm font-semibold text-gray-700 dark:text-gray-300">
-              {{ hoveredGroup.name }} — <span class="font-black" :style="{ color: hoveredGroup.color }">{{ hoveredGroup.seats }}</span> siège{{ hoveredGroup.seats > 1 ? 's' : '' }}
+              {{ hoveredGroup.name }} - <span class="font-black" :style="{ color: hoveredGroup.color }">{{ hoveredGroup.seats }}</span> siège{{ hoveredGroup.seats > 1 ? 's' : '' }}
             </span>
           </div>
 

@@ -2,16 +2,12 @@
   <UCard class="custom-shadow">
     <template #header>
       <h2 class="text-xl font-semibold">
-        Classement des professions — {{ totalCandidates }} candidats
+        Classement des professions - {{ totalCandidates }} candidats
       </h2>
     </template>
 
     <div class="flex flex-col gap-3">
-      <div
-        v-for="item in professions"
-        :key="item.profession"
-        class="flex flex-col gap-2"
-      >
+      <div v-for="item in professions" :key="item.profession" class="flex flex-col gap-2">
         <div class="flex items-center justify-between">
           <!-- Profession Name -->
           <div class="text-sm">
@@ -37,7 +33,7 @@
 </template>
 
 <script setup lang="ts">
-import type { ElectionStatsProfession } from "~/types/election-stats-profession";
+import type { ElectionStatsProfession } from '~~/types/election-stats-profession';
 
 const props = defineProps<{
   professions: ElectionStatsProfession[];
@@ -45,7 +41,7 @@ const props = defineProps<{
 }>();
 
 const totalCandidates = computed(() => {
-    return props.professions.reduce((sum, p) => sum + (Number(p.count?.id) || 0), 0);
+  return props.professions.reduce((sum, p) => sum + (Number(p.count?.id) || 0), 0);
 });
 
 // Calculer le pourcentage pour chaque profession
