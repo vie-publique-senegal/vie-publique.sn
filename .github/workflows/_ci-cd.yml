@@ -72,7 +72,7 @@ jobs:
             type=ref,event=branch
             type=ref,event=pr
             type=sha,prefix=sha-
-            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/prod' }}
 
       - name: Build and push Docker image (AMD64 only)
         uses: docker/build-push-action@v5
