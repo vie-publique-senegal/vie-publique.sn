@@ -32,6 +32,8 @@ jobs:
         run: npm run test:coverage
 
       - name: SonarCloud Scan
+        # Scan limité aux PR vers develop (pas sur les push prod, pour ne pas bloquer le déploiement)
+        if: github.event_name == 'pull_request'
         uses: SonarSource/sonarqube-scan-action@master
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
