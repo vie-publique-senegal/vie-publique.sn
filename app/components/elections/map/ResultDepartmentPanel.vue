@@ -46,9 +46,12 @@ onMounted(() => {
 // Recherche
 const searchQuery = ref('');
 
-watch(() => props.department, () => {
-  searchQuery.value = '';
-});
+watch(
+  () => props.department,
+  () => {
+    searchQuery.value = '';
+  },
+);
 
 // Communes de ce département filtrées
 const departmentResults = computed(() => {
@@ -65,8 +68,8 @@ const departmentResults = computed(() => {
   const deptKey = normalizeDeptName(props.department.departement);
 
   // Les résultats ont un champ `departement` — filtrer par département
-  const byDept = props.allResults.filter(r =>
-    r.departement && normalizeDeptName(r.departement) === deptKey
+  const byDept = props.allResults.filter(
+    (r) => r.departement && normalizeDeptName(r.departement) === deptKey,
   );
 
   return byDept;
@@ -75,18 +78,17 @@ const departmentResults = computed(() => {
 const filteredResults = computed(() => {
   const q = searchQuery.value.trim().toLowerCase();
   if (!q) return departmentResults.value;
-  return departmentResults.value.filter(r =>
-    r.commune.toLowerCase().includes(q) ||
-    r.coalition.toLowerCase().includes(q) ||
-    r.headOfList.toLowerCase().includes(q)
+  return departmentResults.value.filter(
+    (r) =>
+      r.commune.toLowerCase().includes(q) ||
+      r.coalition.toLowerCase().includes(q) ||
+      r.headOfList.toLowerCase().includes(q),
   );
 });
 
 // Top 3 communes par votes
 const topCommunes = computed(() => {
-  return [...departmentResults.value]
-    .sort((a, b) => b.votes - a.votes)
-    .slice(0, 3);
+  return [...departmentResults.value].sort((a, b) => b.votes - a.votes).slice(0, 3);
 });
 
 const formatNumber = (value?: number) => {
@@ -115,19 +117,21 @@ const medalEmoji = (index: number) => ['🥇', '🥈', '🥉'][index] || '';
         isMobile
           ? 'fixed bottom-0 left-0 right-0 z-50 max-h-[80vh] rounded-t-2xl'
           : 'fixed right-4 z-50 w-[400px] rounded-2xl',
-        'bg-white dark:bg-gray-900 shadow-2xl overflow-hidden flex flex-col',
+        'flex flex-col overflow-hidden bg-white shadow-2xl dark:bg-gray-900',
         'border border-gray-200 dark:border-gray-700',
       ]"
       :style="!isMobile ? { top: '80px', bottom: '16px' } : {}"
     >
       <!-- Drag handle mobile -->
-      <div v-if="isMobile" class="flex justify-center pt-2 pb-1 shrink-0">
+      <div v-if="isMobile" class="flex shrink-0 justify-center pb-1 pt-2">
         <div class="h-1 w-10 rounded-full bg-gray-300 dark:bg-gray-600" />
       </div>
 
       <!-- Header -->
-      <div class="shrink-0 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4">
-        <div class="flex items-center justify-between mb-3">
+      <div
+        class="shrink-0 border-b border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900"
+      >
+        <div class="mb-3 flex items-center justify-between">
           <div>
             <h2 class="text-lg font-black uppercase tracking-tight text-gray-900 dark:text-white">
               {{ department.departement }}
@@ -137,7 +141,7 @@ const medalEmoji = (index: number) => ['🥇', '🥈', '🥉'][index] || '';
             </p>
           </div>
           <button
-            class="rounded-full p-2 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            class="rounded-full p-2 transition-colors hover:bg-gray-100 dark:hover:bg-gray-800"
             aria-label="Fermer"
             @click="emit('close')"
           >
@@ -157,7 +161,10 @@ const medalEmoji = (index: number) => ['🥇', '🥈', '🥉'][index] || '';
           >
             <template v-if="searchQuery" #trailing>
               <button class="flex items-center" @click="searchQuery = ''">
-                <UIcon name="i-heroicons-x-circle" class="h-4 w-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" />
+                <UIcon
+                  name="i-heroicons-x-circle"
+                  class="h-4 w-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                />
               </button>
             </template>
           </UInput>
@@ -168,19 +175,23 @@ const medalEmoji = (index: number) => ['🥇', '🥈', '🥉'][index] || '';
       <div :class="['flex-1 overflow-y-auto', isMobile ? 'pb-20' : '']">
         <!-- Résumé stats -->
         <div class="grid grid-cols-2 gap-2 p-4">
-          <div class="rounded-xl bg-gray-50 dark:bg-gray-800 p-3 text-center">
-            <div class="text-[10px] uppercase tracking-wider text-gray-500 dark:text-gray-400 font-semibold">
+          <div class="rounded-xl bg-gray-50 p-3 text-center dark:bg-gray-800">
+            <div
+              class="text-[10px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400"
+            >
               Communes
             </div>
-            <div class="text-lg font-black tabular-nums text-green-700 dark:text-green-400 mt-0.5">
+            <div class="mt-0.5 text-lg font-black tabular-nums text-green-700 dark:text-green-400">
               {{ departmentResults.length }}
             </div>
           </div>
-          <div class="rounded-xl bg-gray-50 dark:bg-gray-800 p-3 text-center">
-            <div class="text-[10px] uppercase tracking-wider text-gray-500 dark:text-gray-400 font-semibold">
+          <div class="rounded-xl bg-gray-50 p-3 text-center dark:bg-gray-800">
+            <div
+              class="text-[10px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400"
+            >
               Total voix
             </div>
-            <div class="text-lg font-black tabular-nums text-green-700 dark:text-green-400 mt-0.5">
+            <div class="mt-0.5 text-lg font-black tabular-nums text-green-700 dark:text-green-400">
               {{ formatNumber(departmentResults.reduce((sum, r) => sum + r.votes, 0)) }}
             </div>
           </div>
@@ -188,7 +199,9 @@ const medalEmoji = (index: number) => ['🥇', '🥈', '🥉'][index] || '';
 
         <!-- Top 3 communes par votes -->
         <div v-if="topCommunes.length > 0 && !searchQuery" class="px-4 pb-3">
-          <h3 class="mb-2 text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+          <h3
+            class="mb-2 text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400"
+          >
             Top 3 communes par nombre de voix
           </h3>
           <div class="space-y-1.5">
@@ -197,9 +210,11 @@ const medalEmoji = (index: number) => ['🥇', '🥈', '🥉'][index] || '';
               :key="item.id"
               class="rounded-xl p-3 ring-1"
               :class="[
-                index === 0 ? 'bg-gradient-to-r from-yellow-50 to-amber-50 dark:from-yellow-900/20 dark:to-amber-900/20 ring-yellow-200 dark:ring-yellow-800/40' :
-                index === 1 ? 'bg-gradient-to-r from-gray-50 to-slate-50 dark:from-gray-800 dark:to-slate-800 ring-gray-200 dark:ring-gray-700' :
-                'bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20 ring-orange-200 dark:ring-orange-800/40'
+                index === 0
+                  ? 'bg-gradient-to-r from-yellow-50 to-amber-50 ring-yellow-200 dark:from-yellow-900/20 dark:to-amber-900/20 dark:ring-yellow-800/40'
+                  : index === 1
+                    ? 'bg-gradient-to-r from-gray-50 to-slate-50 ring-gray-200 dark:from-gray-800 dark:to-slate-800 dark:ring-gray-700'
+                    : 'bg-gradient-to-r from-orange-50 to-amber-50 ring-orange-200 dark:from-orange-900/20 dark:to-amber-900/20 dark:ring-orange-800/40',
               ]"
             >
               <div class="flex items-center justify-between">
@@ -224,41 +239,55 @@ const medalEmoji = (index: number) => ['🥇', '🥈', '🥉'][index] || '';
         </div>
 
         <!-- Séparateur -->
-        <div v-if="departmentResults.length > 0" class="mx-4 border-t border-gray-100 dark:border-gray-800" />
+        <div
+          v-if="departmentResults.length > 0"
+          class="mx-4 border-t border-gray-100 dark:border-gray-800"
+        />
 
         <!-- Liste des communes -->
         <div v-if="departmentResults.length > 0" class="px-4 py-3">
-          <h3 class="mb-2 text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-            {{ searchQuery ? `Résultats (${filteredResults.length})` : `Toutes les communes (${departmentResults.length})` }}
+          <h3
+            class="mb-2 text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400"
+          >
+            {{
+              searchQuery
+                ? `Résultats (${filteredResults.length})`
+                : `Toutes les communes (${departmentResults.length})`
+            }}
           </h3>
 
           <!-- État vide recherche -->
           <div v-if="searchQuery && filteredResults.length === 0" class="py-6 text-center">
-            <UIcon name="i-heroicons-magnifying-glass" class="h-8 w-8 text-gray-300 dark:text-gray-600 mx-auto mb-2" />
+            <UIcon
+              name="i-heroicons-magnifying-glass"
+              class="mx-auto mb-2 h-8 w-8 text-gray-300 dark:text-gray-600"
+            />
             <p class="text-sm text-gray-500 dark:text-gray-400">
               Aucune commune trouvée pour « {{ searchQuery }} »
             </p>
           </div>
 
           <!-- Liste -->
-          <div v-else class="space-y-1.5 max-h-[300px] overflow-y-auto pr-1 scrollbar-thin">
+          <div v-else class="scrollbar-thin max-h-[300px] space-y-1.5 overflow-y-auto pr-1">
             <div
               v-for="item in filteredResults"
               :key="item.id"
-              class="rounded-xl border border-gray-100 dark:border-gray-800 p-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+              class="rounded-xl border border-gray-100 p-3 transition-colors hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-gray-800/50"
             >
               <div class="flex items-center justify-between">
-                <span class="text-sm font-semibold text-gray-900 dark:text-white truncate mr-2">
+                <span class="mr-2 truncate text-sm font-semibold text-gray-900 dark:text-white">
                   {{ item.commune }}
                 </span>
-                <span class="text-xs font-black tabular-nums text-green-700 dark:text-green-400 shrink-0">
+                <span
+                  class="shrink-0 text-xs font-black tabular-nums text-green-700 dark:text-green-400"
+                >
                   {{ formatNumber(item.votes) }} voix
                 </span>
               </div>
               <div class="mt-1 flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-                <UIcon name="i-heroicons-trophy" class="h-3 w-3 text-amber-500 shrink-0" />
-                <span class="font-medium truncate">{{ item.coalition }}</span>
-                <span class="text-gray-300 dark:text-gray-600 shrink-0">·</span>
+                <UIcon name="i-heroicons-trophy" class="h-3 w-3 shrink-0 text-amber-500" />
+                <span class="truncate font-medium">{{ item.coalition }}</span>
+                <span class="shrink-0 text-gray-300 dark:text-gray-600">·</span>
                 <span class="truncate">{{ item.headOfList }}</span>
               </div>
             </div>
@@ -266,9 +295,12 @@ const medalEmoji = (index: number) => ['🥇', '🥈', '🥉'][index] || '';
         </div>
 
         <!-- État vide : aucune donnée -->
-        <div v-if="departmentResults.length === 0" class="py-10 text-center px-4">
-          <UIcon name="i-heroicons-chart-bar" class="h-10 w-10 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
-          <h3 class="text-sm font-bold text-gray-500 dark:text-gray-400 mb-1">
+        <div v-if="departmentResults.length === 0" class="px-4 py-10 text-center">
+          <UIcon
+            name="i-heroicons-chart-bar"
+            class="mx-auto mb-3 h-10 w-10 text-gray-300 dark:text-gray-600"
+          />
+          <h3 class="mb-1 text-sm font-bold text-gray-500 dark:text-gray-400">
             Aucun résultat disponible
           </h3>
           <p class="text-xs text-gray-400 dark:text-gray-500">

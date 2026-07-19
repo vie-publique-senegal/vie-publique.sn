@@ -80,7 +80,8 @@ const formatPercentage = (value: number | null) =>
 
 const medalEmoji = (index: number) => ['🥇', '🥈', '🥉'][index] || '';
 
-const coalitionLabel = (coalition: RankingCoalition) => coalition?.name || coalition?.acronym || 'Coalition';
+const coalitionLabel = (coalition: RankingCoalition) =>
+  coalition?.name || coalition?.acronym || 'Coalition';
 </script>
 
 <template>
@@ -101,18 +102,20 @@ const coalitionLabel = (coalition: RankingCoalition) => coalition?.name || coali
         isMobile
           ? 'fixed bottom-0 left-0 right-0 z-50 max-h-[80vh] rounded-t-2xl'
           : 'fixed right-4 z-50 w-[400px] rounded-2xl',
-        'bg-white dark:bg-gray-900 shadow-2xl overflow-hidden flex flex-col',
+        'flex flex-col overflow-hidden bg-white shadow-2xl dark:bg-gray-900',
         'border border-gray-200 dark:border-gray-700',
       ]"
       :style="!isMobile ? { top: '80px', bottom: '16px' } : {}"
     >
       <!-- Drag handle mobile -->
-      <div v-if="isMobile" class="flex justify-center pt-2 pb-1 shrink-0">
+      <div v-if="isMobile" class="flex shrink-0 justify-center pb-1 pt-2">
         <div class="h-1 w-10 rounded-full bg-gray-300 dark:bg-gray-600" />
       </div>
 
       <!-- Header -->
-      <div class="shrink-0 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4">
+      <div
+        class="shrink-0 border-b border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-900"
+      >
         <div class="flex items-center justify-between">
           <div>
             <h2 class="text-lg font-black uppercase tracking-tight text-gray-900 dark:text-white">
@@ -121,7 +124,7 @@ const coalitionLabel = (coalition: RankingCoalition) => coalition?.name || coali
             <p class="text-sm text-gray-500 dark:text-gray-400">Classement des coalitions</p>
           </div>
           <button
-            class="rounded-full p-2 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            class="rounded-full p-2 transition-colors hover:bg-gray-100 dark:hover:bg-gray-800"
             aria-label="Fermer"
             @click="emit('close')"
           >
@@ -138,16 +141,26 @@ const coalitionLabel = (coalition: RankingCoalition) => coalition?.name || coali
         </div>
 
         <!-- Erreur -->
-        <div v-else-if="errored" class="py-10 text-center px-4">
-          <UIcon name="i-heroicons-exclamation-triangle" class="h-10 w-10 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
-          <h3 class="text-sm font-bold text-gray-500 dark:text-gray-400 mb-1">Erreur de chargement</h3>
-          <p class="text-xs text-gray-400 dark:text-gray-500">Le classement n'a pas pu être récupéré.</p>
+        <div v-else-if="errored" class="px-4 py-10 text-center">
+          <UIcon
+            name="i-heroicons-exclamation-triangle"
+            class="mx-auto mb-3 h-10 w-10 text-gray-300 dark:text-gray-600"
+          />
+          <h3 class="mb-1 text-sm font-bold text-gray-500 dark:text-gray-400">
+            Erreur de chargement
+          </h3>
+          <p class="text-xs text-gray-400 dark:text-gray-500">
+            Le classement n'a pas pu être récupéré.
+          </p>
         </div>
 
         <!-- État vide : aucune donnée saisie -->
-        <div v-else-if="ranking && ranking.round1.length === 0" class="py-10 text-center px-4">
-          <UIcon name="i-heroicons-chart-bar" class="h-10 w-10 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
-          <h3 class="text-sm font-bold text-gray-500 dark:text-gray-400 mb-1">
+        <div v-else-if="ranking && ranking.round1.length === 0" class="px-4 py-10 text-center">
+          <UIcon
+            name="i-heroicons-chart-bar"
+            class="mx-auto mb-3 h-10 w-10 text-gray-300 dark:text-gray-600"
+          />
+          <h3 class="mb-1 text-sm font-bold text-gray-500 dark:text-gray-400">
             Classement pas encore disponible
           </h3>
           <p class="text-xs text-gray-400 dark:text-gray-500">
@@ -158,7 +171,9 @@ const coalitionLabel = (coalition: RankingCoalition) => coalition?.name || coali
         <!-- Classement -->
         <template v-else-if="ranking">
           <div class="px-4 py-3">
-            <h3 class="mb-2 text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+            <h3
+              class="mb-2 text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400"
+            >
               1er tour
             </h3>
             <div class="space-y-1.5">
@@ -168,23 +183,27 @@ const coalitionLabel = (coalition: RankingCoalition) => coalition?.name || coali
                 class="rounded-xl p-3 ring-1"
                 :class="[
                   index === 0
-                    ? 'bg-gradient-to-r from-yellow-50 to-amber-50 dark:from-yellow-900/20 dark:to-amber-900/20 ring-yellow-200 dark:ring-yellow-800/40'
-                    : 'bg-gray-50 dark:bg-gray-800 ring-gray-100 dark:ring-gray-700',
+                    ? 'bg-gradient-to-r from-yellow-50 to-amber-50 ring-yellow-200 dark:from-yellow-900/20 dark:to-amber-900/20 dark:ring-yellow-800/40'
+                    : 'bg-gray-50 ring-gray-100 dark:bg-gray-800 dark:ring-gray-700',
                 ]"
               >
                 <div class="flex items-center justify-between gap-2">
-                  <div class="flex items-center gap-2 min-w-0">
-                    <span v-if="index < 3" class="text-base shrink-0">{{ medalEmoji(index) }}</span>
-                    <span v-else class="text-xs font-bold text-gray-400 shrink-0 w-4 text-center">{{ index + 1 }}</span>
+                  <div class="flex min-w-0 items-center gap-2">
+                    <span v-if="index < 3" class="shrink-0 text-base">{{ medalEmoji(index) }}</span>
+                    <span v-else class="w-4 shrink-0 text-center text-xs font-bold text-gray-400">{{
+                      index + 1
+                    }}</span>
                     <span
-                      class="h-2.5 w-2.5 rounded-full shrink-0"
+                      class="h-2.5 w-2.5 shrink-0 rounded-full"
                       :style="{ backgroundColor: item.coalition.color || '#94a3b8' }"
                     />
-                    <span class="text-sm font-bold text-gray-900 dark:text-white truncate">
+                    <span class="truncate text-sm font-bold text-gray-900 dark:text-white">
                       {{ coalitionLabel(item.coalition) }}
                     </span>
                   </div>
-                  <span class="text-sm font-black tabular-nums text-green-700 dark:text-green-400 shrink-0">
+                  <span
+                    class="shrink-0 text-sm font-black tabular-nums text-green-700 dark:text-green-400"
+                  >
                     {{ formatNumber(item.votes) }}
                   </span>
                 </div>
@@ -196,8 +215,13 @@ const coalitionLabel = (coalition: RankingCoalition) => coalition?.name || coali
           </div>
 
           <!-- Second tour -->
-          <div v-if="ranking.round2 && ranking.round2.length > 0" class="px-4 pb-4 pt-1 border-t border-gray-100 dark:border-gray-800">
-            <h3 class="mb-2 mt-3 text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+          <div
+            v-if="ranking.round2 && ranking.round2.length > 0"
+            class="border-t border-gray-100 px-4 pb-4 pt-1 dark:border-gray-800"
+          >
+            <h3
+              class="mb-2 mt-3 text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400"
+            >
               2d tour
             </h3>
             <div class="space-y-1.5">
@@ -207,23 +231,27 @@ const coalitionLabel = (coalition: RankingCoalition) => coalition?.name || coali
                 class="rounded-xl p-3 ring-1"
                 :class="[
                   index === 0
-                    ? 'bg-gradient-to-r from-yellow-50 to-amber-50 dark:from-yellow-900/20 dark:to-amber-900/20 ring-yellow-200 dark:ring-yellow-800/40'
-                    : 'bg-gray-50 dark:bg-gray-800 ring-gray-100 dark:ring-gray-700',
+                    ? 'bg-gradient-to-r from-yellow-50 to-amber-50 ring-yellow-200 dark:from-yellow-900/20 dark:to-amber-900/20 dark:ring-yellow-800/40'
+                    : 'bg-gray-50 ring-gray-100 dark:bg-gray-800 dark:ring-gray-700',
                 ]"
               >
                 <div class="flex items-center justify-between gap-2">
-                  <div class="flex items-center gap-2 min-w-0">
-                    <span v-if="index < 3" class="text-base shrink-0">{{ medalEmoji(index) }}</span>
-                    <span v-else class="text-xs font-bold text-gray-400 shrink-0 w-4 text-center">{{ index + 1 }}</span>
+                  <div class="flex min-w-0 items-center gap-2">
+                    <span v-if="index < 3" class="shrink-0 text-base">{{ medalEmoji(index) }}</span>
+                    <span v-else class="w-4 shrink-0 text-center text-xs font-bold text-gray-400">{{
+                      index + 1
+                    }}</span>
                     <span
-                      class="h-2.5 w-2.5 rounded-full shrink-0"
+                      class="h-2.5 w-2.5 shrink-0 rounded-full"
                       :style="{ backgroundColor: item.coalition.color || '#94a3b8' }"
                     />
-                    <span class="text-sm font-bold text-gray-900 dark:text-white truncate">
+                    <span class="truncate text-sm font-bold text-gray-900 dark:text-white">
                       {{ coalitionLabel(item.coalition) }}
                     </span>
                   </div>
-                  <span class="text-sm font-black tabular-nums text-green-700 dark:text-green-400 shrink-0">
+                  <span
+                    class="shrink-0 text-sm font-black tabular-nums text-green-700 dark:text-green-400"
+                  >
                     {{ formatNumber(item.votes) }}
                   </span>
                 </div>

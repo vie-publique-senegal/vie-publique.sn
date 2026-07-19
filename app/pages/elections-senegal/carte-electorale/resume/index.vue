@@ -95,13 +95,13 @@ const representativeElectionId = computed(() => {
         <span v-if="revisionLabel">{{ revisionLabel }}</span>
       </p>
 
-      <ElectionRevisionCard class="mt-6" />
+      <ElectionsMapRevisionCard class="mt-6" />
 
-      <ElectionMapTabs active="resume" :query="contextQuery" />
+      <ElectionsMapTabs active="resume" :query="contextQuery" />
     </div>
 
     <div class="w-full max-w-7xl">
-      <ElectionMapSummary :election-id="representativeElectionId" />
+      <ElectionsMapSummary :election-id="representativeElectionId" />
     </div>
   </div>
 </template>

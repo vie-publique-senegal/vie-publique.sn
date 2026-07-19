@@ -1,6 +1,6 @@
 <!-- components/TableauDepartements.vue -->
 <script setup lang="ts">
-import type { DepartmentStats } from "~~/types/election-map-national";
+import type { DepartmentStats } from '~~/types/election-map-national';
 
 interface Props {
   electionId?: string | number | null;
@@ -11,8 +11,8 @@ const props = withDefaults(defineProps<Props>(), {
 });
 
 const emit = defineEmits<{
-  "list-empty": [];
-  "list-ready": [];
+  'list-empty': [];
+  'list-ready': [];
 }>();
 
 // Convertir electionId en ref réactive pour le composable
@@ -22,31 +22,30 @@ const electionIdRef = computed(() => props.electionId);
 const { fetchDepartmentsStats } = useElectionData({ electionId: electionIdRef });
 
 // État local
-const search = ref("");
+const search = ref('');
 const page = ref(1);
 const pageSize = ref(20);
-const sortBy = ref("department");
+const sortBy = ref('department');
 const sortDesc = ref(false);
 const isRefreshing = ref(false);
 
 // Charger les données avec le cache et SSR
-const {
-  data: departments,
-  pending,
-  error,
-  refresh,
-} = await fetchDepartmentsStats();
+const { data: departments, pending, error, refresh } = await fetchDepartmentsStats();
 
 // Surveiller les données et émettre les événements
-watch([departments, pending], ([newDepartments, isPending]) => {
-  if (!isPending) {
-    if (!newDepartments || newDepartments.length === 0) {
-      emit('list-empty');
-    } else {
-      emit('list-ready');
+watch(
+  [departments, pending],
+  ([newDepartments, isPending]) => {
+    if (!isPending) {
+      if (!newDepartments || newDepartments.length === 0) {
+        emit('list-empty');
+      } else {
+        emit('list-ready');
+      }
     }
-  }
-}, { immediate: true });
+  },
+  { immediate: true },
+);
 
 // Filtrage et tri des données
 const filteredDepartments = computed(() => {
@@ -57,9 +56,7 @@ const filteredDepartments = computed(() => {
   // Recherche
   if (search.value) {
     const searchLower = search.value.toLowerCase().trim();
-    filtered = filtered.filter((dept) =>
-      dept.department.toLowerCase().includes(searchLower),
-    );
+    filtered = filtered.filter((dept) => dept.department.toLowerCase().includes(searchLower));
   }
 
   // Tri
@@ -67,15 +64,13 @@ const filteredDepartments = computed(() => {
     const aValue = a[sortBy.value as keyof DepartmentStats];
     const bValue = b[sortBy.value as keyof DepartmentStats];
 
-    if (typeof aValue === "string" && typeof bValue === "string") {
+    if (typeof aValue === 'string' && typeof bValue === 'string') {
       return sortDesc.value
-        ? bValue.localeCompare(aValue, "fr")
-        : aValue.localeCompare(bValue, "fr");
+        ? bValue.localeCompare(aValue, 'fr')
+        : aValue.localeCompare(bValue, 'fr');
     }
 
-    return sortDesc.value
-      ? Number(bValue) - Number(aValue)
-      : Number(aValue) - Number(bValue);
+    return sortDesc.value ? Number(bValue) - Number(aValue) : Number(aValue) - Number(bValue);
   });
 
   return filtered;
@@ -88,9 +83,7 @@ const paginatedDepartments = computed(() => {
   return filteredDepartments.value.slice(start, end);
 });
 
-const totalPages = computed(() =>
-  Math.ceil(filteredDepartments.value.length / pageSize.value),
-);
+const totalPages = computed(() => Math.ceil(filteredDepartments.value.length / pageSize.value));
 
 // Navigation
 const router = useRouter();
@@ -164,17 +157,10 @@ watch(search, () => {
     </div>
 
     <!-- Message d'erreur -->
-    <UAlert
-      v-else-if="error"
-      color="red"
-      variant="solid"
-      :title="error.message"
-    >
+    <UAlert v-else-if="error" color="red" variant="solid" :title="error.message">
       <template #description>
         Une erreur est survenue lors du chargement des données.
-        <UButton variant="link" color="white" @click="handleRefresh">
-          Réessayer
-        </UButton>
+        <UButton variant="link" color="white" @click="handleRefresh"> Réessayer </UButton>
       </template>
     </UAlert>
 
@@ -195,16 +181,11 @@ watch(search, () => {
         @select="handleRowClick"
       >
         <template #header-cell="{ column }">
-          <div
-            class="flex cursor-pointer items-center gap-2"
-            @click="handleSort(column.key)"
-          >
+          <div class="flex cursor-pointer items-center gap-2" @click="handleSort(column.key)">
             {{ column.label }}
             <UIcon
               v-if="sortBy === column.key"
-              :name="
-                sortDesc ? 'i-heroicons-chevron-down' : 'i-heroicons-chevron-up'
-              "
+              :name="sortDesc ? 'i-heroicons-chevron-down' : 'i-heroicons-chevron-up'"
               class="h-4 w-4"
             />
           </div>
@@ -213,16 +194,13 @@ watch(search, () => {
         <!-- Formatage des nombres -->
         <template #cell-sum_voters="{ row }">
           <span class="tabular-nums">
-            {{ row.sum_voters.toLocaleString("fr-FR") }}
+            {{ row.sum_voters.toLocaleString('fr-FR') }}
           </span>
         </template>
       </UTable>
 
       <!-- Message si aucun résultat -->
-      <div
-        v-if="filteredDepartments.length === 0"
-        class="py-8 text-center text-gray-500"
-      >
+      <div v-if="filteredDepartments.length === 0" class="py-8 text-center text-gray-500">
         Aucun département ne correspond à votre recherche.
       </div>
 

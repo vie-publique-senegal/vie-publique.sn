@@ -35,15 +35,15 @@ const queryParams = computed(() => {
 
 // ✅ Appel API via le serveur Nuxt (SSR-friendly et sécurisé)
 const { data: countriesStats } = await useFetch<{ countries: CountryStats[] }>(
-  "/api/elections/diaspora/countries",
+  '/api/elections/diaspora/countries',
   {
     key: computed(() => `diaspora-countries-${electionIdRef.value || 'all'}`),
     query: queryParams,
     watch: [electionIdRef],
-  }
+  },
 );
 
-const q = ref("");
+const q = ref('');
 
 // Données triées et filtrées
 const filteredRows = computed(() => {
@@ -55,13 +55,11 @@ const filteredRows = computed(() => {
       const valueA = getNestedValue(a, sortConfig.value.column);
       const valueB = getNestedValue(b, sortConfig.value.column);
 
-      if (typeof valueA === "number" && typeof valueB === "number") {
-        return sortConfig.value.direction === "desc"
-          ? valueB - valueA
-          : valueA - valueB;
+      if (typeof valueA === 'number' && typeof valueB === 'number') {
+        return sortConfig.value.direction === 'desc' ? valueB - valueA : valueA - valueB;
       }
 
-      return sortConfig.value.direction === "desc"
+      return sortConfig.value.direction === 'desc'
         ? String(valueB).localeCompare(String(valueA))
         : String(valueA).localeCompare(String(valueB));
     });
@@ -81,13 +79,13 @@ const filteredRows = computed(() => {
 
 // Configuration du tri par défaut
 const sortConfig = ref({
-  column: "sum.voters",
-  direction: "desc" as const,
+  column: 'sum.voters',
+  direction: 'desc' as const,
 });
 
 // Fonction pour obtenir la valeur imbriquée
 const getNestedValue = (obj: any, path: string) => {
-  return path.split(".").reduce((acc, part) => acc && acc[part], obj);
+  return path.split('.').reduce((acc, part) => acc && acc[part], obj);
 };
 
 const router = useRouter();
@@ -167,7 +165,7 @@ const handleRowClick = (row: CountryStats) => {
 
         <!-- Formater les nombres -->
         <template #cell-sum.voters="{ row }">
-          {{ row.sum.voters.toLocaleString("fr-FR") }}
+          {{ row.sum.voters.toLocaleString('fr-FR') }}
         </template>
       </UTable>
     </div>

@@ -114,14 +114,14 @@ useSeoMeta({
                 <div v-if="selectedMapOption === optionMap" class="relative min-h-[600px]">
                   <!-- Les élections locales gardent la carte legacy (bureaux rattachés au département,
                        pas de choroplèthe communale en mode bureaux) -->
-                  <ElectionMapComponent4
+                  <ElectionsMapLegacyLocalMap
                     v-if="isLocalElection"
                     :election-id="currentElection?.id"
                     :is-local-election="true"
                     @map-error="mapCarteHasNoData = true"
                     @department-selected="handleDepartmentSelected"
                   />
-                  <ElectionUnifiedMap
+                  <ElectionsMapUnifiedMap
                     v-else
                     mode="offices"
                     :election-id="currentElection?.id"
@@ -131,20 +131,20 @@ useSeoMeta({
                   />
                 </div>
                 <div v-else class="w-full">
-                  <ElectionMapNationalDepartment :election-id="currentElection?.id" />
+                  <ElectionsMapNationalDepartment :election-id="currentElection?.id" />
                 </div>
               </div>
             </template>
 
             <template #diaspora>
               <div class="w-full pt-4">
-                <ElectionMapDiasporaCountries :election-id="currentElection?.id" />
+                <ElectionsMapDiasporaCountries :election-id="currentElection?.id" />
               </div>
             </template>
 
             <template #resume>
               <div class="w-full pt-4">
-                <ElectionMapSummary :election-id="currentElection?.id" />
+                <ElectionsMapSummary :election-id="currentElection?.id" />
               </div>
             </template>
           </UTabs>
@@ -170,7 +170,7 @@ useSeoMeta({
       </div>
     </div>
 
-    <ElectionMapDepartmentPanel
+    <ElectionsMapDepartmentPanel
       :department="selectedDepartmentData"
       :is-open="isDepartmentPanelOpen"
       :election-id="currentElection?.id"

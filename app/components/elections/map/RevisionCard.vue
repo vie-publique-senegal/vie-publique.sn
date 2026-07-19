@@ -16,18 +16,20 @@ const {
   pending: loadingRevisions,
 } = useElectoralRevision();
 
-const { data: summaryTotals } = await useFetch<{ total?: { voters: number; offices: number; places: number } }>(
-  '/api/elections/map/summary',
-  {
-    key: computed(() => `revision-summary-${selectedRevision.value?.national?.id ?? selectedRevision.value?.diaspora?.id ?? 'latest'}`),
-    query: computed(() => {
-      const election = selectedRevision.value?.elections?.[0];
-      return election ? { election: String(election.id) } : {};
-    }),
-    watch: [selectedRevision],
-    default: () => ({}),
-  },
-);
+const { data: summaryTotals } = await useFetch<{
+  total?: { voters: number; offices: number; places: number };
+}>('/api/elections/map/summary', {
+  key: computed(
+    () =>
+      `revision-summary-${selectedRevision.value?.national?.id ?? selectedRevision.value?.diaspora?.id ?? 'latest'}`,
+  ),
+  query: computed(() => {
+    const election = selectedRevision.value?.elections?.[0];
+    return election ? { election: String(election.id) } : {};
+  }),
+  watch: [selectedRevision],
+  default: () => ({}),
+});
 
 const formatNumber = (value?: number | null) =>
   value === null || value === undefined ? '' : value.toLocaleString('fr-FR');
@@ -38,7 +40,9 @@ const revisionTotals = computed(() => {
   return `${formatNumber(total.voters)} électeurs · ${formatNumber(total.offices)} bureaux · ${formatNumber(total.places)} lieux de vote`;
 });
 
-const officialDocuments = computed(() => (selectedRevision.value ? officialDocumentsOf(selectedRevision.value) : []));
+const officialDocuments = computed(() =>
+  selectedRevision.value ? officialDocumentsOf(selectedRevision.value) : [],
+);
 </script>
 
 <template>
@@ -62,7 +66,7 @@ const officialDocuments = computed(() => (selectedRevision.value ? officialDocum
     >
       <div class="flex flex-wrap items-center justify-between gap-3">
         <div class="flex flex-wrap items-center gap-3">
-          <UIcon name="i-heroicons-map" class="w-5 h-5 shrink-0 text-primary-600" />
+          <UIcon name="i-heroicons-map" class="text-primary-600 h-5 w-5 shrink-0" />
           <span class="font-bold dark:text-white">
             Carte électorale {{ selectedRevision.year }}
           </span>

@@ -45,18 +45,18 @@ const queryParams = computed(() => {
 
 // Récupérer les données du résumé
 const { data: summaryData, pending } = await useFetch<SummaryResponse>(
-  "/api/elections/map/summary",
+  '/api/elections/map/summary',
   {
     key: computed(() => `election-summary-${electionIdRef.value || 'all'}`),
     query: queryParams,
     watch: [electionIdRef],
-  }
+  },
 );
 
 // Formater les nombres
 const formatNumber = (value: number | undefined) => {
-  if (value === undefined || value === null) return "0";
-  return value.toLocaleString("fr-FR");
+  if (value === undefined || value === null) return '0';
+  return value.toLocaleString('fr-FR');
 };
 
 // Sections de statistiques calculées dynamiquement
@@ -66,90 +66,90 @@ const statSections = computed(() => {
 
   return [
     {
-      title: "Total",
-      color: "gray",
+      title: 'Total',
+      color: 'gray',
       stats: [
         {
-          label: "Électeurs",
+          label: 'Électeurs',
           value: formatNumber(data.total.voters),
-          icon: "i-heroicons-users",
+          icon: 'i-heroicons-users',
         },
         {
-          label: "Lieux de vote",
+          label: 'Lieux de vote',
           value: formatNumber(data.total.places),
-          icon: "i-heroicons-map-pin",
+          icon: 'i-heroicons-map-pin',
         },
         {
-          label: "Bureaux de vote",
+          label: 'Bureaux de vote',
           value: formatNumber(data.total.offices),
-          icon: "i-heroicons-building-office",
+          icon: 'i-heroicons-building-office',
         },
         {
-          label: "Départements",
+          label: 'Départements',
           value: formatNumber(data.total.departments),
-          icon: "i-heroicons-map",
+          icon: 'i-heroicons-map',
         },
       ],
     },
     {
-      title: "Diaspora",
-      color: "gray",
+      title: 'Diaspora',
+      color: 'gray',
       stats: [
         {
-          label: "Électeurs",
+          label: 'Électeurs',
           value: formatNumber(data.diaspora.voters),
-          icon: "i-heroicons-users",
+          icon: 'i-heroicons-users',
         },
         {
-          label: "Bureaux de vote",
+          label: 'Bureaux de vote',
           value: formatNumber(data.diaspora.offices),
-          icon: "i-heroicons-building-office",
+          icon: 'i-heroicons-building-office',
         },
         {
-          label: "Lieux de vote",
+          label: 'Lieux de vote',
           value: formatNumber(data.diaspora.places),
-          icon: "i-heroicons-map-pin",
+          icon: 'i-heroicons-map-pin',
         },
         {
-          label: "Pays",
+          label: 'Pays',
           value: formatNumber(data.diaspora.countries),
-          icon: "i-heroicons-globe-americas",
+          icon: 'i-heroicons-globe-americas',
         },
         {
-          label: "Représentations diplomatiques",
+          label: 'Représentations diplomatiques',
           value: formatNumber(data.diaspora.diplomaticRepresentations),
-          icon: "i-heroicons-home-modern",
+          icon: 'i-heroicons-home-modern',
         },
         {
-          label: "Localités",
+          label: 'Localités',
           value: formatNumber(data.diaspora.localities),
-          icon: "i-heroicons-map",
+          icon: 'i-heroicons-map',
         },
       ],
     },
     {
-      title: "Nationale",
-      color: "gray",
+      title: 'Nationale',
+      color: 'gray',
       stats: [
         {
-          label: "Électeurs",
+          label: 'Électeurs',
           value: formatNumber(data.national.voters),
-          icon: "i-heroicons-users",
+          icon: 'i-heroicons-users',
         },
         {
-          label: "Lieux de vote",
+          label: 'Lieux de vote',
           value: formatNumber(data.national.places),
-          icon: "i-heroicons-map-pin",
+          icon: 'i-heroicons-map-pin',
         },
         {
-          label: "Bureaux de vote",
+          label: 'Bureaux de vote',
           value: formatNumber(data.national.offices),
-          icon: "i-heroicons-building-office",
+          icon: 'i-heroicons-building-office',
         },
         {
-          label: "Départements",
+          label: 'Départements',
           value: formatNumber(data.national.departments),
-          icon: "i-heroicons-map",
+          icon: 'i-heroicons-map',
         },
       ],
     },
@@ -160,7 +160,7 @@ const statSections = computed(() => {
 <template>
   <!-- État de chargement -->
   <div v-if="pending" class="flex justify-center py-8">
-    <UIcon name="i-heroicons-arrow-path" class="h-8 w-8 animate-spin text-primary-500" />
+    <UIcon name="i-heroicons-arrow-path" class="text-primary-500 h-8 w-8 animate-spin" />
   </div>
 
   <template v-else>
@@ -170,11 +170,7 @@ const statSections = computed(() => {
     </h2>
 
     <!-- Sections -->
-    <div
-      v-for="section in statSections"
-      :key="section.title"
-      class="mb-4 mt-2 space-y-2"
-    >
+    <div v-for="section in statSections" :key="section.title" class="mb-4 mt-2 space-y-2">
       <!-- Titre de section avec barres -->
       <div class="flex items-center justify-center gap-4 px-4">
         <div :class="`h-[1px] w-full bg-${section.color}-300`"></div>
@@ -186,20 +182,14 @@ const statSections = computed(() => {
 
       <!-- Grille de stats -->
       <div class="grid grid-cols-2 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <UCard
-          v-for="stat in section.stats"
-          :key="stat.label"
-          class="custom-shadow bg-gray-50"
-        >
+        <UCard v-for="stat in section.stats" :key="stat.label" class="custom-shadow bg-gray-50">
           <div class="mb-1 flex items-center justify-between">
             <span class="flex items-center gap-2 text-sm text-gray-600 dark:text-white">
               <UIcon :name="stat.icon" class="h-4 w-4 transition-colors" />
               {{ stat.label }}
             </span>
           </div>
-          <div
-            class="text-2xl font-bold text-red-700 transition-colors md:text-3xl"
-          >
+          <div class="text-2xl font-bold text-red-700 transition-colors md:text-3xl">
             {{ stat.value }}
           </div>
         </UCard>

@@ -70,12 +70,22 @@ interface ResultRow {
   coalition_gagnante?: {
     name?: string | null;
     color?: string | null;
-    head_of_list?: { id: number | null; slug: string | null; first_name: string | null; last_name: string | null } | null;
+    head_of_list?: {
+      id: number | null;
+      slug: string | null;
+      first_name: string | null;
+      last_name: string | null;
+    } | null;
   } | null;
   round_2_coalition_gagnante?: {
     name?: string | null;
     color?: string | null;
-    head_of_list?: { id: number | null; slug: string | null; first_name: string | null; last_name: string | null } | null;
+    head_of_list?: {
+      id: number | null;
+      slug: string | null;
+      first_name: string | null;
+      last_name: string | null;
+    } | null;
   } | null;
   constituencie?: {
     name: string;
@@ -91,8 +101,9 @@ interface ResultRow {
 
 const asInt = (value: string | undefined) => parseInt(value || '0') || 0;
 
-const formatPersonName = (person?: { first_name?: string | null; last_name?: string | null } | null): string =>
-  person ? `${person.first_name ?? ''} ${person.last_name ?? ''}`.trim() : '';
+const formatPersonName = (
+  person?: { first_name?: string | null; last_name?: string | null } | null,
+): string => (person ? `${person.first_name ?? ''} ${person.last_name ?? ''}`.trim() : '');
 
 /**
  * Tête de liste : mode results-locale (communes) lit winning_list.candidates
@@ -122,7 +133,9 @@ const { data: items, status } = await useAsyncData(
       if (props.electoralFileId) params.electoral_file = String(props.electoralFileId);
       else if (props.electionId) params.election = String(props.electionId);
 
-      const response = await $fetch<{ data: NationalStatsRow[] }>('/api/elections/map/national', { params });
+      const response = await $fetch<{ data: NationalStatsRow[] }>('/api/elections/map/national', {
+        params,
+      });
       return (response?.data || [])
         .filter((row) => row.slug && row.department)
         .map((row) => ({
@@ -214,12 +227,16 @@ function resetDrillDown() {
 }
 
 const departmentAggregate = computed(() =>
-  props.mode === 'results-locale' ? aggregateResultsByDepartment((items.value || []) as ResultMapItem[]) : [],
+  props.mode === 'results-locale'
+    ? aggregateResultsByDepartment((items.value || []) as ResultMapItem[])
+    : [],
 );
 
 const communesForDrillDown = computed(() => {
   if (!drillDownDept.value) return [];
-  return ((items.value || []) as ResultMapItem[]).filter((c) => c.parentSlug === drillDownDept.value!.slug);
+  return ((items.value || []) as ResultMapItem[]).filter(
+    (c) => c.parentSlug === drillDownDept.value!.slug,
+  );
 });
 
 const mapConfig = computed(() => {
@@ -238,7 +255,12 @@ const mapConfig = computed(() => {
       );
     }
     return buildElectionMapConfig(
-      { mode: 'results-locale-departments', title: props.title, height: props.height, theme: 'light' },
+      {
+        mode: 'results-locale-departments',
+        title: props.title,
+        height: props.height,
+        theme: 'light',
+      },
       departmentAggregate.value,
     );
   }
@@ -251,20 +273,27 @@ const mapConfig = computed(() => {
 
 // Remonte la carte au changement de niveau (nouveau fond GeoJSON + recentrage)
 const mapInstanceKey = computed(() =>
-  props.mode === 'results-locale' ? `locale-${drillDownDept.value?.slug ?? 'departments'}` : props.mode,
+  props.mode === 'results-locale'
+    ? `locale-${drillDownDept.value?.slug ?? 'departments'}`
+    : props.mode,
 );
 
 /** Clic sur « Voir le détail » du popup (mode bureaux) : panneau département */
 async function openDepartmentDetail(item: OfficeMapItem & { region?: string | null }) {
-  let municipalities: { municipality: string; voters: number; offices: number; places: number; population: number }[] = [];
+  let municipalities: {
+    municipality: string;
+    voters: number;
+    offices: number;
+    places: number;
+    population: number;
+  }[] = [];
   try {
     const params: Record<string, string> = { groupBy: 'municipality', department: item.name };
     if (props.electoralFileId) params.electoral_file = String(props.electoralFileId);
     else if (props.electionId) params.election = String(props.electionId);
-    const response = await $fetch<{ data: { municipality: string; voters: number; offices: number; places: number }[] }>(
-      '/api/elections/map/national',
-      { params },
-    );
+    const response = await $fetch<{
+      data: { municipality: string; voters: number; offices: number; places: number }[];
+    }>('/api/elections/map/national', { params });
     municipalities = (response?.data || []).map((m) => ({ ...m, population: 0 }));
   } catch {
     municipalities = [];
@@ -339,7 +368,7 @@ function handleRegionClick(payload: { code: string; name: string; data: unknown 
         icon="i-heroicons-arrow-left"
         color="white"
         size="sm"
-        class="absolute top-4 left-4 z-20 shadow-md"
+        class="absolute left-4 top-4 z-20 shadow-md"
         @click="resetDrillDown"
       >
         Retour aux départements
@@ -347,7 +376,9 @@ function handleRegionClick(payload: { code: string; name: string; data: unknown 
     </div>
     <template #fallback>
       <div class="flex w-full items-center justify-center" :style="{ height: props.height }">
-        <div class="h-10 w-10 animate-spin rounded-full border-4 border-gray-200 border-t-primary-600" />
+        <div
+          class="border-t-primary-600 h-10 w-10 animate-spin rounded-full border-4 border-gray-200"
+        />
       </div>
     </template>
   </ClientOnly>

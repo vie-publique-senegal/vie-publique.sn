@@ -11,32 +11,37 @@ const props = defineProps<Props>();
 const { getTableDataResult, loading } = useElectionMapDataResult();
 
 // Utiliser useLazyAsyncData sans await pour éviter les problèmes de rendu initial
-const { data: tableData, pending, refresh } = useLazyAsyncData(
+const {
+  data: tableData,
+  pending,
+  refresh,
+} = useLazyAsyncData(
   `table-results-${props.electionType}-${props.electionYear}`,
   () => getTableDataResult(props.electionType, props.electionYear),
   {
     watch: [() => props.electionType, () => props.electionYear],
-    immediate: true
-  }
+    immediate: true,
+  },
 );
 
 // Sort logic
 const sortConfig = ref({
   field: 'commune' as 'commune' | 'coalition' | 'votes',
-  direction: 'asc' as 'asc' | 'desc'
+  direction: 'asc' as 'asc' | 'desc',
 });
 
-const searchQuery = ref("");
+const searchQuery = ref('');
 
 const filteredData = computed(() => {
   if (!tableData.value) return [];
   if (!searchQuery.value) return tableData.value;
 
   const query = searchQuery.value.toLowerCase().trim();
-  return tableData.value.filter(item =>
-    item.commune.toLowerCase().includes(query) ||
-    item.coalition.toLowerCase().includes(query) ||
-    item.headOfList.toLowerCase().includes(query)
+  return tableData.value.filter(
+    (item) =>
+      item.commune.toLowerCase().includes(query) ||
+      item.coalition.toLowerCase().includes(query) ||
+      item.headOfList.toLowerCase().includes(query),
   );
 });
 
@@ -92,7 +97,12 @@ defineExpose({
         size="sm"
         :ui="{ rounded: 'rounded-xl', padding: { sm: 'px-3 py-2' } }"
       />
-      <UBadge v-if="sortedData.length > 0" color="gray" variant="subtle" class="rounded-full px-2.5 py-1 text-[10px] shrink-0">
+      <UBadge
+        v-if="sortedData.length > 0"
+        color="gray"
+        variant="subtle"
+        class="shrink-0 rounded-full px-2.5 py-1 text-[10px]"
+      >
         {{ sortedData.length }}
       </UBadge>
     </div>
@@ -100,17 +110,26 @@ defineExpose({
     <!-- Sort controls (uniquement si des résultats existent) -->
     <div
       v-if="tableData && tableData.length > 0"
-      class="flex items-center gap-3 text-[10px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400 px-1"
+      class="flex items-center gap-3 px-1 text-[10px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400"
     >
-      <button class="flex items-center gap-1 hover:text-primary-600 transition-colors" @click="toggleSort('commune')">
+      <button
+        class="hover:text-primary-600 flex items-center gap-1 transition-colors"
+        @click="toggleSort('commune')"
+      >
         Commune
         <UIcon :name="getSortIcon('commune')" class="h-3 w-3" />
       </button>
-      <button class="flex items-center gap-1 hover:text-primary-600 transition-colors" @click="toggleSort('coalition')">
+      <button
+        class="hover:text-primary-600 flex items-center gap-1 transition-colors"
+        @click="toggleSort('coalition')"
+      >
         Coalition
         <UIcon :name="getSortIcon('coalition')" class="h-3 w-3" />
       </button>
-      <button class="flex items-center gap-1 hover:text-primary-600 transition-colors ml-auto" @click="toggleSort('votes')">
+      <button
+        class="hover:text-primary-600 ml-auto flex items-center gap-1 transition-colors"
+        @click="toggleSort('votes')"
+      >
         Voix
         <UIcon :name="getSortIcon('votes')" class="h-3 w-3" />
       </button>
@@ -118,48 +137,62 @@ defineExpose({
 
     <!-- Loading State -->
     <div v-if="pending || loading" class="flex flex-col items-center justify-center py-20">
-      <div class="h-10 w-10 rounded-full border-4 border-primary-500/20 border-t-primary-600 animate-spin"></div>
-      <p class="mt-4 text-sm text-gray-500 animate-pulse">Chargement des résultats...</p>
+      <div
+        class="border-primary-500/20 border-t-primary-600 h-10 w-10 animate-spin rounded-full border-4"
+      ></div>
+      <p class="mt-4 animate-pulse text-sm text-gray-500">Chargement des résultats...</p>
     </div>
 
     <!-- Empty State : aucune donnée pour cette élection -->
-    <div v-else-if="!tableData || !tableData.length" class="flex flex-col items-center justify-center py-16">
-      <UIcon name="i-heroicons-chart-bar" class="w-10 h-10 text-gray-300 dark:text-gray-700 mb-3" />
+    <div
+      v-else-if="!tableData || !tableData.length"
+      class="flex flex-col items-center justify-center py-16"
+    >
+      <UIcon name="i-heroicons-chart-bar" class="mb-3 h-10 w-10 text-gray-300 dark:text-gray-700" />
       <h3 class="text-base font-bold text-gray-500">Aucun résultat disponible</h3>
       <p class="text-xs text-gray-400">Les résultats ne sont pas encore publiés.</p>
     </div>
 
     <!-- Empty State : recherche sans résultat -->
     <div v-else-if="!sortedData.length" class="flex flex-col items-center justify-center py-16">
-      <UIcon name="i-heroicons-magnifying-glass" class="w-10 h-10 text-gray-300 dark:text-gray-700 mb-3" />
+      <UIcon
+        name="i-heroicons-magnifying-glass"
+        class="mb-3 h-10 w-10 text-gray-300 dark:text-gray-700"
+      />
       <h3 class="text-base font-bold text-gray-500">Aucun résultat trouvé</h3>
       <p class="text-xs text-gray-400">Essayez une autre recherche.</p>
     </div>
 
     <!-- Results List -->
-    <div v-else class="space-y-1.5 max-h-[calc(100vh-300px)] overflow-y-auto">
+    <div v-else class="max-h-[calc(100vh-300px)] space-y-1.5 overflow-y-auto">
       <div
         v-for="item in sortedData"
         :key="item.id"
-        class="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/60 transition-colors"
+        class="flex items-center gap-3 rounded-xl border border-gray-100 bg-white px-3 py-2.5 transition-colors hover:bg-gray-50 dark:border-gray-800 dark:bg-gray-900 dark:hover:bg-gray-800/60"
       >
         <!-- Commune + Coalition info -->
         <div class="min-w-0 flex-1">
-          <h4 class="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-tight truncate">
+          <h4
+            class="truncate text-sm font-bold uppercase tracking-tight text-gray-900 dark:text-white"
+          >
             {{ item.commune }}
           </h4>
-          <div class="flex items-center gap-1.5 mt-0.5">
-            <div class="h-1.5 w-1.5 shrink-0 rounded-full bg-primary-500"></div>
-            <span class="text-xs text-gray-600 dark:text-gray-400 truncate">{{ item.coalition }}</span>
+          <div class="mt-0.5 flex items-center gap-1.5">
+            <div class="bg-primary-500 h-1.5 w-1.5 shrink-0 rounded-full"></div>
+            <span class="truncate text-xs text-gray-600 dark:text-gray-400">{{
+              item.coalition
+            }}</span>
           </div>
-          <p v-if="item.headOfList" class="text-[10px] text-gray-400 truncate pl-3">
+          <p v-if="item.headOfList" class="truncate pl-3 text-[10px] text-gray-400">
             {{ item.headOfList }}
           </p>
         </div>
 
         <!-- Votes -->
         <div class="shrink-0 text-right">
-          <span class="text-sm font-black text-gray-900 dark:text-white tabular-nums">{{ formatNumber(item.votes) }}</span>
+          <span class="text-sm font-black tabular-nums text-gray-900 dark:text-white">{{
+            formatNumber(item.votes)
+          }}</span>
         </div>
       </div>
     </div>

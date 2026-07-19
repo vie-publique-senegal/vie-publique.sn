@@ -202,7 +202,7 @@ useSeoMeta({
     <div class="min-h-[400px]">
       <div v-if="resultViewType === 'list'">
         <div v-if="selectedType === 'locale'">
-          <ElectionsDashboardStatsElectionResultatsLocalesTable
+          <ElectionsDashboardStatsResultatsLocalesTable
             ref="localesTableRef"
             :election-type="selectedType"
             :election-year="selectedYear"
@@ -287,7 +287,7 @@ useSeoMeta({
         </div>
         <ClientOnly v-else>
           <div class="relative min-h-[500px] w-full sm:min-h-[600px]">
-            <ElectionUnifiedMap
+            <ElectionsMapUnifiedMap
               :key="`result-map-${selectedType}-${selectedYear}`"
               :mode="isLocalElection ? 'results-locale' : 'results'"
               :election-id="currentElection?.id"
@@ -304,14 +304,14 @@ useSeoMeta({
       </div>
     </div>
 
-    <ElectionMapResultDepartmentPanel
+    <ElectionsMapResultDepartmentPanel
       :department="resultDeptPanelData"
       :is-open="resultDeptPanelOpen"
       :all-results="resultCommunesForDept"
       @close="closeResultDeptPanel"
     />
 
-    <ElectionConstituencyRankingPanel
+    <ElectionsMapConstituencyRankingPanel
       :constituency="rankingPanelConstituency"
       :is-open="rankingPanelOpen"
       :election-id="currentElection?.id"

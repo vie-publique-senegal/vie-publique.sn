@@ -135,9 +135,9 @@ const representativeElectionId = computed(() => {
         Sélectionnez un département pour des informations détaillées.
       </p>
 
-      <ElectionRevisionCard class="mt-6" />
+      <ElectionsMapRevisionCard class="mt-6" />
 
-      <ElectionMapTabs active="nationale" :query="contextQuery" />
+      <ElectionsMapTabs active="nationale" :query="contextQuery" />
     </div>
 
     <div class="w-full max-w-7xl">
@@ -185,7 +185,7 @@ const representativeElectionId = computed(() => {
               </p>
             </div>
             <div v-else class="relative min-h-[600px]">
-              <ElectionUnifiedMap
+              <ElectionsMapUnifiedMap
                 mode="offices"
                 :electoral-file-id="nationalFileId"
                 :election-id="representativeElectionId"
@@ -214,7 +214,7 @@ const representativeElectionId = computed(() => {
                 Les données départementales pour cette révision ne sont pas encore disponibles.
               </p>
             </div>
-            <ElectionMapNationalDepartment
+            <ElectionsMapNationalDepartment
               v-else
               :election-id="representativeElectionId"
               @list-empty="handleListEmpty"
@@ -232,7 +232,7 @@ const representativeElectionId = computed(() => {
       </ClientOnly>
     </div>
 
-    <ElectionMapDepartmentPanel
+    <ElectionsMapDepartmentPanel
       :department="selectedDepartmentData"
       :is-open="isDepartmentPanelOpen"
       :election-id="representativeElectionId"

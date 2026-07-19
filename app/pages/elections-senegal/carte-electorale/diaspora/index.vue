@@ -98,13 +98,13 @@ const representativeElectionId = computed(() => {
         Les Sénégalais de l'étranger votent dans 8 circonscriptions.
       </p>
 
-      <ElectionRevisionCard class="mt-6" />
+      <ElectionsMapRevisionCard class="mt-6" />
 
-      <ElectionMapTabs active="diaspora" :query="contextQuery" />
+      <ElectionsMapTabs active="diaspora" :query="contextQuery" />
     </div>
 
     <div class="w-full max-w-7xl">
-      <ElectionDiasporaZones
+      <ElectionsMapDiasporaZones
         :electoral-file-id="diasporaFileId"
         :election-id="representativeElectionId"
       />

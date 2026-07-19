@@ -127,7 +127,7 @@ useSeoMeta({
     </transition>
 
     <transition name="fade">
-      <ElectionsDashboardElectionStatsKPI
+      <ElectionsDashboardStatsKPI
         v-if="currentElection?.status === 'completed' && hasElectionStats"
         :election="currentElection"
         class="animate-in fade-in slide-in-from-top-4 mb-8 duration-500"

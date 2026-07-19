@@ -66,10 +66,7 @@
                     className: 'department-label',
                   }"
                 >
-                  <span
-                    class="text-xs font-semibold"
-                    :class="{ 'text-[8px]': isMobile }"
-                  >
+                  <span class="text-xs font-semibold" :class="{ 'text-[8px]': isMobile }">
                     {{ region.departement }}
                   </span>
                 </LTooltip>
@@ -79,11 +76,15 @@
                     <div>Région: {{ region.region }}</div>
                     <div>
                       Communes:
-                      <span class="font-bold text-red-700">{{ formatNumber(region.municipality) }}</span>
+                      <span class="font-bold text-red-700">{{
+                        formatNumber(region.municipality)
+                      }}</span>
                     </div>
                     <div class="mb-1">
                       Population:
-                      <span class="font-bold text-red-700">{{ formatNumber(region.population) }}</span>
+                      <span class="font-bold text-red-700">{{
+                        formatNumber(region.population)
+                      }}</span>
                     </div>
                     <div>
                       Électeurs:
@@ -129,10 +130,7 @@
                     className: 'department-label',
                   }"
                 >
-                  <span
-                    class="text-xs font-semibold"
-                    :class="{ 'text-[8px]': isMobile }"
-                  >
+                  <span class="text-xs font-semibold" :class="{ 'text-[8px]': isMobile }">
                     {{ dept.departement }}
                   </span>
                 </LTooltip>
@@ -146,15 +144,21 @@
                     </div>
                     <div>
                       Électeurs:
-                      <span class="font-bold text-green-700">{{ formatNumber(dept.totalVoters) }}</span>
+                      <span class="font-bold text-green-700">{{
+                        formatNumber(dept.totalVoters)
+                      }}</span>
                     </div>
                     <div>
                       Bureaux de vote:
-                      <span class="font-bold text-green-700">{{ formatNumber(dept.totalOffices) }}</span>
+                      <span class="font-bold text-green-700">{{
+                        formatNumber(dept.totalOffices)
+                      }}</span>
                     </div>
                     <div class="mb-2">
                       Lieux de vote:
-                      <span class="font-bold text-green-700">{{ formatNumber(dept.totalPlaces) }}</span>
+                      <span class="font-bold text-green-700">{{
+                        formatNumber(dept.totalPlaces)
+                      }}</span>
                     </div>
                     <NuxtLink
                       :to="getDepartmentDetailUrl(dept.departement)"
@@ -176,8 +180,8 @@
 <script setup lang="ts">
 // PERF-8 : leaflet.css importé ici (l'injection globale du module est désactivée dans nuxt.config)
 import 'leaflet/dist/leaflet.css';
-import type { TransformedRegion, DepartmentGroup } from "~~/types/election-map";
-import { useElectionMapData } from "~/composables/useElectionMapJson";
+import type { TransformedRegion, DepartmentGroup } from '~~/types/election-map';
+import { useElectionMapData } from '~/composables/useElectionMapJson';
 
 const route = useRoute();
 
@@ -212,10 +216,10 @@ const props = withDefaults(defineProps<Props>(), {
 });
 
 const emit = defineEmits<{
-  "region-click": [region: TransformedRegion];
-  "map-ready": [map: unknown];
-  "map-error": [];
-  "department-selected": [department: any];
+  'region-click': [region: TransformedRegion];
+  'map-ready': [map: unknown];
+  'map-error': [];
+  'department-selected': [department: any];
 }>();
 
 // État local
@@ -232,24 +236,30 @@ onMounted(() => {
     isMobile.value = window.innerWidth < 768;
   };
   checkMobile();
-  window.addEventListener("resize", checkMobile);
+  window.addEventListener('resize', checkMobile);
 
   // Nettoyage
   onUnmounted(() => {
-    window.removeEventListener("resize", checkMobile);
+    window.removeEventListener('resize', checkMobile);
   });
 });
 
 // Convertir electionId en number pour le composable
 const electionIdNumber = computed(() => {
   if (props.electionId === null || props.electionId === undefined) return null;
-  const parsed = typeof props.electionId === 'string' ? parseInt(props.electionId) : props.electionId;
+  const parsed =
+    typeof props.electionId === 'string' ? parseInt(props.electionId) : props.electionId;
   return isNaN(parsed) ? null : parsed;
 });
 
 // Chargement des données via le composable
-const { getMapData, getRegionColor, loadDepartmentPolygons, groupByDepartment } = useElectionMapData(electionIdNumber);
-const { data: regions, pending, error } = await useAsyncData(
+const { getMapData, getRegionColor, loadDepartmentPolygons, groupByDepartment } =
+  useElectionMapData(electionIdNumber);
+const {
+  data: regions,
+  pending,
+  error,
+} = await useAsyncData(
   () => `map-data-${props.electionId || 'all'}`,
   async () => {
     const data = await getMapData();
@@ -265,7 +275,9 @@ const { data: regions, pending, error } = await useAsyncData(
       departmentGroups.value = deptPolygons.map((poly, index) => {
         // Comparaison normalisée pour matcher les noms entre sources différentes
         const polyKey = poly.departement.trim().toLowerCase();
-        const communeGroup = communeGroups.find(g => g.departement.trim().toLowerCase() === polyKey);
+        const communeGroup = communeGroups.find(
+          (g) => g.departement.trim().toLowerCase() === polyKey,
+        );
         const lightness = 0.35 + (0.3 * index) / totalDepts;
 
         return {
@@ -296,17 +308,25 @@ const { data: regions, pending, error } = await useAsyncData(
 );
 
 // Surveiller les données et émettre map-error si vide
-watch([regions, pending], ([newRegions, isPending]) => {
-  if (!isPending && (!newRegions || newRegions.length === 0) && departmentGroups.value.length === 0) {
-    emit('map-error');
-  }
-}, { immediate: true });
+watch(
+  [regions, pending],
+  ([newRegions, isPending]) => {
+    if (
+      !isPending &&
+      (!newRegions || newRegions.length === 0) &&
+      departmentGroups.value.length === 0
+    ) {
+      emit('map-error');
+    }
+  },
+  { immediate: true },
+);
 
 // IDs des premières occurrences pour éviter les labels dupliqués (mode national)
 const firstDeptIds = computed(() => {
   const seen = new Set<string>();
   const ids = new Set<number>();
-  for (const r of (regions.value || [])) {
+  for (const r of regions.value || []) {
     if (!seen.has(r.departement)) {
       seen.add(r.departement);
       ids.add(r.id);
@@ -323,9 +343,7 @@ watch(error, (newError) => {
 });
 
 // Computed réactifs
-const zoom = computed(() =>
-  isMobile.value ? props.initialZoom - 0.5 : props.initialZoom,
-);
+const zoom = computed(() => (isMobile.value ? props.initialZoom - 0.5 : props.initialZoom));
 const center = computed(() => props.initialCenter);
 
 // Configuration de la carte
@@ -369,10 +387,10 @@ const polygonOptions = computed(() => ({
 
 // Masque pour le Sénégal
 const senegalMask = {
-  type: "Feature",
+  type: 'Feature',
   properties: {},
   geometry: {
-    type: "Polygon",
+    type: 'Polygon',
     coordinates: [
       [
         [-20.0, 18.0],
@@ -388,12 +406,13 @@ const senegalMask = {
 // Gestionnaires d'événements
 const handleMapReady = (map: unknown) => {
   mapInstance.value = map;
-  emit("map-ready", map);
+  emit('map-ready', map);
 
   // Utiliser les polygones de département pour fitBounds en mode local
-  const boundsSource = props.isLocalElection && departmentGroups.value.length > 0
-    ? departmentGroups.value.map(d => ({ coordinates: d.polygon } as any))
-    : regions.value;
+  const boundsSource =
+    props.isLocalElection && departmentGroups.value.length > 0
+      ? departmentGroups.value.map((d) => ({ coordinates: d.polygon }) as any)
+      : regions.value;
 
   if (boundsSource?.length) {
     const bounds = calculateBounds(boundsSource);
@@ -429,8 +448,8 @@ const calculateBounds = (items: { coordinates: [number, number][] }[]) => {
 };
 
 const formatNumber = (value?: number) => {
-  if (value === undefined || value === null) return "N/A";
-  return value.toLocaleString("fr-FR");
+  if (value === undefined || value === null) return 'N/A';
+  return value.toLocaleString('fr-FR');
 };
 
 // Handlers département
@@ -487,7 +506,9 @@ function hslToHex(h: number, s: number, l: number): string {
   const c = (1 - Math.abs(2 * l - 1)) * s;
   const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
   const m = l - c / 2;
-  let r = 0, g = 0, b = 0;
+  let r = 0,
+    g = 0,
+    b = 0;
 
   if (0 <= h && h < 60) [r, g, b] = [c, x, 0];
   else if (60 <= h && h < 120) [r, g, b] = [x, c, 0];
@@ -498,7 +519,7 @@ function hslToHex(h: number, s: number, l: number): string {
 
   const toHex = (n: number): string => {
     const hex = Math.round((n + m) * 255).toString(16);
-    return hex.length === 1 ? "0" + hex : hex;
+    return hex.length === 1 ? '0' + hex : hex;
   };
 
   return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
