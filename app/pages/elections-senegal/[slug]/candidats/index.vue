@@ -145,6 +145,15 @@ useSeoMeta({
                   ? 'Les Candidats'
                   : 'Les Coalitions'
             }}
+            <span class="text-primary-600 font-black">
+              ({{
+                isLocalElection
+                  ? constituencies.length
+                  : selectedType === 'presidential'
+                    ? displayedPresidentialCoalitions.length
+                    : coalitions.length
+              }})
+            </span>
           </h2>
           <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
             {{
@@ -157,59 +166,36 @@ useSeoMeta({
           </p>
         </div>
 
-        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
-          <div v-if="selectedType !== 'presidential'" class="group relative max-w-md flex-1">
-            <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5">
-              <UIcon
-                name="i-heroicons-magnifying-glass-20-solid"
-                class="h-5 w-5 text-gray-400 transition-colors group-focus-within:text-gray-500"
-              />
-            </div>
-            <input
-              v-model="searchQuery"
-              type="search"
-              :placeholder="
-                selectedType === 'locale' ? 'Rechercher...' : 'Rechercher une coalition...'
-              "
-              class="block w-full rounded-xl border-0 bg-gray-100 py-3 pl-11 pr-10 text-sm text-gray-900 ring-1 ring-transparent transition-all placeholder:text-gray-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-gray-400 dark:bg-gray-800 dark:text-white dark:placeholder:text-gray-400 dark:focus:bg-gray-800/80 dark:focus:ring-gray-500 sm:py-2.5"
+        <div v-if="selectedType !== 'presidential'" class="group relative max-w-md">
+          <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5">
+            <UIcon
+              name="i-heroicons-magnifying-glass-20-solid"
+              class="h-5 w-5 text-gray-400 transition-colors group-focus-within:text-gray-500"
             />
-            <button
-              v-if="searchQuery"
-              type="button"
-              class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 transition-colors hover:text-gray-600 dark:hover:text-gray-300"
-              @click="searchQuery = ''"
-            >
-              <span
-                class="flex h-5 w-5 items-center justify-center rounded-full bg-gray-300 dark:bg-gray-600"
-              >
-                <UIcon
-                  name="i-heroicons-x-mark-20-solid"
-                  class="h-3.5 w-3.5 text-gray-600 dark:text-gray-300"
-                />
-              </span>
-            </button>
           </div>
-
-          <UBadge
-            size="md"
-            color="white"
-            class="shrink-0 self-start border shadow-sm dark:border-gray-800 sm:self-center"
+          <input
+            v-model="searchQuery"
+            type="search"
+            :placeholder="
+              selectedType === 'locale' ? 'Rechercher...' : 'Rechercher une coalition...'
+            "
+            class="block w-full rounded-xl border-0 bg-gray-100 py-3 pl-11 pr-10 text-sm text-gray-900 ring-1 ring-transparent transition-all placeholder:text-gray-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-gray-400 dark:bg-gray-800 dark:text-white dark:placeholder:text-gray-400 dark:focus:bg-gray-800/80 dark:focus:ring-gray-500 sm:py-2.5"
+          />
+          <button
+            v-if="searchQuery"
+            type="button"
+            class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 transition-colors hover:text-gray-600 dark:hover:text-gray-300"
+            @click="searchQuery = ''"
           >
-            <span class="text-primary-600 mr-1 font-black">{{
-              isLocalElection
-                ? constituencies.length
-                : selectedType === 'presidential'
-                  ? displayedPresidentialCoalitions.length
-                  : coalitions.length
-            }}</span>
-            {{
-              isLocalElection
-                ? 'circonscriptions'
-                : selectedType === 'presidential'
-                  ? 'candidats'
-                  : 'coalitions'
-            }}
-          </UBadge>
+            <span
+              class="flex h-5 w-5 items-center justify-center rounded-full bg-gray-300 dark:bg-gray-600"
+            >
+              <UIcon
+                name="i-heroicons-x-mark-20-solid"
+                class="h-3.5 w-3.5 text-gray-600 dark:text-gray-300"
+              />
+            </span>
+          </button>
         </div>
       </div>
 
