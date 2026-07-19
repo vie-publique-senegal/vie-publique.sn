@@ -21,7 +21,6 @@ const {
 
 // État local initialisé avec les query params de l'URL pour partage
 const search = ref((route.query.q as string) || '');
-const pageSize = ref(10);
 const sortBy = ref((route.query.sort as string) || 'municipality');
 const sortDesc = ref(route.query.order === 'desc');
 const isRefreshing = ref(false);
@@ -162,8 +161,18 @@ const municipalities = computed(() => {
   return [...new Set(details.value.map((item) => item.municipality))].sort();
 });
 
-// URL de retour : le dashboard de l'élection si on en vient, sinon la vue nationale
+// URL de retour (fallback) : le dashboard de l'élection si on en vient, sinon la vue nationale
 const backUrl = computed(() => backTo('/elections-senegal/carte-electorale/nationale'));
+
+// Bouton retour : navigue dans l'historique du navigateur si on vient d'une
+// page de l'app (ex. la liste des zones/pays), sinon retombe sur backUrl.
+const goBack = () => {
+  if (window.history.state?.back) {
+    router.back();
+  } else {
+    navigateTo(backUrl.value);
+  }
+};
 
 // Titre de la page : contexte élection si la navigation en vient, sinon la révision
 const pageTitle = computed(() => {
@@ -237,60 +246,51 @@ useHead({
     <!-- En-tête avec navigation retour -->
     <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
       <div class="flex items-center gap-4">
-        <UButton icon="i-heroicons-arrow-left" variant="ghost" :to="backUrl" />
+        <UButton icon="i-heroicons-arrow-left" variant="ghost" @click="goBack" />
         <div>
           <h1 class="text-xl font-bold dark:text-white sm:text-2xl">
             {{ department }}
           </h1>
-          <p v-if="electionName || revisionLabel" class="text-sm text-gray-500 dark:text-gray-400">
-            {{ electionName || revisionLabel }}
-          </p>
         </div>
       </div>
     </div>
 
     <!-- Statistiques globales -->
-    <div v-if="stats" class="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4">
-      <UCard class="custom-shadow bg-gray-50 dark:bg-gray-800">
-        <div class="text-center">
-          <div class="text-xs text-gray-500 dark:text-gray-400 sm:text-sm">Total Électeurs</div>
-          <div
-            class="text-xl font-semibold tabular-nums text-red-700 dark:text-red-500 sm:text-2xl md:text-4xl"
-          >
-            {{ formatNumber(stats.sum?.voters) }}
-          </div>
-        </div>
-      </UCard>
-      <UCard class="custom-shadow bg-gray-50 dark:bg-gray-800">
-        <div class="text-center">
-          <div class="text-xs text-gray-500 dark:text-gray-400 sm:text-sm">Communes</div>
-          <div
-            class="text-xl font-semibold tabular-nums text-red-700 dark:text-red-500 sm:text-2xl md:text-4xl"
-          >
-            {{ formatNumber(stats.countDistinct?.municipality) }}
-          </div>
-        </div>
-      </UCard>
-      <UCard class="custom-shadow bg-gray-50 dark:bg-gray-800">
-        <div class="text-center">
-          <div class="text-xs text-gray-500 dark:text-gray-400 sm:text-sm">Lieux de vote</div>
-          <div
-            class="text-xl font-semibold tabular-nums text-red-700 dark:text-red-500 sm:text-2xl md:text-4xl"
-          >
-            {{ formatNumber(stats.countDistinct?.polling_place) }}
-          </div>
-        </div>
-      </UCard>
-      <UCard class="custom-shadow bg-gray-50 dark:bg-gray-800">
-        <div class="text-center">
-          <div class="text-xs text-gray-500 dark:text-gray-400 sm:text-sm">Bureaux</div>
-          <div
-            class="text-xl font-semibold tabular-nums text-red-700 dark:text-red-500 sm:text-2xl md:text-4xl"
-          >
-            {{ formatNumber(stats.count?.office_number) }}
-          </div>
-        </div>
-      </UCard>
+    <div v-if="stats" class="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
+      <div
+        v-for="stat in [
+          { label: 'Électeurs', value: formatNumber(stats.sum?.voters), icon: 'i-heroicons-users' },
+          {
+            label: 'Communes',
+            value: formatNumber(stats.countDistinct?.municipality),
+            icon: 'i-heroicons-building-office-2',
+          },
+          {
+            label: 'Lieux de vote',
+            value: formatNumber(stats.countDistinct?.polling_place),
+            icon: 'i-heroicons-map-pin',
+          },
+          {
+            label: 'Bureaux',
+            value: formatNumber(stats.count?.office_number),
+            icon: 'i-heroicons-building-office',
+          },
+        ]"
+        :key="stat.label"
+        class="rounded-2xl bg-white p-3 ring-1 ring-gray-200 dark:bg-gray-800 dark:ring-gray-700 md:p-4"
+      >
+        <p
+          class="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400"
+        >
+          <UIcon :name="stat.icon" class="h-3.5 w-3.5 shrink-0" />
+          <span class="truncate">{{ stat.label }}</span>
+        </p>
+        <p
+          class="mt-1 text-lg font-bold tabular-nums text-gray-900 dark:text-white sm:text-xl md:text-2xl"
+        >
+          {{ stat.value }}
+        </p>
+      </div>
     </div>
 
     <!-- Filtres -->
@@ -334,7 +334,9 @@ useHead({
 
     <!-- Tableau des données -->
     <template v-else>
-      <div class="overflow-x-auto">
+      <div
+        class="overflow-x-auto rounded-2xl bg-white ring-1 ring-gray-200 dark:bg-gray-800 dark:ring-gray-700"
+      >
         <UTable
           :rows="filteredDetails"
           :columns="columns"
@@ -377,7 +379,10 @@ useHead({
       </div>
 
       <!-- Stats de la recherche -->
-      <div v-if="localStats" class="mt-6 rounded-lg bg-gray-50 p-4 dark:bg-gray-800">
+      <div
+        v-if="localStats"
+        class="mt-6 rounded-2xl bg-white p-4 ring-1 ring-gray-200 dark:bg-gray-800 dark:ring-gray-700"
+      >
         <div class="text-sm text-gray-600 dark:text-gray-300">
           Résultats filtrés :
           <span class="font-medium">{{ filteredDetails.length }}</span>
@@ -386,7 +391,7 @@ useHead({
           commune(s),
           <span class="font-medium">{{ localStats.uniquePollingPlaces }}</span>
           lieu(x) de vote,
-          <span class="font-medium text-red-700 dark:text-red-500">{{
+          <span class="font-semibold text-gray-900 dark:text-white">{{
             localStats.totalVoters.toLocaleString('fr-FR')
           }}</span>
           électeurs

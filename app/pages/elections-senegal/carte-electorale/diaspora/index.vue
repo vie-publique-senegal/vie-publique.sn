@@ -74,6 +74,26 @@ const representativeElectionId = computed(() => {
   const elections = selectedRevision.value?.elections || [];
   return elections.length > 0 ? String(elections[0].id) : null;
 });
+
+// Nombre de circonscriptions (zones électorales officielles de la diaspora),
+// dynamique - même source que ElectionsMapDiasporaZones.
+const { data: diasporaZonesData } = await useFetch<{ zones: { id: number }[] }>(
+  '/api/elections/diaspora/zones',
+  {
+    key: computed(
+      () =>
+        `diaspora-zones-count-${diasporaFileId.value ?? representativeElectionId.value ?? 'all'}`,
+    ),
+    query: computed(() => {
+      if (diasporaFileId.value) return { electoral_file: String(diasporaFileId.value) };
+      if (representativeElectionId.value) return { election: representativeElectionId.value };
+      return {};
+    }),
+    watch: [diasporaFileId, representativeElectionId],
+    default: () => ({ zones: [] }),
+  },
+);
+const diasporaConstituenciesCount = computed(() => diasporaZonesData.value?.zones.length || 0);
 </script>
 
 <template>
@@ -95,7 +115,8 @@ const representativeElectionId = computed(() => {
         Carte Électorale - Diaspora
       </h1>
       <p class="mt-0.5 max-w-3xl text-xs text-gray-500 dark:text-gray-400">
-        Les Sénégalais de l'étranger votent dans 8 circonscriptions.
+        Les Sénégalais de l'étranger votent dans
+        {{ diasporaConstituenciesCount || '' }} circonscriptions.
       </p>
 
       <ElectionsMapRevisionCard class="mt-6" />

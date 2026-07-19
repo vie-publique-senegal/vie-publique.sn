@@ -127,7 +127,7 @@ const formatNumber = (value?: number | null) => {
       <h2 class="mb-3 text-lg font-bold dark:text-white">
         Les {{ zones.length }} circonscriptions de l'étranger
       </h2>
-      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <button
           v-for="zone in zones"
           :key="zone.id"
@@ -168,7 +168,7 @@ const formatNumber = (value?: number | null) => {
     </div>
     <div
       v-else-if="zonesStatus === 'pending' || zonesStatus === 'idle'"
-      class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4"
+      class="grid grid-cols-2 gap-3 lg:grid-cols-4"
     >
       <USkeleton v-for="i in 8" :key="i" class="h-28 w-full rounded-xl" />
     </div>

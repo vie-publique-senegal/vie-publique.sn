@@ -31,6 +31,10 @@ interface SummaryResponse {
   };
 }
 
+interface ZonesResponse {
+  zones: { id: number }[];
+}
+
 // Convertir electionId en computed pour la réactivité
 const electionIdRef = computed(() => props.electionId);
 
@@ -53,6 +57,16 @@ const { data: summaryData, pending } = await useFetch<SummaryResponse>(
   },
 );
 
+// Nombre de circonscriptions de la diaspora (zones électorales officielles),
+// non exposé par /map/summary : réutilise le même endpoint que DiasporaZones.vue.
+const { data: diasporaZonesData } = await useFetch<ZonesResponse>('/api/elections/diaspora/zones', {
+  key: computed(() => `diaspora-zones-count-${electionIdRef.value || 'all'}`),
+  query: queryParams,
+  watch: [electionIdRef],
+  default: () => ({ zones: [] }),
+});
+const diasporaConstituencies = computed(() => diasporaZonesData.value?.zones.length || 0);
+
 // Formater les nombres
 const formatNumber = (value: number | undefined) => {
   if (value === undefined || value === null) return '0';
@@ -67,7 +81,7 @@ const statSections = computed(() => {
   return [
     {
       title: 'Total',
-      color: 'gray',
+      icon: 'i-heroicons-globe-alt',
       stats: [
         {
           label: 'Électeurs',
@@ -85,15 +99,15 @@ const statSections = computed(() => {
           icon: 'i-heroicons-building-office',
         },
         {
-          label: 'Départements',
-          value: formatNumber(data.total.departments),
+          label: 'Circonscriptions',
+          value: formatNumber(data.national.departments + diasporaConstituencies.value),
           icon: 'i-heroicons-map',
         },
       ],
     },
     {
       title: 'Diaspora',
-      color: 'gray',
+      icon: 'i-heroicons-globe-americas',
       stats: [
         {
           label: 'Électeurs',
@@ -111,9 +125,14 @@ const statSections = computed(() => {
           icon: 'i-heroicons-map-pin',
         },
         {
+          label: 'Circonscriptions',
+          value: formatNumber(diasporaConstituencies.value),
+          icon: 'i-heroicons-map',
+        },
+        {
           label: 'Pays',
           value: formatNumber(data.diaspora.countries),
-          icon: 'i-heroicons-globe-americas',
+          icon: 'i-heroicons-flag',
         },
         {
           label: 'Représentations diplomatiques',
@@ -129,7 +148,7 @@ const statSections = computed(() => {
     },
     {
       title: 'Nationale',
-      color: 'gray',
+      icon: 'i-heroicons-building-library',
       stats: [
         {
           label: 'Électeurs',
@@ -147,7 +166,7 @@ const statSections = computed(() => {
           icon: 'i-heroicons-building-office',
         },
         {
-          label: 'Départements',
+          label: 'Circonscriptions',
           value: formatNumber(data.national.departments),
           icon: 'i-heroicons-map',
         },
@@ -173,38 +192,34 @@ const statSections = computed(() => {
     <div v-for="section in statSections" :key="section.title" class="mb-4 mt-2 space-y-2">
       <!-- Titre de section avec barres -->
       <div class="flex items-center justify-center gap-4 px-4">
-        <div :class="`h-[1px] w-full bg-${section.color}-300`"></div>
-        <h3 class="text-lg font-bold dark:text-white" :class="`text-${section.color}-700`">
+        <div class="h-[1px] w-full bg-gray-300 dark:bg-gray-700"></div>
+        <h3 class="flex items-center gap-2 text-lg font-bold text-gray-700 dark:text-white">
+          <UIcon :name="section.icon" class="h-5 w-5" />
           {{ section.title }}
         </h3>
-        <div :class="`h-[1px] w-full bg-${section.color}-300`"></div>
+        <div class="h-[1px] w-full bg-gray-300 dark:bg-gray-700"></div>
       </div>
 
       <!-- Grille de stats -->
-      <div class="grid grid-cols-2 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <UCard v-for="stat in section.stats" :key="stat.label" class="custom-shadow bg-gray-50">
-          <div class="mb-1 flex items-center justify-between">
-            <span class="flex items-center gap-2 text-sm text-gray-600 dark:text-white">
-              <UIcon :name="stat.icon" class="h-4 w-4 transition-colors" />
-              {{ stat.label }}
-            </span>
-          </div>
-          <div class="text-2xl font-bold text-red-700 transition-colors md:text-3xl">
+      <div class="grid grid-cols-2 gap-3 sm:grid-cols-2 md:gap-4 lg:grid-cols-4">
+        <div
+          v-for="stat in section.stats"
+          :key="stat.label"
+          class="rounded-2xl bg-white p-3 ring-1 ring-gray-200 dark:bg-gray-800 dark:ring-gray-700 md:p-4"
+        >
+          <p
+            class="flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400"
+          >
+            <UIcon :name="stat.icon" class="h-3.5 w-3.5 shrink-0" />
+            <span class="truncate">{{ stat.label }}</span>
+          </p>
+          <p
+            class="mt-1 text-lg font-bold tabular-nums text-gray-900 dark:text-white sm:text-xl md:text-2xl"
+          >
             {{ stat.value }}
-          </div>
-        </UCard>
+          </p>
+        </div>
       </div>
     </div>
   </template>
 </template>
-
-<style scoped>
-.border {
-  @apply border-gray-200;
-}
-
-.group:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-}
-</style>
