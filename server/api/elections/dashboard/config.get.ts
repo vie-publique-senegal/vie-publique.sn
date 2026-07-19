@@ -119,7 +119,9 @@ export default defineCachedEventHandler(
 
       electionsData.forEach((e: any) => {
         if (e.year) yearsSet.add(e.year);
-        if (e.type) typesSet.add(e.type);
+        // Un type n'apparaît dans le sélecteur que s'il a au moins une élection avec un slug
+        // (sinon aucune fiche /elections-senegal/[slug] n'existe pour ce type.
+        if (e.type && e.slug) typesSet.add(e.type);
       });
 
       const years = Array.from(yearsSet)
@@ -220,7 +222,7 @@ export default defineCachedEventHandler(
   },
   {
     maxAge: 5 * 60,
-    name: "elections-dashboard-config-v2",
+    name: "elections-dashboard-config-v3",
     getKey: () => "elections-dashboard-config",
   }
 );

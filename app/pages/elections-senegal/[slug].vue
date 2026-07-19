@@ -246,7 +246,7 @@ useHead({
               :model-value="selectedYear"
               :options="
                 config.years.filter((y) =>
-                  config.elections?.some((e) => e.type === selectedType && e.year === y.value),
+                  config.elections?.some((e) => e.type === selectedType && e.year === y.value && !!e.slug),
                 )
               "
               value-attribute="value"
@@ -262,7 +262,7 @@ useHead({
 
     <!-- Tabs Navigation (style budget) -->
     <div
-      v-if="!isCandidateProfilePage"
+      v-if="!isCandidateProfilePage && (loadingConfig || electionBySlug)"
       class="sticky top-0 z-40 border-b border-gray-200 bg-white/95 backdrop-blur-sm dark:border-gray-800 dark:bg-gray-900/95"
     >
       <div class="container mx-auto px-4">
@@ -301,23 +301,22 @@ useHead({
       <!-- État : élection introuvable -->
       <div
         v-if="!loadingConfig && !electionBySlug"
-        class="animate-in fade-in zoom-in-95 flex flex-col items-center justify-center py-32 text-center duration-500"
+        class="animate-in fade-in zoom-in-95 rounded-2xl bg-white py-20 text-center ring-1 ring-gray-200 duration-500 dark:bg-gray-800 dark:ring-gray-700"
       >
-        <div class="bg-primary-50 dark:bg-primary-900/10 mb-6 rounded-full p-6">
-          <UIcon name="i-heroicons-face-frown" class="text-primary-500 h-20 w-20" />
-        </div>
-        <h1 class="mb-4 text-4xl font-black tracking-tight text-gray-900 dark:text-white">
-          Oups ! Élection introuvable
+        <UIcon
+          name="i-heroicons-face-frown"
+          class="mx-auto mb-4 h-16 w-16 text-gray-300 dark:text-gray-700"
+        />
+        <h1 class="mb-2 text-xl font-bold text-gray-900 dark:text-white">
+          Élection introuvable
         </h1>
-        <p class="mx-auto mb-8 max-w-lg text-lg text-gray-500">
+        <p class="mb-6 text-sm text-gray-500">
           Aucune élection ne correspond à cette adresse.
         </p>
         <UButton
           to="/elections-senegal"
-          size="xl"
-          color="gray"
-          variant="solid"
           icon="i-heroicons-arrow-left"
+          variant="soft"
         >
           Retour aux élections
         </UButton>
