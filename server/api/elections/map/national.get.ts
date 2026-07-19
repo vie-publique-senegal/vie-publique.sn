@@ -38,18 +38,15 @@ export default defineCachedEventHandler(
     const query = getQuery(event);
 
     const department = query.department as string | undefined;
-    const groupByDepartment = query.groupBy === "department";
-    const groupByMunicipality = query.groupBy === "municipality";
+    const groupByDepartment = query.groupBy === 'department';
+    const groupByMunicipality = query.groupBy === 'municipality';
     const electionId = query.election as string | undefined;
     const electoralFileParam = query.electoral_file as string | undefined;
 
     try {
       const fileId = electoralFileParam
         ? parseInt(electoralFileParam)
-        : await resolveElectoralFileId(
-            electionId ? parseInt(electionId) : null,
-            "national"
-          );
+        : await resolveElectoralFileId(electionId ? parseInt(electionId) : null, 'national');
 
       if (fileId) {
         const baseFilter: Record<string, unknown> = { electoral_file: { _eq: fileId } };
@@ -60,18 +57,18 @@ export default defineCachedEventHandler(
         // Stats par commune d'un département (additif — panneau département)
         if (groupByMunicipality && department) {
           const municipalityStats = (await directus.request(
-            aggregate("election_polling_stations", {
+            aggregate('election_polling_stations', {
               aggregate: {
-                count: ["office_number"],
-                sum: ["voters"],
-                countDistinct: ["polling_place"],
+                count: ['office_number'],
+                sum: ['voters'],
+                countDistinct: ['polling_place'],
               },
-              groupBy: ["municipality"],
+              groupBy: ['municipality'],
               query: {
                 filter: baseFilter,
                 limit: 2000,
               },
-            })
+            }),
           )) as {
             municipality: string | null;
             count?: Record<string, string>;
@@ -82,9 +79,9 @@ export default defineCachedEventHandler(
           return {
             data: municipalityStats.map((row) => ({
               municipality: row.municipality,
-              voters: parseInt(row.sum?.voters || "0"),
-              offices: parseInt(row.count?.office_number || "0"),
-              places: parseInt(row.countDistinct?.polling_place || "0"),
+              voters: parseInt(row.sum?.voters || '0'),
+              offices: parseInt(row.count?.office_number || '0'),
+              places: parseInt(row.countDistinct?.polling_place || '0'),
             })),
           };
         }
@@ -92,20 +89,20 @@ export default defineCachedEventHandler(
         // Détails d'un département (liste des bureaux)
         if (department && !groupByDepartment) {
           const pollingStations = (await directus.request(
-            readItems("election_polling_stations", {
+            readItems('election_polling_stations', {
               fields: [
-                "id",
-                "municipality",
-                "polling_place",
-                "office_number",
-                "voters",
-                "constituency.name",
-                "constituency.geo_department.region.name",
+                'id',
+                'municipality',
+                'polling_place',
+                'office_number',
+                'voters',
+                'constituency.name',
+                'constituency.geo_department.region.name',
               ],
               filter: baseFilter,
               limit: 2000,
-              sort: ["municipality", "polling_place", "office_number"],
-            })
+              sort: ['municipality', 'polling_place', 'office_number'],
+            }),
           )) as StationRow[];
 
           return {
@@ -123,23 +120,21 @@ export default defineCachedEventHandler(
 
         // Statistiques groupées par département (avec ou sans filtre)
         const statsData = (await directus.request(
-          aggregate("election_polling_stations", {
+          aggregate('election_polling_stations', {
             aggregate: {
-              count: ["polling_place", "office_number"],
-              sum: ["voters"],
-              countDistinct: ["municipality", "polling_place"],
+              count: ['polling_place', 'office_number'],
+              sum: ['voters'],
+              countDistinct: ['municipality', 'polling_place'],
             },
-            groupBy: ["constituency"],
+            groupBy: ['constituency'],
             query: {
               filter: baseFilter,
               limit: 2000,
             },
-          })
+          }),
         )) as StationStatsRow[];
 
-        const namesById = await getConstituencyNamesById(
-          statsData.map((row) => row.constituency)
-        );
+        const namesById = await getConstituencyNamesById(statsData.map((row) => row.constituency));
 
         return {
           data: statsData.map((row) => ({
@@ -155,7 +150,10 @@ export default defineCachedEventHandler(
       }
 
       // Fallback legacy : election_map_national
-      warnElectoralLegacyFallback("/api/elections/map/national", electionId ? `election ${electionId}` : undefined);
+      warnElectoralLegacyFallback(
+        '/api/elections/map/national',
+        electionId ? `election ${electionId}` : undefined,
+      );
 
       const buildFilter = (additionalFilters: Record<string, any> = {}) => {
         const filter: any = { ...additionalFilters };
@@ -249,7 +247,7 @@ export default defineCachedEventHandler(
   },
   {
     maxAge: 60 * 60, // Cache de 1 heure
-    name: "election-map-national-v2",
-    getKey: (event) => buildCacheKey("election-map-national", getQuery(event)),
-  }
+    name: 'election-map-national-v2',
+    getKey: (event) => buildCacheKey('election-map-national', getQuery(event)),
+  },
 );

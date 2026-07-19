@@ -25,10 +25,7 @@ export default defineCachedEventHandler(
     try {
       const fileId = electoralFileParam
         ? parseInt(electoralFileParam)
-        : await resolveElectoralFileId(
-            electionId ? parseInt(electionId) : null,
-            "diaspora"
-          );
+        : await resolveElectoralFileId(electionId ? parseInt(electionId) : null, 'diaspora');
 
       if (fileId) {
         const filter: Record<string, unknown> = { electoral_file: { _eq: fileId } };
@@ -37,16 +34,16 @@ export default defineCachedEventHandler(
         }
 
         const countriesData = await directus.request(
-          readItems("election_polling_stations", {
+          readItems('election_polling_stations', {
             limit: 2000,
-            groupBy: ["country"],
+            groupBy: ['country'],
             aggregate: {
-              count: ["polling_place", "office_number"],
-              sum: ["voters"],
-              countDistinct: ["polling_place"],
+              count: ['polling_place', 'office_number'],
+              sum: ['voters'],
+              countDistinct: ['polling_place'],
             },
             filter,
-          })
+          }),
         );
 
         return {
@@ -55,7 +52,10 @@ export default defineCachedEventHandler(
       }
 
       // Fallback legacy : election_map_diaspora
-      warnElectoralLegacyFallback("/api/elections/diaspora/countries", electionId ? `election ${electionId}` : undefined);
+      warnElectoralLegacyFallback(
+        '/api/elections/diaspora/countries',
+        electionId ? `election ${electionId}` : undefined,
+      );
 
       const filter: any = {};
       if (electionId) {
@@ -91,7 +91,7 @@ export default defineCachedEventHandler(
   },
   {
     maxAge: 60 * 60, // Cache de 1 heure
-    name: "election-diaspora-countries-v2",
-    getKey: (event) => buildCacheKey("election-diaspora-countries", getQuery(event)),
+    name: 'election-diaspora-countries-v2',
+    getKey: (event) => buildCacheKey('election-diaspora-countries', getQuery(event)),
   },
 );

@@ -26,7 +26,7 @@ export default defineCachedEventHandler(
       // des statuts draft fait partie de la migration prod, phase 2).
       const filter: any = {
         is_elected: { _eq: true },
-        status: { _eq: "published" },
+        status: { _eq: 'published' },
       };
 
       // Ajout des filtres optionnels
@@ -54,16 +54,16 @@ export default defineCachedEventHandler(
       const candidatesData = await directus.request(
         readItems('election_candidates', {
           fields: [
-            "id",
-            "profession",
+            'id',
+            'profession',
             { person: PERSON_IDENTITY_FIELDS } as any,
             {
               electoral_list: [
                 'name',
                 'type',
                 {
-                  coalition: ["color", { political_entity: ENTITY_IDENTITY_FIELDS }],
-                  constituency: ["name"],
+                  coalition: ['color', { political_entity: ENTITY_IDENTITY_FIELDS }],
+                  constituency: ['name'],
                 },
               ],
             },
@@ -71,8 +71,8 @@ export default defineCachedEventHandler(
           filter,
           limit,
           offset,
-          sort: ["person.last_name", "person.first_name"],
-        })
+          sort: ['person.last_name', 'person.first_name'],
+        }),
       );
 
       // Récupération du total

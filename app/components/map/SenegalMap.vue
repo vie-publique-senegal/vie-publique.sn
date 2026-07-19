@@ -220,11 +220,15 @@ onMounted(async () => {
   store.initFromConfig(props.config);
 
   // Charger deck.gl + GeoJSON en parallèle (sources surchargées par config.geoSources)
-  const sources = props.config.geoSources ?? {}
+  const sources = props.config.geoSources ?? {};
   const geoUrl = (key: 'regions' | 'departements' | 'communes', fallback: string) =>
-    sources[key] === null ? null : (sources[key] ?? fallback)
+    sources[key] === null ? null : (sources[key] ?? fallback);
   const fetchGeo = (url: string | null) =>
-    url ? fetch(url).then((r) => r.ok ? r.json() : null).catch(() => null) : Promise.resolve(null)
+    url
+      ? fetch(url)
+          .then((r) => (r.ok ? r.json() : null))
+          .catch(() => null)
+      : Promise.resolve(null);
 
   const [, regions, departements, communes] = await Promise.all([
     loadDeckModules().catch(() => null),
@@ -392,7 +396,9 @@ onUnmounted(() => window.removeEventListener('resize', checkMobile));
    (mobile), le canvas deck.gl vit dans .maplibregl-ctrl-top-left et un
    display:none sur le conteneur le rendrait 0×0 (couches invisibles). */
 .senegal-map :deep(.maplibregl-ctrl-top-right .maplibregl-ctrl),
-.senegal-map :deep(.maplibregl-ctrl-top-left .maplibregl-ctrl) { display: none; }
+.senegal-map :deep(.maplibregl-ctrl-top-left .maplibregl-ctrl) {
+  display: none;
+}
 
 .senegal-map :deep(.maplibregl-ctrl-attrib) {
   font-size: 9px;

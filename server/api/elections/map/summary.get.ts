@@ -59,7 +59,12 @@ export default defineCachedEventHandler(
               aggregate: {
                 sum: ['voters'],
                 count: ['office_number'],
-                countDistinct: ['polling_place', 'country', 'locality', 'diplomatic_representation'],
+                countDistinct: [
+                  'polling_place',
+                  'country',
+                  'locality',
+                  'diplomatic_representation',
+                ],
               },
               query: {
                 filter: { electoral_file: { _eq: diasporaFileId } },
@@ -73,7 +78,10 @@ export default defineCachedEventHandler(
         nationalDepartments = parseInt(national.countDistinct?.constituency || '0');
       } else {
         // Fallback legacy : election_map_national + election_map_diaspora
-        warnElectoralLegacyFallback('/api/elections/map/summary', electionId ? `election ${electionId}` : undefined);
+        warnElectoralLegacyFallback(
+          '/api/elections/map/summary',
+          electionId ? `election ${electionId}` : undefined,
+        );
 
         const filter: any = {};
         if (electionId) {
@@ -98,7 +106,12 @@ export default defineCachedEventHandler(
               aggregate: {
                 sum: ['voters'],
                 count: ['office_number'],
-                countDistinct: ['polling_place', 'country', 'locality', 'diplomatic_representation'],
+                countDistinct: [
+                  'polling_place',
+                  'country',
+                  'locality',
+                  'diplomatic_representation',
+                ],
               },
               query: Object.keys(filter).length > 0 ? { filter } : {},
             }),
@@ -162,6 +175,6 @@ export default defineCachedEventHandler(
   {
     maxAge: 60 * 60, // Cache de 1 heure
     name: 'election-carte-summary-v2',
-    getKey: (event) => buildCacheKey("election-carte-summary", getQuery(event)),
+    getKey: (event) => buildCacheKey('election-carte-summary', getQuery(event)),
   },
 );
