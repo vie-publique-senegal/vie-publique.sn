@@ -2,7 +2,7 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [prod]
+    branches: [prod, develop]
   pull_request:
     branches: [develop]
 
@@ -99,7 +99,8 @@ jobs:
     name: Deploy to Coolify
     runs-on: ubuntu-latest
     needs: build-and-push
-    if: github.event_name == 'push'
+    # Déploiement uniquement depuis prod (les push develop buildent l'image sans déployer)
+    if: github.event_name == 'push' && github.ref == 'refs/heads/prod'
     steps:
       - name: Trigger Coolify deployment
         run: |
