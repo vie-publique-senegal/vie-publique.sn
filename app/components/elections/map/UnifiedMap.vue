@@ -125,7 +125,7 @@ const dataKey = computed(
   () => `election-map-${props.mode}-${props.electionId ?? ''}-${props.electoralFileId ?? ''}`,
 );
 
-const { data: items, status } = await useAsyncData(
+const { data: items, status } = useAsyncData(
   dataKey,
   async (): Promise<OfficeMapItem[] | ResultMapItem[]> => {
     if (props.mode === 'offices') {

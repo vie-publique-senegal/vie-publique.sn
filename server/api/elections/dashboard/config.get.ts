@@ -5,7 +5,7 @@ export default defineCachedEventHandler(
     const directus = getCmsClient() as any;
 
     try {
-      const electionsData = (await directus.request(
+      const electionsPromise = directus.request(
         (readItems as any)("elections", {
           fields: [
             "id",
@@ -43,7 +43,64 @@ export default defineCachedEventHandler(
             status: { _nin: ["draft", "archived"] }
           },
         })
-      )) as any[];
+      ) as Promise<any[]>;
+
+      // Fichiers électoraux des élections (additif, best-effort : requête séparée
+      // pour ne pas faire échouer la config quand le schéma n'existe pas encore en prod).
+      // Lancée en parallèle de la requête principale (aucune dépendance entre les deux)
+      // pour éviter d'attendre deux allers-retours CMS séquentiels.
+      const electoralFileFields = (scope: string) => [
+        `electoral_file_${scope}.id`,
+        `electoral_file_${scope}.name`,
+        `electoral_file_${scope}.scope`,
+        `electoral_file_${scope}.year`,
+        `electoral_file_${scope}.document.id`,
+        `electoral_file_${scope}.document.slug`,
+        `electoral_file_${scope}.document.title`,
+        `electoral_file_${scope}.document.type`,
+        `electoral_file_${scope}.document.file`,
+        `electoral_file_${scope}.document.status`,
+      ];
+
+      interface ElectoralFileRow {
+        id: number;
+        name: string;
+        year: number | null;
+        document?: {
+          id: number;
+          slug: string | null;
+          title: string | null;
+          type: string | null;
+          file: string | null;
+          status: string;
+        } | null;
+      }
+
+      interface CleanElectoralFile {
+        id: number;
+        name: string;
+        year: number | null;
+        document: Omit<NonNullable<ElectoralFileRow["document"]>, "status"> | null;
+      }
+
+      const filesPromise = directus
+        .request(
+          (readItems as any)("elections", {
+            fields: ["id", ...electoralFileFields("national"), ...electoralFileFields("diaspora")],
+            filter: { status: { _nin: ["draft", "archived"] } },
+            limit: -1,
+          })
+        )
+        .catch(() => null) as Promise<
+        | {
+            id: number;
+            electoral_file_national?: ElectoralFileRow | null;
+            electoral_file_diaspora?: ElectoralFileRow | null;
+          }[]
+        | null
+      >;
+
+      const [electionsData, fileRowsResult] = await Promise.all([electionsPromise, filesPromise]);
 
       if (!electionsData || electionsData.length === 0) {
           return {
@@ -80,54 +137,12 @@ export default defineCachedEventHandler(
         value: t,
       }));
 
-      // Fichiers électoraux des élections (additif, best-effort : requête séparée
-      // pour ne pas faire échouer la config quand le schéma n'existe pas encore en prod)
-      const electoralFileFields = (scope: string) => [
-        `electoral_file_${scope}.id`,
-        `electoral_file_${scope}.name`,
-        `electoral_file_${scope}.scope`,
-        `electoral_file_${scope}.year`,
-        `electoral_file_${scope}.document.id`,
-        `electoral_file_${scope}.document.slug`,
-        `electoral_file_${scope}.document.title`,
-        `electoral_file_${scope}.document.type`,
-        `electoral_file_${scope}.document.file`,
-        `electoral_file_${scope}.document.status`,
-      ];
-
-      interface ElectoralFileRow {
-        id: number;
-        name: string;
-        year: number | null;
-        document?: {
-          id: number;
-          slug: string | null;
-          title: string | null;
-          type: string | null;
-          file: string | null;
-          status: string;
-        } | null;
-      }
-
-      interface CleanElectoralFile {
-        id: number;
-        name: string;
-        year: number | null;
-        document: Omit<NonNullable<ElectoralFileRow["document"]>, "status"> | null;
-      }
-
       const electoralFilesByElection = new Map<
         number,
         { national: CleanElectoralFile | null; diaspora: CleanElectoralFile | null }
       >();
-      try {
-        const fileRows = (await directus.request(
-          (readItems as any)("elections", {
-            fields: ["id", ...electoralFileFields("national"), ...electoralFileFields("diaspora")],
-            filter: { status: { _nin: ["draft", "archived"] } },
-            limit: -1,
-          })
-        )) as {
+      if (fileRowsResult) {
+        const fileRows = fileRowsResult as {
           id: number;
           electoral_file_national?: ElectoralFileRow | null;
           electoral_file_diaspora?: ElectoralFileRow | null;
@@ -159,8 +174,6 @@ export default defineCachedEventHandler(
             diaspora: cleanFile(row.electoral_file_diaspora),
           });
         }
-      } catch {
-        // Schéma des fichiers électoraux absent (prod pré-migration) : clé non exposée
       }
 
       // Traiter les données des élections pour nettoyer et filtrer les documents
