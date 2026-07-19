@@ -13,6 +13,18 @@ export interface DocumentsOptions {
   /** Nombre d'items par page */
   limit?: number;
 
+  /** Filtre année initial (ex: '2026'). Appliqué AVANT le premier fetch pour le SSR */
+  year?: string;
+
+  /** Filtre famille initial (ex: 'statistics'). Appliqué AVANT le premier fetch pour le SSR */
+  family?: string;
+
+  /**
+   * Organisme d'audit initial (ex: 'OFNAC'). Appliqué AVANT le premier fetch pour le SSR.
+   * Utilisé par les pages dédiées /documents/rapports-audit/organisme/<slug>.
+   */
+  auditInstitution?: string;
+
   /** Synchroniser avec l'URL */
   syncUrl?: boolean;
 }
@@ -87,20 +99,28 @@ export const useDocuments = (options: DocumentsOptions = {}) => {
   });
 
   // Gestion du filtre par année
-  const yearFilter = ref<string>('all');
+  // Initialisé via options.year pour que le PREMIER fetch (SSR inclus) soit déjà filtré.
+  const yearFilter = ref<string>(options.year || 'all');
 
   // Gestion du filtre par organisme d'audit
-  const auditInstitutionFilter = ref<string>('');
+  // Initialisé via options.auditInstitution pour que le PREMIER fetch (SSR inclus)
+  // soit déjà filtré sur les pages dédiées par organisme.
+  const auditInstitutionFilter = ref<string>(options.auditInstitution || '');
 
   // Gestion du filtre par famille de documents
-  const familyFilter = ref<string>('all');
+  // Initialisé via options.family pour que le PREMIER fetch (SSR inclus) soit déjà filtré.
+  const familyFilter = ref<string>(options.family || 'all');
+
+  // Quand l'organisme est imposé par la page (page dédiée par organisme),
+  // on ne lit/écrit PAS le query param ?organisme : l'URL reste propre.
+  const lockAuditInstitution = !!options.auditInstitution;
 
   // Lecture des filtres depuis l'URL
   onMounted(() => {
     if (route.query.year) {
       yearFilter.value = route.query.year as string;
     }
-    if (route.query.organisme) {
+    if (!lockAuditInstitution && route.query.organisme) {
       auditInstitutionFilter.value = route.query.organisme as string;
     }
     if (route.query.family) {
@@ -120,7 +140,9 @@ export const useDocuments = (options: DocumentsOptions = {}) => {
   });
 
   // Synchronisation du filtre organisme avec l'URL
+  // (désactivée sur les pages dédiées où l'organisme est imposé)
   watch(auditInstitutionFilter, () => {
+    if (lockAuditInstitution) return;
     const query: any = { ...route.query };
     if (auditInstitutionFilter.value) {
       query.organisme = auditInstitutionFilter.value;
@@ -191,12 +213,23 @@ export const useDocuments = (options: DocumentsOptions = {}) => {
     sort: state.sortBy,
     limit: state.itemsPerPage,
     page: state.currentPage,
-    search: state.searchQuery,
+    search: state.apiSearchQuery,
   });
 
   // Computed pour compatibilité avec l'ancien code
   const totalItems = computed(() => collection.pagination.value?.total || 0);
   const totalPages = computed(() => collection.pagination.value?.totalPages || 1);
+
+  // Recalage des pages hors-limites.
+  // Si l'URL demande une page > totalPages (ex: ?page=3 alors que la collection
+  // filtrée ne contient qu'1 page), le CMS renvoie un tableau vide et l'UI
+  // afficherait « Aucun résultat » à tort, sans pagination pour revenir en arrière.
+  // On recale donc sur la dernière page valide une fois les données chargées.
+  watch([totalPages, collection.loading], () => {
+    if (!collection.loading.value && state.currentPage.value > totalPages.value) {
+      state.currentPage.value = totalPages.value;
+    }
+  });
 
   const setAuditInstitutionFilter = (value: string) => {
     auditInstitutionFilter.value = value;

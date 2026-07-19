@@ -1,5 +1,5 @@
 // server/api/elections/candidates/elected.get.ts
-import { readItems, aggregate } from "@directus/sdk";
+import { readItems, aggregate } from '@directus/sdk';
 
 /**
  * Endpoint pour récupérer les candidats élus aux élections
@@ -52,15 +52,15 @@ export default defineCachedEventHandler(
 
       // Récupération des candidats élus
       const candidatesData = await directus.request(
-        readItems("election_candidates", {
+        readItems('election_candidates', {
           fields: [
             "id",
             "profession",
             { person: PERSON_IDENTITY_FIELDS } as any,
             {
               electoral_list: [
-                "name",
-                "type",
+                'name',
+                'type',
                 {
                   coalition: ["color", { political_entity: ENTITY_IDENTITY_FIELDS }],
                   constituency: ["name"],
@@ -77,10 +77,10 @@ export default defineCachedEventHandler(
 
       // Récupération du total
       const [totalCount] = await directus.request(
-        aggregate("election_candidates", {
-          aggregate: { count: "*" },
+        aggregate('election_candidates', {
+          aggregate: { count: '*' },
           query: { filter },
-        })
+        }),
       );
 
       const total = Number(totalCount.count);
@@ -111,15 +111,20 @@ export default defineCachedEventHandler(
         },
       };
     } catch (error) {
-      console.error("Error fetching elected candidates:", error);
+      reportServerError(error, 'api/elections/candidates/elected', {
+        coalition,
+        gender,
+        search,
+        page,
+      });
       throw createError({
         statusCode: 500,
-        statusMessage: "Erreur lors de la récupération des candidats élus",
+        statusMessage: 'Erreur lors de la récupération des candidats élus',
       });
     }
   },
   {
     maxAge: 60 * 60, // Cache de 1 heure
-    name: "election-candidates-elected",
-  }
+    name: 'election-candidates-elected',
+  },
 );

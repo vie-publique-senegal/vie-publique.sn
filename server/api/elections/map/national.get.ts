@@ -1,5 +1,5 @@
 // server/api/elections/map/national.get.ts
-import { readItems, aggregate } from "@directus/sdk";
+import { readItems, aggregate } from '@directus/sdk';
 
 interface StationRow {
   id: number;
@@ -166,23 +166,21 @@ export default defineCachedEventHandler(
       };
 
       if (groupByDepartment) {
-        const filter = buildFilter(
-          department ? { department: { _eq: department } } : {}
-        );
+        const filter = buildFilter(department ? { department: { _eq: department } } : {});
 
         const statsData = await directus.request(
-          aggregate("election_map_national", {
+          aggregate('election_map_national', {
             aggregate: {
-              count: ["polling_place", "office_number"],
-              sum: ["voters"],
-              countDistinct: ["municipality", "polling_place"],
+              count: ['polling_place', 'office_number'],
+              sum: ['voters'],
+              countDistinct: ['municipality', 'polling_place'],
             },
-            groupBy: ["department"],
+            groupBy: ['department'],
             query: {
               filter,
               limit: 2000,
             },
-          })
+          }),
         );
 
         return {
@@ -194,20 +192,20 @@ export default defineCachedEventHandler(
         const filter = buildFilter({ department: { _eq: department } });
 
         const pollingStations = await directus.request(
-          readItems("election_map_national", {
+          readItems('election_map_national', {
             fields: [
-              "id",
-              "department",
-              "municipality",
-              "polling_place",
-              "office_number",
-              "voters",
-              "region",
+              'id',
+              'department',
+              'municipality',
+              'polling_place',
+              'office_number',
+              'voters',
+              'region',
             ],
             filter,
             limit: 2000,
-            sort: ["municipality", "polling_place", "office_number"],
-          })
+            sort: ['municipality', 'polling_place', 'office_number'],
+          }),
         );
 
         return {
@@ -218,28 +216,34 @@ export default defineCachedEventHandler(
       const filter = buildFilter();
 
       const allStats = await directus.request(
-        aggregate("election_map_national", {
+        aggregate('election_map_national', {
           aggregate: {
-            count: ["polling_place", "office_number"],
-            sum: ["voters"],
-            countDistinct: ["municipality", "polling_place"],
+            count: ['polling_place', 'office_number'],
+            sum: ['voters'],
+            countDistinct: ['municipality', 'polling_place'],
           },
-          groupBy: ["department"],
+          groupBy: ['department'],
+          // ⚠️ Ne jamais passer `filter: undefined` : le SDK le sérialise en
+          // `filter=undefined` littéral → Directus 400 « Invalid JSON for filter »
           query: {
-            filter: Object.keys(filter).length > 0 ? filter : undefined,
+            ...(Object.keys(filter).length > 0 ? { filter } : {}),
             limit: 2000,
           },
-        })
+        }),
       );
 
       return {
         data: allStats,
       };
     } catch (error) {
-      console.error("Error fetching election map national data:", error);
+      reportServerError(error, 'api/elections/map/national', {
+        department,
+        electionId,
+        groupByDepartment,
+      });
       throw createError({
         statusCode: 500,
-        statusMessage: "Erreur lors de la récupération des données de la carte nationale",
+        statusMessage: 'Erreur lors de la récupération des données de la carte nationale',
       });
     }
   },

@@ -9,7 +9,7 @@
       </div>
     </header>
 
-    <main class="container mx-auto px-0 sm:px-4 py-4">
+    <main class="container mx-auto px-0 py-4 sm:px-4">
       <!-- Navigation Cards - Mobile: 2 cols compact, Desktop: 3 cols -->
       <div class="grid grid-cols-2 gap-1.5 md:grid-cols-3 md:gap-3">
         <NuxtLink
@@ -168,6 +168,13 @@ const allNavigationCards: NavigationCard[] = [
     featureKey: 'menu_documents',
   },
   {
+    title: 'Dossiers',
+    description: 'Pages de référence sur les grands sujets',
+    icon: 'i-heroicons-folder-open',
+    to: '/dossiers',
+    featureKey: 'menu_dossiers',
+  },
+  {
     title: 'Annuaire',
     description: 'Nominations, Sites, Medias...',
     icon: 'i-heroicons-book-open',
@@ -192,7 +199,7 @@ const allNavigationCards: NavigationCard[] = [
     title: 'Journal officiel Sénégal',
     description: 'Lois, Décrets, Arrêtés',
     icon: 'i-heroicons-newspaper',
-    to: '/documents/journal-officiel',
+    to: '/documents/journal-officiel-senegal',
     featureKey: 'menu_journal_officiel',
   },
   {
@@ -210,10 +217,10 @@ const allNavigationCards: NavigationCard[] = [
     featureKey: 'menu_gouvernement',
   },
   {
-    title: 'Nominations',
-    description: 'Nominations, Ministres, DG...',
+    title: 'Personnalités publiques',
+    description: 'Ministres, DG, PCA, nominations...',
     icon: 'i-heroicons-user-group',
-    to: '/nomination-senegal',
+    to: '/personnalites-senegal',
     featureKey: 'menu_nominations',
   },
   {
@@ -255,7 +262,7 @@ const allNavigationCards: NavigationCard[] = [
     title: "Organigramme de l'etat",
     description: "Annuaire de l'état",
     icon: 'i-heroicons-information-circle',
-    to: '/etat-senegal/annuaire',
+    to: '/etat-senegal/organisation',
     featureKey: 'menu_organigramme_etat',
   },
   {
@@ -280,13 +287,6 @@ const allNavigationCards: NavigationCard[] = [
     featureKey: 'menu_don_bictorys',
   },
   {
-    title: 'Don avec Paydunya',
-    description: 'Soutenez-nous via Paydunya',
-    icon: 'i-heroicons-heart',
-    to: '/don/paydunya',
-    featureKey: 'menu_don_paydunya',
-  },
-  {
     title: 'Podcasts',
     description: 'Lives, Spaces, Interviews en replay',
     icon: 'i-heroicons-microphone',
@@ -299,7 +299,7 @@ const allNavigationCards: NavigationCard[] = [
     icon: 'i-heroicons-clipboard-document-list',
     to: '/projets-publics-senegal',
     featureKey: 'menu_projets_publics',
-  }
+  },
 ];
 
 // Filtrer les cartes en fonction des feature flags
@@ -322,6 +322,10 @@ const cardConfigs: CardConfigs = {
     color: 'text-indigo-600 dark:text-indigo-400',
     bgColor: 'bg-indigo-100 dark:bg-indigo-900/30',
   },
+  Dossiers: {
+    color: 'text-rose-600 dark:text-rose-400',
+    bgColor: 'bg-rose-100 dark:bg-rose-900/30',
+  },
   'Assemblée Nationale': {
     color: 'text-amber-600 dark:text-amber-400',
     bgColor: 'bg-amber-100 dark:bg-amber-900/30',
@@ -334,7 +338,7 @@ const cardConfigs: CardConfigs = {
     color: 'text-emerald-600 dark:text-emerald-400',
     bgColor: 'bg-emerald-100 dark:bg-emerald-900/30',
   },
-  Nominations: {
+  'Personnalités publiques': {
     color: 'text-teal-600 dark:text-teal-400',
     bgColor: 'bg-teal-100 dark:bg-teal-900/30',
   },
@@ -373,10 +377,6 @@ const cardConfigs: CardConfigs = {
   'Don avec Bictorys': {
     color: 'text-red-600 dark:text-red-400',
     bgColor: 'bg-red-100 dark:bg-red-900/30',
-  },
-  'Don avec Paydunya': {
-    color: 'text-rose-600 dark:text-rose-400',
-    bgColor: 'bg-rose-100 dark:bg-rose-900/30',
   },
   Podcasts: {
     color: 'text-violet-600 dark:text-violet-400',

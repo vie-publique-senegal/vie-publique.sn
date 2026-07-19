@@ -27,6 +27,10 @@ const securityConfig =
               'https://*.vie-publique.sn',
               'https://www.google-analytics.com',
               'https://*.google-analytics.com',
+              // GA4 envoie aussi vers ses endpoints régionaux + doubleclick (Google Signals)
+              'https://analytics.google.com',
+              'https://*.analytics.google.com',
+              'https://stats.g.doubleclick.net',
               'https://www.google.com',
               'https://fonts.googleapis.com',
               'https://*.googleapis.com',
@@ -41,6 +45,15 @@ const securityConfig =
               'https://fonts.openmaptiles.org',
               // Iconify (chargement dynamique d'icônes par Nuxt UI)
               'https://api.iconify.design',
+              // Microsoft Clarity
+              'https://www.clarity.ms',
+              'https://*.clarity.ms',
+              // Sentry (monitoring d'erreurs) — hôtes d'ingestion selon la région du projet
+              'https://*.ingest.sentry.io',
+              'https://*.ingest.us.sentry.io',
+              'https://*.ingest.de.sentry.io',
+              // Cloudflare Web Analytics (beacon injecté par le proxy Cloudflare)
+              'https://cloudflareinsights.com',
             ],
             'script-src': [
               "'self'",
@@ -54,6 +67,10 @@ const securityConfig =
               'https://connect.facebook.net',
               'https://instant.page',
               'https://www.gstatic.com',
+              // Microsoft Clarity
+              'https://www.clarity.ms',
+              // Cloudflare Web Analytics (beacon injecté par le proxy Cloudflare)
+              'https://static.cloudflareinsights.com',
             ],
             'script-src-attr': ["'unsafe-inline'", "'unsafe-hashes'"],
             'style-src': [
@@ -94,6 +111,7 @@ const securityConfig =
               'https://platform.twitter.com',
               'https://syndication.twitter.com',
               'https://cms.vie-publique.sn',
+              'https://docs.google.com',
             ],
             'base-uri': ["'self'"],
             'form-action': ["'self'"],
@@ -163,26 +181,42 @@ export default defineNuxtConfig({
             changeOrigin: true,
             rewrite: (path) => path.replace(/^\/cms/, ''),
           },
-          '/docs': {
-            target: `${process.env.CMS_API_URL}/assets`,
-            changeOrigin: true,
-            rewrite: (path) => path.replace(/^\/docs/, ''),
-          },
+          // NB : pas d'entrée '/docs' ici — servie par server/routes/docs/[...path].ts
+          // (proxy + canonical), qui doit s'exécuter aussi en dev.
         }
       : {},
   },
 
   // Configuration hybride : routeRules + fallback API
   routeRules: {
+    // Service worker : JAMAIS de cache long (revalidation à chaque visite, l'ETag
+    // rend ça gratuit). Sans ça, l'origine envoyait max-age=14400 et Cloudflare
+    // cachait sw.js 4 h au edge → les mises à jour du SW (et donc du precache PWA)
+    // mettaient jusqu'à 4 h à atteindre les utilisateurs après un déploiement.
+    '/sw.js': { headers: { 'cache-control': 'no-cache' } },
+    // --- SWR HTML (PERF-7, docs/audits/audit-web-vitals-2026-07.md) ---
+    // Le HTML rendu est caché côté Nitro et resservi instantanément ; à expiration,
+    // le visiteur reçoit la copie "stale" pendant que Nitro re-rend en arrière-plan.
+    // TTL courts sur les pages chaudes : fraîcheur quasi inchangée (les API Directus
+    // derrière sont déjà cachées ~1 h), TTFB sans rendu SSR ni latence Directus.
+    // ⚠️ Vérifié le 16/07/2026 : le cache SWR incluant la query, la pagination
+    // ?page=N reste correcte (IDs disjoints page 1 vs 2 — cf. CLAUDE.md § listes).
+    '/': { swr: 120 },
+    '/actualites': { swr: 120 },
+    '/actualites/**': { swr: 300 },
+    '/dossiers': { swr: 300 },
+    '/dossiers/**': { swr: 600 },
+    '/documents': { swr: 600 },
+    '/documents/**': { swr: 600 },
+    '/conseil-des-ministres': { swr: 300 },
+    '/conseil-des-ministres/**': { swr: 600 },
     // Essayer routeRules en premier
     '/cms/**': {
       proxy: `${process.env.CMS_API_URL || 'https://cms.vie-publique.sn'}/assets/**`,
       headers: { 'cache-control': 'max-age=31536000, immutable' },
     },
-    '/docs/**': {
-      proxy: `${process.env.CMS_API_URL || 'https://cms.vie-publique.sn'}/assets/**`,
-      headers: { 'cache-control': 'max-age=86400' },
-    },
+    // '/docs/**' : servi par server/routes/docs/[...path].ts (proxy + Link canonical
+    // par fichier — une routeRule proxy ne permet que des headers statiques).
     // Headers pour les API de fallback
     '/api/**': {
       headers: { 'cache-control': 'no-cache' },
@@ -195,9 +229,18 @@ export default defineNuxtConfig({
     '/publications': { redirect: { to: '/actualites', statusCode: 301 }, prerender: true },
     '/publications/**': { redirect: { to: '/actualites', statusCode: 301 }, prerender: true },
     // Redirections des anciennes URLs anglaises vers françaises
-    '/about/privacy': { redirect: { to: '/a-propos/confidentialite', statusCode: 301 }, prerender: true },
-    '/about/barometre': { redirect: { to: '/a-propos/barometre-politique', statusCode: 301 }, prerender: true },
-    '/about/us': { redirect: { to: '/a-propos/qui-sommes-nous', statusCode: 301 }, prerender: true },
+    '/about/privacy': {
+      redirect: { to: '/a-propos/confidentialite', statusCode: 301 },
+      prerender: true,
+    },
+    '/about/barometre': {
+      redirect: { to: '/a-propos/barometre-politique', statusCode: 301 },
+      prerender: true,
+    },
+    '/about/us': {
+      redirect: { to: '/a-propos/qui-sommes-nous', statusCode: 301 },
+      prerender: true,
+    },
     // Apple touch icons (requêtes automatiques iOS)
     '/apple-touch-icon.png': { redirect: '/pwa-192x192.png' },
     '/apple-touch-icon-precomposed.png': { redirect: '/pwa-192x192.png' },
@@ -206,39 +249,160 @@ export default defineNuxtConfig({
     '/reports/**': { redirect: { to: '/documents/rapports-audit', statusCode: 301 } },
     '/rapport-senegal': { redirect: { to: '/documents/rapports-audit', statusCode: 301 } },
     '/rapport-senegal/**': { redirect: { to: '/documents/rapports-audit', statusCode: 301 } },
+    // Journal officiel : consolidation vers /documents/journal-officiel-senegal
+    '/journal-officiel-senegal': {
+      redirect: { to: '/documents/journal-officiel-senegal', statusCode: 301 },
+    },
+    '/journal-officiel-senegal/**': {
+      redirect: { to: '/documents/journal-officiel-senegal', statusCode: 301 },
+    },
+    '/documents/journal-officiel': {
+      redirect: { to: '/documents/journal-officiel-senegal', statusCode: 301 },
+    },
+    '/documents/journal-officiel/**': {
+      redirect: { to: '/documents/journal-officiel-senegal/**', statusCode: 301 },
+    },
     '/budget-etat-senegal': { redirect: { to: '/budget-senegal', statusCode: 301 } },
     '/budget-etat-senegal/**': { redirect: { to: '/budget-senegal/**', statusCode: 301 } },
-    '/nomination-senegal/conseil-des-ministres-07-aout': { redirect: { to: '/nomination-senegal', statusCode: 301 } },
-    '/nomination-senegal/conseil-des-ministres-07-aout/**': { redirect: { to: '/nomination-senegal/**', statusCode: 301 } },
-    '/nomination-senegal/conseil-des-ministres-18-juillet': { redirect: { to: '/nomination-senegal', statusCode: 301 } },
-    '/nomination-senegal/conseil-des-ministres-18-juillet/**': { redirect: { to: '/nomination-senegal/**', statusCode: 301 } },
-    '/nomination-senegal/conseil-des-ministres-31-juillet': { redirect: { to: '/nomination-senegal', statusCode: 301 } },
-    '/nomination-senegal/conseil-des-ministres-31-juillet/**': { redirect: { to: '/nomination-senegal/**', statusCode: 301 } },
-    '/publications/recrutement': { redirect: { to: '/a-propos/recrutement', statusCode: 301 }, prerender: true },
-    '/conseil-des-ministres/conseil-des-ministres-*': { redirect: { to: '/conseil-des-ministres', statusCode: 301 } },
+    '/nomination-senegal/conseil-des-ministres-07-aout': {
+      redirect: { to: '/nomination-senegal', statusCode: 301 },
+    },
+    '/nomination-senegal/conseil-des-ministres-07-aout/**': {
+      redirect: { to: '/nomination-senegal/**', statusCode: 301 },
+    },
+    '/nomination-senegal/conseil-des-ministres-18-juillet': {
+      redirect: { to: '/nomination-senegal', statusCode: 301 },
+    },
+    '/nomination-senegal/conseil-des-ministres-18-juillet/**': {
+      redirect: { to: '/nomination-senegal/**', statusCode: 301 },
+    },
+    '/nomination-senegal/conseil-des-ministres-31-juillet': {
+      redirect: { to: '/nomination-senegal', statusCode: 301 },
+    },
+    '/nomination-senegal/conseil-des-ministres-31-juillet/**': {
+      redirect: { to: '/nomination-senegal/**', statusCode: 301 },
+    },
+    '/publications/recrutement': {
+      redirect: { to: '/a-propos/recrutement', statusCode: 301 },
+      prerender: true,
+    },
+    '/conseil-des-ministres/conseil-des-ministres-*': {
+      redirect: { to: '/conseil-des-ministres', statusCode: 301 },
+    },
     '/medias/liste-officielle': { redirect: { to: '/medias', statusCode: 301 }, prerender: true },
+    // Ancien système soirée électorale législatives 2024 (/elections/**) → dashboard
+    // multi-élections /elections-senegal (pages supprimées 2026-07, docs/modules/elections/).
+    // Les règles spécifiques priment sur les wildcards (radix router Nitro).
+    '/elections': { redirect: { to: '/elections-senegal', statusCode: 301 } },
+    '/elections/legislatives/guide-electoral': {
+      redirect: { to: '/elections-senegal/guide-electoral', statusCode: 301 },
+    },
+    // bureaux-temoins n'a pas d'équivalent dans la nouvelle arbo → racine carte
+    '/elections/legislatives/carte-electorale/bureaux-temoins': {
+      redirect: { to: '/elections-senegal/carte-electorale', statusCode: 301 },
+    },
+    // nationale/[department] et diaspora/[country] existent à l'identique côté nouveau
+    '/elections/legislatives/carte-electorale': {
+      redirect: { to: '/elections-senegal/carte-electorale', statusCode: 301 },
+    },
+    '/elections/legislatives/carte-electorale/**': {
+      redirect: { to: '/elections-senegal/carte-electorale/**', statusCode: 301 },
+    },
+    '/elections/legislatives/resultats/deputes': {
+      redirect: { to: '/assemblee-nationale/deputes', statusCode: 301 },
+    },
+    '/elections/legislatives/resultats': {
+      redirect: {
+        to: '/elections-senegal/legislatives-2024/resultats',
+        statusCode: 301,
+      },
+    },
+    '/elections/legislatives/resultats/**': {
+      redirect: {
+        to: '/elections-senegal/legislatives-2024/resultats',
+        statusCode: 301,
+      },
+    },
+    '/elections/legislatives/statistiques': {
+      redirect: {
+        to: '/elections-senegal/legislatives-2024/statistiques',
+        statusCode: 301,
+      },
+    },
+    // Catch-all (dont /elections/legislatives et /elections/legislatives/[id])
+    '/elections/**': {
+      redirect: { to: '/elections-senegal/legislatives-2024', statusCode: 301 },
+    },
+    // Ancien dashboard /elections-senegal/dashboard/[type]/[year] → pages par slug
+    '/elections-senegal/dashboard/legislative/2024': {
+      redirect: { to: '/elections-senegal/legislatives-2024', statusCode: 301 },
+    },
+    '/elections-senegal/dashboard/**': {
+      redirect: { to: '/elections-senegal/scrutins', statusCode: 301 },
+    },
     '/code-senegal': { redirect: { to: '/documents/codes', statusCode: 301 } },
     '/code-senegal/**': { redirect: { to: '/documents/codes', statusCode: 301 } },
-    '/portraits': { redirect: { to: '/personnalites', statusCode: 301 } },
-    '/portraits/**': { redirect: { to: '/personnalites/**', statusCode: 301 } },
-    '/budget-senegal/2024': { redirect: { to: '/budget-senegal', statusCode: 301 }, prerender: true },
-    '/budget-senegal/2025': { redirect: { to: '/budget-senegal', statusCode: 301 }, prerender: true },
+    // Legacy /portraits/<slug> : résolu vers /personnalites/<id>/<slug> par le
+    // handler serveur server/routes/portraits/[slug].get.ts (lookup slug -> id).
+    // Le blanket '/portraits/**' -> '/personnalites/**' renvoyait sur un 404
+    // (la route cible est /personnalites/[id]/[slug], 2 segments). Ne PAS le remettre.
+    '/portraits': { redirect: { to: '/personnalites-senegal', statusCode: 301 } },
+    '/budget-senegal/2024': {
+      redirect: { to: '/budget-senegal', statusCode: 301 },
+      prerender: true,
+    },
+    '/budget-senegal/2025': {
+      redirect: { to: '/budget-senegal', statusCode: 301 },
+      prerender: true,
+    },
     // Anciennes URLs PDF → pages documents
-    '/pdf/budget/2024-lois-de-finances-2023-18.pdf': { redirect: { to: '/documents/budget', statusCode: 301 } },
-    '/pdf/budget/2024-loi-de-finances-annexes.pdf': { redirect: { to: '/documents/budget', statusCode: 301 } },
-    '/pdf/budget/2024-rapport-execution-budgetaire-premier-trimestre.pdf': { redirect: { to: '/documents/budget', statusCode: 301 } },
-    '/pdf/budget/2024-rapport-execution-budgetaire-deuxieme-trimestre.pdf': { redirect: { to: '/documents/budget', statusCode: 301 } },
-    '/pdf/budget/2025-projet-loi-de-finance-initiale.pdf': { redirect: { to: '/documents/budget', statusCode: 301 } },
-    '/pdf/budget/2025-projet-loi-de-finance-initiale-annexes-voies-et-moyens.pdf': { redirect: { to: '/documents/budget', statusCode: 301 } },
-    '/pdf/budget/2025-document-budgetaire-genre.pdf': { redirect: { to: '/documents/budget', statusCode: 301 } },
-    '/pdf/budget/2024-LFR-loi-de-finances-rectificative-2024-scan-compressed.pdf': { redirect: { to: '/documents/budget', statusCode: 301 } },
-    '/pdf/jors/**': { redirect: { to: '/documents/journal-officiel', statusCode: 301 } },
-    '/pdf/textes/Decret-2024-940.pdf': { redirect: { to: '/documents/551/decret-2024-940-portant-repartition-des-services-de-letat', statusCode: 301 } },
-    '/pdf/programmes/senegal-2050-brochure.pdf': { redirect: { to: '/documents/415/senegal-2050', statusCode: 301 } },
-    '/pdf/programmes/senegal-2050-brochure_compressed.pdf': { redirect: { to: '/documents/415/senegal-2050', statusCode: 301 } },
-    '/pdf/programmes/etats-generaux-industrie-commerce-pre-rappord-diagnostic-industrialisation.pdf': { redirect: { to: '/actualites/133/etats-generaux-industrie-commerce', statusCode: 301 } },
-    '/pdf/justice/arrete-7934-du-31-mai-2016-relatif-au-bareme-de-remunerations-des-mandataires-judiciaires.pdf': { redirect: { to: '/documents/1402/JO-6937-du-02-juin-2016', statusCode: 301 } },
-    '/pdf/communiques/reunion-interministerielle-rentree-scolaire-2024-2025.pdf': { redirect: { to: '/actualites/136/reunion-interministerielle-rentree-scolaire-2024-2025', statusCode: 301 } },
+    '/pdf/budget/2024-lois-de-finances-2023-18.pdf': {
+      redirect: { to: '/documents/budget', statusCode: 301 },
+    },
+    '/pdf/budget/2024-loi-de-finances-annexes.pdf': {
+      redirect: { to: '/documents/budget', statusCode: 301 },
+    },
+    '/pdf/budget/2024-rapport-execution-budgetaire-premier-trimestre.pdf': {
+      redirect: { to: '/documents/budget', statusCode: 301 },
+    },
+    '/pdf/budget/2024-rapport-execution-budgetaire-deuxieme-trimestre.pdf': {
+      redirect: { to: '/documents/budget', statusCode: 301 },
+    },
+    '/pdf/budget/2025-projet-loi-de-finance-initiale.pdf': {
+      redirect: { to: '/documents/budget', statusCode: 301 },
+    },
+    '/pdf/budget/2025-projet-loi-de-finance-initiale-annexes-voies-et-moyens.pdf': {
+      redirect: { to: '/documents/budget', statusCode: 301 },
+    },
+    '/pdf/budget/2025-document-budgetaire-genre.pdf': {
+      redirect: { to: '/documents/budget', statusCode: 301 },
+    },
+    '/pdf/budget/2024-LFR-loi-de-finances-rectificative-2024-scan-compressed.pdf': {
+      redirect: { to: '/documents/budget', statusCode: 301 },
+    },
+    '/pdf/jors/**': { redirect: { to: '/documents/journal-officiel-senegal', statusCode: 301 } },
+    '/pdf/textes/Decret-2024-940.pdf': {
+      redirect: {
+        to: '/documents/551/decret-2024-940-portant-repartition-des-services-de-letat',
+        statusCode: 301,
+      },
+    },
+    '/pdf/programmes/senegal-2050-brochure.pdf': {
+      redirect: { to: '/documents/415/senegal-2050', statusCode: 301 },
+    },
+    '/pdf/programmes/senegal-2050-brochure_compressed.pdf': {
+      redirect: { to: '/documents/415/senegal-2050', statusCode: 301 },
+    },
+    '/pdf/programmes/etats-generaux-industrie-commerce-pre-rappord-diagnostic-industrialisation.pdf':
+      { redirect: { to: '/actualites/133/etats-generaux-industrie-commerce', statusCode: 301 } },
+    '/pdf/justice/arrete-7934-du-31-mai-2016-relatif-au-bareme-de-remunerations-des-mandataires-judiciaires.pdf':
+      { redirect: { to: '/documents/1402/JO-6937-du-02-juin-2016', statusCode: 301 } },
+    '/pdf/communiques/reunion-interministerielle-rentree-scolaire-2024-2025.pdf': {
+      redirect: {
+        to: '/actualites/136/reunion-interministerielle-rentree-scolaire-2024-2025',
+        statusCode: 301,
+      },
+    },
   },
 
   // Optimisations Vite pour le bundling (simplifiées pour éviter les conflits)
@@ -286,17 +450,26 @@ export default defineNuxtConfig({
     '@nuxt/ui',
     'nuxt-gtag',
     '@nuxtjs/seo',
-    // FIXME? Temporairement désactivé - incompatible avec Nuxt 4
-    // '@nuxtjs/web-vitals',
+    // RUM : assuré par Cloudflare Web Analytics (beacon injecté par le proxy,
+    // dashboard zone → Analytics → Web analytics). @nuxtjs/web-vitals désinstallé
+    // (mort : dernière release 04/2024, jamais compatible Nuxt 4) — PERF-11.
     '@nuxt/image',
     '@vueuse/motion/nuxt',
     '@nuxt/eslint',
     '@pinia/nuxt',
     '@nuxtjs/leaflet',
+    // PERF-8 : @nuxtjs/leaflet pousse leaflet.css dans le CSS GLOBAL (module.mjs:38,
+    // sans option pour désactiver) → ce mini-module inline, exécuté juste après,
+    // retire cette injection. Le CSS est importé à la place dans les composants
+    // Election/ElectionMap* qui rendent réellement une carte Leaflet.
+    (_inlineOptions: unknown, nuxt: { options: { css: string[] } }) => {
+      nuxt.options.css = nuxt.options.css.filter((c) => !String(c).includes('leaflet'));
+    },
     '@vite-pwa/nuxt',
     '@vueuse/nuxt',
     '@nuxtjs/mdc',
     'nuxt-security',
+    '@sentry/nuxt/module',
   ],
   devtools: { enabled: true },
   runtimeConfig: {
@@ -313,12 +486,6 @@ export default defineNuxtConfig({
     // Configuration Sunu Election
     sunuElectionApiUrl: process.env.SUNU_ELECTION_API_URL,
     sunuElectionApiKey: process.env.SUNU_ELECTION_API_KEY,
-
-    // Configuration Paydunya
-    paydunyaMasterKey: process.env.PAYDUNYA_MASTER_KEY,
-    paydunyaPrivateKey: process.env.PAYDUNYA_PRIVATE_KEY,
-    paydunyaToken: process.env.PAYDUNYA_TOKEN,
-    paydunyaApiUrl: process.env.PAYDUNYA_API_URL,
 
     // Configuration SMTP pour Nodemailer
     smtpHost: process.env.SMTP_HOST,
@@ -350,6 +517,10 @@ export default defineNuxtConfig({
       firebaseAppId: process.env.NUXT_PUBLIC_FIREBASE_APP_ID,
       firebaseMeasurementId: process.env.NUXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
       firebaseVapidKey: process.env.NUXT_PUBLIC_FIREBASE_VAPID_KEY,
+      // Sentry (monitoring d'erreurs) — DSN vide = désactivé (voir docs/infra/sentry.md)
+      sentry: {
+        dsn: process.env.NUXT_PUBLIC_SENTRY_DSN || '',
+      },
       // Feature Flags
       appEnv: process.env.NUXT_PUBLIC_APP_ENV || 'production',
       featureFlagsEnabled: process.env.NUXT_FEATURE_FLAGS_ENABLED !== 'false',
@@ -360,7 +531,12 @@ export default defineNuxtConfig({
       nodeEnv: process.env.NODE_ENV || 'development',
     },
   },
-  css: ['~/assets/css/app.css', 'maplibre-gl/dist/maplibre-gl.css'],
+  // PERF-8 : PAS de CSS cartographique ici — le tableau `css:` est GLOBAL (bundlé
+  // dans entry.css, render-blocking sur 100 % des pages). maplibre-gl.css (~70 Ko)
+  // est importé dans app/components/map/SenegalMap.vue et leaflet.css dans les
+  // composants Election/ElectionMap* : Vite les rattache au chunk du composant,
+  // chargé uniquement sur les pages cartes (CSS garanti avant le rendu du composant).
+  css: ['~/assets/css/app.css'],
   colorMode: {
     preference: 'dark', // default value of $nuxt.colorMode.preference
   },
@@ -376,7 +552,16 @@ export default defineNuxtConfig({
       viewport: 'width=device-width, initial-scale=1',
       // Note: @vite-pwa/nuxt injecte automatiquement <link rel="manifest">
       // Ne PAS l'ajouter manuellement ici (doublon sinon)
-      link: [],
+      link: [
+        // Autodiscovery du flux RSS global (les flux par rubrique sont déclarés
+        // par leurs pages de listing respectives) — voir docs/modules/rss/flux-rss.md
+        {
+          rel: 'alternate',
+          type: 'application/rss+xml',
+          title: 'Vie-Publique.sn — Dernières publications',
+          href: '/rss.xml',
+        },
+      ],
       meta: [
         {
           name: 'keywords',
@@ -449,10 +634,30 @@ export default defineNuxtConfig({
           src: '//instant.page/5.1.1',
           integrity: 'sha384-MWfCL6g1OTGsbSwfuMHc8+8J2u71/LA8dzlIN3ycajckxuZZmF+DNjdm7O6H3PSq',
         },
+        ...(process.env.CLARITY_PROJECT_ID
+          ? [
+              {
+                key: 'microsoft-clarity',
+                innerHTML: `(function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);})(window,document,"clarity","script","${process.env.CLARITY_PROJECT_ID}");`,
+              },
+            ]
+          : []),
       ],
     },
   },
   security: securityConfig as any,
+
+  // Sentry (monitoring d'erreurs) — voir docs/infra/sentry.md
+  sentry: {
+    // Injecte l'init serveur en tête du bundle Nitro : pas besoin de changer
+    // la commande de démarrage (node .output/server/index.mjs) ni le Dockerfile.
+    autoInjectServerSentry: 'top-level-import',
+    // Pas d'upload de source maps pour l'instant (nécessiterait SENTRY_AUTH_TOKEN au build)
+    sourceMapsUploadOptions: {
+      enabled: false,
+    },
+  },
+
   site: {
     url: process.env.NUXT_PUBLIC_SITE_URL || 'https://www.vie-publique.sn',
     name: 'Vie Publique Sénégal',
@@ -465,31 +670,38 @@ export default defineNuxtConfig({
   // Sitemap dynamique
   sitemap: {
     sources: ['/api/__sitemap__/urls'],
+    // La recherche interne est noindex (règle SEO §10 CLAUDE.md) → hors sitemap
+    exclude: ['/recherche'],
   },
 
   // Robots.txt
   robots: {
+    groups: [
+      // Groupe * : reçoit aussi les allow/disallow top-level (fusion faite par le module).
+      // Content-Signal (contentsignals.org) : search + ai-input autorisés, ai-train refusé.
+      {
+        userAgent: '*',
+        contentSignal: 'search=yes,ai-input=yes,ai-train=no,use=reference',
+      },
+      // Crawlers explicitement bloqués (scraping massif sans opt-out exploitable)
+      { userAgent: 'Bytespider', disallow: '/' },
+      { userAgent: 'CCBot', disallow: '/' },
+    ],
     allow: '/',
     disallow: [
-      '/journal-officiel-senegal/v2',
-      '/journal-officiel-senegal/v3',
       '/budget-senegal/old',
       '/financial-scandals',
       '/publications/enquetes',
       '/publications/institutions',
       '/barometre-politique',
-      '/elections/legislatives/resultats/global',
       '/publications/recrutement',
       '/quiz',
       '/chatbot',
       '/chat-bot',
-      '/gouvernement-senegal',
       '/etat-senegal/annuaire',
-      '/etat-senegal/organisation',
       '/a-propos/barometre-politique',
       '/a-propos/charte-dons',
       '/don/bictorys',
-      '/don/paydunya',
       '/don/success',
       '/dashboard/**',
       '/projets-publics-senegal',
@@ -505,18 +717,26 @@ export default defineNuxtConfig({
       name: 'Vie Publique Sénégal',
       url: 'https://www.vie-publique.sn',
       logo: 'https://www.vie-publique.sn/social-image.png',
+      // Entité Wikidata + profils officiels (voir docs/modules/a-propos/wikipedia-wikidata.md)
+      sameAs: [
+        'https://www.wikidata.org/wiki/Q140571616',
+        'https://x.com/ViePubliqueSN',
+        'https://www.facebook.com/ViePubliqueSenegal',
+        'https://www.instagram.com/viepubliquesn/',
+        'https://www.linkedin.com/company/vie-publique-sn/',
+        'https://github.com/Code-for-Senegal/vie-publique.sn',
+        'https://play.google.com/store/apps/details?id=sn.viepublique.app',
+        'https://apps.apple.com/app/id6757257552',
+      ],
     },
   },
   gtag: {
     enabled: !!process.env.GTAG_ID,
     id: process.env.GTAG_ID,
+    // Init différée à l'idle/1ʳᵉ interaction (app/plugins/analytics-idle.client.ts) :
+    // gtag.js coûtait ~330 ms de main thread mobile pendant l'hydratation (INP).
+    initMode: 'manual',
   },
-  // FIXME web-vitals: incompatible avec Nuxt 4? Temporarily disabled
-  // webVitals: {
-  //   provider: 'ga',
-  //   disabled: !process.env.GTAG_ID,
-  //   ga: { id: process.env.GTAG_ID },
-  // },
   image: {
     // Provider pour les images locales et du proxy
     providers: {
@@ -532,10 +752,6 @@ export default defineNuxtConfig({
     // Alias pour simplifier l'usage
     alias: {
       cms: '/cms',
-    },
-    directus: {
-      // This URL needs to include the final `assets/` directory
-      baseURL: process.env.CMS_API_URL_ASSETS,
     },
   },
   /* PWA options */
@@ -570,17 +786,7 @@ export default defineNuxtConfig({
           src: 'pwa-512x512.png',
           sizes: '512x512',
           type: 'image/png',
-        },
-        {
-          src: 'pwa-512x512.png',
-          sizes: '512x512',
-          type: 'image/png',
           purpose: 'any',
-        },
-        {
-          src: 'pwa-1024x1024.png',
-          sizes: '1024x1024',
-          type: 'image/png',
         },
         {
           src: 'pwa-1024x1024.png',
@@ -693,21 +899,22 @@ export default defineNuxtConfig({
         client_mode: ['navigate-existing', 'auto'],
       },
     },
-    // Note: avec strategies: 'injectManifest', les options workbox
-    // (clientsClaim, skipWaiting, navigateFallback) sont IGNORÉES.
-    // Le SW custom (sw.ts) gère tout directement.
-    workbox: {
-      globPatterns: ['**/*.{js,css,html,png,svg,ico}'],
-      maximumFileSizeToCacheInBytes: 10 * 1024 * 1024,
-      cleanupOutdatedCaches: true,
-    },
     injectManifest: {
-      // Precache UNIQUEMENT les assets essentiels (icônes, favicon).
-      // Les JS/CSS hashés (/_nuxt/*) sont gérés par CacheFirst en runtime :
-      // cache miss → réseau → cache. Pas besoin de les precacher.
-      // Precacher tout JS/CSS ralentit l'installation du SW et si un seul
-      // fichier échoue → le SW ne s'installe pas → l'ancien reste actif.
-      globPatterns: ['**/*.{png,svg,ico,webp}'],
+      // Precache UNIQUEMENT les assets essentiels du shell PWA (~0,5 MB) :
+      // icônes du manifest, favicon, badge de notification. PAS de glob large :
+      // '**/*.{png,svg,ico,webp}' précachait 123 images = 43 MB re-téléchargés
+      // à chaque mise à jour du SW (PERF-1). Les autres images ET les JS/CSS
+      // hashés (/_nuxt/*) sont couverts en runtime par les routes CacheFirst
+      // de app/service-worker/sw.ts. Precacher trop ralentit l'installation du
+      // SW et un seul fichier en échec bloque son installation.
+      globPatterns: [
+        'pwa-192x192.png',
+        'pwa-256x256.png',
+        'pwa-512x512.png',
+        'pwa-1024x1024.png',
+        'favicon.ico',
+        'badge-72x72.png',
+      ],
       maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
     },
     client: {

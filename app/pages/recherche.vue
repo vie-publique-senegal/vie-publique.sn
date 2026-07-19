@@ -1,13 +1,17 @@
 <script setup lang="ts">
-// Configuration SEO
+// Configuration SEO — page de recherche interne : JAMAIS indexable (règle SEO §10
+// CLAUDE.md) : espace d'URLs ?q= infini (crawl budget) + vecteur de spam injecté.
+// « noindex, follow » (pas Disallow robots.txt : le crawler doit voir le noindex) ;
+// exclue aussi du sitemap (nuxt.config sitemap.exclude).
 useHead({
-  title: "Recherche Avancée - Vie-Publique.sn",
+  title: 'Recherche avancée',
   meta: [
     {
-      name: "description",
+      name: 'description',
       content:
-        "Recherche avancée dans les actualités et documents officiels de la République du Sénégal avec filtres et fonctionnalités étendues",
+        'Recherche avancée dans les actualités et documents officiels de la République du Sénégal avec filtres et fonctionnalités étendues',
     },
+    { name: 'robots', content: 'noindex, follow' },
   ],
 });
 
@@ -21,43 +25,107 @@ const {
   currentPage,
   hasSearched,
   selectedTypes,
+  selectedCategories,
+  selectedYear,
   performSearch,
   totalPages,
   toggleType,
   resultCountsByType,
+  resultCountsByCategory,
 } = useSearchEnhanced();
 
-// Types disponibles pour les filtres
+// Types disponibles pour les filtres.
+// document/actualite : toujours affichés. Les autres (index v2 multi-types) n'apparaissent
+// que s'ils ont des résultats (comptage facette) ou s'ils sont déjà sélectionnés.
+const skyChip =
+  'bg-sky-100 text-sky-700 border-sky-200 dark:bg-sky-900/30 dark:text-sky-300 dark:border-sky-700';
 const availableTypes = [
   {
-    value: "document",
-    label: "Documents",
-    icon: "i-heroicons-document-text",
+    value: 'document',
+    label: 'Documents',
+    icon: 'i-heroicons-document-text',
+    always: true,
     color:
-      "bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700",
+      'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700',
   },
   {
-    value: "actualite",
-    label: "Actualités",
-    icon: "i-heroicons-newspaper",
+    value: 'actualite',
+    label: 'Actualités',
+    icon: 'i-heroicons-newspaper',
+    always: true,
     color:
-      "bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-700",
+      'bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-700',
   },
+  { value: 'dossier', label: 'Dossiers', icon: 'i-heroicons-folder-open', color: skyChip },
+  { value: 'depute', label: 'Députés', icon: 'i-heroicons-user-group', color: skyChip },
+  {
+    value: 'question',
+    label: 'Questions écrites',
+    icon: 'i-heroicons-chat-bubble-left-right',
+    color: skyChip,
+  },
+  { value: 'vote', label: 'Votes', icon: 'i-heroicons-hand-raised', color: skyChip },
+  { value: 'personnalite', label: 'Personnalités', icon: 'i-heroicons-user', color: skyChip },
+  {
+    value: 'institution',
+    label: 'Annuaire État',
+    icon: 'i-heroicons-building-library',
+    color: skyChip,
+  },
+  { value: 'podcast', label: 'Podcasts', icon: 'i-heroicons-microphone', color: skyChip },
 ];
+
+const visibleTypes = computed(() =>
+  availableTypes.filter(
+    (t) =>
+      t.always ||
+      (resultCountsByType.value[t.value] || 0) > 0 ||
+      selectedTypes.value.includes(t.value),
+  ),
+);
+
+// Filtres documents (visibles quand le filtre « Documents » est actif) :
+// sous-types issus de la facette `category` (libellés FR : Journal Officiel, Loi, Décret…)
+const categoryOptions = computed(() => {
+  const counts = resultCountsByCategory.value;
+  const names = new Set([...Object.keys(counts), ...selectedCategories.value]);
+  return [...names]
+    .sort((a, b) => (counts[b] || 0) - (counts[a] || 0))
+    .map((name) => ({
+      label: counts[name] ? `${name} (${counts[name]})` : name,
+      value: name,
+    }));
+});
+
+const currentYear = new Date().getFullYear();
+const yearOptions = [
+  { label: 'Toutes les années', value: 0 },
+  ...Array.from({ length: currentYear - 1959 }, (_, i) => ({
+    label: String(currentYear - i),
+    value: currentYear - i,
+  })),
+];
+// USelect ne gère pas null : 0 = « toutes les années »
+const yearModel = computed({
+  get: () => selectedYear.value ?? 0,
+  set: (v: number) => {
+    selectedYear.value = v || null;
+  },
+});
 
 // Fonction pour formater les dates Unix timestamp (sans le jour de la semaine)
 const formatUnixDate = (timestamp: number | string) => {
-  if (!timestamp) return "";
-  const ts = typeof timestamp === "string" ? parseInt(timestamp) : timestamp;
+  if (!timestamp) return '';
+  const ts = typeof timestamp === 'string' ? parseInt(timestamp) : timestamp;
   const date = new Date(ts * 1000);
 
   const options: Intl.DateTimeFormatOptions = {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
   };
 
-  return date.toLocaleDateString("fr-FR", options);
+  return date.toLocaleDateString('fr-FR', options);
 };
 
 // Fonction pour effacer tous les filtres (commentée car non utilisée)
@@ -67,13 +135,13 @@ const formatUnixDate = (timestamp: number | string) => {
 
 // Fonction pour obtenir la couleur du badge selon le type
 const getBadgeColor = (type: string) => {
-  if (type === "document") {
-    return "bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700";
-  } else if (type === "actualite") {
-    return "bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-700";
+  if (type === 'document') {
+    return 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700';
+  } else if (type === 'actualite') {
+    return 'bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-700';
   }
   // Couleur par défaut pour les autres types
-  return "bg-gray-100 text-gray-700 border-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600";
+  return 'bg-gray-100 text-gray-700 border-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600';
 };
 
 // Composant Skeleton pour les résultats - défini dans le template
@@ -87,20 +155,20 @@ const getBadgeColor = (type: string) => {
     </div>
 
     <!-- Sticky Header mobile -->
-    <header class="sticky top-0 z-40 border-b border-gray-200 bg-white/95 backdrop-blur-sm md:relative md:border-0 md:bg-transparent md:backdrop-blur-none dark:border-gray-800 dark:bg-gray-900/95">
+    <header
+      class="sticky top-0 z-40 border-b border-gray-200 bg-white/95 backdrop-blur-sm dark:border-gray-800 dark:bg-gray-900/95 md:relative md:border-0 md:bg-transparent md:backdrop-blur-none"
+    >
       <div class="container mx-auto px-4 py-3 md:py-6">
         <div class="flex items-center gap-3">
           <NuxtLink
             to="/"
-            class="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 md:hidden dark:bg-gray-800"
+            class="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800 md:hidden"
           >
             <UIcon name="i-heroicons-arrow-left" class="h-4 w-4 text-gray-600 dark:text-gray-400" />
           </NuxtLink>
           <div class="min-w-0 flex-1">
-            <h1 class="text-lg font-bold text-gray-900 md:text-2xl dark:text-white">
-              Recherche
-            </h1>
-            <p v-if="totalIndexed" class="hidden text-xs text-gray-500 md:block dark:text-gray-400">
+            <h1 class="text-lg font-bold text-gray-900 dark:text-white md:text-2xl">Recherche</h1>
+            <p v-if="totalIndexed" class="hidden text-xs text-gray-500 dark:text-gray-400 md:block">
               {{ totalIndexed }} documents indexés
             </p>
           </div>
@@ -137,7 +205,11 @@ const getBadgeColor = (type: string) => {
               class="flex h-8 items-center gap-1.5 rounded-full bg-sky-500 px-3 text-xs font-medium text-white transition-colors hover:bg-sky-600 disabled:opacity-50"
               @click="performSearch"
             >
-              <UIcon v-if="loading" name="i-heroicons-arrow-path" class="h-3.5 w-3.5 animate-spin" />
+              <UIcon
+                v-if="loading"
+                name="i-heroicons-arrow-path"
+                class="h-3.5 w-3.5 animate-spin"
+              />
               <span>Rechercher</span>
             </button>
           </div>
@@ -145,15 +217,15 @@ const getBadgeColor = (type: string) => {
       </div>
 
       <!-- Filtres -->
-      <div class="mb-4 flex gap-2">
+      <div class="mb-4 flex flex-wrap gap-2">
         <button
-          v-for="type in availableTypes"
+          v-for="type in visibleTypes"
           :key="type.value"
           :class="[
             'flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-all active:scale-95',
             selectedTypes.includes(type.value)
               ? type.color
-              : 'bg-white text-gray-600 ring-1 ring-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:ring-gray-700'
+              : 'bg-white text-gray-600 ring-1 ring-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:ring-gray-700',
           ]"
           @click="toggleType(type.value)"
         >
@@ -165,6 +237,45 @@ const getBadgeColor = (type: string) => {
           >
             {{ resultCountsByType[type.value] }}
           </span>
+        </button>
+      </div>
+
+      <!-- Filtres documents : sous-type + année (liés au filtre « Documents ») -->
+      <div v-if="selectedTypes.includes('document')" class="mb-4 flex flex-wrap items-center gap-2">
+        <USelectMenu
+          v-model="selectedCategories"
+          :options="categoryOptions"
+          multiple
+          value-attribute="value"
+          option-attribute="label"
+          placeholder="Type de document"
+          size="sm"
+          class="w-full sm:w-64"
+        >
+          <template #label>
+            <span v-if="selectedCategories.length === 0" class="text-gray-400"
+              >Type de document</span
+            >
+            <span v-else class="truncate">{{ selectedCategories.join(', ') }}</span>
+          </template>
+        </USelectMenu>
+        <USelect
+          v-model="yearModel"
+          :options="yearOptions"
+          value-attribute="value"
+          option-attribute="label"
+          size="sm"
+          class="w-full sm:w-44"
+        />
+        <button
+          v-if="selectedCategories.length > 0 || selectedYear"
+          class="text-xs text-gray-500 underline-offset-2 hover:underline dark:text-gray-400"
+          @click="
+            selectedCategories = [];
+            selectedYear = null;
+          "
+        >
+          Réinitialiser
         </button>
       </div>
 
@@ -194,7 +305,8 @@ const getBadgeColor = (type: string) => {
               <span class="font-semibold text-gray-900 dark:text-white">{{ totalResults }}</span>
               résultat{{ totalResults > 1 ? 's' : '' }}
               <span v-if="searchQuery" class="hidden sm:inline">
-                pour « <span class="font-medium text-sky-600 dark:text-sky-400">{{ searchQuery }}</span> »
+                pour «
+                <span class="font-medium text-sky-600 dark:text-sky-400">{{ searchQuery }}</span> »
               </span>
             </p>
           </div>
@@ -204,7 +316,9 @@ const getBadgeColor = (type: string) => {
             v-if="totalResults === 0"
             class="rounded-2xl bg-white p-8 text-center ring-1 ring-gray-100 dark:bg-gray-800 dark:ring-gray-700"
           >
-            <div class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700">
+            <div
+              class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700"
+            >
               <UIcon name="i-heroicons-magnifying-glass" class="h-8 w-8 text-gray-400" />
             </div>
             <h3 class="font-semibold text-gray-900 dark:text-white">Aucun résultat</h3>
@@ -219,7 +333,7 @@ const getBadgeColor = (type: string) => {
               v-for="result in searchResults"
               :key="result.document?.id"
               :to="result.formattedUrl || '/actualites'"
-              class="flex gap-3 rounded-xl bg-white p-3 ring-1 ring-gray-100 transition-all active:scale-[0.99] md:hover:ring-gray-200 dark:bg-gray-800 dark:ring-gray-700 dark:md:hover:ring-gray-600"
+              class="flex gap-3 rounded-xl bg-white p-3 ring-1 ring-gray-100 transition-all active:scale-[0.99] dark:bg-gray-800 dark:ring-gray-700 md:hover:ring-gray-200 dark:md:hover:ring-gray-600"
             >
               <!-- Thumbnail -->
               <CmsImage
@@ -247,22 +361,24 @@ const getBadgeColor = (type: string) => {
 
                 <!-- Meta -->
                 <div class="mt-2 flex items-center justify-between">
-                  <time
-                    v-if="result.document?.date_published"
-                    class="text-[10px] text-gray-400"
-                  >
+                  <time v-if="result.document?.date_published" class="text-[10px] text-gray-400">
                     {{ formatUnixDate(result.document.date_published) }}
                   </time>
                   <span
-                    v-if="result.document?.type || result.document?.category?.name"
-                    :class="getBadgeColor(result.document?.type || result.document?.category?.slug)"
+                    v-if="result.document?.category || result.document?.type"
+                    :class="getBadgeColor(result.document?.type)"
                     class="flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium"
                   >
                     <UIcon
-                      :name="result.document?.type === 'document' ? 'i-heroicons-document-text' : 'i-heroicons-newspaper'"
+                      :name="
+                        result.document?.type === 'document'
+                          ? 'i-heroicons-document-text'
+                          : 'i-heroicons-newspaper'
+                      "
                       class="h-3 w-3"
                     />
-                    {{ result.document?.type || result.document?.category?.name }}
+                    <!-- v2 : category = libellé FR (Journal Officiel, Député…) ; v1 : fallback type brut -->
+                    {{ result.document?.category || result.document?.type }}
                   </span>
                 </div>
               </div>
@@ -280,7 +396,8 @@ const getBadgeColor = (type: string) => {
                 wrapper: 'flex items-center gap-1',
                 base: 'min-w-8 h-8 flex items-center justify-center rounded-lg text-sm font-medium',
                 active: 'bg-sky-500 text-white',
-                inactive: 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 ring-1 ring-gray-200 dark:ring-gray-700',
+                inactive:
+                  'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 ring-1 ring-gray-200 dark:ring-gray-700',
               }"
             />
             <p class="text-xs text-gray-500 dark:text-gray-400">
@@ -302,8 +419,12 @@ const getBadgeColor = (type: string) => {
           </div>
 
           <!-- Popular Searches -->
-          <div class="rounded-2xl bg-white p-4 ring-1 ring-gray-100 dark:bg-gray-800 dark:ring-gray-700">
-            <h3 class="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+          <div
+            class="rounded-2xl bg-white p-4 ring-1 ring-gray-100 dark:bg-gray-800 dark:ring-gray-700"
+          >
+            <h3
+              class="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400"
+            >
               Recherches populaires
             </h3>
             <div class="space-y-1">
@@ -319,14 +440,24 @@ const getBadgeColor = (type: string) => {
                   'Projets de développement',
                 ]"
                 :key="suggestion"
-                class="flex w-full items-center gap-3 rounded-lg p-2.5 text-left transition-colors active:bg-gray-100 md:hover:bg-gray-50 dark:active:bg-gray-700 dark:md:hover:bg-gray-700/50"
-                @click="searchQuery = suggestion; performSearch();"
+                class="flex w-full items-center gap-3 rounded-lg p-2.5 text-left transition-colors active:bg-gray-100 dark:active:bg-gray-700 md:hover:bg-gray-50 dark:md:hover:bg-gray-700/50"
+                @click="
+                  searchQuery = suggestion;
+                  performSearch();
+                "
               >
-                <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700">
+                <div
+                  class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700"
+                >
                   <UIcon name="i-heroicons-magnifying-glass" class="h-4 w-4 text-gray-400" />
                 </div>
-                <span class="flex-1 text-sm text-gray-700 dark:text-gray-300">{{ suggestion }}</span>
-                <UIcon name="i-heroicons-arrow-up-left" class="h-4 w-4 text-gray-300 dark:text-gray-600" />
+                <span class="flex-1 text-sm text-gray-700 dark:text-gray-300">{{
+                  suggestion
+                }}</span>
+                <UIcon
+                  name="i-heroicons-arrow-up-left"
+                  class="h-4 w-4 text-gray-300 dark:text-gray-600"
+                />
               </button>
             </div>
           </div>

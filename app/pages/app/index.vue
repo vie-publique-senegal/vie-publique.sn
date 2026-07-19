@@ -5,7 +5,7 @@ const title = 'Vie Publique Sénégal — App gratuite | Budget, Lois, Journal O
 const description =
   "Téléchargez l'app Vie Publique Sénégal. 10 000+ documents officiels : journal officiel, lois, décrets, budgets, nominations. Gratuit sur Android et iPhone.";
 const url = `${siteUrl}/app`;
-const image = `${siteUrl}/logos/logo2.webp`;
+const image = `${siteUrl}/logos/logo-transparent-carre.png`;
 
 const APP_STORE_URL = 'https://apps.apple.com/us/app/vie-publique-s%C3%A9n%C3%A9gal/id6757257552';
 const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=sn.viepublique.app';
@@ -72,8 +72,8 @@ useHead({
     { name: 'robots', content: 'index, follow' },
   ],
   script: [
-    { type: 'application/ld+json', children: JSON.stringify(breadcrumbSchema) },
-    { type: 'application/ld+json', children: JSON.stringify(softwareAppSchema) },
+    { type: 'application/ld+json', innerHTML: JSON.stringify(breadcrumbSchema) },
+    { type: 'application/ld+json', innerHTML: JSON.stringify(softwareAppSchema) },
   ],
 });
 
@@ -125,40 +125,37 @@ const darkScreenshots = [
       </p>
 
       <!-- CTA STORE BUTTONS -->
-      <div class="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-4">
+      <div class="mt-8 flex flex-row items-center justify-center gap-3 sm:gap-4">
         <a
           :href="PLAY_STORE_URL"
           target="_blank"
           rel="noopener noreferrer"
-          class="store-btn inline-flex items-center gap-3 rounded-2xl bg-gray-900 px-6 py-3.5 text-white shadow-lg transition-all hover:scale-105 hover:shadow-xl dark:bg-[#E2BA13] dark:text-gray-900"
+          class="store-btn rounded-lg transition-transform hover:scale-105"
         >
-          <svg class="h-8 w-8" viewBox="0 0 24 24">
-            <path d="M3.609 1.814L13.792 12 3.61 22.186a.996.996 0 01-.61-.92V2.734a1 1 0 01.609-.92z" fill="#4285F4"/>
-            <path d="M14.499 12.707L16.801 15.009 5.864 21.342 14.499 12.707z" fill="#FBBC04"/>
-            <path d="M17.698 11.507L20.532 13.146A1 1 0 0120.532 14.854L17.698 16.493 15.166 13.961 17.698 11.507z" fill="#EA4335"/>
-            <path d="M5.864 3.458L16.8 9.79 14.498 12.092 5.864 3.458z" fill="#34A853"/>
-          </svg>
-          <div class="text-left">
-            <div class="text-[10px] uppercase leading-tight opacity-70">Disponible sur</div>
-            <div class="text-lg font-semibold leading-tight">Google Play</div>
-          </div>
+          <img
+            src="/img/google-store.svg"
+            alt="Disponible sur Google Play"
+            class="h-12 w-auto sm:h-14"
+            width="137"
+            height="42"
+            loading="eager"
+          />
         </a>
 
         <a
           :href="APP_STORE_URL"
           target="_blank"
           rel="noopener noreferrer"
-          class="store-btn inline-flex items-center gap-3 rounded-2xl bg-gray-900 px-6 py-3.5 text-white shadow-lg transition-all hover:scale-105 hover:shadow-xl dark:bg-[#E2BA13] dark:text-gray-800"
+          class="store-btn rounded-lg transition-transform hover:scale-105"
         >
-          <svg class="h-8 w-8" viewBox="0 0 24 24" fill="currentColor">
-            <path
-              d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"
-            />
-          </svg>
-          <div class="text-left">
-            <div class="text-[10px] uppercase leading-tight opacity-70">Télécharger sur</div>
-            <div class="text-lg font-semibold leading-tight">App Store</div>
-          </div>
+          <img
+            src="/img/apple-store.svg"
+            alt="Télécharger dans l'App Store"
+            class="h-12 w-auto sm:h-14"
+            width="135"
+            height="40"
+            loading="eager"
+          />
         </a>
       </div>
 
@@ -375,33 +372,36 @@ const darkScreenshots = [
         Gratuit. Sans publicité. Pour tous les citoyens.
       </p>
 
-      <div class="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-4">
+      <div class="mt-6 flex flex-row items-center justify-center gap-3 sm:gap-4">
         <a
           :href="PLAY_STORE_URL"
           target="_blank"
           rel="noopener noreferrer"
-          class="inline-flex items-center gap-3 rounded-2xl bg-gray-900 px-6 py-3.5 text-white shadow-lg transition-all hover:scale-105 hover:shadow-xl dark:bg-[#E2BA13] dark:text-gray-900"
+          class="transition-transform hover:scale-105"
         >
-          <svg class="h-6 w-6" viewBox="0 0 24 24">
-            <path d="M3.609 1.814L13.792 12 3.61 22.186a.996.996 0 01-.61-.92V2.734a1 1 0 01.609-.92z" fill="#4285F4"/>
-            <path d="M14.499 12.707L16.801 15.009 5.864 21.342 14.499 12.707z" fill="#FBBC04"/>
-            <path d="M17.698 11.507L20.532 13.146A1 1 0 0120.532 14.854L17.698 16.493 15.166 13.961 17.698 11.507z" fill="#EA4335"/>
-            <path d="M5.864 3.458L16.8 9.79 14.498 12.092 5.864 3.458z" fill="#34A853"/>
-          </svg>
-          <span class="text-sm font-semibold sm:text-base">Télécharger sur Google Play</span>
+          <img
+            src="/img/google-store.svg"
+            alt="Disponible sur Google Play"
+            class="h-12 w-auto sm:h-14"
+            width="137"
+            height="42"
+            loading="lazy"
+          />
         </a>
         <a
           :href="APP_STORE_URL"
           target="_blank"
           rel="noopener noreferrer"
-          class="inline-flex items-center gap-3 rounded-2xl bg-gray-900 px-6 py-3.5 text-white shadow-lg transition-all hover:scale-105 hover:shadow-xl dark:bg-[#E2BA13] dark:text-gray-900"
+          class="transition-transform hover:scale-105"
         >
-          <svg class="h-6 w-6" viewBox="0 0 24 24" fill="currentColor">
-            <path
-              d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"
-            />
-          </svg>
-          <span class="text-sm font-semibold sm:text-base">Télécharger sur App Store</span>
+          <img
+            src="/img/apple-store.svg"
+            alt="Télécharger dans l'App Store"
+            class="h-12 w-auto sm:h-14"
+            width="135"
+            height="40"
+            loading="lazy"
+          />
         </a>
       </div>
     </section>

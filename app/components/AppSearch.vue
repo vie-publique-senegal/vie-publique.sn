@@ -75,7 +75,10 @@
                   {{ result.document?.title }}
                 </p>
                 <p class="truncate text-xs text-gray-500 dark:text-gray-400">
-                  {{ result.document?.category?.name || 'Actualité' }}
+                  {{
+                    result.document?.category ||
+                    (result.document?.type === 'document' ? 'Document' : 'Actualité')
+                  }}
                 </p>
               </div>
             </NuxtLink>
@@ -204,7 +207,10 @@
                   {{ result.document?.title }}
                 </p>
                 <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                  {{ result.document?.category?.name || 'Actualité' }}
+                  {{
+                    result.document?.category ||
+                    (result.document?.type === 'document' ? 'Document' : 'Actualité')
+                  }}
                 </p>
               </div>
             </NuxtLink>
@@ -236,49 +242,50 @@ const quickSearchResults = ref([]);
 const mobileSearchResults = ref([]);
 const searchInput = ref();
 
-// Recherche rapide avec debounce pour desktop
+// Recherche rapide avec debounce pour desktop (seuils alignés site-wide : 350 ms, min 2 car.)
 const quickSearch = useDebounceFn(async () => {
-  if (!quickSearchQuery.value.trim()) {
+  if (quickSearchQuery.value.trim().length < 2) {
     quickSearchResults.value = [];
     return;
   }
 
   try {
-    const { data } = await $fetch('/api/search', {
+    // $fetch renvoie directement le body { data, total, ... }
+    const response: any = await $fetch('/api/search', {
       query: {
         q: quickSearchQuery.value,
         limit: 8,
       },
     });
 
-    quickSearchResults.value = data?.data || [];
+    quickSearchResults.value = response?.data || [];
   } catch (error) {
     console.error('Erreur recherche rapide:', error);
     quickSearchResults.value = [];
   }
-}, 200);
+}, 350);
 
-// Recherche mobile avec debounce
+// Recherche mobile avec debounce (mêmes seuils)
 const mobileSearch = useDebounceFn(async () => {
-  if (!mobileSearchQuery.value.trim()) {
+  if (mobileSearchQuery.value.trim().length < 2) {
     mobileSearchResults.value = [];
     return;
   }
 
   try {
-    const { data } = await $fetch('/api/search', {
+    const response: any = await $fetch('/api/search', {
       query: {
         q: mobileSearchQuery.value,
         limit: 10,
       },
     });
 
-    mobileSearchResults.value = data?.data || [];
+    mobileSearchResults.value = response?.data || [];
   } catch (error) {
     console.error('Erreur recherche mobile:', error);
     mobileSearchResults.value = [];
   }
-}, 200);
+}, 350);
 
 // Watchers pour les recherches en temps réel
 watch(quickSearchQuery, quickSearch);

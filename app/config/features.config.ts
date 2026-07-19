@@ -46,6 +46,12 @@ export const DEFAULT_FEATURES: Record<string, FeatureFlag> = {
     environments: ['dev', 'test', 'production'],
     description: 'Menu Conseil des ministres',
   },
+  menu_dossiers: {
+    key: 'menu_dossiers',
+    enabled: true,
+    environments: ['dev', 'test'],
+    description: 'Menu Dossiers (pages de référence thématiques)',
+  },
   menu_assemblee_nationale: {
     key: 'menu_assemblee_nationale',
     enabled: true,
@@ -130,13 +136,6 @@ export const DEFAULT_FEATURES: Record<string, FeatureFlag> = {
     environments: ['dev', 'test', 'production'],
     description: 'Menu Don avec Bictorys',
   },
-  menu_don_paydunya: {
-    key: 'menu_don_paydunya',
-    enabled: true,
-    environments: ['dev', 'test', 'production'],
-    description: 'Menu Don avec Paydunya',
-  },
-
   // Composants
   social_networks: {
     key: 'social_networks',

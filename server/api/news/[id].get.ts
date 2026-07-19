@@ -1,9 +1,9 @@
-import { readItem } from "@directus/sdk";
+import { readItem } from '@directus/sdk';
 
 export default defineCachedEventHandler(
   async (event) => {
     const config = useRuntimeConfig();
-    const id = getRouterParam(event, "id");
+    const id = getRouterParam(event, 'id');
 
     if (!id) {
       throw createError({
@@ -16,30 +16,30 @@ export default defineCachedEventHandler(
       const directus = getCmsClient();
 
       const newsData = await directus.request(
-        readItem("news", id, {
+        readItem('news', id, {
           fields: [
-            "id",
-            "title",
-            "slug",
-            "status",
-            "date_published",
-            "date_updated",
-            "cover_image",
-            "content",
-            "tags",
-            "featured",
-            "category.name",
-            "category.slug",
-            "document.file",
+            'id',
+            'title',
+            'slug',
+            'status',
+            'date_published',
+            'date_updated',
+            'cover_image',
+            'content',
+            'tags',
+            'featured',
+            'category.name',
+            'category.slug',
+            'document.file',
           ],
         }),
       );
 
       // Vérifier si l'article est publié
-      if (newsData.status !== "published") {
+      if (newsData.status !== 'published') {
         throw createError({
           statusCode: 404,
-          statusMessage: "Article non trouvé",
+          statusMessage: 'Article non trouvé',
         });
       }
 
@@ -50,15 +50,9 @@ export default defineCachedEventHandler(
         slug: newsData.slug,
         date_published: newsData.date_published,
         content: newsData.content,
-        ...(newsData.date_updated
-          ? { date_updated: newsData.date_updated }
-          : {}),
-        ...(newsData.cover_image
-          ? { cover_image: newsData.cover_image }
-          : {}),
-        ...(newsData.featured !== undefined
-          ? { featured: newsData.featured }
-          : {}),
+        ...(newsData.date_updated ? { date_updated: newsData.date_updated } : {}),
+        ...(newsData.cover_image ? { cover_image: newsData.cover_image } : {}),
+        ...(newsData.featured !== undefined ? { featured: newsData.featured } : {}),
         ...(newsData.tags ? { tags: newsData.tags } : {}),
         ...(newsData.category
           ? {
@@ -82,10 +76,7 @@ export default defineCachedEventHandler(
         data: article, // Gardé "data" pour cohérence avec useCmsCollection
       };
     } catch (error: any) {
-      console.error(
-        `Erreur lors de la récupération de l'actualité ${id}:`,
-        error,
-      );
+      console.error(`Erreur lors de la récupération de l'actualité ${id}:`, error);
 
       if (error.statusCode) {
         throw error;
@@ -98,10 +89,13 @@ export default defineCachedEventHandler(
     }
   },
   {
-    maxAge: 60 * 60, // 1 heure
-    name: "news-detail",
+    // 15 min (au lieu d'1 h) : les corrections éditoriales arrivent surtout dans
+    // l'heure suivant la publication (préco P2, docs/guidelines/cache-strategy.md).
+    // Le swr:true par défaut de Nitro sert le stale pendant la revalidation.
+    maxAge: getCacheMaxAge(15 * 60),
+    name: 'news-detail',
     getKey: (event) => {
-      const id = getRouterParam(event, "id");
+      const id = getRouterParam(event, 'id');
       return `news-detail-${id}`;
     },
   },

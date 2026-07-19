@@ -147,25 +147,27 @@ useHead({
   script: [
     {
       type: 'application/ld+json',
-      children: JSON.stringify(organizationSchema),
+      innerHTML: JSON.stringify(organizationSchema),
     },
     {
       type: 'application/ld+json',
-      children: JSON.stringify(websiteSchema),
+      innerHTML: JSON.stringify(websiteSchema),
     },
     {
       type: 'application/ld+json',
-      children: JSON.stringify(breadcrumbSchema),
+      innerHTML: JSON.stringify(breadcrumbSchema),
     },
     {
       type: 'application/ld+json',
-      children: JSON.stringify(newsMediaSchema),
+      innerHTML: JSON.stringify(newsMediaSchema),
     },
   ],
 });
 
 // Utilisation du composable centralisé pour les données de navigation
 const { navigationCards } = useNavigationCards();
+
+const { isFeatureEnabled } = useFeatureFlags();
 </script>
 
 <template>
@@ -182,20 +184,34 @@ const { navigationCards } = useNavigationCards();
 
     <HomeQuickAccess :navigation-cards="navigationCards" />
 
-    <HomeAppPromo />
-
     <div class="">
+      <div class="my-8">
+        <HomeAppPromo />
+      </div>
+
       <div class="my-8">
         <HomeFeaturedDocuments />
       </div>
       <div class="my-8">
-        <HomePodcasts />
+        <HomeNews />
       </div>
+      <div v-if="isFeatureEnabled('menu_dossiers')" class="my-8">
+        <HomeDossiers />
+      </div>
+
+      <div class="my-8">
+        <HomeGovernmentHighlight />
+      </div>
+
+      <div v-if="isFeatureEnabled('menu_organigramme_etat')" class="my-8">
+        <HomeEtatOrganisation />
+      </div>
+
       <div class="my-8">
         <HomeBudgetHighlight />
       </div>
       <div class="my-8">
-        <HomeNews />
+        <HomePodcasts />
       </div>
       <div class="my-8">
         <HomeAssemblyQuestions />

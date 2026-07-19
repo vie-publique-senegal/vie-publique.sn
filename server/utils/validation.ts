@@ -8,7 +8,8 @@
  */
 export const VALIDATION_PATTERNS = {
   email: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
-  phone: /^(\+221|00221)?[\s.-]?(7[0-8]|76|77|78|33)[\s.-]?\d{3}[\s.-]?\d{2}[\s.-]?\d{2}$|^(\+|00)?[1-9]\d{6,14}$/,
+  phone:
+    /^(\+221|00221)?[\s.-]?(7[0-8]|76|77|78|33)[\s.-]?\d{3}[\s.-]?\d{2}[\s.-]?\d{2}$|^(\+|00)?[1-9]\d{6,14}$/,
   url: /^https?:\/\/(www\.)?[-a-zA-Z0-9@:%._+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_+.~#?&//=]*)$/,
   twitterHandle: /^@?[a-zA-Z0-9_]{1,15}$/,
   linkedinUrl: /^(https?:\/\/)?(www\.)?linkedin\.com\/(in|company)\/[a-zA-Z0-9_-]+\/?$/,
@@ -59,18 +60,20 @@ export const VALIDATION_MESSAGES = {
 export const sanitizeString = (input: string | undefined | null): string => {
   if (!input) return '';
 
-  return input
-    .trim()
-    // Supprime les balises HTML
-    .replace(/<[^>]*>/g, '')
-    // Échappe les caractères spéciaux HTML
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#x27;')
-    // Supprime les caractères de contrôle (sauf newline et tab)
-    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
+  return (
+    input
+      .trim()
+      // Supprime les balises HTML
+      .replace(/<[^>]*>/g, '')
+      // Échappe les caractères spéciaux HTML
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#x27;')
+      // Supprime les caractères de contrôle (sauf newline et tab)
+      .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
+  );
 };
 
 /**
@@ -79,13 +82,15 @@ export const sanitizeString = (input: string | undefined | null): string => {
 export const sanitizeForStorage = (input: string | undefined | null): string => {
   if (!input) return '';
 
-  return input
-    .trim()
-    // Supprime les balises script et événements inline
-    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-    .replace(/on\w+\s*=\s*["'][^"']*["']/gi, '')
-    // Supprime les caractères de contrôle (sauf newline et tab)
-    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
+  return (
+    input
+      .trim()
+      // Supprime les balises script et événements inline
+      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+      .replace(/on\w+\s*=\s*["'][^"']*["']/gi, '')
+      // Supprime les caractères de contrôle (sauf newline et tab)
+      .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
+  );
 };
 
 /**
@@ -155,11 +160,7 @@ export const isValidInstagramHandle = (handle: string): boolean => {
 /**
  * Valide la longueur d'un champ
  */
-export const isValidLength = (
-  value: string,
-  min: number,
-  max: number
-): boolean => {
+export const isValidLength = (value: string, min: number, max: number): boolean => {
   const length = value?.length || 0;
   return length >= min && length <= max;
 };
@@ -172,124 +173,7 @@ export interface ValidationResult {
   errors: Record<string, string>;
 }
 
-/**
- * Interface pour les données du formulaire d'invitation podcast
- */
-export interface PodcastInvitationFormInput {
-  full_name: string;
-  email: string;
-  phone?: string;
-  organization?: string;
-  position?: string;
-  topic_interest: string;
-  expertise_area?: string;
-  motivation: string;
-  availability?: string;
-  twitter?: string;
-  linkedin?: string;
-  facebook?: string;
-  instagram?: string;
-  website?: string;
-}
-
-/**
- * Valide les données du formulaire d'invitation podcast
- */
-export const validatePodcastInvitationForm = (
-  data: PodcastInvitationFormInput
-): ValidationResult => {
-  const errors: Record<string, string> = {};
-
-  // Validation du nom complet (requis)
-  if (!data.full_name?.trim()) {
-    errors.full_name = VALIDATION_MESSAGES.required('Nom complet');
-  } else if (!isValidLength(data.full_name.trim(), FIELD_LIMITS.fullName.min, FIELD_LIMITS.fullName.max)) {
-    errors.full_name = VALIDATION_MESSAGES.minLength('Nom complet', FIELD_LIMITS.fullName.min);
-  } else if (containsDangerousPatterns(data.full_name)) {
-    errors.full_name = VALIDATION_MESSAGES.dangerousContent;
-  }
-
-  // Validation de l'email (requis)
-  if (!data.email?.trim()) {
-    errors.email = VALIDATION_MESSAGES.required('Email');
-  } else if (!isValidEmail(data.email.trim())) {
-    errors.email = VALIDATION_MESSAGES.invalidEmail;
-  }
-
-  // Validation du téléphone (optionnel)
-  if (data.phone && !isValidPhone(data.phone)) {
-    errors.phone = VALIDATION_MESSAGES.invalidPhone;
-  }
-
-  // Validation de l'organisation (optionnel mais limité)
-  if (data.organization && !isValidLength(data.organization.trim(), 0, FIELD_LIMITS.organization.max)) {
-    errors.organization = VALIDATION_MESSAGES.maxLength('Organisation', FIELD_LIMITS.organization.max);
-  } else if (data.organization && containsDangerousPatterns(data.organization)) {
-    errors.organization = VALIDATION_MESSAGES.dangerousContent;
-  }
-
-  // Validation du poste (optionnel mais limité)
-  if (data.position && !isValidLength(data.position.trim(), 0, FIELD_LIMITS.position.max)) {
-    errors.position = VALIDATION_MESSAGES.maxLength('Poste', FIELD_LIMITS.position.max);
-  } else if (data.position && containsDangerousPatterns(data.position)) {
-    errors.position = VALIDATION_MESSAGES.dangerousContent;
-  }
-
-  // Validation du sujet (requis)
-  if (!data.topic_interest?.trim()) {
-    errors.topic_interest = VALIDATION_MESSAGES.required('Sujet');
-  } else if (!isValidLength(data.topic_interest.trim(), FIELD_LIMITS.topicInterest.min, FIELD_LIMITS.topicInterest.max)) {
-    errors.topic_interest = `Le sujet doit contenir entre ${FIELD_LIMITS.topicInterest.min} et ${FIELD_LIMITS.topicInterest.max} caractères`;
-  } else if (containsDangerousPatterns(data.topic_interest)) {
-    errors.topic_interest = VALIDATION_MESSAGES.dangerousContent;
-  }
-
-  // Validation du domaine d'expertise (optionnel)
-  if (data.expertise_area && !isValidLength(data.expertise_area.trim(), 0, FIELD_LIMITS.expertiseArea.max)) {
-    errors.expertise_area = VALIDATION_MESSAGES.maxLength("Domaine d'expertise", FIELD_LIMITS.expertiseArea.max);
-  } else if (data.expertise_area && containsDangerousPatterns(data.expertise_area)) {
-    errors.expertise_area = VALIDATION_MESSAGES.dangerousContent;
-  }
-
-  // Validation de la motivation (requis)
-  if (!data.motivation?.trim()) {
-    errors.motivation = VALIDATION_MESSAGES.required('Motivation');
-  } else if (!isValidLength(data.motivation.trim(), FIELD_LIMITS.motivation.min, FIELD_LIMITS.motivation.max)) {
-    errors.motivation = `La motivation doit contenir entre ${FIELD_LIMITS.motivation.min} et ${FIELD_LIMITS.motivation.max} caractères`;
-  } else if (containsDangerousPatterns(data.motivation)) {
-    errors.motivation = VALIDATION_MESSAGES.dangerousContent;
-  }
-
-  // Validation de la disponibilité (optionnel)
-  if (data.availability && !isValidLength(data.availability.trim(), 0, FIELD_LIMITS.availability.max)) {
-    errors.availability = VALIDATION_MESSAGES.maxLength('Disponibilité', FIELD_LIMITS.availability.max);
-  } else if (data.availability && containsDangerousPatterns(data.availability)) {
-    errors.availability = VALIDATION_MESSAGES.dangerousContent;
-  }
-
-  // Validation des réseaux sociaux
-  if (data.twitter && !isValidTwitterHandle(data.twitter.trim())) {
-    errors.twitter = VALIDATION_MESSAGES.invalidTwitter;
-  }
-
-  if (data.linkedin && !isValidLinkedinUrl(data.linkedin.trim())) {
-    errors.linkedin = VALIDATION_MESSAGES.invalidLinkedin;
-  }
-
-  if (data.facebook && !isValidFacebookUrl(data.facebook.trim())) {
-    errors.facebook = VALIDATION_MESSAGES.invalidFacebook;
-  }
-
-  if (data.instagram && !isValidInstagramHandle(data.instagram.trim())) {
-    errors.instagram = VALIDATION_MESSAGES.invalidInstagram;
-  }
-
-  if (data.website && !isValidUrl(data.website.trim())) {
-    errors.website = VALIDATION_MESSAGES.invalidUrl;
-  }
-
-  return {
-    isValid: Object.keys(errors).length === 0,
-    errors,
-  };
-};
+// NB (2026-07-19) : le formulaire « invitation podcast » (seul consommateur historique de ce
+// fichier) a été supprimé — voir QUAL-2 dans docs/audits/audit-complet-2026-07.md. Les
+// validateurs génériques ci-dessus sont conservés pour le fix SEC-4 (Turnstile + validation
+// des formulaires publics) qui prévoit de les réutiliser.

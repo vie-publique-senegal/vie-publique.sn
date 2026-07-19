@@ -2,7 +2,8 @@
   <div class="min-h-screen bg-gray-50 pb-20 dark:bg-gray-950">
     <!-- Breadcrumb -->
     <div class="container mx-auto px-4 pt-2">
-      <AppBreadcrumb :items="[
+      <AppBreadcrumb
+:items="[
         { label: 'Assemblée nationale', to: '/assemblee-nationale' },
         { label: 'Députés' }
       ]" />
@@ -359,19 +360,19 @@ useHead({
   script: [
     {
       type: "application/ld+json",
-      children: JSON.stringify(deputiesSchema),
+      innerHTML: JSON.stringify(deputiesSchema),
     },
     {
       type: "application/ld+json",
-      children: JSON.stringify(breadcrumbSchema),
+      innerHTML: JSON.stringify(breadcrumbSchema),
     },
     {
       type: "application/ld+json",
-      children: JSON.stringify(organizationSchema),
+      innerHTML: JSON.stringify(organizationSchema),
     },
     {
       type: "application/ld+json",
-      children: JSON.stringify(governmentSchema),
+      innerHTML: JSON.stringify(governmentSchema),
     },
   ],
 });
