@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { Component } from 'vue';
 import { getCommune } from '#shared/communes';
-import { COMMUNE_TABS } from '~/composables/collectivites/communeTabs';
+import { getVisibleCommuneTabs } from '~/composables/collectivites/communeTabs';
 import { useCommuneSeo } from '~/composables/collectivites/useCommuneSeo';
 import TabMaire from '~/components/collectivites/tabs/Maire.vue';
 import TabExecutif from '~/components/collectivites/tabs/Executif.vue';
@@ -36,7 +36,9 @@ if (!commune) {
   throw createError({ statusCode: 404, statusMessage: 'Commune introuvable', fatal: true });
 }
 
-const tab = COMMUNE_TABS.find((t) => t.path === route.params.tab && t.path);
+const tab = getVisibleCommuneTabs(commune.tabsMasques).find(
+  (t) => t.path === route.params.tab && t.path,
+);
 const tabComponent = tab ? TAB_COMPONENTS[tab.key] : undefined;
 if (!tab || !tabComponent) {
   throw createError({ statusCode: 404, statusMessage: 'Section introuvable', fatal: true });

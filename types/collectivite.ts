@@ -70,6 +70,8 @@ export interface Commune {
   longitude: number;
   dateCreation: string;
   photoCouverture: string;
+  // Clés de `COMMUNE_TABS` à masquer pour cette commune (ex: pas de conseil élu → ['conseil']).
+  tabsMasques?: string[];
   mairie: {
     adresse: string;
     telephone: string;

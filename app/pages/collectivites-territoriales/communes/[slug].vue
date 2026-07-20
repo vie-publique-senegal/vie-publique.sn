@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import { getCommune } from '#shared/communes';
-import { COMMUNE_TABS, getCommuneTabPath } from '~/composables/collectivites/communeTabs';
+import {
+  getCommuneTabPath,
+  getVisibleCommuneTabs,
+  type CommuneTab,
+} from '~/composables/collectivites/communeTabs';
 
 const route = useRoute();
 
@@ -9,8 +13,10 @@ if (!commune) {
   throw createError({ statusCode: 404, statusMessage: 'Commune introuvable', fatal: true });
 }
 
+const visibleTabs = getVisibleCommuneTabs(commune.tabsMasques);
+
 // Anciens liens `?tab=budget` (query) → URL canonique par chemin (/communes/<slug>/budget).
-const legacyTab = COMMUNE_TABS.find((t) => t.key === route.query.tab && t.path);
+const legacyTab = visibleTabs.find((t) => t.key === route.query.tab && t.path);
 if (legacyTab) {
   await navigateTo(getCommuneTabPath(commune.slug, legacyTab), {
     redirectCode: 301,
@@ -18,8 +24,7 @@ if (legacyTab) {
   });
 }
 
-const isActiveTab = (tab: (typeof COMMUNE_TABS)[number]) =>
-  route.path === getCommuneTabPath(commune!.slug, tab);
+const isActiveTab = (tab: CommuneTab) => route.path === getCommuneTabPath(commune!.slug, tab);
 
 const share = () => {
   if (typeof navigator !== 'undefined' && navigator.share) {
@@ -64,7 +69,7 @@ const share = () => {
           </div>
           <div class="mt-4 flex flex-wrap gap-2">
             <NuxtLink
-              :to="getCommuneTabPath(commune.slug, COMMUNE_TABS[0])"
+              :to="getCommuneTabPath(commune.slug, visibleTabs[0])"
               class="inline-flex items-center gap-2 rounded-md bg-white/95 px-4 py-2 text-sm font-medium text-gray-900 transition hover:bg-white"
             >
               <UIcon name="i-heroicons-map-pin" class="size-4" />
@@ -110,7 +115,7 @@ const share = () => {
     >
       <nav class="scrollbar-hide flex gap-5 overflow-x-auto" aria-label="Sections de la fiche">
         <NuxtLink
-          v-for="t in COMMUNE_TABS"
+          v-for="t in visibleTabs"
           :key="t.key"
           :to="getCommuneTabPath(commune.slug, t)"
           class="shrink-0 whitespace-nowrap border-b-2 px-1 py-3 text-sm transition-colors"

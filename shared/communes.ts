@@ -1,4 +1,4 @@
-// Données du module Collectivités territoriales — port fidèle du prototype
+// Données du module Collectivités territoriales - port fidèle du prototype
 // vpsn-collectivites (senegal-local-guide/src/data/communes.ts).
 //
 // ⚠️ DONNÉES DE DÉMONSTRATION : 18 communes réelles en « seeds » ; le reste
@@ -104,11 +104,12 @@ interface Seed {
   parti: Parti;
   profession: string;
   altitude?: number;
+  tabsMasques?: string[];
 }
 
 /* prettier-ignore */
 const seeds: Seed[] = [
-  { slug: 'dakar-plateau', nom: 'Dakar-Plateau', region: 'Dakar', departement: 'Dakar', chefLieu: true, type: "Commune d'arrondissement", population: 36760, superficie: 4.0, latitude: 14.6717, longitude: -17.4382, maireNom: 'Alioune Ndoye', maireSexe: 'H', parti: 'BBY', profession: 'Homme politique', altitude: 12 },
+  { slug: 'dakar-plateau', nom: 'Dakar-Plateau', region: 'Dakar', departement: 'Dakar', chefLieu: true, type: "Commune d'arrondissement", population: 36760, superficie: 4.0, latitude: 14.6717, longitude: -17.4382, maireNom: 'Alioune Ndoye', maireSexe: 'H', parti: 'BBY', profession: 'Homme politique', altitude: 12, tabsMasques: ['budget', 'projets', 'services', 'documents', 'actualites'] },
   { slug: 'mermoz-sacre-coeur', nom: 'Mermoz–Sacré-Cœur', region: 'Dakar', departement: 'Dakar', chefLieu: false, type: "Commune d'arrondissement", population: 41500, superficie: 3.2, latitude: 14.7130, longitude: -17.4756, maireNom: 'Barthélémy Dias', maireSexe: 'H', parti: 'Yewwi', profession: 'Homme politique' },
   { slug: 'guediawaye', nom: 'Guédiawaye', region: 'Dakar', departement: 'Guédiawaye', chefLieu: true, type: 'Ville', population: 329659, superficie: 13.0, latitude: 14.7692, longitude: -17.4103, maireNom: 'Ahmed Aïdara', maireSexe: 'H', parti: 'Yewwi', profession: 'Journaliste' },
   { slug: 'pikine', nom: 'Pikine', region: 'Dakar', departement: 'Pikine', chefLieu: true, type: 'Ville', population: 1170791, superficie: 87.3, latitude: 14.7549, longitude: -17.3961, maireNom: 'Abdoulaye Thimbo', maireSexe: 'H', parti: 'BBY', profession: 'Ingénieur' },
@@ -134,6 +135,7 @@ function buildCommune(seed: Seed, index: number): Commune {
   const conseillersTotal = Math.min(46, Math.max(20, Math.round(Math.log10(seed.population) * 8)));
   const budgetTotal = Math.round(seed.population * 0.012 + 200); // millions FCFA
   return {
+    tabsMasques: seed.tabsMasques,
     slug: seed.slug,
     nom: seed.nom,
     region: seed.region,
@@ -172,17 +174,17 @@ function buildCommune(seed: Seed, index: number): Commune {
     adjoints: [
       {
         nom: 'Fatou Ndiaye',
-        fonction: '1er Adjoint — Finances et Budget',
+        fonction: '1er Adjoint - Finances et Budget',
         telephone: '+221 77 123 45 67',
       },
-      { nom: 'Ibrahima Sarr', fonction: '2e Adjoint — Urbanisme', telephone: '+221 77 234 56 78' },
+      { nom: 'Ibrahima Sarr', fonction: '2e Adjoint - Urbanisme', telephone: '+221 77 234 56 78' },
       {
         nom: 'Aïssatou Diop',
-        fonction: '3e Adjoint — Éducation et Jeunesse',
+        fonction: '3e Adjoint - Éducation et Jeunesse',
         telephone: '+221 77 345 67 89',
       },
-      { nom: 'Modou Faye', fonction: '4e Adjoint — Santé et Action sociale' },
-      { nom: 'Ndeye Coumba Ba', fonction: '5e Adjoint — Culture et Sports' },
+      { nom: 'Modou Faye', fonction: '4e Adjoint - Santé et Action sociale' },
+      { nom: 'Ndeye Coumba Ba', fonction: '5e Adjoint - Culture et Sports' },
     ],
     secretaireMunicipal: { nom: 'El Hadji Mamadou Ndour', telephone: '+221 77 456 78 90' },
     conseillers: makeConseillers(majParti, conseillersTotal),
@@ -243,7 +245,7 @@ function buildCommune(seed: Seed, index: number): Commune {
         budget: 85,
       },
       {
-        titre: 'Éclairage public solaire — Phase II',
+        titre: 'Éclairage public solaire - Phase II',
         categorie: 'Éclairage',
         statut: 'En cours',
         budget: 120,
@@ -274,7 +276,7 @@ function buildCommune(seed: Seed, index: number): Commune {
     ],
     documents: [
       {
-        titre: 'Délibération n°2024-045 — Vote du budget 2024',
+        titre: 'Délibération n°2024-045 - Vote du budget 2024',
         type: 'Délibération',
         date: '2024-02-12',
       },
@@ -285,7 +287,7 @@ function buildCommune(seed: Seed, index: number): Commune {
       },
       { titre: 'Compte administratif 2023', type: 'Compte administratif', date: '2024-06-30' },
       { titre: 'Plan de Développement Communal 2024–2029', type: 'PDC', date: '2024-01-15' },
-      { titre: "Appel d'offres — Voirie urbaine", type: "Appel d'offres", date: '2024-08-20' },
+      { titre: "Appel d'offres - Voirie urbaine", type: "Appel d'offres", date: '2024-08-20' },
       { titre: "Rapport annuel d'activité 2023", type: 'Rapport', date: '2024-04-10' },
     ],
     actualites: [
@@ -297,7 +299,7 @@ function buildCommune(seed: Seed, index: number): Commune {
         categorie: 'Actualité',
       },
       {
-        titre: 'Conseil municipal — Session budgétaire',
+        titre: 'Conseil municipal - Session budgétaire',
         date: '2025-10-24',
         extrait:
           "Le conseil s'est réuni pour délibérer sur le budget rectificatif de l'exercice en cours…",

@@ -28,3 +28,8 @@ export const COMMUNE_TABS: CommuneTab[] = [
 
 export const getCommuneTabPath = (slug: string, tab: CommuneTab) =>
   `/collectivites-territoriales/communes/${slug}${tab.path ? `/${tab.path}` : ''}`;
+
+// Tabs à afficher pour une commune donnée : tous, sauf ceux listés dans
+// `commune.tabsMasques` (opt-out — la plupart des communes affichent tout).
+export const getVisibleCommuneTabs = (tabsMasques?: string[]) =>
+  tabsMasques?.length ? COMMUNE_TABS.filter((t) => !tabsMasques.includes(t.key)) : COMMUNE_TABS;
