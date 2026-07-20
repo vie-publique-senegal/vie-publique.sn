@@ -228,10 +228,9 @@ Référentiel administratif générique (partagé avec d'autres modules du site)
 | `name`                   | Nom | "Dakar" |
 | `population`             | Population (régions et départements) | 1146053 |
 | `slug` (communes uniquement) | Clé de jointure avec les contours GeoJSON | "plateau" |
-| `code` (communes uniquement) | Pcode officiel | "SN0101" |
 | `department` (communes) / `region` (départements) | FK vers le niveau parent | ... |
 
-> Régions et départements n'ont **pas** de `slug`/`code` propres (retirés le 2026-07-14) : seules les communes en portent, la résolution des niveaux supérieurs se fait par leur `name`.
+> Régions et départements n'ont **pas** de `slug` propre (retiré le 2026-07-14) : seules les communes en portent, la résolution des niveaux supérieurs se fait par leur `name`. Le champ `code` (Pcode officiel) porté par `geo_municipalities` a également été **supprimé** ; `GEO_UNIT_FIELDS`/`ResolvedGeoUnit` (`server/utils/electionGeoUnit.ts`) ne l'exposent plus.
 
 ---
 

@@ -25,7 +25,6 @@ export const GEO_UNIT_FIELDS = [
   'geo_municipality.id',
   'geo_municipality.name',
   'geo_municipality.slug',
-  'geo_municipality.code',
   'geo_municipality.population',
   'geo_municipality.department.name',
   'geo_municipality.department.region.name',
@@ -39,7 +38,6 @@ export interface GeoUnitRef {
 export interface ResolvedGeoUnit {
   name: string;
   slug: string | null;
-  code: string | null;
   population: number | null;
   /** Niveau immédiatement supérieur : région pour un département, département pour une commune ; null pour une région et les lignes legacy sans parent */
   parent: GeoUnitRef | null;
@@ -74,7 +72,6 @@ const asRef = (value: unknown): GeoUnitRef | null => {
 const identityOf = (row: Row) => ({
   name: (row.name as string) ?? '',
   slug: (row.slug as string | null) ?? null,
-  code: (row.code as string | null) ?? null,
   population: (row.population as number | null) ?? null,
 });
 

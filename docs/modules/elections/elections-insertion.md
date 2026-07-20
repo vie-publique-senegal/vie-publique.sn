@@ -102,7 +102,7 @@ Le référentiel des circonscriptions (46 départements, ~552 communes, 8 zones 
 }
 ```
 
-> ⚠️ Les anciens champs `region` (texte) et `parent` (M2O self) **n'existent plus** sur `election_constituencies` : l'identité géographique (nom, code, population, hiérarchie) est portée par le référentiel `geo_regions`/`geo_departments`/`geo_municipalities`, référencé via **un seul** des FK `geo_region`/`geo_department`/`geo_municipality` selon le niveau de la ligne. Voir [elections-model.md sections 5️⃣/5️⃣bis](./elections-model.md) et [elections-geo-resolution.md](./elections-geo-resolution.md).
+> ⚠️ Les anciens champs `region` (texte) et `parent` (M2O self) **n'existent plus** sur `election_constituencies` : l'identité géographique (nom, slug, population, hiérarchie) est portée par le référentiel `geo_regions`/`geo_departments`/`geo_municipalities`, référencé via **un seul** des FK `geo_region`/`geo_department`/`geo_municipality` selon le niveau de la ligne. Voir [elections-model.md sections 5️⃣/5️⃣bis](./elections-model.md) et [elections-geo-resolution.md](./elections-geo-resolution.md).
 
 **Types de circonscriptions** :
 
