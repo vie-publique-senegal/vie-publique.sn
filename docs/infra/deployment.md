@@ -99,10 +99,15 @@ docker-compose -f docker-compose.production.yml up -d
 
 L'image Docker `ghcr.io/vie-publique-senegal/vie-publique.sn` est automatiquement construite avec plusieurs tags :
 
-- **`:latest`** - Dernière version stable de la branche principale
+- **`:latest`** - Dernier build de la branche `prod` (production)
+- **`:prod`** - Dernière version de la branche prod (équivalent de `:latest`)
 - **`:develop`** - Dernière version de la branche develop
 - **`:sha-xxxxxxx`** - Version spécifique basée sur le commit SHA (ex: `:sha-1129d5b`)
 - **`:buildcache`** - Tag de cache pour optimiser les builds (usage interne CI/CD)
+
+> ⚠️ **État actuel** : le déploiement de production se fait via **Coolify en mode Nixpacks**
+> (build depuis le repo), pas à partir de ces images — ce guide décrit un déploiement Docker
+> manuel alternatif/futur. Voir `ci-cd-github.md` pour le pipeline réel.
 
 #### Utilisation des tags
 

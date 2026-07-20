@@ -37,11 +37,11 @@
 
 ### 🟠 Important — Qualité de code
 
-- [ ] [QUAL-2 — ~5 200 lignes de code mort (29 composants + 6 composables)](#qual-2--code-mort-5-200-lignes)
+- [ ] [QUAL-2 — ~4 100 lignes de code mort (37 composants + 4 composables) — périmètre re-scanné 19/07/2026 après la migration élections](#qual-2--code-mort-4-100-lignes) ⏳ partiel 19/07 : feature « invitation podcast » orpheline purgée (modal + composable + endpoint + types, ~940 l.)
 - [ ] [QUAL-3 — `formatDate` redéfini dans 28 fichiers → créer `app/utils/date.ts`](#qual-3--formatdate-dupliqué-dans-28-fichiers)
 - [ ] [QUAL-4 — ~424 occurrences de `any`](#qual-4--424-any)
 - [ ] [QUAL-5 — 225 `console.*` en prod (dont routes de paiement)](#qual-5--225-console-en-prod) ⏳ partiel 02/07/2026 : 225 → 55 (−75 %) ; restent 10 console dans `donate/*` + règle ESLint `no-console` à ajouter
-- [ ] [QUAL-6 — Double arborescence élections (`elections/` vs `elections-senegal/`)](#qual-6--double-arborescence-élections)
+- [x] [QUAL-6 — Double arborescence élections (`elections/` vs `elections-senegal/`)](#qual-6--double-arborescence-élections) ✅ 18/07/2026 (commit `bddf890` : `app/pages/elections/` supprimé + 301 vers le dashboard ; composables dupliqués `useElectionStatsList`/`useElectionProfessions` supprimés ; vérifié 19/07 : le dossier n'existe plus)
 
 ### 🟠 Important — SEO
 
@@ -72,7 +72,7 @@
 ### 🟡 Mineur
 
 - [ ] [A11Y-1 — Pas de skip link « Aller au contenu »](#a11y-1--pas-de-skip-link)
-- [ ] [A11Y-2 — `EtatTreeNode.vue` cliquable sans rôle/clavier](#a11y-2--etattreenode-non-accessible-clavier)
+- [ ] [A11Y-2 — `EtatTreeNode.vue` cliquable sans rôle/clavier](#a11y-2--etattreenode-non-accessible-clavier) ⚠️ re-scan 19/07/2026 : composant **mort** (cf. QUAL-2) → à supprimer via la purge, pas à corriger
 - [ ] [A11Y-3 — UButton icône sans aria-label (3-4 cas)](#a11y-3--boutons-icône-sans-aria-label) ⏳ partiel 02/07/2026 : `documents/public.vue` ✅ (aria-label grille/liste) ; `ElectionMapD3` OK (texte visible) ; reste le bouton x-mark de `elections-senegal/dashboard/[type]/[year].vue`
 - [ ] [A11Y-4 — Contrastes `text-gray-400` sur fond clair (~40-80 cas)](#a11y-4--contrastes-text-gray-400)
 - [ ] [SEC-8 — Proxies legacy `[...path].ts` : path non encodé + buffering RAM](#sec-8--proxies-legacy-path-non-encodé--buffering-ram)
@@ -239,13 +239,50 @@ En plus, `nuxt.config.ts:444` charge `maplibre-gl.css` (70 KB) **globalement** a
 
 > Volumétrie : 124 pages, 233 composants, 87 composables, 130 fichiers API, ~95 000 lignes.
 
-### QUAL-2 — Code mort (~5 200 lignes)
+### QUAL-2 — Code mort (~4 100 lignes)
 
-**29 composants sur 110 scannés jamais référencés** (~4 690 lignes) : `Election/ElectionResultSvgMap.vue` (697 l.), `ElectionResultDeputiesGrid2.vue` (358), `AppSearch.vue` (345), `DonateButton.vue` (255), `ElectionMapComponent3.vue` (253), `ElectionResultSvgHemicycleHome.vue` (236), `BudgetChartsTable2.vue` (197), `ElectionSenegalMap.vue` (197)…
-Séries copiées-collées jamais nettoyées : `ElectionMapComponent1/2/3` morts (le 4 est utilisé), `BudgetChartsTable`+`Table2`, `Budget2ChartsPie`+`Pie2`, `NewsletterForm2`.
-**6 composables jamais importés** (~540 l.) : `useAppVersionSimple`, `useElectionBureauxTemoins`, `useElectionD3Hemicycle`, `useElectionMap`, `useResultsText`, `useSearch`.
+> **Périmètre re-scanné le 19/07/2026** (grep par nom de composant Nuxt — segments de dossier
+> pascal-casés et dédupliqués — + variantes `Lazy*`/kebab-case + imports explicites, avec
+> contre-vérifications manuelles). L'inventaire initial du 02/07 est caduc : la **migration
+> élections du 18/07** (commit `bddf890`) a déjà supprimé les plus gros morts
+> (`ElectionResultSvgMap`, `ElectionResultDeputiesGrid2`, `ElectionMapComponent1/2/3`,
+> `ElectionResultSvgHemicycleHome`, `ElectionSenegalMap`, `NewsletterForm2`,
+> `useElectionBureauxTemoins`, `useElectionD3Hemicycle`, `useSearch`…). Les 12 composants
+> `Election/*` restants sont **vivants** (utilisés par le dashboard).
 
-**Fix** : PR de purge dédiée. ⚠️ Vérifier l'absence d'usage dynamique (`<component :is>`) avant suppression.
+**37 composants jamais référencés (~3 830 lignes)** :
+
+| Zone | Fichiers (lignes) |
+| --- | --- |
+| Racine (5) | `AppSearch.vue` (352), `DonateButton.vue` (255), `SubcategoryLayout.vue` (166), `HomeTwitterTimeline.vue` (143), `AzureImage.vue` (100) |
+| `Budget/` (13, ~1 490 l.) | les DEUX exemplaires des séries sont morts : `BudgetChartsTable` (179) + `Table2` (197), `Budget2ChartsPie` (20) + `Pie2` (164), `Budget2TableMinistry` (130) + `V2` (194) ; plus `Budget2OverviewCard` (143), `Budget2TableRevenueExpense` (115), `BudgetInstitutions` (161), `BudgetExecution` (66), `BudgetEntityOverview` (58), `BudgetRateBar` (37), `BudgetMinistry` (23) |
+| `Layout/` (4, 163 l.) | `LayoutSubcategoryAssembly` + `2` + `3`, `LayoutSubcategoryComponent` |
+| `Menu/` (4, 158 l.) | `MenuAssemblee`, `MenuHome`, `MenuHome2`, `MenuMedias` |
+| `etat/` (3, 192 l.) | `EtatOrganisation.vue` (122) + morts **transitifs** `EtatTreeView.vue` (14) et `EtatTreeNode.vue` (56, référencés uniquement entre eux) |
+| `elections/dashboard/` (2) | `cards/LegislativeCoalitionCard.vue` (69 — les variantes Ballot/Head/List sont vivantes), `stats/ElectionResultatsStats.vue` (168) |
+| `map/` (2) | `MapExportButton.vue` (41), `MapLayerToggles.vue` (53) |
+| `parliament/deputies/` (2) | `MotionVote.vue` (23), `RecentVotes.vue` (38) |
+| Divers (2) | `PublicProjects/ProjectsTable.vue` (319), `Assembly/AssemblyDeputyCard2.vue` (103) |
+
+**4 composables jamais importés (~245 lignes)** : `useAppVersionSimple` (23), `useElectionMap` (64),
+`useElectionMapNational` (89 — absent de l'inventaire initial), `useResultsText` (69).
+
+**✅ Purgé le 19/07/2026 — feature « invitation podcast » orpheline** : livrée le 13/02/2026
+(commit `88331914`), débranchée de la page `/podcasts` **le lendemain** par son auteur
+(commit `54014433`, refonte de la page) en laissant toute la mécanique orpheline. Supprimés :
+`PodcastInvitationModal.vue` (371 l.), `podcasts/usePodcastInvitation.ts` (342 l.),
+`server/api/podcasts/invitation-request.post.ts` (104 l.), `types/podcast-invitation.ts` (125 l.),
+ainsi que le bloc `validatePodcastInvitationForm` de `server/utils/validation.ts` (les validateurs
+génériques y sont **conservés** pour le fix SEC-4). Restauration possible depuis `88331914`
+si la feature revient.
+
+**Effets de bord sur d'autres items de l'audit** : A11Y-2 (`EtatTreeNode` non accessible clavier)
+devient **sans objet** (composant mort, à supprimer, pas à corriger) ; QUAL-7 : `Budget2TableMinistry`
+et `BudgetChartsTable`, cités pour leurs `defineProps` runtime, sont morts.
+
+**Fix** : PR de purge dédiée, puis **re-scanner après suppression** (des composants vivants peuvent
+devenir orphelins à leur tour, comme le trio etat/podcast ci-dessus). Aucun usage dynamique
+`<component :is>` détecté au 19/07, mais re-vérifier au moment de la purge.
 
 ### QUAL-3 — formatDate dupliqué dans 28 fichiers
 
@@ -266,6 +303,11 @@ Séries copiées-collées jamais nettoyées : `ElectionMapComponent1/2/3` morts 
 **Fix** : règle ESLint `no-console: ['warn', { allow: ['error', 'warn'] }]` côté app ; logger conditionné à l'env côté serveur, en priorité sur `donate/*`.
 
 ### QUAL-6 — Double arborescence élections
+
+> ✅ **Terminé le 18/07/2026** (commit `bddf890`) : `app/pages/elections/` supprimé, redirections
+> 301 vers `/elections-senegal` (dashboard), composables dupliqués supprimés. Vérifié le 19/07 lors
+> du re-scan QUAL-2 : le dossier n'existe plus, `useElectionStatsList`/`useElectionProfessions`
+> absents du code.
 
 `app/pages/elections/` (17 pages, legacy législatives 2024) vs `app/pages/elections-senegal/` (7 pages, nouveau dashboard) avec doublons fonctionnels (`carte-electorale/`, `guide-electoral.vue`, `diaspora/[country].vue` en double). Paires de composables dupliqués vivantes : `useElectionStatsList` vs `elections/dashboard/useElectoralStatsList`, `useElectionProfessions` vs `useElectoralProfessions`. C'est la zone qui concentre le plus de dette (any, @ts-ignore, fichiers > 600 lignes — dont `dashboard/[type]/[year].vue` : 1 008 lignes).
 
@@ -484,6 +526,10 @@ Aucun lien « Aller au contenu » dans `app/layouts/default.vue`. **Fix** : `<a 
 
 ### A11Y-2 — EtatTreeNode non accessible clavier
 
+> ⚠️ **Re-scan 19/07/2026** : `EtatTreeNode.vue` est du code **mort transitif** (référencé uniquement
+> par `EtatTreeView.vue`, lui-même référencé uniquement par `EtatOrganisation.vue`, jamais monté).
+> Résolution = suppression via la purge QUAL-2, pas de fix a11y.
+
 `app/components/etat/EtatTreeNode.vue:3` : `<div class="node-content" @click="toggle">` sans `role`, `tabindex` ni gestion clavier. **Fix** : `role="button" tabindex="0" @keydown.enter="toggle" @keydown.space.prevent="toggle"`.
 
 ### A11Y-3 — Boutons icône sans aria-label
@@ -537,7 +583,7 @@ Aussi : `rate-limit.ts:29` se fie au premier élément de `x-forwarded-for` (spo
 
 ### QUAL-7 — Types mal rangés
 
-157 fichiers définissent des `interface` hors de `types/` (ex. `useBudget.ts` : 7 interfaces exportées ; aucun `types/budget.ts` n'existe). 9 composants avec `defineProps` runtime au lieu du générique TS (`Budget2TableMinistry.vue`, `BudgetChartsTable.vue`, `error.vue`…).
+157 fichiers définissent des `interface` hors de `types/` (ex. `useBudget.ts` : 7 interfaces exportées ; aucun `types/budget.ts` n'existe). 9 composants avec `defineProps` runtime au lieu du générique TS (`Budget2TableMinistry.vue`, `BudgetChartsTable.vue`, `error.vue`…). _(Note 19/07/2026 : `Budget2TableMinistry` et `BudgetChartsTable` sont du code mort — cf. QUAL-2 — leur cas se règle par suppression.)_
 
 ### QUAL-8 — Annuaire CSV → Directus
 
@@ -568,6 +614,6 @@ L'annuaire des sites publics était chargé depuis un **CSV brut sur un dépôt 
 - Stratégies runtime du service worker (`app/service-worker/sw.ts`) : fallback déploiement, SWR images CMS
 - Pagination serveur via `useCmsCollection`/`useCollectionState` — conforme partout
 - Aucun secret commité, `.gitignore` correct, firebase-admin chargé depuis l'env
-- `podcasts/invitation-request` et `notifications/subscribe` : rate limit + validation + sanitisation (le modèle à répliquer sur newsletter/donate)
+- `notifications/subscribe` : rate limit + validation + sanitisation (le modèle à répliquer sur newsletter/donate) _(l'autre modèle historique, `podcasts/invitation-request`, a été supprimé le 19/07 — feature orpheline, cf. QUAL-2 ; ses validateurs génériques restent dans `server/utils/validation.ts`)_
 - SEO : migration `innerHTML`, breadcrumb unique, h1 unique, scope setup — chantiers CLAUDE.md aboutis
 - Compression br/gz activée, sourcemaps désactivés, headers de sécurité prod corrects (HSTS, frame-ancestors, nosniff)
