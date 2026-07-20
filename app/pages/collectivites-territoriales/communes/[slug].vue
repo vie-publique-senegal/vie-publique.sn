@@ -1,121 +1,31 @@
 <script setup lang="ts">
-import type { Component } from 'vue';
-import { getCommune, formatNumber } from '#shared/communes';
-import TabApercu from '~/components/collectivites/tabs/Apercu.vue';
-import TabMaire from '~/components/collectivites/tabs/Maire.vue';
-import TabExecutif from '~/components/collectivites/tabs/Executif.vue';
-import TabConseil from '~/components/collectivites/tabs/Conseil.vue';
-import TabTerritoire from '~/components/collectivites/tabs/Territoire.vue';
-import TabBudget from '~/components/collectivites/tabs/Budget.vue';
-import TabProjets from '~/components/collectivites/tabs/Projets.vue';
-import TabServices from '~/components/collectivites/tabs/Services.vue';
-import TabDocuments from '~/components/collectivites/tabs/Documents.vue';
-import TabActualites from '~/components/collectivites/tabs/Actualites.vue';
-import TabContacts from '~/components/collectivites/tabs/Contacts.vue';
+import { getCommune } from '#shared/communes';
+import { COMMUNE_TABS, getCommuneTabPath } from '~/composables/collectivites/communeTabs';
 
 const route = useRoute();
-const router = useRouter();
-const { siteName, siteUrl, themeColor } = useSiteMetadata();
 
 const commune = getCommune(route.params.slug as string);
 if (!commune) {
   throw createError({ statusCode: 404, statusMessage: 'Commune introuvable', fatal: true });
 }
 
-// ── Onglets (?tab= lu de façon SYNCHRONE au setup — règle SSR CLAUDE.md) ──
-const TABS: { key: string; label: string; component: Component }[] = [
-  { key: 'apercu', label: 'Aperçu', component: TabApercu },
-  { key: 'maire', label: 'Le Maire', component: TabMaire },
-  { key: 'executif', label: 'Exécutif', component: TabExecutif },
-  { key: 'conseil', label: 'Conseil', component: TabConseil },
-  { key: 'territoire', label: 'Territoire', component: TabTerritoire },
-  { key: 'budget', label: 'Budget', component: TabBudget },
-  { key: 'projets', label: 'Projets', component: TabProjets },
-  { key: 'services', label: 'Services', component: TabServices },
-  { key: 'documents', label: 'Documents', component: TabDocuments },
-  { key: 'actualites', label: 'Actualités', component: TabActualites },
-  { key: 'contacts', label: 'Contacts', component: TabContacts },
-];
-
-const initialTab = TABS.findIndex((t) => t.key === route.query.tab);
-const selectedTab = ref(initialTab >= 0 ? initialTab : 0);
-
-watch(selectedTab, (i) => {
-  router.replace({
-    query: { ...route.query, tab: i > 0 ? TABS[i].key : undefined },
+// Anciens liens `?tab=budget` (query) → URL canonique par chemin (/communes/<slug>/budget).
+const legacyTab = COMMUNE_TABS.find((t) => t.key === route.query.tab && t.path);
+if (legacyTab) {
+  await navigateTo(getCommuneTabPath(commune.slug, legacyTab), {
+    redirectCode: 301,
+    replace: true,
   });
-});
+}
 
-const activeTab = computed(() => TABS[selectedTab.value] ?? TABS[0]);
+const isActiveTab = (tab: (typeof COMMUNE_TABS)[number]) =>
+  route.path === getCommuneTabPath(commune!.slug, tab);
 
-// ── Actions du hero ────────────────────────────────────────────────
 const share = () => {
   if (typeof navigator !== 'undefined' && navigator.share) {
     navigator.share({ title: commune.nom, url: window.location.href });
   }
 };
-
-// ── SEO (déclaré en dernier — anti-TDZ) ────────────────────────────
-const pageTitle = `${commune.nom} — Commune du Sénégal (${commune.region})`;
-const pageDescription = `Fiche complète de la commune de ${commune.nom} (${commune.region}) : maire ${commune.maire.nom}, ${formatNumber(commune.population)} habitants, budget, conseil municipal et documents.`;
-const pageUrl = `${siteUrl}/collectivites-territoriales/communes/${commune.slug}`;
-
-useSeoMeta({
-  title: pageTitle,
-  ogTitle: pageTitle,
-  description: pageDescription,
-  ogDescription: pageDescription,
-  ogImage: commune.photoCouverture,
-  ogUrl: pageUrl,
-  ogType: 'website',
-  twitterCard: 'summary_large_image',
-  twitterImage: commune.photoCouverture,
-});
-
-// Nœud d'entité propre à la page : la mairie (GovernmentOrganization).
-// Le BreadcrumbList est émis par <AppBreadcrumb> — ne pas en ajouter un 2e.
-const mairieSchema = {
-  '@context': 'https://schema.org',
-  '@type': 'GovernmentOrganization',
-  name: `Mairie de ${commune.nom}`,
-  url: commune.mairie.siteWeb || pageUrl,
-  telephone: commune.mairie.telephone,
-  email: commune.mairie.email,
-  address: {
-    '@type': 'PostalAddress',
-    streetAddress: commune.mairie.adresse,
-    addressLocality: commune.nom,
-    addressRegion: commune.region,
-    addressCountry: 'SN',
-  },
-  location: {
-    '@type': 'Place',
-    geo: {
-      '@type': 'GeoCoordinates',
-      latitude: commune.latitude,
-      longitude: commune.longitude,
-    },
-  },
-  areaServed: commune.nom,
-  parentOrganization: { '@type': 'GovernmentOrganization', name: 'République du Sénégal' },
-};
-
-useHead({
-  htmlAttrs: { lang: 'fr-SN' },
-  link: [{ rel: 'canonical', href: pageUrl }],
-  meta: [
-    { name: 'robots', content: 'index, follow' },
-    { name: 'theme-color', content: themeColor },
-    { property: 'og:site_name', content: siteName },
-  ],
-  script: [
-    {
-      key: 'ld-mairie',
-      type: 'application/ld+json',
-      innerHTML: JSON.stringify(mairieSchema),
-    },
-  ],
-});
 </script>
 
 <template>
@@ -153,14 +63,13 @@ useHead({
             </span>
           </div>
           <div class="mt-4 flex flex-wrap gap-2">
-            <button
-              type="button"
+            <NuxtLink
+              :to="getCommuneTabPath(commune.slug, COMMUNE_TABS[0])"
               class="inline-flex items-center gap-2 rounded-md bg-white/95 px-4 py-2 text-sm font-medium text-gray-900 transition hover:bg-white"
-              @click="selectedTab = 0"
             >
               <UIcon name="i-heroicons-map-pin" class="size-4" />
               Localiser
-            </button>
+            </NuxtLink>
             <a
               v-if="commune.mairie.telephone"
               :href="`tel:${commune.mairie.telephone.replace(/\s/g, '')}`"
@@ -195,31 +104,31 @@ useHead({
     <!-- ─── Bandeau KPI ────────────────────────────────────────────── -->
     <CollectivitesCommuneKpiStrip :commune="commune" class="mt-4 rounded-lg" />
 
-    <!-- ─── Barre d'onglets (scrollable mobile, sans scrollbar) ────── -->
+    <!-- ─── Barre d'onglets (liens réels, indexables) ──────────────── -->
     <div
-      class="sticky top-0 z-30 -mx-4 mt-2 border-b border-gray-100 bg-white/90 px-4 backdrop-blur dark:border-gray-700 dark:bg-gray-900/90"
+      class="sticky top-0 z-30 -mx-4 mt-2 border-b border-gray-100 bg-white px-4 dark:border-gray-700 dark:bg-gray-900"
     >
-      <nav class="scrollbar-hide flex gap-1 overflow-x-auto py-2" aria-label="Sections de la fiche">
-        <button
-          v-for="(t, i) in TABS"
+      <nav class="scrollbar-hide flex gap-5 overflow-x-auto" aria-label="Sections de la fiche">
+        <NuxtLink
+          v-for="t in COMMUNE_TABS"
           :key="t.key"
-          type="button"
-          class="whitespace-nowrap rounded-md px-4 py-2 text-sm transition"
+          :to="getCommuneTabPath(commune.slug, t)"
+          class="shrink-0 whitespace-nowrap border-b-2 px-1 py-3 text-sm transition-colors"
           :class="
-            selectedTab === i
-              ? 'bg-primary-600 text-white'
-              : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white'
+            isActiveTab(t)
+              ? 'border-primary-600 font-medium text-gray-900 dark:text-white'
+              : 'border-transparent text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white'
           "
-          @click="selectedTab = i"
+          :aria-current="isActiveTab(t) ? 'page' : undefined"
         >
           {{ t.label }}
-        </button>
+        </NuxtLink>
       </nav>
     </div>
 
-    <!-- ─── Contenu de l'onglet actif ──────────────────────────────── -->
+    <!-- ─── Contenu de l'onglet actif (route enfant) ──────────────── -->
     <section class="py-8">
-      <component :is="activeTab.component" :commune="commune" />
+      <NuxtPage />
     </section>
   </div>
 </template>

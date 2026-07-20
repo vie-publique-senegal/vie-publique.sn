@@ -1,6 +1,8 @@
 <template>
   <div class="grid gap-6 lg:grid-cols-3">
-    <div class="custom-shadow rounded-lg bg-white p-6 dark:bg-gray-800 lg:col-span-1">
+    <div
+      class="rounded-xl bg-white p-6 ring-1 ring-gray-200 dark:bg-gray-800 dark:ring-gray-700 lg:col-span-1"
+    >
       <div class="text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400">
         Budget {{ budget.annee }}
       </div>
@@ -21,8 +23,10 @@
         </CollectivitesInfoRow>
       </div>
     </div>
-    <div class="custom-shadow rounded-lg bg-white p-6 dark:bg-gray-800 lg:col-span-2">
-      <h2 class="mb-4 text-xl font-bold text-gray-900 dark:text-white">Répartition</h2>
+    <div
+      class="rounded-xl bg-white p-6 ring-1 ring-gray-200 dark:bg-gray-800 dark:ring-gray-700 lg:col-span-2"
+    >
+      <h2 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Répartition</h2>
       <div class="space-y-5">
         <div v-for="it in items" :key="it.label">
           <div class="mb-1.5 flex justify-between text-sm">

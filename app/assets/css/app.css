@@ -44,7 +44,8 @@
 
 /* Override Tailwind dark mode colors with Dim palette */
 .dark body,
-.dark .bg-gray-900 {
+.dark .bg-gray-900,
+.dark .dark\:bg-gray-900 {
   background-color: #15202B !important;
 }
 

@@ -1,7 +1,7 @@
 <template>
   <NuxtLink
     :to="`/collectivites-territoriales/communes/${commune.slug}`"
-    class="custom-shadow group block overflow-hidden rounded-lg bg-white transition hover:-translate-y-0.5 hover:shadow-xl dark:bg-gray-800"
+    class="group block overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-gray-100 transition hover:shadow-lg dark:bg-gray-800 dark:ring-gray-800"
   >
     <div class="relative h-40 overflow-hidden bg-gray-100 dark:bg-gray-700">
       <img

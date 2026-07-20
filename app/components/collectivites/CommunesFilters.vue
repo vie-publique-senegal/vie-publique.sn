@@ -1,18 +1,13 @@
 <template>
-  <div class="custom-shadow rounded-lg bg-white p-4 dark:bg-gray-800 md:p-6">
-    <div class="flex flex-col gap-3 md:flex-row">
-      <UInput
-        v-model="q"
-        icon="i-heroicons-magnifying-glass"
-        type="search"
-        size="lg"
-        class="flex-1"
-        placeholder="Rechercher une commune, un maire, une région…"
-      />
+  <div
+    class="rounded-xl bg-white p-4 ring-1 ring-gray-200 dark:bg-gray-800 dark:ring-gray-700 md:p-6"
+  >
+    <div class="flex items-center justify-between gap-3">
+      <p class="text-xs text-gray-500 dark:text-gray-400">Filtrer les résultats</p>
       <slot name="actions" />
     </div>
 
-    <div class="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-7">
+    <div class="mt-3 grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-7">
       <label class="flex flex-col text-xs text-gray-500 dark:text-gray-400">
         <span class="mb-1 uppercase tracking-wider">Région</span>
         <USelect v-model="region" :options="withAll(regions)" />
@@ -41,11 +36,7 @@
       </div>
     </div>
 
-    <div class="mt-4 flex items-center justify-between text-sm">
-      <span class="text-gray-500 dark:text-gray-400">
-        <strong class="text-gray-900 dark:text-white">{{ count }}</strong>
-        commune{{ count > 1 ? 's' : '' }} correspondante{{ count > 1 ? 's' : '' }}
-      </span>
+    <div class="mt-4 flex justify-end text-sm">
       <button
         type="button"
         class="text-primary-600 dark:text-primary-400 hover:underline"
@@ -64,13 +55,11 @@ interface Props {
   regions: string[];
   departements: string[];
   partis: string[];
-  count: number;
 }
 
 defineProps<Props>();
 defineEmits<{ reset: [] }>();
 
-const q = defineModel<string>('q', { default: '' });
 const region = defineModel<string>('region', { default: '' });
 const departement = defineModel<string>('departement', { default: '' });
 const parti = defineModel<string>('parti', { default: '' });

@@ -3,7 +3,7 @@
     <div
       v-for="(a, i) in commune.actualites"
       :key="i"
-      class="custom-shadow rounded-lg bg-white p-5 dark:bg-gray-800"
+      class="rounded-xl bg-white p-5 ring-1 ring-gray-200 dark:bg-gray-800 dark:ring-gray-700"
     >
       <div class="flex items-baseline justify-between gap-3">
         <span class="text-primary-600 dark:text-primary-400 text-xs uppercase tracking-wider">{{

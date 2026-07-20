@@ -3,7 +3,7 @@
     <div
       v-for="it in items"
       :key="it.label"
-      class="custom-shadow rounded-lg bg-white p-5 dark:bg-gray-800"
+      class="rounded-xl bg-white p-5 ring-1 ring-gray-200 dark:bg-gray-800 dark:ring-gray-700"
     >
       <UIcon :name="it.icon" class="size-6 text-gray-400 dark:text-gray-500" />
       <div class="mt-2 text-3xl font-bold text-gray-900 dark:text-white">

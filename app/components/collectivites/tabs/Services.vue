@@ -3,7 +3,7 @@
     <div
       v-for="s in commune.services"
       :key="s"
-      class="custom-shadow rounded-lg bg-white p-5 transition hover:shadow-xl dark:bg-gray-800"
+      class="rounded-xl bg-white p-5 ring-1 ring-gray-200 dark:bg-gray-800 dark:ring-gray-700"
     >
       <UIcon name="i-heroicons-building-office-2" class="size-6 text-gray-400 dark:text-gray-500" />
       <div class="mt-2 font-medium text-gray-900 dark:text-white">{{ s }}</div>

@@ -140,49 +140,89 @@ useHead({
 
 <template>
   <div class="min-h-screen pb-16">
-    <AppBreadcrumb :items="[{ label: 'Collectivités territoriales' }]" class="px-4" />
+    <div class="container mx-auto px-4 pt-2">
+      <AppBreadcrumb :items="[{ label: 'Collectivités territoriales' }]" />
+    </div>
 
-    <!-- ─── Hero éditorial (H1 unique + stats) ─────────────────────── -->
-    <section class="mx-auto mt-4 max-w-3xl px-4">
-      <h1 class="text-2xl font-bold text-gray-900 dark:text-white md:text-3xl">
-        L'annuaire des collectivités territoriales du Sénégal
-      </h1>
-      <p class="mt-3 text-sm leading-relaxed text-gray-600 dark:text-gray-400 md:text-base">
-        Fiches complètes de chaque commune : gouvernance locale, conseil municipal, données
-        territoriales, résultats électoraux, budget, projets et documents publics.
-      </p>
-      <div class="mt-6 flex flex-wrap gap-8 text-sm">
+    <!-- ─── En-tête sticky (titre + compteur + recherche) ──────────── -->
+    <header
+      class="sticky top-0 z-40 border-b border-gray-200 bg-white/95 backdrop-blur-sm dark:border-gray-800 dark:bg-gray-900/95"
+    >
+      <div class="mx-auto max-w-7xl px-4 py-3">
+        <div class="flex items-center justify-between">
+          <h1 class="text-lg font-bold text-gray-900 dark:text-white sm:text-xl">
+            Collectivités territoriales
+          </h1>
+          <span class="text-xs text-gray-500 dark:text-gray-400">
+            {{ formatNumber(filtered.length) }} commune{{ filtered.length > 1 ? 's' : '' }}
+          </span>
+        </div>
+        <p class="mt-1 hidden text-sm text-gray-500 dark:text-gray-400 sm:block">
+          Fiches complètes de chaque commune : gouvernance locale, conseil municipal, données
+          territoriales, résultats électoraux, budget, projets et documents publics.
+        </p>
+
+        <!-- Recherche -->
+        <div class="group relative mt-3">
+          <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5">
+            <UIcon
+              name="i-heroicons-magnifying-glass-20-solid"
+              class="h-5 w-5 text-gray-400 transition-colors group-focus-within:text-gray-500"
+            />
+          </div>
+          <input
+            type="search"
+            :value="q"
+            placeholder="Rechercher une commune, un maire, une région…"
+            class="block w-full rounded-xl border-0 bg-gray-100 py-3 pl-11 pr-10 text-sm text-gray-900 ring-1 ring-transparent transition-all placeholder:text-gray-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-gray-400 dark:bg-gray-800 dark:text-white dark:placeholder:text-gray-400 dark:focus:bg-gray-800/80 dark:focus:ring-gray-500 sm:py-2.5"
+            @input="q = ($event.target as HTMLInputElement).value"
+          />
+          <button
+            v-if="q"
+            type="button"
+            class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 transition-colors hover:text-gray-600 dark:hover:text-gray-300"
+            @click="q = ''"
+          >
+            <span
+              class="flex h-5 w-5 items-center justify-center rounded-full bg-gray-300 dark:bg-gray-600"
+            >
+              <UIcon
+                name="i-heroicons-x-mark-20-solid"
+                class="h-3.5 w-3.5 text-gray-600 dark:text-gray-300"
+              />
+            </span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- ─── Repères chiffrés ───────────────────────────────────────── -->
+    <section class="mx-auto max-w-7xl px-4">
+      <div class="flex flex-wrap gap-6 border-b border-gray-100 py-4 text-sm dark:border-gray-700">
         <div>
-          <div class="text-2xl font-bold text-gray-900 dark:text-white">
-            {{ formatNumber(COMMUNES.length) }}
-          </div>
-          <div class="text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400">
-            Collectivités référencées
-          </div>
+          <span class="font-bold text-gray-900 dark:text-white">{{
+            formatNumber(COMMUNES.length)
+          }}</span>
+          <span class="text-gray-500 dark:text-gray-400"> collectivités référencées</span>
         </div>
         <div>
-          <div class="text-2xl font-bold text-gray-900 dark:text-white">
-            {{ formatNumber(REGIONS.length) }}
-          </div>
-          <div class="text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400">
-            Régions couvertes
-          </div>
+          <span class="font-bold text-gray-900 dark:text-white">{{
+            formatNumber(REGIONS.length)
+          }}</span>
+          <span class="text-gray-500 dark:text-gray-400"> régions couvertes</span>
         </div>
         <div>
-          <div class="text-2xl font-bold text-gray-900 dark:text-white">
-            {{ formatNumber(totalPopulation) }}
-          </div>
-          <div class="text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400">
-            Habitants
-          </div>
+          <span class="font-bold text-gray-900 dark:text-white">{{
+            formatNumber(totalPopulation)
+          }}</span>
+          <span class="text-gray-500 dark:text-gray-400"> habitants</span>
         </div>
       </div>
     </section>
 
-    <!-- ─── Recherche + filtres + bascule de vue ───────────────────── -->
-    <section class="mx-auto mt-8 max-w-7xl px-4">
+    <!-- ─── Filtres + bascule de vue ───────────────────────────────── -->
+    <section class="mx-auto mt-6 max-w-7xl px-4">
       <CollectivitesCommunesFilters
-        v-model:q="q"
         v-model:region="region"
         v-model:departement="departement"
         v-model:parti="parti"
@@ -193,21 +233,18 @@ useHead({
         :regions="REGIONS"
         :departements="DEPARTEMENTS"
         :partis="PARTIS"
-        :count="filtered.length"
         @reset="resetFilters"
       >
         <template #actions>
-          <div
-            class="flex rounded-lg border border-gray-200 bg-white p-1 dark:border-gray-700 dark:bg-gray-800"
-          >
+          <div class="flex rounded-lg ring-1 ring-gray-200 dark:ring-gray-700">
             <button
               v-for="v in VIEWS"
               :key="v.key"
               type="button"
-              class="rounded-md px-4 py-2 text-sm transition"
+              class="rounded-md px-4 py-1.5 text-sm transition"
               :class="
                 view === v.key
-                  ? 'bg-primary-600 text-white'
+                  ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900'
                   : 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white'
               "
               @click="view = v.key"

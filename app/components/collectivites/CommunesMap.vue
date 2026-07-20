@@ -13,9 +13,19 @@
   call-sites restent intacts.
 -->
 <template>
-  <div class="custom-shadow relative overflow-hidden rounded-lg" :style="{ height }">
+  <div
+    ref="containerRef"
+    class="relative overflow-hidden rounded-xl ring-1 ring-gray-200 dark:ring-gray-700"
+    :style="{ height }"
+  >
     <ClientOnly>
-      <LMap :zoom="zoom" :center="center" :use-global-leaflet="false" class="z-0 h-full w-full">
+      <LMap
+        :zoom="zoom"
+        :center="center"
+        :use-global-leaflet="false"
+        class="z-0 h-full w-full"
+        @ready="onMapReady"
+      >
         <LTileLayer
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
@@ -76,6 +86,11 @@
 </template>
 
 <script setup lang="ts">
+// PERF-8 (nuxt.config.ts) : l'injection globale de leaflet.css est désactivée,
+// chaque composant qui rend une carte Leaflet doit l'importer lui-même — sans ce
+// CSS, les tuiles perdent leur positionnement/dimensionnement Leaflet (`max-width:
+// none` etc.) et Tailwind preflight les corrompt (tuiles manquantes en damier).
+import 'leaflet/dist/leaflet.css';
 import type { Commune } from '~~/types/collectivite';
 import { formatNumber } from '#shared/communes';
 
@@ -101,4 +116,29 @@ const zoom = computed(() => (focus.value ? 11 : 6.5));
 
 const markerRadius = (c: Commune) => Math.max(6, Math.min(22, Math.log10(c.population) * 3));
 const markerColor = (c: Commune) => (c.slug === props.focusSlug ? '#1D9BF0' : '#0284c7');
+
+// Leaflet ne recharge les tuiles que pour la taille du conteneur au moment de
+// l'initialisation. Ici le conteneur vit dans une carte à ring/padding, un onglet
+// routé ou un panneau superposé : sa taille finale n'est pas garantie stable au
+// premier rendu → sans `invalidateSize()`, une partie des tuiles reste vide
+// (damier). On resynchronise à l'événement `ready` puis à chaque resize réel du
+// conteneur (ResizeObserver), pas seulement au montage.
+const containerRef = ref<HTMLElement | null>(null);
+let mapInstance: { invalidateSize: () => void } | null = null;
+let resizeObserver: ResizeObserver | undefined;
+
+const onMapReady = (map: { invalidateSize: () => void }) => {
+  mapInstance = map;
+  nextTick(() => map.invalidateSize());
+};
+
+onMounted(() => {
+  if (!containerRef.value) return;
+  resizeObserver = new ResizeObserver(() => mapInstance?.invalidateSize());
+  resizeObserver.observe(containerRef.value);
+});
+
+onUnmounted(() => {
+  resizeObserver?.disconnect();
+});
 </script>

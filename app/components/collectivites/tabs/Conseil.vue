@@ -20,7 +20,7 @@
       <div
         v-for="(cons, i) in filtered"
         :key="i"
-        class="custom-shadow flex items-center gap-3 rounded-lg bg-white p-3 dark:bg-gray-800"
+        class="flex items-center gap-3 rounded-xl bg-white p-3 ring-1 ring-gray-200 dark:bg-gray-800 dark:ring-gray-700"
       >
         <div
           class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gray-100 font-medium text-gray-700 dark:bg-gray-700 dark:text-gray-300"

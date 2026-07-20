@@ -1,12 +1,12 @@
 <template>
   <div class="grid gap-8">
     <div>
-      <h2 class="mb-4 text-xl font-bold text-gray-900 dark:text-white">Adjoints au maire</h2>
+      <h2 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Adjoints au maire</h2>
       <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <div
           v-for="(a, i) in commune.adjoints"
           :key="i"
-          class="custom-shadow rounded-lg bg-white p-5 dark:bg-gray-800"
+          class="rounded-xl bg-white p-5 ring-1 ring-gray-200 dark:bg-gray-800 dark:ring-gray-700"
         >
           <div class="flex items-start gap-3">
             <div
@@ -26,8 +26,10 @@
       </div>
     </div>
     <div>
-      <h2 class="mb-4 text-xl font-bold text-gray-900 dark:text-white">Secrétariat municipal</h2>
-      <div class="custom-shadow rounded-lg bg-white p-5 dark:bg-gray-800">
+      <h2 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">
+        Secrétariat municipal
+      </h2>
+      <div class="rounded-xl bg-white p-5 ring-1 ring-gray-200 dark:bg-gray-800 dark:ring-gray-700">
         <div class="flex items-center gap-3">
           <div
             class="flex h-12 w-12 items-center justify-center rounded-full bg-sky-50 font-medium text-sky-700 dark:bg-sky-900/40 dark:text-sky-300"

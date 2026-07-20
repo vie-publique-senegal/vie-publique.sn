@@ -50,7 +50,7 @@ useHead({
 
 <template>
   <div class="relative h-full min-h-[480px] w-full">
-    <CollectivitesCommunesMap :communes="filtered" height="100%" class="!rounded-none" />
+    <CollectivitesCommunesMap :communes="filtered" height="100%" class="!rounded-none !ring-0" />
 
     <!-- Panneau de contrôle superposé -->
     <div

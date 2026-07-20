@@ -1,7 +1,7 @@
 <template>
   <div class="grid gap-6 md:grid-cols-2">
-    <div class="custom-shadow rounded-lg bg-white p-6 dark:bg-gray-800">
-      <h2 class="mb-4 text-xl font-bold text-gray-900 dark:text-white">
+    <div class="rounded-xl bg-white p-6 ring-1 ring-gray-200 dark:bg-gray-800 dark:ring-gray-700">
+      <h2 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">
         Mairie de {{ commune.nom }}
       </h2>
       <CollectivitesInfoRow label="Adresse" :value="mairie.adresse" />
@@ -43,8 +43,8 @@
       </CollectivitesInfoRow>
       <CollectivitesInfoRow label="Horaires" :value="mairie.horaires" />
     </div>
-    <div class="custom-shadow rounded-lg bg-white p-6 dark:bg-gray-800">
-      <h2 class="mb-4 text-xl font-bold text-gray-900 dark:text-white">Localisation</h2>
+    <div class="rounded-xl bg-white p-6 ring-1 ring-gray-200 dark:bg-gray-800 dark:ring-gray-700">
+      <h2 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Localisation</h2>
       <CollectivitesCommunesMap :communes="[commune]" height="320px" :focus-slug="commune.slug" />
     </div>
   </div>

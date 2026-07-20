@@ -1,7 +1,9 @@
 <template>
   <div>
     <!-- Desktop : table -->
-    <div class="custom-shadow hidden overflow-hidden rounded-lg bg-white dark:bg-gray-800 md:block">
+    <div
+      class="hidden overflow-hidden rounded-xl bg-white ring-1 ring-gray-200 dark:bg-gray-800 dark:ring-gray-700 md:block"
+    >
       <table class="w-full text-sm">
         <thead
           class="bg-gray-50 text-left text-xs uppercase tracking-wider text-gray-500 dark:bg-gray-700 dark:text-gray-400"
@@ -39,7 +41,7 @@
       <div
         v-for="(d, i) in commune.documents"
         :key="i"
-        class="custom-shadow rounded-lg bg-white p-4 dark:bg-gray-800"
+        class="rounded-xl bg-white p-4 ring-1 ring-gray-200 dark:bg-gray-800 dark:ring-gray-700"
       >
         <div class="font-medium text-gray-900 dark:text-white">{{ d.titre }}</div>
         <div class="mt-2 flex items-center gap-3 text-xs">
