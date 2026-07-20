@@ -122,7 +122,7 @@ const representativeElectionId = computed(() => {
         class="mb-6"
         :items="[
           { label: 'Élections', to: '/elections-senegal' },
-          { label: 'Carte électorale' },
+          { label: 'Carte électorale', to: '/elections-senegal' },
           { label: 'Nationale' },
         ]"
       />

@@ -105,7 +105,7 @@ const diasporaConstituenciesCount = computed(() => diasporaZonesData.value?.zone
           { label: 'Élections', to: '/elections-senegal' },
           {
             label: 'Carte électorale',
-            to: { path: '/elections-senegal/carte-electorale/nationale', query: contextQuery },
+            to: '/elections-senegal',
           },
           { label: 'Diaspora' },
         ]"
