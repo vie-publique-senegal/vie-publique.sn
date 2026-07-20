@@ -65,7 +65,7 @@ useHead({
             {{ formatNumber(filtered.length) }} collectivité{{
               filtered.length > 1 ? 's' : ''
             }}
-            affichée{{ filtered.length > 1 ? 's' : '' }} — cliquez sur une commune pour ouvrir sa
+            affichée{{ filtered.length > 1 ? 's' : '' }} - cliquez sur une commune pour ouvrir sa
             fiche.
           </p>
         </div>

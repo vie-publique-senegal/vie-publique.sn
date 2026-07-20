@@ -76,7 +76,7 @@ const resetFilters = () => {
 
 const totalPopulation = COMMUNES.reduce((s, c) => s + c.population, 0);
 
-// ── SEO (en dernier — helpers et computeds déclarés avant) ─────────
+// ── SEO (en dernier - helpers et computeds déclarés avant) ─────────
 const pageTitle = 'Collectivités territoriales du Sénégal : annuaire des communes';
 const pageDescription =
   'Recherchez une commune, un maire, une région. Fiches complètes des collectivités territoriales du Sénégal : gouvernance locale, conseil municipal, budgets et documents officiels.';

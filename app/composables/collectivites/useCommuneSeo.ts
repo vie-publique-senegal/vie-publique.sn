@@ -5,15 +5,15 @@ import { getCommuneTabPath, type CommuneTab } from './communeTabs';
 // SEO + JSON-LD partagés par la fiche commune et ses onglets routés.
 // Chaque onglet a son propre titre/description/canonical (indexable séparément),
 // mais réémet le même nœud d'entité GovernmentOrganization (la mairie) : cf.
-// docs/guidelines/design.md — pas de BreadcrumbList ici, <AppBreadcrumb> l'émet déjà.
+// docs/guidelines/design.md - pas de BreadcrumbList ici, <AppBreadcrumb> l'émet déjà.
 export function useCommuneSeo(commune: Commune, tab: CommuneTab) {
   const { siteName, siteUrl, themeColor } = useSiteMetadata();
 
   const pageUrl = `${siteUrl}${getCommuneTabPath(commune.slug, tab)}`;
   const pageTitle =
     tab.key === 'apercu'
-      ? `${commune.nom} — Commune du Sénégal (${commune.region})`
-      : `${tab.label} — ${commune.nom} (${commune.region})`;
+      ? `${commune.nom} - Commune du Sénégal (${commune.region})`
+      : `${tab.label} - ${commune.nom} (${commune.region})`;
   const pageDescription =
     tab.key === 'apercu'
       ? `Fiche complète de la commune de ${commune.nom} (${commune.region}) : maire ${commune.maire.nom}, ${formatNumber(commune.population)} habitants, budget, conseil municipal et documents.`

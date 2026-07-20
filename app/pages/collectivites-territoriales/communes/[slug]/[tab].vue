@@ -15,7 +15,7 @@ import TabActualites from '~/components/collectivites/tabs/Actualites.vue';
 import TabContacts from '~/components/collectivites/tabs/Contacts.vue';
 
 // Aperçu vit dans [slug]/index.vue (balise littérale <CollectivitesTabsApercu>,
-// auto-importée normalement) — cette route ne gère que les 10 autres onglets.
+// auto-importée normalement) - cette route ne gère que les 10 autres onglets.
 const TAB_COMPONENTS: Record<string, Component> = {
   maire: TabMaire,
   executif: TabExecutif,

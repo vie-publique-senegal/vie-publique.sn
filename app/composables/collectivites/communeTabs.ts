@@ -1,6 +1,6 @@
-// Onglets de la fiche commune — chaque entrée correspond à une route indexable
+// Onglets de la fiche commune - chaque entrée correspond à une route indexable
 // (`path: ''` = /communes/<slug>, sinon /communes/<slug>/<path>).
-// NB : pas de référence au composant ici — Nuxt n'enregistre PAS globalement les
+// NB : pas de référence au composant ici - Nuxt n'enregistre PAS globalement les
 // composants auto-importés (l'auto-import est une analyse statique par fichier des
 // balises littérales du template). Un `<component :is="'CollectivitesTabsBudget'">`
 // construit depuis une chaîne ne résout donc RIEN (le composant n'a jamais été importé
