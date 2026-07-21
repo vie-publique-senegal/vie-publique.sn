@@ -118,7 +118,7 @@ const tabLink = (tab: string) =>
 // Navigation vers une autre élection (changement type/année)
 const navigateToElection = (type: string, year: number) => {
   const targetElection = config.value?.elections?.find(
-    (e: any) => e.type === type && e.year === year,
+    (e: any) => e.type === type && e.year === year && !!e.slug,
   );
   if (!targetElection?.slug) return;
   const targetTab = targetElection.status === 'completed' ? 'resultats' : 'candidats';
@@ -130,7 +130,11 @@ const onYearChange = (year: number | string) =>
 
 const onTypeChange = (type: string) => {
   let targetYear = selectedYear.value;
-  const electionsOfType = config.value?.elections?.filter((e: any) => e.type === type) || [];
+  // Seuls les scrutins avec slug sont navigables : sans ce filtre, une élection
+  // historique sans fiche (ex. législatives 2012) fait croire que l'année courante
+  // existe pour le type cible et bloque la navigation.
+  const electionsOfType =
+    config.value?.elections?.filter((e: any) => e.type === type && !!e.slug) || [];
   const exists = electionsOfType.some((e: any) => e.year === targetYear);
 
   if (!exists && electionsOfType.length > 0) {
