@@ -22,16 +22,19 @@ const isPresidential2Rounds = computed(
   () => currentElection.value?.type === 'presidential' && currentElection.value?.rounds === 2,
 );
 
+// Coalitions ayant des données de second tour renseignées
+const round2Coalitions = computed(() =>
+  coalitions.value.filter(
+    (c) =>
+      (c.round_2_voix != null && c.round_2_voix > 0) ||
+      (c.round_2_pourcentage != null && c.round_2_pourcentage > 0),
+  ),
+);
+
 // La section second tour s'affiche uniquement si l'élection est présidentielle à 2 tours
 // ET qu'au moins une coalition a des données de second tour renseignées
 const isPresidentialWithRound2 = computed(
-  () =>
-    isPresidential2Rounds.value &&
-    coalitions.value.some(
-      (c) =>
-        (c.round_2_voix != null && c.round_2_voix > 0) ||
-        (c.round_2_pourcentage != null && c.round_2_pourcentage > 0),
-    ),
+  () => isPresidential2Rounds.value && round2Coalitions.value.length > 0,
 );
 
 // Disponibilité des données carte vérifiée en amont (même source que la carte) :
@@ -230,12 +233,14 @@ useSeoMeta({
               v-if="['presidential', 'legislative'].includes(selectedType)"
               :results="coalitions"
               :type="selectedType"
+              :round="isPresidentialWithRound2 ? 1 : undefined"
               class="mb-6"
             />
             <ElectionsDashboardResultClassement
               :coalitions="coalitions"
               :loading="loadingCoalitions"
               :type="selectedType"
+              :subtitle="isPresidentialWithRound2 ? '1er tour' : null"
             />
 
             <!-- Section Second Tour (présidentielle uniquement) -->
@@ -243,6 +248,12 @@ useSeoMeta({
               v-if="isPresidentialWithRound2"
               class="mt-8 border-t border-gray-100 pt-6 dark:border-gray-800"
             >
+              <ElectionsDashboardResultChart
+                :results="round2Coalitions"
+                type="presidential"
+                :round="2"
+                class="mb-6"
+              />
               <ElectionsDashboardResultRound2
                 :coalitions="coalitions"
                 :loading="loadingCoalitions"

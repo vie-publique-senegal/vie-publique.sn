@@ -9,7 +9,13 @@ ChartJS.register(ArcElement, Tooltip, Legend, ChartDataLabels);
 const props = defineProps<{
   results: Coalition[];
   type: string;
+  round?: 1 | 2;
 }>();
+
+const getVoix = (item: Coalition) =>
+  (props.round === 2 ? item.round_2_voix : item.voix) || 0;
+const getPourcentage = (item: Coalition) =>
+  (props.round === 2 ? item.round_2_pourcentage : item.pourcentage) || 0;
 
 const colorMode = useColorMode();
 const isDark = computed(() => colorMode.value === 'dark');
@@ -34,7 +40,7 @@ const defaultColors = [
 
 const sortedResults = computed(() => {
   return [...props.results]
-    .sort((a, b) => (b.voix || 0) - (a.voix || 0))
+    .sort((a, b) => getVoix(b) - getVoix(a))
     .slice(0, 10);
 });
 
@@ -59,7 +65,7 @@ const chartColors = computed(() =>
 const doughnutData = computed(() => ({
   labels: sortedResults.value.map(item => getName(item)),
   datasets: [{
-    data: sortedResults.value.map(item => item.pourcentage || 0),
+    data: sortedResults.value.map(item => getPourcentage(item)),
     backgroundColor: chartColors.value,
     borderColor: isDark.value ? '#111827' : '#ffffff',
     borderWidth: 3,
@@ -100,7 +106,7 @@ const doughnutOptions = computed((): any => ({
           if (props.type === 'presidential' && item) {
             lines.push(` Coalition: ${item.name}`);
           }
-          lines.push(` ${context.parsed}% (${formatNumber(item?.voix || 0)} voix)`);
+          lines.push(` ${context.parsed}% (${formatNumber(item ? getVoix(item) : 0)} voix)`);
           return lines;
         },
       },
@@ -244,7 +250,11 @@ const hoveredGroup = ref<HemicycleGroup | null>(null);
     <div class="px-5 py-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
       <div>
         <h3 class="font-bold text-gray-900 dark:text-white text-sm sm:text-base">
-          {{ type === 'presidential' ? 'Répartition des voix par candidat' : 'Répartition des sièges par coalition' }}
+          {{
+            type === 'presidential'
+              ? `Répartition des voix par candidat${round === 1 ? ' - 1er tour' : round === 2 ? ' - 2nd tour' : ''}`
+              : 'Répartition des sièges par coalition'
+          }}
         </h3>
       </div>
     </div>
