@@ -1,6 +1,7 @@
 # TODO Refactoring — Supprimer l'ancien système « état » (Système A)
 
-> **Statut** : à traiter. Audit réalisé le 2026-06-25.
+> **Statut** : Couche 1 (code) **terminée le 2026-07-23**. Reste la Couche 2 (Directus).
+> Audit réalisé le 2026-06-25.
 > **Résumé** : le projet contient deux systèmes « état » parallèles. Le **Système A**
 > (collection Directus `state_entity`) est redondant avec le **Système B** actuel
 > (`state_organization_entity`). Il faut supprimer le Système A.
@@ -27,20 +28,28 @@
 - **Seul lien restant vers l'ancien `state_entity`** : `public_project.ministry`
   (filtre ministères des projets) dans `server/api/public-projects/filters.get.ts` (L48-58).
 
-## Couche 1 — CODE (suppression sûre, rien ne l'importe hors de lui)
+## Couche 1 — CODE (✅ faite le 2026-07-23)
 
-À supprimer :
+- [x] `server/api/state/` (4 fichiers : `entities/index.get.ts`, `entities/[slug].get.ts`, `tree.get.ts`, `stats.get.ts`)
+- [x] `app/pages/etat-senegal/annuaire/` (2 fichiers : `index.vue`, `[slug].vue`)
+- [x] `app/composables/useStateEntities.ts`
+- [x] `app/composables/useStateTree.ts`
+- [x] `app/composables/useStateStats.ts`
+- [x] `app/composables/useStateEntityDetail.ts`
+- [x] `types/state-entity.ts`
+- [x] Composants orphelins découverts en plus : `StateTreeNode.vue`, `StateEntityCard.vue`,
+      `StateEntityFilters.vue`, `State/EntityTypeBadge.vue`, `State/EntityStatusBadge.vue`
+- [x] Redirections 301 ajoutées (`routeRules`) : `/etat-senegal/annuaire` →
+      `/etat-senegal/organisation` et `/etat-senegal/annuaire/**` → `/etat-senegal/**` ;
+      entrée `robots.disallow` retirée (le crawler doit voir la 301)
+- [x] Réindexeur recherche corrigé (`scripts/search-reindex.mjs`) : URL `/etat-senegal/<slug>`
+      + filtre `has_public_page` (avant : liens vers l'annuaire A mort, 2 394 entités indexées
+      dont 2 055 sans page)
+- [x] Vérifié : `npm run lint` (aucune référence résiduelle)
 
-- [ ] `server/api/state/` (4 fichiers : `entities/index.get.ts`, `entities/[slug].get.ts`, `tree.get.ts`, `stats.get.ts`)
-- [ ] `app/pages/etat-senegal/annuaire/` (2 fichiers : `index.vue`, `[slug].vue`)
-- [ ] `app/composables/useStateEntities.ts`
-- [ ] `app/composables/useStateTree.ts`
-- [ ] `app/composables/useStateStats.ts`
-- [ ] `app/composables/useStateEntityDetail.ts`
-- [ ] `types/state-entity.ts`
-- [ ] Entrée menu « Organigramme de l'etat » dans `app/pages/menu.vue` (~L261-267)
-- [ ] Flag `menu_organigramme_etat` dans `app/config/features.config.ts`
-- [ ] Vérifier ensuite : `npm run lint` (aucune référence résiduelle)
+> ⚠️ **Gardés volontairement** (le TODO initial était périmé) : l'entrée menu
+> « Organigramme de l'etat » et le flag `menu_organigramme_etat` pointent désormais vers le
+> **Système B** (`/etat-senegal/organisation` + bloc `HomeEtatOrganisation` de la home).
 
 ## Couche 2 — COLLECTION Directus `state_entity` (PAS avant migration)
 
