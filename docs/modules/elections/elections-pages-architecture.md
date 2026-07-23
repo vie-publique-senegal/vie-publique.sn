@@ -93,7 +93,7 @@ app/pages/elections-senegal/
 | `/elections-senegal/[slug]/statistiques` | Statistiques (législatives) |
 | `/elections-senegal/[slug]/guide` | Vidéos tutoriels de l'élection |
 | `/elections-senegal/guide-electoral` | Guide de l'électeur |
-| `/elections-senegal/legislation` | Législation électorale |
+| `/elections-senegal/legislation` | **Supprimée** — redirige (301) vers `/documents/elections` |
 | `/elections-senegal/carte-electorale` | **Redirige (301)** vers `carte-electorale/nationale` |
 | `/elections-senegal/carte-electorale/nationale` | Carte électorale nationale, pilotée par révision (`?revision=`) |
 | `/elections-senegal/carte-electorale/nationale/dakar` | Détail département Dakar |

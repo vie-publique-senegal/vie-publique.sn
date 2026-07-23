@@ -98,18 +98,13 @@ const topLegislativeCoalitions = computed(() => {
 });
 
 
-const electionYear = computed(() => {
-  if (!props.election.election_date) return 'all';
-  return new Date(props.election.election_date).getFullYear().toString();
-});
-
 const quickLinks = computed(() => {
   const links = [];
   if (props.election.type === 'presidential') {
     links.push({
       label: 'Résultats définitifs',
       description: 'Proclamés par le Conseil Constitutionnel.',
-      to: `/elections-senegal/legislation?type=${props.election.type}&year=${electionYear.value}&q=resultats`,
+      to: '/documents/elections',
       icon: 'i-heroicons-document-text'
     });
   } else if (props.election.type === 'legislative') {

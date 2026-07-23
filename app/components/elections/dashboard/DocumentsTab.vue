@@ -20,7 +20,7 @@ const props = defineProps<{
       <p class="text-gray-500 font-bold">Aucun document spécifique n'est encore rattaché à ce scrutin.</p>
       <p class="text-xs text-gray-400 mt-2">Consultez la bibliothèque complète pour les textes généraux.</p>
       <NuxtLink
-        to="/elections-senegal/legislation"
+        to="/documents/elections"
         class="text-primary-600 dark:text-primary-400 mt-6 inline-flex items-center gap-1 text-sm font-bold underline underline-offset-4 hover:text-primary-700 dark:hover:text-primary-300"
       >
         Toute la législation

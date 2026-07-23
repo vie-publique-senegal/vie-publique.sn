@@ -62,7 +62,7 @@ useSeoMeta({
         </p>
       </div>
       <UButton
-        to="/elections-senegal/legislation"
+        to="/documents/elections"
         variant="ghost"
         size="xs"
         icon="i-heroicons-arrow-right"

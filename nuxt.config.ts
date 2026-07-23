@@ -264,6 +264,13 @@ export default defineNuxtConfig({
     },
     '/budget-etat-senegal': { redirect: { to: '/budget-senegal', statusCode: 301 } },
     '/budget-etat-senegal/**': { redirect: { to: '/budget-senegal/**', statusCode: 301 } },
+    // Législation électorale : page supprimée, consolidation vers /documents/elections
+    '/elections-senegal/legislation': {
+      redirect: { to: '/documents/elections', statusCode: 301 },
+    },
+    '/elections-senegal/legislation/**': {
+      redirect: { to: '/documents/elections', statusCode: 301 },
+    },
     '/nomination-senegal/conseil-des-ministres-07-aout': {
       redirect: { to: '/nomination-senegal', statusCode: 301 },
     },

@@ -99,7 +99,7 @@ const navigationLinks = computed(() => {
       title: 'Législation',
       description: 'Textes de lois et décrets',
       icon: 'i-heroicons-scale',
-      to: '/elections-senegal/legislation',
+      to: '/documents/elections',
       iconColor: 'text-emerald-600 dark:text-emerald-400',
       iconBg: 'bg-emerald-100 dark:bg-emerald-900/30',
       hoverRing: 'md:hover:ring-emerald-200',

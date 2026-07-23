@@ -26,7 +26,7 @@ Le module électoral couvre :
 | Historique des scrutins | `/elections-senegal/scrutins` | Liste paginée de toutes les élections publiées, lien vers leur tableau de bord |
 | Dashboard élection | `/elections-senegal/[slug]/...` | Tableau de bord d'UNE élection, organisé en onglets |
 | Guide électoral | `/elections-senegal/guide-electoral` | Vidéos tutoriels, filtrables par type de scrutin et langue |
-| Législation | `/elections-senegal/legislation` | Documents électoraux filtrables |
+| Législation | `/documents/elections` | Documents électoraux (page mutualisée `/documents/[category]`) |
 | Carte électorale | `/elections-senegal/carte-electorale` | **Redirige (301)** vers `/elections-senegal/carte-electorale/nationale` (query propagée) ; le contenu vit dans les sous-pages `nationale`/`diaspora`/`resume` |
 
 Chaque élection est identifiée par un **slug CMS** (ex. `legislatives-2024`) et par le couple **type + année** (`legislative` / `presidential` / `locale` + `year`).
