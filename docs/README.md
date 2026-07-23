@@ -39,6 +39,7 @@
 | **Déploiement / Docker** | [`infra/deployment.md`](./infra/deployment.md) | [`infra/docker.md`](./infra/docker.md) |
 | **Infra / topologie / supervision** | [`infra/README.md`](./infra/README.md) | [`infra/supervision-infra.md`](./infra/supervision-infra.md), [`infra/cloudfare.md`](./infra/cloudfare.md) |
 | **Monitoring / alerting** | [`infra/monitoring.md`](./infra/monitoring.md) | [`infra/sentry.md`](./infra/sentry.md) (erreurs applicatives) |
+| **Backups bases de données (Coolify → R2)** | [`infra/backups-coolify.md`](./infra/backups-coolify.md) | — |
 | **DNS / redirections domaines** | [`guidelines/dns-redirections-domaines.md`](./guidelines/dns-redirections-domaines.md) | — |
 | **Noindex site de test** | [`guidelines/noindex-test-site.md`](./guidelines/noindex-test-site.md) | — |
 | **Feature flags** | [`guidelines/feature-flags/README.md`](./guidelines/feature-flags/README.md) | [`guidelines/feature-flags/feature-flags-cheatsheet.md`](./guidelines/feature-flags/feature-flags-cheatsheet.md) |
