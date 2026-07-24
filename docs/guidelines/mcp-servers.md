@@ -16,6 +16,7 @@
 | `cloudflare-graphql` | HTTP (hébergé Cloudflare) | OAuth via `/mcp` | API GraphQL Analytics : cache hit ratio, requêtes, bande passante, menaces — sert au suivi des KPI de [`infra/cloudfare.md`](../infra/cloudfare.md) |
 | `chrome-devtools` | stdio (`npx chrome-devtools-mcp`) | aucune | Piloter un vrai Chrome : DOM **après hydratation**, console, réseau — la classe de bugs invisibles en `curl` (JSON-LD dupliqué client, TDZ à l'hydratation, cf. CLAUDE.md § SEO) |
 | `directus` | stdio (`npx @directus/content-mcp`) | token via env | Inspecter les collections/champs réels du CMS (évite les pièges de nommage et de permissions documentés dans CLAUDE.md) |
+| `coolify` | HTTP (auto-hébergé `coolify.vpsn.cloud/mcp`) | Bearer token via env | Inspecter l'infra Coolify de l'**environnement de TEST** (serveurs, projets, applications, services, bases — 10 outils en lecture seule, Coolify ≥ 4.1) |
 | `google-analytics` | stdio (`python -m pipx run analytics-mcp`) | ADC Google | Requêter GA4 (rapports, temps réel) |
 
 ## Mise en route (une fois par développeur)
@@ -34,7 +35,12 @@
 
    ⚠️ Puis **redémarrer VS Code entièrement** (les variables utilisateur sont lues au
    lancement du processus, pas de la session Claude).
-4. **`google-analytics`** : nécessite pipx (`python -m pip install --user pipx`) et des
+4. **`coolify`** : créer un token dans Coolify (instance de test) → Security » API Tokens,
+   puis définir la variable d'environnement **utilisateur** `COOLIFY_MCP_TOKEN` (même
+   commande PowerShell que ci-dessus) et **redémarrer VS Code entièrement**. L'endpoint MCP
+   doit être activé dans Coolify (Settings → MCP). Sans token valide, l'endpoint renvoie la
+   page de login HTML (200), pas un 401 — trompeur au diagnostic.
+5. **`google-analytics`** : nécessite pipx (`python -m pip install --user pipx`) et des
    [Application Default Credentials](https://cloud.google.com/docs/authentication/provide-credentials-adc)
    Google. Méthode retenue (2026-07) : **service account** — pas de gcloud, pas d'expiration :
    1. projet GCP `vie-publique-sn` → activer les API **Analytics Data** + **Analytics Admin** ;

@@ -380,9 +380,10 @@ useHead({
             <div>
               <!-- Présentation : le body riche prime (il porte ses propres titres).
                    Le chapô (description) ne s'affiche que s'il n'y a PAS de body, pour
-                   éviter le doublon de titre/intro. -->
+                   éviter le doublon de titre/intro. Fiche minimale (ni description ni
+                   body) : repli sur le texte généré (type, rattachement, décret) pour ne
+                   jamais laisser la colonne principale vide. -->
               <div
-                v-if="entity.description || entity.body"
                 class="mb-6 rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800/50"
               >
                 <div
@@ -392,12 +393,12 @@ useHead({
                   <h2 class="text-sm font-semibold text-gray-900 dark:text-white">Présentation</h2>
                 </div>
                 <div class="px-5 py-4">
-                  <!-- Chapô : seulement quand il n'y a pas de body -->
+                  <!-- Chapô (ou repli généré) : seulement quand il n'y a pas de body -->
                   <p
-                    v-if="entity.description && !entity.body"
+                    v-if="!entity.body"
                     class="text-sm leading-relaxed text-gray-700 dark:text-gray-300"
                   >
-                    {{ entity.description }}
+                    {{ entity.description || pageDescription }}
                   </p>
 
                   <!-- Body riche : clampé si long, avec fondu + « Lire la suite » -->

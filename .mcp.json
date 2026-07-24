@@ -20,6 +20,13 @@
       "type": "http",
       "url": "https://graphql.mcp.cloudflare.com/mcp"
     },
+    "coolify": {
+      "type": "http",
+      "url": "https://coolify.vpsn.cloud/mcp",
+      "headers": {
+        "Authorization": "Bearer ${COOLIFY_MCP_TOKEN}"
+      }
+    },
     "chrome-devtools": {
       "type": "stdio",
       "command": "npx",

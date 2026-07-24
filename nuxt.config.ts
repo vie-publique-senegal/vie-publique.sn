@@ -347,6 +347,15 @@ export default defineNuxtConfig({
     '/elections-senegal/dashboard/**': {
       redirect: { to: '/elections-senegal/scrutins', statusCode: 301 },
     },
+    // Ancien annuaire Système A (state_entity) supprimé 2026-07 → Système B
+    // (docs/modules/etat/todo-supprimer-systeme-a.md). Le splat /annuaire/<slug>
+    // retombe sur /etat-senegal/<slug> ; les entités sans page publique font 404.
+    '/etat-senegal/annuaire': {
+      redirect: { to: '/etat-senegal/organisation', statusCode: 301 },
+    },
+    '/etat-senegal/annuaire/**': {
+      redirect: { to: '/etat-senegal/**', statusCode: 301 },
+    },
     '/code-senegal': { redirect: { to: '/documents/codes', statusCode: 301 } },
     '/code-senegal/**': { redirect: { to: '/documents/codes', statusCode: 301 } },
     // Legacy /portraits/<slug> : résolu vers /personnalites/<id>/<slug> par le
@@ -705,7 +714,6 @@ export default defineNuxtConfig({
       '/quiz',
       '/chatbot',
       '/chat-bot',
-      '/etat-senegal/annuaire',
       '/a-propos/barometre-politique',
       '/a-propos/charte-dons',
       '/don/bictorys',
