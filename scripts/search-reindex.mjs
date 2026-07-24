@@ -355,12 +355,16 @@ const SOURCES = [
     type: 'institution',
     priority: 60,
     collection: 'state_organization_entity',
-    // pas de champ status sur cette collection
-    params: { fields: 'id,name,slug,description,body,logo,cover_image,date_updated,date_created' },
+    // pas de champ status sur cette collection ; seules les entités avec page
+    // publique sont indexées (les autres n'ont pas d'URL de destination)
+    params: {
+      'filter[has_public_page][_eq]': 'true',
+      fields: 'id,name,slug,description,body,logo,cover_image,date_updated,date_created',
+    },
     map: (d) => ({
       title: cleanText(d.name),
       slug: d.slug,
-      url: `/etat-senegal/annuaire/${d.slug}`,
+      url: `/etat-senegal/${d.slug}`,
       summary: truncate(cleanText(d.description)),
       content_text: cleanText(d.body || d.description),
       category: "Annuaire de l'État",

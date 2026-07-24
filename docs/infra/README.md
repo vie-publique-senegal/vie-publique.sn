@@ -54,9 +54,10 @@ Navigateur ──HTTPS──> Traefik (Coolify) ──> Frontend Nuxt (SSR)
 
 ## CI/CD
 
-GitHub Actions (`.github/workflows/`) → build `Dockerfile.optimized` → push **ghcr.io** →
-webhook **Coolify** (event « Packages ») → pull image + redémarrage conteneur.
-Détail : [`./ci-cd-github.md`](./ci-cd-github.md).
+GitHub Actions (`.github/workflows/_ci-cd.yml`) : tests + Sonar (PR develop) ; push
+`develop`/`prod` → build `Dockerfile.optimized` → push **ghcr.io** (`latest` = prod) ; push
+`prod` → webhook **Coolify**, qui rebuilde depuis le repo (**Nixpacks** — les images ghcr ne
+servent pas encore au déploiement). Détail : [`./ci-cd-github.md`](./ci-cd-github.md).
 
 ## Sauvegardes
 
