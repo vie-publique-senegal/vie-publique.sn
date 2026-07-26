@@ -14,6 +14,20 @@ interface SendEmailParams {
   text: string;
 }
 
+// Charte e-mail Vie-Publique (alignée sur le template newsletter).
+const BRAND = {
+  logo: 'https://www.vie-publique.sn/logos/logo-transparent-carre.png',
+  site: 'https://www.vie-publique.sn',
+  navy: '#0C2146',
+  navySoft: '#24344d',
+  gold: '#F4D160',
+  cream: '#F7F5EF',
+  creamBorder: '#EFE8D6',
+  gray: '#576174',
+  grayLight: '#6b7280',
+  white: '#ffffff',
+} as const;
+
 /**
  * Envoyer un e-mail via l'API Resend. Renvoie true si l'envoi a réussi,
  * false sinon (l'appelant décide de la dégradation ; jamais de throw ici).
@@ -37,7 +51,7 @@ async function sendEmail({ to, subject, html, text }: SendEmailParams): Promise<
         'Content-Type': 'application/json',
       },
       body: {
-        from: `Vie Publique Sénégal <${config.resendFromEmail}>`,
+        from: `Vie-Publique Sénégal <${config.resendFromEmail}>`,
         to,
         subject,
         html,
@@ -78,17 +92,30 @@ function formatAmount(amount: number): string {
 }
 
 /**
+ * Une ligne « libellé / valeur » du récapitulatif (layout table, e-mail-safe).
+ * `last` retire le séparateur du bas.
+ */
+function detailRow(label: string, value: string, last = false): string {
+  const border = last ? '' : `border-bottom:1px solid ${BRAND.creamBorder};`;
+  return `
+              <tr>
+                <td style="padding:12px 0;${border}font-size:14px;color:${BRAND.grayLight};">${label}</td>
+                <td style="padding:12px 0;${border}font-size:14px;color:${BRAND.navy};font-weight:600;text-align:right;">${value}</td>
+              </tr>`;
+}
+
+/**
  * Envoyer l'e-mail de confirmation de don.
  *
- * Les champs issus du webhook sont échappés (`sanitizeString`) avant d'être
- * interpolés dans le HTML (défense contre l'injection HTML/phishing), et
- * l'adresse destinataire est validée : on n'envoie qu'à une adresse bien formée.
+ * Design sobre aligné sur la charte Vie-Publique (logo, navy/or, fond blanc),
+ * layout en tables pour un rendu fiable dans tous les clients e-mail (Outlook
+ * inclus). Les champs issus du webhook sont échappés (`sanitizeString`) avant
+ * interpolation (défense contre l'injection HTML/phishing) et l'adresse
+ * destinataire est validée : on n'envoie qu'à une adresse bien formée.
  */
 export async function sendDonationConfirmationEmail(
   donationData: DonationEmailData,
 ): Promise<boolean> {
-  // On n'envoie qu'à une adresse valide (défense en profondeur : le webhook est
-  // authentifié, mais on ne relaie jamais vers une adresse malformée/absente).
   if (!donationData.donor_email || !isValidEmail(donationData.donor_email)) {
     reportServerError(
       new Error('Adresse de don invalide ou absente : e-mail de confirmation non envoyé'),
@@ -105,262 +132,152 @@ export async function sendDonationConfirmationEmail(
     timeStyle: 'short',
   });
 
-  // Échappement HTML de toutes les valeurs d'origine externe (F7).
+  // Échappement HTML de toutes les valeurs d'origine externe.
   const donorName = sanitizeString(donationData.donor_name) || 'Donateur';
   const transactionId = sanitizeString(donationData.transaction_id);
   const invoiceRef = sanitizeString(donationData.invoice_ref);
   const donorEmail = sanitizeString(donationData.donor_email);
   const donorPhone = sanitizeString(donationData.donor_phone);
 
-  const htmlContent = `
-<!DOCTYPE html>
+  const pairs: Array<[string, string]> = [
+    ['Référence', transactionId],
+    ...(invoiceRef ? [['Numéro de facture', invoiceRef] as [string, string]] : []),
+    ['Méthode de paiement', gatewayName],
+    ['Date', formattedDate],
+    ['Email', donorEmail],
+    ...(donorPhone ? [['Téléphone', donorPhone] as [string, string]] : []),
+  ];
+  const rowsClean = pairs
+    .map(([label, value], i) => detailRow(label, value, i === pairs.length - 1))
+    .join('');
+
+  const htmlContent = `<!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Confirmation de don - Vie Publique Sénégal</title>
-  <style>
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-      line-height: 1.6;
-      color: #333;
-      max-width: 600px;
-      margin: 0 auto;
-      padding: 20px;
-      background-color: #f4f4f4;
-    }
-    .container {
-      background-color: #ffffff;
-      border-radius: 8px;
-      padding: 30px;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    }
-    .header {
-      text-align: center;
-      margin-bottom: 30px;
-      border-bottom: 3px solid #0000d3;
-      padding-bottom: 20px;
-    }
-    .header h1 {
-      color: #0000d3;
-      margin: 0;
-      font-size: 28px;
-    }
-    .header p {
-      color: #666;
-      margin: 5px 0 0 0;
-    }
-    .success-icon {
-      text-align: center;
-      font-size: 60px;
-      margin: 20px 0;
-    }
-    .message {
-      background-color: #e6f3ff;
-      border-left: 4px solid #0000d3;
-      padding: 15px;
-      margin: 20px 0;
-      border-radius: 4px;
-    }
-    .details {
-      background-color: #f9f9f9;
-      border-radius: 8px;
-      padding: 20px;
-      margin: 20px 0;
-    }
-    .details h2 {
-      color: #0000d3;
-      margin-top: 0;
-      font-size: 18px;
-      border-bottom: 2px solid #e0e0e0;
-      padding-bottom: 10px;
-    }
-    .detail-row {
-      display: flex;
-      justify-content: space-between;
-      padding: 10px 0;
-      border-bottom: 1px solid #e0e0e0;
-    }
-    .detail-row:last-child {
-      border-bottom: none;
-    }
-    .detail-label {
-      font-weight: 600;
-      color: #555;
-    }
-    .detail-value {
-      color: #333;
-      text-align: right;
-    }
-    .amount {
-      font-size: 24px;
-      font-weight: bold;
-      color: #16a34a;
-    }
-    .footer {
-      margin-top: 30px;
-      padding-top: 20px;
-      border-top: 2px solid #e0e0e0;
-      text-align: center;
-      color: #666;
-      font-size: 14px;
-    }
-    .button {
-      display: inline-block;
-      padding: 12px 30px;
-      background-color: #0000d3;
-      color: #ffffff;
-      text-decoration: none;
-      border-radius: 5px;
-      margin: 20px 0;
-      font-weight: 600;
-    }
-    .social-links {
-      margin-top: 20px;
-    }
-    .social-links a {
-      color: #0000d3;
-      text-decoration: none;
-      margin: 0 10px;
-    }
-  </style>
+  <meta name="color-scheme" content="light only">
+  <title>Confirmation de don — Vie-Publique Sénégal</title>
 </head>
-<body>
-  <div class="container">
-    <div class="header">
-      <h1>Vie Publique Sénégal</h1>
-      <p>Plateforme d'information publique transparente</p>
-    </div>
+<body style="margin:0;padding:0;background-color:${BRAND.cream};">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:${BRAND.cream};">
+    <tr>
+      <td align="center" style="padding:32px 16px;">
 
-    <div class="success-icon">✅</div>
+        <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:600px;max-width:100%;background-color:${BRAND.white};border:1px solid ${BRAND.creamBorder};border-radius:12px;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
 
-    <h2 style="text-align: center; color: #16a34a;">Don reçu avec succès !</h2>
+          <!-- En-tête : logo + marque -->
+          <tr>
+            <td align="center" style="padding:36px 42px 22px;border-bottom:1px solid ${BRAND.creamBorder};">
+              <img src="${BRAND.logo}" alt="Vie-Publique Sénégal" width="56" style="display:block;width:56px;height:auto;margin:0 auto 12px;border:0;">
+              <div style="font-size:16px;font-weight:700;color:${BRAND.navy};letter-spacing:0.2px;">Vie Publique Sénégal</div>
+              <div style="font-size:12px;color:${BRAND.gray};margin-top:4px;">Plateforme d'information publique</div>
+            </td>
+          </tr>
 
-    <div class="message">
-      <p>Cher(e) <strong>${donorName}</strong>,</p>
-      <p>
-        Nous tenons à vous remercier chaleureusement pour votre généreuse contribution à
-        Vie Publique Sénégal. Votre soutien nous permet de continuer à maintenir une plateforme
-        d'information publique transparente et accessible à tous les Sénégalais.
-      </p>
-    </div>
+          <!-- Filet doré -->
+          <tr><td style="height:3px;background-color:${BRAND.gold};font-size:0;line-height:0;">&nbsp;</td></tr>
 
-    <div class="details">
-      <h2>Détails de votre don</h2>
+          <!-- Corps -->
+          <tr>
+            <td style="padding:36px 42px 8px;">
+              <h1 style="margin:0 0 18px;font-size:22px;font-weight:700;color:${BRAND.navy};">Merci pour votre don</h1>
+              <p style="margin:0 0 16px;font-size:15px;line-height:1.65;color:${BRAND.navySoft};">
+                Cher(e) <strong style="color:${BRAND.navy};">${donorName}</strong>,
+              </p>
+              <p style="margin:0 0 8px;font-size:15px;line-height:1.65;color:${BRAND.navySoft};">
+                Nous vous remercions chaleureusement pour votre contribution. Votre soutien nous
+                permet de maintenir une plateforme d'information publique transparente et accessible
+                à tous les Sénégalais.
+              </p>
+            </td>
+          </tr>
 
-      <div class="detail-row">
-        <span class="detail-label">Montant :</span>
-        <span class="detail-value amount">${formattedAmount}</span>
-      </div>
+          <!-- Montant mis en avant -->
+          <tr>
+            <td style="padding:16px 42px 4px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:${BRAND.cream};border:1px solid ${BRAND.creamBorder};border-radius:10px;">
+                <tr>
+                  <td align="center" style="padding:22px;">
+                    <div style="font-size:12px;text-transform:uppercase;letter-spacing:1px;color:${BRAND.gray};margin-bottom:6px;">Montant de votre don</div>
+                    <div style="font-size:30px;font-weight:700;color:${BRAND.navy};">${formattedAmount}</div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
 
-      <div class="detail-row">
-        <span class="detail-label">Référence :</span>
-        <span class="detail-value">${transactionId}</span>
-      </div>
+          <!-- Détails -->
+          <tr>
+            <td style="padding:24px 42px 8px;">
+              <div style="font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:${BRAND.gray};margin-bottom:6px;">Détails de la transaction</div>
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                ${rowsClean}
+              </table>
+            </td>
+          </tr>
 
-      ${
-        invoiceRef
-          ? `
-      <div class="detail-row">
-        <span class="detail-label">Numéro de facture :</span>
-        <span class="detail-value">${invoiceRef}</span>
-      </div>
-      `
-          : ''
-      }
+          <!-- CTA -->
+          <tr>
+            <td align="center" style="padding:28px 42px 8px;">
+              <a href="${BRAND.site}" style="display:inline-block;background-color:${BRAND.navy};color:${BRAND.white};text-decoration:none;font-size:15px;font-weight:600;padding:13px 30px;border-radius:8px;">Visiter Vie-Publique Sénégal</a>
+            </td>
+          </tr>
 
-      <div class="detail-row">
-        <span class="detail-label">Méthode de paiement :</span>
-        <span class="detail-value">${gatewayName}</span>
-      </div>
+          <!-- Note reçu -->
+          <tr>
+            <td style="padding:20px 42px 36px;">
+              <p style="margin:0;font-size:13px;line-height:1.6;color:${BRAND.gray};border-top:1px solid ${BRAND.creamBorder};padding-top:20px;">
+                Conservez cet e-mail comme preuve de votre transaction. Pour toute question,
+                écrivez-nous à <a href="mailto:contact@vie-publique.sn" style="color:${BRAND.navy};font-weight:600;">contact@vie-publique.sn</a>.
+              </p>
+            </td>
+          </tr>
 
-      <div class="detail-row">
-        <span class="detail-label">Date :</span>
-        <span class="detail-value">${formattedDate}</span>
-      </div>
+          <!-- Pied de page -->
+          <tr>
+            <td style="background-color:${BRAND.navy};padding:28px 42px;text-align:center;">
+              <div style="font-size:14px;font-weight:700;color:${BRAND.white};margin-bottom:4px;">Vie-Publique Sénégal</div>
+              <div style="font-size:12px;color:#B8C0CF;margin-bottom:14px;">Plateforme citoyenne indépendante — Dakar, Sénégal</div>
+              <div style="font-size:12px;color:#B8C0CF;">
+                <a href="https://x.com/ViePubliqueSN" style="color:${BRAND.gold};text-decoration:none;">Twitter</a> &nbsp;·&nbsp;
+                <a href="https://www.facebook.com/ViePubliqueSenegal" style="color:${BRAND.gold};text-decoration:none;">Facebook</a> &nbsp;·&nbsp;
+                <a href="https://www.linkedin.com/company/vie-publique-sn" style="color:${BRAND.gold};text-decoration:none;">LinkedIn</a> &nbsp;·&nbsp;
+                <a href="${BRAND.site}" style="color:${BRAND.gold};text-decoration:none;">Site web</a>
+              </div>
+              <div style="font-size:11px;color:#7E8AA0;margin-top:16px;">Cet e-mail a été envoyé automatiquement. Merci de ne pas y répondre.</div>
+            </td>
+          </tr>
 
-      <div class="detail-row">
-        <span class="detail-label">Email :</span>
-        <span class="detail-value">${donorEmail}</span>
-      </div>
+        </table>
 
-      ${
-        donorPhone
-          ? `
-      <div class="detail-row">
-        <span class="detail-label">Téléphone :</span>
-        <span class="detail-value">${donorPhone}</span>
-      </div>
-      `
-          : ''
-      }
-    </div>
-
-    <div style="text-align: center;">
-      <a href="https://www.vie-publique.sn" class="button">Visiter Vie Publique Sénégal</a>
-    </div>
-
-    <div class="message" style="background-color: #fff3cd; border-left-color: #ffc107;">
-      <p style="margin: 0;">
-        <strong>Note :</strong> Conservez cet email comme preuve de votre transaction.
-        Si vous avez des questions, n'hésitez pas à nous contacter à
-        <a href="mailto:contact@vie-publique.sn">contact@vie-publique.sn</a>.
-      </p>
-    </div>
-
-    <div class="footer">
-      <p>
-        <strong>Vie Publique Sénégal</strong><br>
-        Plateforme citoyenne indépendante<br>
-        Dakar, Sénégal
-      </p>
-      <div class="social-links">
-        <a href="https://x.com/ViePubliqueSN">Twitter</a> |
-        <a href="https://www.facebook.com/ViePubliqueSenegal">Facebook</a> |
-        <a href="https://www.linkedin.com/company/vie-publique-sn">LinkedIn</a> |
-        <a href="https://www.whatsapp.com/channel/0029VawbhaFLikg1htAGXc2I">Chaîne WhatsApp</a> |
-        <a href="https://www.youtube.com/@ViePubliqueSenegal">Youtube</a> |
-        <a href="https://www.vie-publique.sn">Site Web</a>
-      </div>
-      <p style="margin-top: 20px; font-size: 12px; color: #999;">
-        Cet email a été envoyé automatiquement. Merci de ne pas y répondre directement.
-      </p>
-    </div>
-  </div>
+      </td>
+    </tr>
+  </table>
 </body>
-</html>
-  `;
+</html>`;
 
-  const textContent = `
-Confirmation de don - Vie Publique Sénégal
+  const textContent = `Vie-Publique Sénégal — Confirmation de don
 
 Cher(e) ${donorName},
 
-Nous tenons à vous remercier chaleureusement pour votre généreuse contribution à Vie Publique Sénégal.
+Merci pour votre contribution. Votre soutien nous permet de maintenir une plateforme d'information publique transparente et accessible à tous les Sénégalais.
 
-DÉTAILS DE VOTRE DON
---------------------
+DÉTAILS DE LA TRANSACTION
 Montant : ${formattedAmount}
 Référence : ${transactionId}
 ${invoiceRef ? `Numéro de facture : ${invoiceRef}\n` : ''}Méthode de paiement : ${gatewayName}
 Date : ${formattedDate}
 Email : ${donorEmail}
 ${donorPhone ? `Téléphone : ${donorPhone}\n` : ''}
+Conservez cet e-mail comme preuve de votre transaction.
+Question ? contact@vie-publique.sn — ${BRAND.site}
 
-Conservez cet email comme preuve de votre transaction.
-
-Pour toute question, contactez-nous à : contact@vie-publique.sn
-Visitez notre site : https://www.vie-publique.sn
-
-Merci pour votre soutien !
-
----
-Vie Publique Sénégal - Plateforme d'information publique transparente
-  `;
+Vie-Publique Sénégal — Plateforme citoyenne indépendante, Dakar.`;
 
   return sendEmail({
     to: donationData.donor_email,
-    subject: `Merci pour votre don de ${formattedAmount} - Vie Publique Sénégal`,
+    subject: `Merci pour votre don de ${formattedAmount} — Vie-Publique Sénégal`,
     html: htmlContent,
     text: textContent,
   });
