@@ -45,6 +45,7 @@
 | **Feature flags** | [`guidelines/feature-flags/README.md`](./guidelines/feature-flags/README.md) | [`guidelines/feature-flags/feature-flags-cheatsheet.md`](./guidelines/feature-flags/feature-flags-cheatsheet.md) |
 | **Proxy images CMS** | [`guidelines/proxy-images.md`](./guidelines/proxy-images.md) | [`guidelines/proxy-images-migration.md`](./guidelines/proxy-images-migration.md) |
 | **Serveurs MCP (Claude Code)** | [`guidelines/mcp-servers.md`](./guidelines/mcp-servers.md) | [`infra/sentry.md`](./infra/sentry.md) (§5 MCP Sentry) |
+| **Skills Claude Code (quand utiliser lequel)** | [`guidelines/claude-skills.md`](./guidelines/claude-skills.md) | catalogue : [skills.sh](https://skills.sh/) |
 | **Versioning** | [`guidelines/versioning.md`](./guidelines/versioning.md) | — |
 | **Global settings** | [`guidelines/global-settings.md`](./guidelines/global-settings.md) | — |
 | **Modules du site** | [`modules/README.md`](./modules/README.md) | 1 dossier par feature |
