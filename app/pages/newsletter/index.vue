@@ -61,7 +61,7 @@ useSeoMeta({
         <li class="py-3">
           <p class="font-medium text-gray-900 dark:text-white">Actualités de la plateforme</p>
           <p class="text-sm text-gray-500 dark:text-gray-400">
-            Nouvelles fonctionnalités et nouveaux contenus de Vie-Publique Sénégal.
+            Nouvelles fonctionnalités et nouveaux contenus de Vie Publique Sénégal.
           </p>
         </li>
       </ul>

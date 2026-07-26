@@ -503,13 +503,9 @@ export default defineNuxtConfig({
     sunuElectionApiUrl: process.env.SUNU_ELECTION_API_URL,
     sunuElectionApiKey: process.env.SUNU_ELECTION_API_KEY,
 
-    // Configuration SMTP pour Nodemailer
-    smtpHost: process.env.SMTP_HOST,
-    smtpPort: process.env.SMTP_PORT,
-    smtpSecure: process.env.SMTP_SECURE,
-    smtpUser: process.env.SMTP_USER,
-    smtpPassword: process.env.SMTP_PASSWORD,
-    smtpFromEmail: process.env.SMTP_FROM_EMAIL,
+    // E-mails transactionnels (Resend) — ex. confirmation de don
+    resendApiKey: process.env.RESEND_API_KEY,
+    resendFromEmail: process.env.RESEND_FROM_EMAIL,
     brevoApiUrl: process.env.BREVO_API_URL,
     brevoApiKey: process.env.BREVO_API_KEY,
     brevoListId: process.env.BREVO_LIST_ID,
