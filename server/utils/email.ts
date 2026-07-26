@@ -51,7 +51,7 @@ async function sendEmail({ to, subject, html, text }: SendEmailParams): Promise<
         'Content-Type': 'application/json',
       },
       body: {
-        from: `Vie-Publique Sénégal <${config.resendFromEmail}>`,
+        from: `Vie Publique Sénégal <${config.resendFromEmail}>`,
         to,
         subject,
         html,
@@ -157,7 +157,7 @@ export async function sendDonationConfirmationEmail(
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="color-scheme" content="light only">
-  <title>Confirmation de don — Vie-Publique Sénégal</title>
+  <title>Confirmation de don pour Vie Publique Sénégal</title>
 </head>
 <body style="margin:0;padding:0;background-color:${BRAND.cream};">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:${BRAND.cream};">
@@ -277,7 +277,7 @@ Vie-Publique Sénégal — Plateforme citoyenne indépendante, Dakar.`;
 
   return sendEmail({
     to: donationData.donor_email,
-    subject: `Merci pour votre don de ${formattedAmount} — Vie-Publique Sénégal`,
+    subject: `Merci pour votre don de ${formattedAmount} à Vie Publique Sénégal`,
     html: htmlContent,
     text: textContent,
   });
