@@ -26,6 +26,7 @@
 | **Règles projet (source de vérité)** | [`/CLAUDE.md`](../CLAUDE.md) | conventions Directus, SEO, UI, cache, pièges |
 | **Architecture d'accès aux données** | [`guidelines/guideline-api.md`](./guidelines/guideline-api.md) | pattern 3 couches, SSR, cache, ajout de collection |
 | **Sécurité — applicatif** | [`audits/audit-complet-2026-07.md`](./audits/audit-complet-2026-07.md) | findings SEC-1..10 |
+| **Sécurité — scan automatisé (Claude Security)** | [`guidelines/claude-security-scan.md`](./guidelines/claude-security-scan.md) (outil, pièges Windows) | campagnes datées dans [`audits/`](./audits/) |
 | **Sécurité — infra** | [`infra/plan-remediation.md`](./infra/plan-remediation.md) | [`infra/securite-infra-2026-07.md`](./infra/securite-infra-2026-07.md) (INFRA-1..13), [`infra/README.md`](./infra/README.md) (archi) |
 | **SEO** | [`/CLAUDE.md`](../CLAUDE.md) (§ SEO & Open Graph) | [`seo/seo-strategy.md`](./seo/seo-strategy.md), [`seo/seo-audit.md`](./seo/seo-audit.md), [`seo/seo-pages-detail-audit.md`](./seo/seo-pages-detail-audit.md), [`seo/seo-indexation-rapide.md`](./seo/seo-indexation-rapide.md), [`seo/llms-txt.md`](./seo/llms-txt.md) |
 | **URLs / slugs** | [`guidelines/url-structure-analysis.md`](./guidelines/url-structure-analysis.md) | — |
@@ -45,6 +46,7 @@
 | **Feature flags** | [`guidelines/feature-flags/README.md`](./guidelines/feature-flags/README.md) | [`guidelines/feature-flags/feature-flags-cheatsheet.md`](./guidelines/feature-flags/feature-flags-cheatsheet.md) |
 | **Proxy images CMS** | [`guidelines/proxy-images.md`](./guidelines/proxy-images.md) | [`guidelines/proxy-images-migration.md`](./guidelines/proxy-images-migration.md) |
 | **Serveurs MCP (Claude Code)** | [`guidelines/mcp-servers.md`](./guidelines/mcp-servers.md) | [`infra/sentry.md`](./infra/sentry.md) (§5 MCP Sentry) |
+| **Skills Claude Code (quand utiliser lequel)** | [`guidelines/claude-skills.md`](./guidelines/claude-skills.md) | catalogue : [skills.sh](https://skills.sh/) |
 | **Versioning** | [`guidelines/versioning.md`](./guidelines/versioning.md) | — |
 | **Global settings** | [`guidelines/global-settings.md`](./guidelines/global-settings.md) | — |
 | **Modules du site** | [`modules/README.md`](./modules/README.md) | 1 dossier par feature |
@@ -58,6 +60,7 @@
 - [`modules/a-propos/refonte-section-association.md`](./modules/a-propos/refonte-section-association.md) — refonte section association
 - [`modules/dashboard/`](./modules/dashboard/) — dashboards RAC et projets publics
 - [`audits/audit-recherche-2026-07.md`](./audits/audit-recherche-2026-07.md) — checklist recherche Typesense
+- [`infra/todo-migration-minio-r2.md`](./infra/todo-migration-minio-r2.md) — migration stockage assets MinIO → Cloudflare R2 (INFRA-9/INFRA-2)
 
 ## 📌 Statut des docs
 
