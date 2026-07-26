@@ -3,26 +3,45 @@
  * Ce endpoint sera appelé par Bictorys lorsqu'un paiement est complété
  */
 
+import { createHash, timingSafeEqual } from 'node:crypto';
+
+/**
+ * Bictorys authentifie ses webhooks par un secret partagé transmis dans l'en-tête
+ * `X-Secret-Key` (PAS de HMAC : cf. docs Bictorys « Comment valider les webhooks »).
+ * On compare la valeur reçue au secret configuré, en temps constant. Les deux valeurs
+ * sont hachées d'abord pour obtenir des buffers de longueur fixe (timingSafeEqual exige
+ * une longueur identique) sans fuiter la longueur du secret.
+ */
+function isValidWebhookSecret(provided: string, expected: string | undefined): boolean {
+  if (!expected || !provided) return false;
+  const a = createHash('sha256').update(provided).digest();
+  const b = createHash('sha256').update(expected).digest();
+  return timingSafeEqual(a, b);
+}
+
 export default defineEventHandler(async (event) => {
+  const config = useRuntimeConfig();
+
+  // Authentification du webhook — AVANT le try/catch qui neutralise les erreurs en 200 :
+  // une requête forgée doit être rejetée en 401, pas avalée en réponse de succès.
+  const providedSecret = getHeader(event, 'x-secret-key') || '';
+  if (!isValidWebhookSecret(providedSecret, config.bictorysWebhookSecret)) {
+    if (!config.bictorysWebhookSecret) {
+      // Mauvaise config serveur : on ferme la porte ET on la rend visible en monitoring.
+      reportServerError(
+        new Error('BICTORYS_WEBHOOK_SECRET manquant : tous les webhooks Bictorys sont rejetés'),
+        'api/donate/webhook',
+      );
+    }
+    // SEC-9 : message générique, aucun détail interne dans la réponse HTTP.
+    throw createError({ statusCode: 401, statusMessage: 'Unauthorized' });
+  }
+
   try {
-    const config = useRuntimeConfig();
     const body = await readBody(event);
 
-    // Vérification de la signature du webhook (sécurité)
-    const signature = getHeader(event, 'x-bictorys-signature') || '';
-    const webhookSecret = config.bictorysWebhookSecret;
-
-    // TODO: Implémenter la vérification de signature selon la documentation Bictorys
-    // Exemple de vérification HMAC (à adapter selon Bictorys)
-    // const isValid = verifyBictorysSignature(body, signature, webhookSecret)
-    // if (!isValid) {
-    //   throw createError({
-    //     statusCode: 401,
-    //     message: 'Signature du webhook invalide',
-    //   })
-    // }
-
-    // Logger l'événement pour debug
+    // Logger l'événement pour debug. La requête est authentifiée (secret vérifié
+    // ci-dessus), donc ces champs proviennent de Bictorys, pas d'un tiers arbitraire.
     console.log('Webhook Bictorys reçu:', {
       event_type: body.event || body.type,
       transaction_id: body.data?.reference || body.reference,
@@ -78,20 +97,57 @@ export default defineEventHandler(async (event) => {
  * Gérer un paiement réussi
  */
 async function handleSuccessfulPayment(data: any) {
+  // Validation du contenu du payload (doc Bictorys : vérifier montant, devise,
+  // statut, référence). Même authentifié, un événement incohérent ne doit pas
+  // déclencher un e-mail « Don reçu » erroné.
+  const amount = Number(data.amount);
+  const currency = data.currency;
+  const status = data.status;
+  const reference = data.reference || data.transaction_id;
+
+  if (!reference || !Number.isFinite(amount) || amount <= 0) {
+    reportServerError(
+      new Error('Webhook charge.success au payload incohérent (référence/montant invalide)'),
+      'api/donate/webhook/validate',
+      { reference, amount: data.amount },
+    );
+    return;
+  }
+  if (currency && currency !== 'XOF') {
+    reportServerError(
+      new Error(`Webhook charge.success avec devise inattendue: ${currency}`),
+      'api/donate/webhook/validate',
+      { reference },
+    );
+    return;
+  }
+  if (
+    status &&
+    !['success', 'succeeded', 'paid', 'completed'].includes(String(status).toLowerCase())
+  ) {
+    reportServerError(
+      new Error(`Webhook charge.success avec statut incohérent: ${status}`),
+      'api/donate/webhook/validate',
+      { reference },
+    );
+    return;
+  }
+
   console.log('💰 Paiement réussi:', {
-    reference: data.reference,
-    amount: data.amount,
+    reference,
+    amount,
     email: data.customer?.email,
   });
 
-  // TODO: Enregistrer le don dans la base de données
-  // - Sauvegarder dans une table donations
-  // - Mettre à jour les statistiques de dons
-  // - Émettre un reçu fiscal si applicable
+  // NOTE : la persistance du don (table Directus, stats, reçu fiscal) n'est pas
+  // encore implémentée — voir docs/modules/dons/donation-system.md.
 
-  // Envoyer un email de remerciement au donateur
+  // Envoyer un email de remerciement au donateur. sendDonationConfirmationEmail
+  // renvoie false (sans throw) sur échec « attendu » (adresse invalide, erreur
+  // Resend) et a déjà reporté la cause précise via reportServerError ; on ne
+  // logge donc un succès QUE si l'envoi a réellement eu lieu.
   try {
-    await sendDonationConfirmationEmail({
+    const sent = await sendDonationConfirmationEmail({
       gateway: 'bictorys',
       transaction_id: data.reference || data.transaction_id,
       amount: data.amount,
@@ -101,10 +157,14 @@ async function handleSuccessfulPayment(data: any) {
       invoice_ref: data.merchantReference || data.reference,
       created_at: new Date().toISOString(),
     });
-    console.log('✉️ Email de confirmation envoyé avec succès');
+    if (sent) {
+      console.log('✉️ Email de confirmation envoyé avec succès');
+    } else {
+      console.warn('Email de confirmation non envoyé (cause détaillée en monitoring)');
+    }
   } catch (emailError) {
-    // Ne pas faire échouer le webhook si l'email échoue — mais le signaler :
-    // un donateur sans email de remerciement, ça doit se voir en monitoring
+    // Erreur inattendue (le chemin normal renvoie false, pas un throw) :
+    // ne pas faire échouer le webhook, mais le signaler en monitoring.
     reportServerError(emailError, 'api/donate/webhook/email', {
       reference: data.reference || data.transaction_id,
     });

@@ -1,80 +1,118 @@
 /**
- * Utilitaire Nodemailer pour l'envoi d'emails
- * Configuration et fonctions pour envoyer des emails de confirmation de dons
+ * E-mails transactionnels via l'API Resend.
+ *
+ * Remplace l'ancien envoi SMTP (nodemailer) : Resend est le fournisseur
+ * transactionnel du projet (domaine vérifié → SPF/DKIM corrects, meilleure
+ * délivrabilité + observabilité). La newsletter marketing reste sur Brevo,
+ * c'est un canal distinct.
  */
-import nodemailer from 'nodemailer'
-import type { Transporter } from 'nodemailer'
 
-let transporter: Transporter | null = null
+interface SendEmailParams {
+  to: string;
+  subject: string;
+  html: string;
+  text: string;
+}
 
 /**
- * Créer et configurer le transporteur Nodemailer
+ * Envoyer un e-mail via l'API Resend. Renvoie true si l'envoi a réussi,
+ * false sinon (l'appelant décide de la dégradation ; jamais de throw ici).
  */
-function getTransporter(): Transporter {
-  if (transporter) {
-    return transporter
+async function sendEmail({ to, subject, html, text }: SendEmailParams): Promise<boolean> {
+  const config = useRuntimeConfig();
+
+  if (!config.resendApiKey || !config.resendFromEmail) {
+    reportServerError(
+      new Error('RESEND_API_KEY / RESEND_FROM_EMAIL manquant : e-mail non envoyé'),
+      'utils/email',
+    );
+    return false;
   }
 
-  const config = useRuntimeConfig()
-
-  // Configuration du transporteur SMTP
-  transporter = nodemailer.createTransport({
-    host: config.smtpHost,
-    port: Number(config.smtpPort) || 587,
-    secure: config.smtpSecure === 'true',
-    auth: {
-      user: config.smtpUser,
-      pass: config.smtpPassword,
-    },
-  })
-
-  return transporter
+  try {
+    await $fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${config.resendApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: {
+        from: `Vie Publique Sénégal <${config.resendFromEmail}>`,
+        to,
+        subject,
+        html,
+        text,
+      },
+    });
+    return true;
+  } catch (error) {
+    // Détails en logs + Sentry, message générique (SEC-9). L'appelant gère la suite.
+    reportServerError(error, 'utils/email/resend', { to });
+    return false;
+  }
 }
 
 /**
- * Interface pour les données de don
+ * Données d'un don pour l'e-mail de confirmation.
  */
 interface DonationEmailData {
-  gateway: 'bictorys'
-  transaction_id: string
-  amount: number
-  donor_name: string
-  donor_email: string
-  donor_phone?: string
-  invoice_ref?: string
-  created_at: string
+  gateway: 'bictorys';
+  transaction_id: string;
+  amount: number;
+  donor_name: string;
+  donor_email: string;
+  donor_phone?: string;
+  invoice_ref?: string;
+  created_at: string;
 }
 
 /**
- * Formater un montant en FCFA
+ * Formater un montant en FCFA.
  */
 function formatAmount(amount: number): string {
   return new Intl.NumberFormat('fr-FR', {
     style: 'currency',
     currency: 'XOF',
     minimumFractionDigits: 0,
-  }).format(amount)
+  }).format(amount);
 }
 
 /**
- * Envoyer un email de confirmation de don
+ * Envoyer l'e-mail de confirmation de don.
+ *
+ * Les champs issus du webhook sont échappés (`sanitizeString`) avant d'être
+ * interpolés dans le HTML (défense contre l'injection HTML/phishing), et
+ * l'adresse destinataire est validée : on n'envoie qu'à une adresse bien formée.
  */
 export async function sendDonationConfirmationEmail(
-  donationData: DonationEmailData
+  donationData: DonationEmailData,
 ): Promise<boolean> {
-  try {
-    const config = useRuntimeConfig()
-    const transport = getTransporter()
+  // On n'envoie qu'à une adresse valide (défense en profondeur : le webhook est
+  // authentifié, mais on ne relaie jamais vers une adresse malformée/absente).
+  if (!donationData.donor_email || !isValidEmail(donationData.donor_email)) {
+    reportServerError(
+      new Error('Adresse de don invalide ou absente : e-mail de confirmation non envoyé'),
+      'utils/email/donation',
+      { reference: donationData.transaction_id },
+    );
+    return false;
+  }
 
-    const gatewayName = 'Bictorys'
-    const formattedAmount = formatAmount(donationData.amount)
-    const formattedDate = new Date(donationData.created_at).toLocaleString('fr-FR', {
-      dateStyle: 'long',
-      timeStyle: 'short',
-    })
+  const gatewayName = 'Bictorys';
+  const formattedAmount = formatAmount(donationData.amount);
+  const formattedDate = new Date(donationData.created_at).toLocaleString('fr-FR', {
+    dateStyle: 'long',
+    timeStyle: 'short',
+  });
 
-    // Construire le contenu de l'email en HTML
-    const htmlContent = `
+  // Échappement HTML de toutes les valeurs d'origine externe (F7).
+  const donorName = sanitizeString(donationData.donor_name) || 'Donateur';
+  const transactionId = sanitizeString(donationData.transaction_id);
+  const invoiceRef = sanitizeString(donationData.invoice_ref);
+  const donorEmail = sanitizeString(donationData.donor_email);
+  const donorPhone = sanitizeString(donationData.donor_phone);
+
+  const htmlContent = `
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -199,7 +237,7 @@ export async function sendDonationConfirmationEmail(
     <h2 style="text-align: center; color: #16a34a;">Don reçu avec succès !</h2>
 
     <div class="message">
-      <p>Cher(e) <strong>${donationData.donor_name}</strong>,</p>
+      <p>Cher(e) <strong>${donorName}</strong>,</p>
       <p>
         Nous tenons à vous remercier chaleureusement pour votre généreuse contribution à
         Vie Publique Sénégal. Votre soutien nous permet de continuer à maintenir une plateforme
@@ -217,15 +255,19 @@ export async function sendDonationConfirmationEmail(
 
       <div class="detail-row">
         <span class="detail-label">Référence :</span>
-        <span class="detail-value">${donationData.transaction_id}</span>
+        <span class="detail-value">${transactionId}</span>
       </div>
 
-      ${donationData.invoice_ref ? `
+      ${
+        invoiceRef
+          ? `
       <div class="detail-row">
         <span class="detail-label">Numéro de facture :</span>
-        <span class="detail-value">${donationData.invoice_ref}</span>
+        <span class="detail-value">${invoiceRef}</span>
       </div>
-      ` : ''}
+      `
+          : ''
+      }
 
       <div class="detail-row">
         <span class="detail-label">Méthode de paiement :</span>
@@ -239,15 +281,19 @@ export async function sendDonationConfirmationEmail(
 
       <div class="detail-row">
         <span class="detail-label">Email :</span>
-        <span class="detail-value">${donationData.donor_email}</span>
+        <span class="detail-value">${donorEmail}</span>
       </div>
 
-      ${donationData.donor_phone ? `
+      ${
+        donorPhone
+          ? `
       <div class="detail-row">
         <span class="detail-label">Téléphone :</span>
-        <span class="detail-value">${donationData.donor_phone}</span>
+        <span class="detail-value">${donorPhone}</span>
       </div>
-      ` : ''}
+      `
+          : ''
+      }
     </div>
 
     <div style="text-align: center;">
@@ -283,24 +329,23 @@ export async function sendDonationConfirmationEmail(
   </div>
 </body>
 </html>
-    `
+  `;
 
-    // Version texte brut pour les clients email qui ne supportent pas HTML
-    const textContent = `
+  const textContent = `
 Confirmation de don - Vie Publique Sénégal
 
-Cher(e) ${donationData.donor_name},
+Cher(e) ${donorName},
 
 Nous tenons à vous remercier chaleureusement pour votre généreuse contribution à Vie Publique Sénégal.
 
 DÉTAILS DE VOTRE DON
 --------------------
 Montant : ${formattedAmount}
-Référence : ${donationData.transaction_id}
-${donationData.invoice_ref ? `Numéro de facture : ${donationData.invoice_ref}\n` : ''}Méthode de paiement : ${gatewayName}
+Référence : ${transactionId}
+${invoiceRef ? `Numéro de facture : ${invoiceRef}\n` : ''}Méthode de paiement : ${gatewayName}
 Date : ${formattedDate}
-Email : ${donationData.donor_email}
-${donationData.donor_phone ? `Téléphone : ${donationData.donor_phone}\n` : ''}
+Email : ${donorEmail}
+${donorPhone ? `Téléphone : ${donorPhone}\n` : ''}
 
 Conservez cet email comme preuve de votre transaction.
 
@@ -311,21 +356,12 @@ Merci pour votre soutien !
 
 ---
 Vie Publique Sénégal - Plateforme d'information publique transparente
-    `
+  `;
 
-    // Envoyer l'email
-    const info = await transport.sendMail({
-      from: `"Vie Publique Sénégal" <${config.smtpFromEmail}>`,
-      to: donationData.donor_email,
-      subject: `Merci pour votre don de ${formattedAmount} - Vie Publique Sénégal`,
-      text: textContent,
-      html: htmlContent,
-    })
-
-    console.log('Email de confirmation envoyé:', info.messageId)
-    return true
-  } catch (error) {
-    console.error('Erreur lors de l\'envoi de l\'email de confirmation:', error)
-    return false
-  }
+  return sendEmail({
+    to: donationData.donor_email,
+    subject: `Merci pour votre don de ${formattedAmount} - Vie Publique Sénégal`,
+    html: htmlContent,
+    text: textContent,
+  });
 }

@@ -1,9 +1,17 @@
 /**
  * API endpoint pour initialiser un paiement de don via Bictorys
  */
+// Plafond de don anti-abus (XOF). Un montant hors bornes est rejeté avant tout appel Bictorys.
+const MIN_DONATION_XOF = 100;
+const MAX_DONATION_XOF = 10_000_000;
+
 export default defineEventHandler(async (event) => {
   try {
     const config = useRuntimeConfig();
+
+    // Anti-abus : limite le nombre de créations de charge par IP.
+    checkRateLimit(event, { maxRequests: 10, windowMs: 60_000 });
+
     const body = await readBody(event);
 
     // Validation des données
@@ -16,6 +24,13 @@ export default defineEventHandler(async (event) => {
       });
     }
 
+    if (amount < MIN_DONATION_XOF || amount > MAX_DONATION_XOF) {
+      throw createError({
+        statusCode: 400,
+        message: `Le montant doit être compris entre ${MIN_DONATION_XOF} et ${MAX_DONATION_XOF} FCFA`,
+      });
+    }
+
     if (!email || !name) {
       throw createError({
         statusCode: 400,
@@ -23,12 +38,21 @@ export default defineEventHandler(async (event) => {
       });
     }
 
+    if (!isValidEmail(email)) {
+      throw createError({
+        statusCode: 400,
+        message: 'Adresse email invalide',
+      });
+    }
+
     // Générer des références uniques pour ce paiement
     const paymentReference = `VPSN-DON-${Date.now()}-${Math.random().toString(36).substring(7)}`;
     const merchantReference = crypto.randomUUID();
 
-    const successRedirectUrl = 'https://client.co/redirect_url';
-    const errorRedirectUrl = 'https://client.co/redirect_url';
+    // URLs de retour vers nos propres pages de callback.
+    const siteUrl = config.public.siteUrl || 'https://www.vie-publique.sn';
+    const successRedirectUrl = `${siteUrl}/don/success?gateway=bictorys`;
+    const errorRedirectUrl = `${siteUrl}/don/cancel?gateway=bictorys`;
 
     const bictorysPayload = {
       amount: Math.round(amount),
