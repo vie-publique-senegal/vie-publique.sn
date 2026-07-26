@@ -60,6 +60,7 @@
 - [`modules/a-propos/refonte-section-association.md`](./modules/a-propos/refonte-section-association.md) — refonte section association
 - [`modules/dashboard/`](./modules/dashboard/) — dashboards RAC et projets publics
 - [`audits/audit-recherche-2026-07.md`](./audits/audit-recherche-2026-07.md) — checklist recherche Typesense
+- [`infra/todo-migration-minio-r2.md`](./infra/todo-migration-minio-r2.md) — migration stockage assets MinIO → Cloudflare R2 (INFRA-9/INFRA-2)
 
 ## 📌 Statut des docs
 
