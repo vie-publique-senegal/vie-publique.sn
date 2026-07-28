@@ -333,6 +333,15 @@ export default defineNuxtConfig({
     '/elections/**': {
       redirect: { to: '/elections-senegal/dashboard/legislative/2024', statusCode: 301 },
     },
+    // Ancien annuaire Système A (state_entity) supprimé 2026-07 → Système B
+    // (docs/modules/etat/todo-supprimer-systeme-a.md). Le splat /annuaire/<slug>
+    // retombe sur /etat-senegal/<slug> ; les entités sans page publique font 404.
+    '/etat-senegal/annuaire': {
+      redirect: { to: '/etat-senegal/organisation', statusCode: 301 },
+    },
+    '/etat-senegal/annuaire/**': {
+      redirect: { to: '/etat-senegal/**', statusCode: 301 },
+    },
     '/code-senegal': { redirect: { to: '/documents/codes', statusCode: 301 } },
     '/code-senegal/**': { redirect: { to: '/documents/codes', statusCode: 301 } },
     // Legacy /portraits/<slug> : résolu vers /personnalites/<id>/<slug> par le
@@ -480,13 +489,9 @@ export default defineNuxtConfig({
     sunuElectionApiUrl: process.env.SUNU_ELECTION_API_URL,
     sunuElectionApiKey: process.env.SUNU_ELECTION_API_KEY,
 
-    // Configuration SMTP pour Nodemailer
-    smtpHost: process.env.SMTP_HOST,
-    smtpPort: process.env.SMTP_PORT,
-    smtpSecure: process.env.SMTP_SECURE,
-    smtpUser: process.env.SMTP_USER,
-    smtpPassword: process.env.SMTP_PASSWORD,
-    smtpFromEmail: process.env.SMTP_FROM_EMAIL,
+    // E-mails transactionnels (Resend) — ex. confirmation de don
+    resendApiKey: process.env.RESEND_API_KEY,
+    resendFromEmail: process.env.RESEND_FROM_EMAIL,
     brevoApiUrl: process.env.BREVO_API_URL,
     brevoApiKey: process.env.BREVO_API_KEY,
     brevoListId: process.env.BREVO_LIST_ID,
@@ -691,7 +696,6 @@ export default defineNuxtConfig({
       '/quiz',
       '/chatbot',
       '/chat-bot',
-      '/etat-senegal/annuaire',
       '/a-propos/barometre-politique',
       '/a-propos/charte-dons',
       '/don/bictorys',

@@ -51,7 +51,7 @@ server/
 │       ├── init-payment.post.ts  # Init Bictorys
 │       └── webhook.post.ts       # Webhook Bictorys
 └── utils/
-    └── nodemailer.ts             # Utilitaire d'envoi d'emails
+    └── email.ts                  # Envoi d'e-mails transactionnels via Resend
 ```
 
 ### Diagramme de flux
@@ -104,15 +104,17 @@ BICTORYS_WEBHOOK_SECRET=your_webhook_secret_here
 ```
 
 ```env
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_SECURE=false
-SMTP_USER=votre-email@gmail.com
-SMTP_PASSWORD=votre-mot-de-passe-application
-SMTP_FROM_EMAIL=noreply@vie-publique.sn
+# E-mails transactionnels via Resend. Expéditeur sur le SOUS-domaine send.vie-publique.sn.
+RESEND_API_KEY=re_votre_cle_api
+RESEND_FROM_EMAIL=dons@send.vie-publique.sn
 ```
 
-**Note Gmail** : utiliser un mot de passe d'application.
+**Note délivrabilité & DNS** : l'expéditeur est sur le **sous-domaine `send.vie-publique.sn`**
+(vérifié dans Resend) et **non** sur le domaine racine — ainsi les enregistrements Resend
+(SPF/DKIM du sous-domaine) n'interfèrent pas avec **Google Workspace** qui gère le mail humain
+`@vie-publique.sn` (MX `smtp.google.com` sur la racine). Les enregistrements DNS Resend s'ajoutent
+dans **Cloudflare** (DNS autoritaire du domaine), en **DNS only** (nuage gris, pas de proxy). La
+newsletter marketing reste sur **Brevo**, canal distinct.
 
 ### Configuration du webhook Bictorys
 
@@ -206,7 +208,9 @@ Webhook Bictorys pour les notifications de paiement.
 
 ## Emails de confirmation
 
-Les emails sont envoyés automatiquement via **Nodemailer** (`server/utils/nodemailer.ts`) après un paiement réussi.
+Les e-mails sont envoyés automatiquement via l'**API Resend** (`server/utils/email.ts`) après un
+paiement réussi. Les champs issus du webhook sont échappés (`sanitizeString`) avant interpolation
+dans le HTML, et l'adresse destinataire est validée (`isValidEmail`) avant l'envoi.
 
 ```typescript
 await sendDonationConfirmationEmail({
@@ -221,13 +225,24 @@ await sendDonationConfirmationEmail({
 })
 ```
 
-### TODO
+### Sécurité du webhook (fait 2026-07-26)
 
-Implémenter la vérification HMAC dans `server/api/donate/webhook.post.ts`.
+Le webhook est authentifié par le **secret partagé** Bictorys : l'en-tête `X-Secret-Key` est
+comparé en temps constant à `BICTORYS_WEBHOOK_SECRET` (Bictorys **n'utilise pas de HMAC** — cf.
+[doc officielle](https://docs.bictorys.com/docs/how-to-validate-webhooks)). Rejet **401** si absent
+ou incorrect, avant tout traitement. Le contenu du payload (montant, devise, statut) est validé
+avant l'envoi de l'e-mail. Détail dans [`../../audits/audit-claude-security-2026-07.md`](../../audits/audit-claude-security-2026-07.md).
+
+### TODO restants
+
+- **Persistance des dons** : enregistrer chaque don confirmé (collection Directus) pour la
+  traçabilité comptable, les statistiques et les reçus fiscaux. Aujourd'hui le webhook n'envoie
+  qu'un e-mail, sans conserver de trace.
+- **Anti-bot** : ajouter Turnstile sur `/api/donate/init-payment` (chantier SEC-4 global).
 
 ---
 
 ## Support
 
 - **Documentation Bictorys** : [https://docs.bictorys.com](https://docs.bictorys.com)
-- **Documentation Nodemailer** : [https://nodemailer.com](https://nodemailer.com)
+- **Documentation Resend** : [https://resend.com/docs](https://resend.com/docs)
