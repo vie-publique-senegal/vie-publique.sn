@@ -71,21 +71,28 @@ export default defineCachedEventHandler(
       if (constituencyId) {
         targetConstituencyIds.push(constituencyId);
 
-        // Expansion département → communes via la hiérarchie du référentiel geo
-        const requested = await directus.request(
-          (readItems as any)("election_constituencies", {
-              fields: ['id', 'geo_department.id'],
-              filter: { id: { _eq: constituencyId } },
-              limit: 1,
-          })
-        );
-        const geoDeptId = requested?.[0]?.geo_department?.id;
-        if (geoDeptId) {
+        // Expansion département → communes via la hiérarchie du référentiel versionné.
+        // Celle-ci n'est pas traversable en filtre Directus (pas de relation inverse sur
+        // geo_entity) : on calcule d'abord les entités descendantes du département dans
+        // l'instantané, puis on filtre les circonscriptions sur `geo_entity: { _in }`.
+        const [requested, geoSnapshot] = await Promise.all([
+          directus.request(
+            (readItems as any)("election_constituencies", {
+                fields: ['id', ...GEO_UNIT_FIELDS],
+                filter: { id: { _eq: constituencyId } },
+                limit: 1,
+            })
+          ),
+          getGeoSnapshot(),
+        ]);
+        const descendantEntityIds = geoSnapshot.descendantIds(geoEntityIdOf(requested?.[0]));
+        if (descendantEntityIds.length > 0) {
           const children = await directus.request(
             (readItems as any)("election_constituencies", {
                 fields: ['id'],
-                filter: { geo_municipality: { department: { _eq: geoDeptId } } },
+                filter: { geo_entity: { _in: descendantEntityIds } },
                 limit: -1,
+                sort: ['id'],
             })
           );
           if (children && children.length > 0) {

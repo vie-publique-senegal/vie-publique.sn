@@ -34,24 +34,25 @@ export default defineCachedEventHandler(
         return [];
       }
 
-      const allConstituencies = await directus.request(
-        (readItems as any)('election_constituencies', {
-          fields: [
-            'id',
-            'name',
-            'slug',
-            'type',
-            'nationale_type',
-            'seats',
-            // Identité et hiérarchie via le référentiel geo_*
-            'geo_department.id',
-            'geo_department.name',
-            'geo_department.region.name',
-            'geo_municipality.department',
-          ],
-          limit: -1,
-        }),
-      );
+      const [allConstituencies, geoSnapshot] = await Promise.all([
+        directus.request(
+          (readItems as any)('election_constituencies', {
+            fields: [
+              'id',
+              'name',
+              'slug',
+              'type',
+              'nationale_type',
+              'seats',
+              // Identité et hiérarchie via le référentiel versionné
+              ...GEO_UNIT_FIELDS,
+            ],
+            limit: -1,
+            sort: ['id'],
+          }),
+        ),
+        getGeoSnapshot(),
+      ]);
 
       const departments = allConstituencies.filter(
         (c: any) => c.type === 'national' && c.nationale_type === 'departement',
@@ -60,15 +61,18 @@ export default defineCachedEventHandler(
         (c: any) => c.type === 'national' && c.nationale_type === 'commune',
       );
 
-      // Hiérarchie commune → département via geo_municipality.department (id geo_departments)
-      const deptIdByGeoDept = new Map<number, number>();
+      // Hiérarchie commune → département via l'instantané : on remonte au premier ANCÊTRE
+      // de niveau `departement` (le parent immédiat d'une commune est son arrondissement
+      // dans 497 cas sur 553), puis on retraduit cette entité en circonscription.
+      const deptIdByGeoEntity = new Map<number, number>();
       departments.forEach((d: any) => {
-        if (d.geo_department?.id) deptIdByGeoDept.set(d.geo_department.id, d.id);
+        const entityId = geoEntityIdOf(d);
+        if (entityId !== null) deptIdByGeoEntity.set(entityId, d.id);
       });
-      const departmentOf = (c: any) =>
-        c?.geo_municipality?.department
-          ? (deptIdByGeoDept.get(c.geo_municipality.department) ?? null)
-          : null;
+      const departmentOf = (c: any) => {
+        const deptEntity = geoSnapshot.ancestorOfLevel(geoEntityIdOf(c), 'departement');
+        return deptEntity ? (deptIdByGeoEntity.get(deptEntity.id) ?? null) : null;
+      };
 
       const deptCommunesMap = new Map<string, any[]>();
       communes.forEach((commune: any) => {
@@ -136,12 +140,13 @@ export default defineCachedEventHandler(
         .map((dept: any) => {
           const attachedCommunes = deptCommunesMap.get(dept.id) || [];
           const uniqueCoalitions = deptCoalitionsMap.get(dept.id) || new Set();
-          const geo = resolveGeoUnit(dept);
+          const geo = resolveGeoUnit(dept, geoSnapshot);
 
           return {
             id: dept.id,
             name: geo?.name || dept.name,
-            slug: geo?.slug ?? dept.slug ?? null,
+            slug: dept.slug ?? null,
+            geo_slug: geoSlugOf(geo),
             type: dept.type,
             region: geo?.region?.name ?? null,
             seats: dept.seats,
@@ -175,7 +180,7 @@ export default defineCachedEventHandler(
   },
   {
     maxAge: 60 * 30,
-    name: 'elections-dashboard-constituencies-v2',
+    name: 'elections-dashboard-constituencies-v3',
     getKey: (event) => {
       const query = getQuery(event);
       return `constituencies-${query.year}-${query.type}-${query.search || 'none'}`;

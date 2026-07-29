@@ -16,11 +16,12 @@ interface GeoData {
   municipality: number;
   population: number;
   id: number;
-  // Circonscription (jointure des contours statiques par slug)
+  // Circonscription (jointure des contours statiques par slug du référentiel géographique)
   constituencie?: {
     id: number;
     name: string;
     slug?: string | null;
+    geo_slug?: string | null;
     type?: string;
     nationale_type?: string | null;
     region?: string | null;
@@ -131,10 +132,10 @@ export function useElectionMapData(electionId?: Ref<string | number | null> | st
 
   // Extraire les coordonnées depuis les différents formats possibles
   const extractCoordinates = (item: GeoData, contours?: Map<string, ConstituencyContour>): number[][][] | null => {
-    // Contours statiques joints par slug de circonscription
-    const slug = item.constituencie?.slug;
-    if (slug && contours?.get(slug)?.ring?.length) {
-      return [contours.get(slug)!.ring];
+    // Contours statiques joints par le slug du référentiel géographique
+    const geoSlug = item.constituencie?.geo_slug;
+    if (geoSlug && contours?.get(geoSlug)?.ring?.length) {
+      return [contours.get(geoSlug)!.ring];
     }
     // Format Position (legacy, réponse fallback)
     if (item.Position?.coordinates?.[0]?.length > 0) {

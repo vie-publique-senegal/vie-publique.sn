@@ -13,6 +13,8 @@ interface GeoData {
   constituencie?: {
     name: string;
     slug?: string | null;
+    /** Slug du référentiel géographique — clé de jointure des contours */
+    geo_slug?: string | null;
     region: string;
     type: string;
     nationale_type: string;
@@ -167,9 +169,10 @@ export function useElectionMapDataResult() {
       .map((item) => {
         const constData = item.constituencie!;
 
-        // Contours statiques joints par slug ; Position en secours (réponse fallback legacy)
-        const contourRing = constData.slug ? contours?.get(constData.slug)?.ring : undefined;
-        const coordsRaw = contourRing || item.Position?.coordinates?.[0] || [];
+        // Contours statiques joints par le slug du référentiel géographique ;
+        // Position en secours (réponse fallback legacy)
+        const contourRing = constData.geo_slug ? contours?.get(constData.geo_slug)?.ring : undefined;
+        const coordsRaw = contourRing?.length ? contourRing : item.Position?.coordinates?.[0] || [];
         const coordinates: [number, number][] = Array.isArray(coordsRaw)
             ? coordsRaw.map((coord: number[]) => [coord[1], coord[0]] as [number, number]) // Flip to [lat, lng]
             : [];

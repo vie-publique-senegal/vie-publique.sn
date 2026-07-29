@@ -7,7 +7,7 @@ interface StationRow {
   polling_place: string;
   office_number: string;
   voters: number | null;
-  constituency?: { name?: string; geo_department?: { region?: { name?: string } } | null } | null;
+  constituency?: ({ name?: string } & Record<string, unknown>) | null;
 }
 
 interface StationStatsRow {
@@ -88,22 +88,25 @@ export default defineCachedEventHandler(
 
         // Détails d'un département (liste des bureaux)
         if (department && !groupByDepartment) {
-          const pollingStations = (await directus.request(
-            readItems('election_polling_stations', {
-              fields: [
-                'id',
-                'municipality',
-                'polling_place',
-                'office_number',
-                'voters',
-                'constituency.name',
-                'constituency.geo_department.region.name',
-              ],
-              filter: baseFilter,
-              limit: 2000,
-              sort: ['municipality', 'polling_place', 'office_number'],
-            }),
-          )) as StationRow[];
+          const [pollingStations, geoSnapshot] = await Promise.all([
+            directus.request(
+              readItems('election_polling_stations', {
+                fields: [
+                  'id',
+                  'municipality',
+                  'polling_place',
+                  'office_number',
+                  'voters',
+                  'constituency.name',
+                  ...GEO_UNIT_FIELDS.map((f) => `constituency.${f}`),
+                ],
+                filter: baseFilter,
+                limit: 2000,
+                sort: ['municipality', 'polling_place', 'office_number'],
+              }),
+            ) as Promise<StationRow[]>,
+            getGeoSnapshot(),
+          ]);
 
           return {
             data: pollingStations.map((station) => ({
@@ -113,7 +116,7 @@ export default defineCachedEventHandler(
               polling_place: station.polling_place,
               office_number: station.office_number,
               voters: station.voters,
-              region: station.constituency?.geo_department?.region?.name || null,
+              region: resolveGeoUnit(station.constituency, geoSnapshot)?.region?.name || null,
             })),
           };
         }
@@ -140,6 +143,7 @@ export default defineCachedEventHandler(
           data: statsData.map((row) => ({
             department: namesById.get(Number(row.constituency))?.name || null,
             slug: namesById.get(Number(row.constituency))?.slug || null,
+            geo_slug: namesById.get(Number(row.constituency))?.geo_slug ?? null,
             population: namesById.get(Number(row.constituency))?.population ?? null,
             region: namesById.get(Number(row.constituency))?.region ?? null,
             count: row.count,
@@ -247,7 +251,7 @@ export default defineCachedEventHandler(
   },
   {
     maxAge: 60 * 60, // Cache de 1 heure
-    name: 'election-map-national-v2',
+    name: 'election-map-national-v3',
     getKey: (event) => buildCacheKey('election-map-national', getQuery(event)),
   },
 );

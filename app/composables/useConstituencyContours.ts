@@ -1,30 +1,46 @@
 /**
- * Contours statiques des circonscriptions (public/geo/), indexés par slug.
- * Remplace la lecture des polygones depuis l'API carte : les endpoints ne
- * servent plus Position, la jointure se fait par constituencie.slug côté front.
+ * Contours statiques des circonscriptions (public/geo/), indexés par le slug du
+ * référentiel géographique (`geo_slug` des payloads de carte : « departement-bambey »,
+ * « commune-dakar-plateau-dakar ») — PAS par le slug de circonscription, qui reste la
+ * clé des URLs publiques.
+ *
+ * ⚠️ Quatre communes n'ont aucune limite cartographiée et portent une géométrie Point
+ * (`precision: 'approx_point'` dans le fichier source). Elles sont conservées ici avec
+ * `kind: 'point'` : une commune absente de la structure disparaîtrait silencieusement de
+ * la carte, ce qui se lit comme un oubli plutôt que comme une limite de la donnée.
  */
 
 export type ContourLevel = 'departements' | 'communes';
 
 const CONTOUR_SOURCES: Record<ContourLevel, string> = {
   departements: '/geo/senegal-departements.geojson',
-  communes: '/geo/senegal-communes-contours.geojson',
+  communes: '/geo/communes-senegal.geojson',
 };
 
 export interface ConstituencyContour {
   slug: string;
   name: string;
+  /** pcode — présent sur les départements, absent des fichiers communaux */
   code: string | null;
   parent: string | null;
-  /** Anneau extérieur du polygone, en ordre GeoJSON [lng, lat] */
+  /** `polygon` : `ring` exploitable ; `point` : aucun contour, seul `point` est renseigné */
+  kind: 'polygon' | 'point';
+  /** Anneau extérieur du polygone, en ordre GeoJSON [lng, lat] — vide si `kind: 'point'` */
   ring: number[][];
+  /** Position [lng, lat] — renseignée uniquement si `kind: 'point'` */
+  point: [number, number] | null;
 }
 
 interface GeoJsonFeature {
-  properties: { slug?: string; name?: string; code?: string | null; parent?: string | null };
-  geometry: {
-    type: 'Polygon' | 'MultiPolygon';
-    coordinates: number[][][] | number[][][][];
+  properties?: {
+    slug?: string;
+    name?: string;
+    code?: string | null;
+    parent?: string | null;
+  };
+  geometry?: {
+    type: 'Polygon' | 'MultiPolygon' | 'Point';
+    coordinates: number[] | number[][][] | number[][][][];
   };
 }
 
@@ -48,6 +64,15 @@ function extractOuterRing(geometry: GeoJsonFeature['geometry']): number[][] | nu
   return null;
 }
 
+/** Coordonnée d'une géométrie Point, ou null pour toute autre géométrie */
+function extractPoint(geometry: GeoJsonFeature['geometry']): [number, number] | null {
+  if (geometry?.type !== 'Point') return null;
+  const coords = geometry.coordinates as number[];
+  return typeof coords?.[0] === 'number' && typeof coords?.[1] === 'number'
+    ? [coords[0], coords[1]]
+    : null;
+}
+
 /** Centroïde approximatif (moyenne des points) d'un anneau de polygone [lng, lat] */
 export function ringCentroid(ring: number[][]): [number, number] {
   let sumLng = 0;
@@ -57,6 +82,12 @@ export function ringCentroid(ring: number[][]): [number, number] {
     sumLat += lat;
   }
   return ring.length ? [sumLng / ring.length, sumLat / ring.length] : [-14.4524, 14.4974];
+}
+
+/** Position représentative d'un contour, quelle que soit sa géométrie */
+export function contourPosition(contour: ConstituencyContour): [number, number] | null {
+  if (contour.kind === 'point') return contour.point;
+  return contour.ring.length ? ringCentroid(contour.ring) : null;
 }
 
 export function useConstituencyContours() {
@@ -72,14 +103,21 @@ export function useConstituencyContours() {
         const entries: Record<string, ConstituencyContour> = {};
         for (const feature of geojson?.features || []) {
           const slug = feature.properties?.slug;
+          if (!slug) continue;
+
           const ring = extractOuterRing(feature.geometry);
-          if (!slug || !ring) continue;
+          const point = ring ? null : extractPoint(feature.geometry);
+          // Ni polygone ni point exploitable : la feature n'est pas cartographiable
+          if (!ring && !point) continue;
+
           entries[slug] = {
             slug,
             name: feature.properties?.name || slug,
             code: feature.properties?.code ?? null,
             parent: feature.properties?.parent ?? null,
-            ring,
+            kind: ring ? 'polygon' : 'point',
+            ring: ring ?? [],
+            point,
           };
         }
         cache.value = entries;

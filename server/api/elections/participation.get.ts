@@ -23,8 +23,8 @@ interface ParticipationRow {
  * - election: ID de l'élection (optionnel, additif — le legacy ne filtrait pas)
  *
  * Source : election_constituency_results (departement/region résolus via le
- * référentiel geo_* — resolveGeoUnit). Fallback : collection `carte` tant que
- * les résultats ne sont pas backfillés (prod non migrée).
+ * référentiel versionné geo_entity — resolveGeoUnit + instantané). Fallback :
+ * collection `carte` tant que les résultats ne sont pas backfillés (prod non migrée).
  */
 export default defineCachedEventHandler(
   async (event) => {
@@ -56,10 +56,11 @@ export default defineCachedEventHandler(
         .catch(() => null)) as ParticipationRow[] | null;
 
       if (results && results.length > 0) {
+        const geoSnapshot = await getGeoSnapshot();
         return results
           .map((row) => {
             const constituency = row.constituency;
-            const geo = resolveGeoUnit(constituency);
+            const geo = resolveGeoUnit(constituency, geoSnapshot);
             const isCommune = constituency?.nationale_type === "commune";
             return {
               departement: isCommune ? geo?.parent?.name || null : geo?.name || constituency?.name || null,
@@ -106,7 +107,7 @@ export default defineCachedEventHandler(
   },
   {
     maxAge: 5 * 60, // Cache de 5 minutes (données en temps réel)
-    name: "election-participation-v3",
+    name: "election-participation-v4",
     getKey: (event) => {
       const query = getQuery(event);
       return `election-participation-${query.election || "all"}`;

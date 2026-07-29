@@ -29,39 +29,42 @@ export default defineCachedEventHandler(
       const fileId = await resolveElectoralFileId(null, "national");
 
       if (fileId) {
-        const stations = (await directus.request(
-          readItems("election_polling_stations", {
-            fields: [
-              "id",
-              "municipality",
-              "implantation",
-              "polling_place",
-              "office_number",
-              "voters",
-              "constituency.name",
-              "constituency.geo_department.region.name",
-            ],
-            filter: {
-              electoral_file: { _eq: fileId },
-              constituency: { name: { _eq: departmentName } },
-            },
-            sort: ["municipality", "polling_place", "office_number"],
-            limit: -1,
-          })
-        )) as {
-          id: number;
-          municipality: string | null;
-          implantation: string | null;
-          polling_place: string;
-          office_number: string;
-          voters: number | null;
-          constituency?: { name?: string; geo_department?: { region?: { name?: string } } | null } | null;
-        }[];
+        const [stations, geoSnapshot] = await Promise.all([
+          directus.request(
+            readItems("election_polling_stations", {
+              fields: [
+                "id",
+                "municipality",
+                "implantation",
+                "polling_place",
+                "office_number",
+                "voters",
+                "constituency.name",
+                ...GEO_UNIT_FIELDS.map((f) => `constituency.${f}`),
+              ],
+              filter: {
+                electoral_file: { _eq: fileId },
+                constituency: { name: { _eq: departmentName } },
+              },
+              sort: ["municipality", "polling_place", "office_number"],
+              limit: -1,
+            })
+          ) as Promise<{
+            id: number;
+            municipality: string | null;
+            implantation: string | null;
+            polling_place: string;
+            office_number: string;
+            voters: number | null;
+            constituency?: ({ name?: string } & Record<string, unknown>) | null;
+          }[]>,
+          getGeoSnapshot(),
+        ]);
 
         const pollingStations = stations.map((station) => ({
           id: station.id,
           department: station.constituency?.name || departmentName,
-          region: station.constituency?.geo_department?.region?.name || null,
+          region: resolveGeoUnit(station.constituency, geoSnapshot)?.region?.name || null,
           municipality: station.municipality,
           implantation: station.implantation,
           polling_place: station.polling_place,
@@ -117,7 +120,7 @@ export default defineCachedEventHandler(
   },
   {
     maxAge: 60 * 30, // 30 minutes de cache
-    name: "election-department-details-v2",
+    name: "election-department-details-v3",
     getKey: (event) => {
       const department = getRouterParam(event, "department");
       return `department-details-${department}`;

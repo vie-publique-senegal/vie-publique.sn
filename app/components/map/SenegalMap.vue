@@ -105,7 +105,10 @@ function buildDeckLayers(configs: any[]): any[] {
       const LayerClass = DeckLayers[typeMap[cfg._type]];
       if (!LayerClass) return null;
       try {
-        const { _type, _dsId, clusterRadius, clusterMaxZoom, ...rest } = cfg;
+        // `_dsId` est conservé dans les props deck.gl : il permet de retrouver le
+        // dataset d'origine même pour les sous-couches dont l'id porte un suffixe
+        // (points sans contour, labels…), là où `id.replace('layer-', '')` échoue.
+        const { _type, clusterRadius, clusterMaxZoom, ...rest } = cfg;
         return new LayerClass(rest);
       } catch (err) {
         console.warn(`[SenegalMap] Layer "${cfg._type}" creation failed:`, err);
@@ -186,7 +189,7 @@ function handleMapClick(info: any) {
 
   handlePickInfo(info);
 
-  const layerId = info.layer?.id?.replace('layer-', '') ?? '';
+  const layerId = info.layer?.props?._dsId ?? info.layer?.id?.replace('layer-', '') ?? '';
   const ds = props.config.datasets.find((d) => d.id === layerId);
 
   if (ds?.type === 'choropleth' && info.object?.properties) {
@@ -234,11 +237,19 @@ onMounted(async () => {
     loadDeckModules().catch(() => null),
     fetchGeo(geoUrl('regions', '/geo/senegal-regions.geojson')),
     fetchGeo(geoUrl('departements', '/geo/senegal-departements.geojson')),
-    fetchGeo(geoUrl('communes', '/geo/senegal-communes.geojson')),
+    // Par défaut, les communes ne servent que de calque de LIBELLÉS (zoom ≥ 9) :
+    // le fichier de points d'étiquetage couvre les 553 communes du référentiel.
+    // Les cartes qui dessinent les communes surchargent `geoSources.communes`.
+    fetchGeo(geoUrl('communes', '/geo/communes-senegal-labels.geojson')),
   ]);
   geoJsonRegions.value = regions;
   geoJsonDepartements.value = departements;
   geoJsonCommunes.value = communes;
+
+  // Le composant a pu être démonté pendant les chargements ci-dessus (navigation
+  // client, ou remontage par `:key` au drill-down) : sans ce contrôle, MapLibre reçoit
+  // un container null et lève « Invalid type: 'container' must be a String or HTMLElement ».
+  if (!mapContainer.value) return;
 
   await engine.initMap(mapContainer.value, {
     center: props.config.center ?? [-14.4524, 14.4974],

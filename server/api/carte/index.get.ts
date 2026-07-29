@@ -1,4 +1,4 @@
-import { readItems, aggregate } from '@directus/sdk'
+import { readItems, aggregate } from '@directus/sdk';
 
 interface StationAggregateRow {
   electoral_file: number | string;
@@ -24,23 +24,26 @@ interface ResultRow {
   round_2_valid_votes: number | null;
   round_2_participation_rate: number | null;
   election: { id: number; type: string; year: number } | null;
-  constituency: {
-    id: number;
-    name: string;
-    slug: string | null;
-    type: string;
-    nationale_type: string | null;
-  } & Record<string, unknown> | null;
+  constituency:
+    | ({
+        id: number;
+        name: string;
+        slug: string | null;
+        type: string;
+        nationale_type: string | null;
+      } & Record<string, unknown>)
+    | null;
 }
 
 /**
  * Données carte par circonscription (électeurs, bureaux, participation).
  * Source : election_constituency_results + agrégats election_polling_stations.
  * L'identité géographique (departement/region/municipality/population) est résolue
- * via le référentiel geo_* (resolveGeoUnit, fallback champs legacy pour les lignes
- * diaspora/Territoire National). Fallback : collection legacy `carte` tant que les
- * résultats ne sont pas backfillés (prod non migrée). Les contours ne sont plus
- * servis : le front les charge depuis public/geo/ et les joint par constituencie.slug.
+ * via le référentiel versionné geo_entity (resolveGeoUnit + instantané, fallback
+ * champs legacy pour les lignes diaspora/Territoire National). Fallback : collection
+ * legacy `carte` tant que les résultats ne sont pas backfillés (prod non migrée).
+ * Les contours ne sont plus servis : le front les charge depuis public/geo/ et les
+ * joint par constituencie.slug (`geo_slug` porte le slug du référentiel, additif).
  */
 export default defineCachedEventHandler(
   async (event) => {
@@ -82,7 +85,7 @@ export default defineCachedEventHandler(
             ...(electionId ? { filter: { election: { _eq: parseInt(electionId) } } } : {}),
             limit: -1,
             sort: ['id'],
-          })
+          }),
         )
         .catch(() => null)) as ResultRow[] | null;
 
@@ -95,18 +98,20 @@ export default defineCachedEventHandler(
             fields,
             ...(electionId ? { filter: { election: { _eq: parseInt(electionId) } } } : {}),
             limit: -1,
-          })
+          }),
         );
       }
 
       // Agrégats bureaux/lieux par circonscription, via les fichiers électoraux
       // nationaux des élections présentes dans les résultats
-      const electionIds = [...new Set(results.map((r) => r.election?.id).filter(Boolean))] as number[];
+      const electionIds = [
+        ...new Set(results.map((r) => r.election?.id).filter(Boolean)),
+      ] as number[];
       const fileIdByElection = new Map<number, number | null>();
       await Promise.all(
         electionIds.map(async (id) => {
           fileIdByElection.set(id, await resolveElectoralFileId(id, 'national'));
-        })
+        }),
       );
       const fileIds = [...new Set([...fileIdByElection.values()].filter(Boolean))] as number[];
 
@@ -124,7 +129,7 @@ export default defineCachedEventHandler(
                 filter: { electoral_file: { _in: fileIds } },
                 limit: -1,
               },
-            })
+            }),
           )
           .catch(() => [])) as StationAggregateRow[];
 
@@ -136,15 +141,21 @@ export default defineCachedEventHandler(
         }
       }
 
+      const geoSnapshot = await getGeoSnapshot();
+
       // Contrat de réponse conservé (clés de `carte`), sans Position ;
-      // constituencie.slug ajouté pour la jointure des contours statiques ;
-      // identité géographique résolue via le référentiel geo_* (fallback legacy)
+      // constituencie.slug reste TOUJOURS le slug de la circonscription (URLs publiques
+      // stables) et `geo_slug` porte, en plus, le slug du référentiel géographique ;
+      // identité géographique résolue via le référentiel geo_entity (fallback legacy)
       return results.map((row) => {
         const constituency = row.constituency;
-        const geo = resolveGeoUnit(constituency);
+        const geo = resolveGeoUnit(constituency, geoSnapshot);
         const isCommune = constituency?.nationale_type === 'commune';
         const fileId = row.election ? fileIdByElection.get(row.election.id) : null;
-        const stats = fileId && constituency ? stationAggregates.get(`${fileId}:${constituency.id}`) : undefined;
+        const stats =
+          fileId && constituency
+            ? stationAggregates.get(`${fileId}:${constituency.id}`)
+            : undefined;
 
         return {
           id: row.id,
@@ -153,13 +164,16 @@ export default defineCachedEventHandler(
             ? {
                 id: constituency.id,
                 name: geo?.name || constituency.name,
-                slug: geo?.slug ?? constituency.slug,
+                slug: constituency.slug,
+                geo_slug: geoSlugOf(geo),
                 type: constituency.type,
                 nationale_type: constituency.nationale_type,
                 region: geo?.region?.name ?? null,
               }
             : null,
-          departement: isCommune ? geo?.parent?.name || null : geo?.name || constituency?.name || null,
+          departement: isCommune
+            ? geo?.parent?.name || null
+            : geo?.name || constituency?.name || null,
           region: geo?.region?.name || null,
           municipality: isCommune ? geo?.name || constituency?.name || null : null,
           voters: row.voters,
@@ -186,13 +200,13 @@ export default defineCachedEventHandler(
 
       throw createError({
         statusCode: 500,
-        statusMessage: 'Erreur lors de la récupération des données de carte'
+        statusMessage: 'Erreur lors de la récupération des données de carte',
       });
     }
   },
   {
     maxAge: 60 * 60, // 1 heure
-    name: 'carte-v3',
+    name: 'carte-v4',
     getKey: (event) => {
       const query = getQuery(event);
       return `carte-${query.election || 'all'}`;

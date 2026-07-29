@@ -64,31 +64,48 @@ export async function resolveElectoralFileId(
   return id;
 }
 
+/** Identité exposée d'une circonscription dans les payloads de carte agrégés. */
+export interface ConstituencyIdentity {
+  name: string;
+  /** Slug de la circonscription (URLs publiques) — jamais celui du référentiel */
+  slug: string | null;
+  /** Slug du référentiel géographique, pour la jointure des contours ; null hors référentiel */
+  geo_slug: string | null;
+  population: number | null;
+  region: string | null;
+}
+
 /** Noms, slugs et populations des circonscriptions par id (mapping des agrégats groupés). */
 export async function getConstituencyNamesById(
   ids: (number | string | null | undefined)[],
-): Promise<Map<number, { name: string; slug: string | null; population: number | null; region: string | null }>> {
+): Promise<Map<number, ConstituencyIdentity>> {
   const uniqueIds = [...new Set(ids.map((id) => Number(id)).filter((id) => !isNaN(id) && id > 0))];
-  const namesById = new Map<number, { name: string; slug: string | null; population: number | null; region: string | null }>();
+  const namesById = new Map<number, ConstituencyIdentity>();
   if (uniqueIds.length === 0) return namesById;
 
   const cmsClient = getCmsClient();
-  const rows = (await cmsClient
-    .request(
-      readItems('election_constituencies', {
-        fields: ['id', 'name', 'slug', ...GEO_UNIT_FIELDS],
-        filter: { id: { _in: uniqueIds } },
-        limit: -1,
-        sort: ['id'],
-      }),
-    )
-    .catch(() => [])) as ({ id: number; name: string; slug: string | null } & Record<string, unknown>)[];
+  const [rows, geoSnapshot] = await Promise.all([
+    cmsClient
+      .request(
+        readItems('election_constituencies', {
+          fields: ['id', 'name', 'slug', ...GEO_UNIT_FIELDS],
+          filter: { id: { _in: uniqueIds } },
+          limit: -1,
+          sort: ['id'],
+        }),
+      )
+      .catch(() => []) as Promise<
+      ({ id: number; name: string; slug: string | null } & Record<string, unknown>)[]
+    >,
+    getGeoSnapshot(),
+  ]);
 
   for (const row of rows) {
-    const geo = resolveGeoUnit(row);
+    const geo = resolveGeoUnit(row, geoSnapshot);
     namesById.set(row.id, {
       name: geo?.name || row.name,
-      slug: geo?.slug ?? row.slug ?? null,
+      slug: row.slug ?? null,
+      geo_slug: geoSlugOf(geo),
       population: geo?.population ?? null,
       region: geo?.region?.name ?? null,
     });

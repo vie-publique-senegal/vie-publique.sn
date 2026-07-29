@@ -7,7 +7,8 @@
  *   (majorité des communes), clic = drill-down zoomé sur les communes de ce
  *   département (539 communes d'un coup était illisible).
  *
- * Les contours viennent de public/geo/ (jointure par slug).
+ * Les contours viennent de public/geo/, joints par le slug du référentiel géographique
+ * (`geo_slug`). Le slug de circonscription reste la clé des URLs et du classement.
  * Remplace les cartes Leaflet des pages elections-senegal ; les composants
  * legacy restent utilisés par les pages elections/legislatives.
  */
@@ -18,7 +19,7 @@ import {
   type OfficeMapItem,
   type ResultMapItem,
 } from '~/config/map-elections';
-import { useConstituencyContours, ringCentroid } from '~/composables/useConstituencyContours';
+import { useConstituencyContours, contourPosition } from '~/composables/useConstituencyContours';
 
 interface Props {
   mode: ElectionMapMode;
@@ -45,6 +46,7 @@ const emit = defineEmits<{
 interface NationalStatsRow {
   department: string | null;
   slug: string | null;
+  geo_slug: string | null;
   population: number | null;
   region: string | null;
   count?: Record<string, string>;
@@ -90,8 +92,9 @@ interface ResultRow {
   constituencie?: {
     name: string;
     slug?: string | null;
+    geo_slug?: string | null;
     nationale_type?: string | null;
-    parent?: { name?: string | null; slug?: string | null } | null;
+    parent?: { name?: string | null; slug?: string | null; geo_slug?: string | null } | null;
   } | null;
   winning_list?: {
     is_substitute?: boolean;
@@ -137,9 +140,10 @@ const { data: items, status } = useAsyncData(
         params,
       });
       return (response?.data || [])
-        .filter((row) => row.slug && row.department)
+        .filter((row) => row.geo_slug && row.department)
         .map((row) => ({
-          slug: row.slug!,
+          slug: row.slug ?? row.geo_slug!,
+          geoSlug: row.geo_slug!,
           name: row.department!,
           region: row.region,
           voters: asInt(row.sum?.voters),
@@ -155,15 +159,19 @@ const { data: items, status } = useAsyncData(
     const rows = await $fetch<ResultRow[]>('/api/carte/result', { params });
     const wantedLevel = props.mode === 'results-locale' ? 'commune' : 'departement';
     return (rows || [])
-      .filter((row) => row.constituencie?.slug && row.constituencie?.nationale_type === wantedLevel)
+      .filter(
+        (row) => row.constituencie?.geo_slug && row.constituencie?.nationale_type === wantedLevel,
+      )
       .map((row) => ({
-        slug: row.constituencie!.slug!,
+        slug: row.constituencie!.slug ?? row.constituencie!.geo_slug!,
+        geoSlug: row.constituencie!.geo_slug!,
         name: row.constituencie!.name,
         winnerName: row.coalition_gagnante?.name || '',
         winnerColor: row.coalition_gagnante?.color || '',
         headOfList: headOfList(row, props.mode),
         voters: row.voters || 0,
         parentSlug: row.constituencie?.parent?.slug ?? null,
+        parentGeoSlug: row.constituencie?.parent?.geo_slug ?? null,
         parentName: row.constituencie?.parent?.name ?? null,
         votersCount: row.voters_count ?? null,
         nullBallots: row.null_ballots ?? null,
@@ -200,6 +208,8 @@ watch(
 // Vue initiale : agrégat par
 // département (majorité des communes) ; clic = zoom sur les communes de ce
 // département.
+// `slug` est ici le slug GÉOGRAPHIQUE du département (clé du fond départemental
+// réindexé et de `parentGeoSlug` des communes).
 const drillDownDept = ref<{ slug: string; name: string } | null>(null);
 const { loadContours } = useConstituencyContours();
 const drillDownCenter = ref<[number, number] | null>(null);
@@ -216,8 +226,8 @@ async function drillDownTo(slug: string, name: string) {
   // ne lit center/zoom qu'à l'initialisation, un remount avec un centre encore
   // nul retomberait sur le centre par défaut du Sénégal.
   const contours = await loadContours('departements');
-  const ring = contours.get(slug)?.ring;
-  drillDownCenter.value = ring ? ringCentroid(ring) : null;
+  const contour = contours.get(slug);
+  drillDownCenter.value = contour ? contourPosition(contour) : null;
   drillDownDept.value = { slug, name };
 }
 
@@ -235,7 +245,7 @@ const departmentAggregate = computed(() =>
 const communesForDrillDown = computed(() => {
   if (!drillDownDept.value) return [];
   return ((items.value || []) as ResultMapItem[]).filter(
-    (c) => c.parentSlug === drillDownDept.value!.slug,
+    (c) => c.parentGeoSlug === drillDownDept.value!.slug,
   );
 });
 
@@ -313,7 +323,7 @@ async function openDepartmentDetail(item: OfficeMapItem & { region?: string | nu
 
 /** Clic sur un département agrégé (mode results-locale, avant drill-down) : zoom communes */
 function openDepartmentAggregate(dept: ResultMapItem) {
-  drillDownTo(dept.slug, dept.name);
+  drillDownTo(dept.geoSlug, dept.name);
 }
 
 /** Clic sur une commune (mode results-locale, drill-down actif) : panneau détail */

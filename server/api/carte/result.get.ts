@@ -1,4 +1,4 @@
-import { readItems } from '@directus/sdk'
+import { readItems } from '@directus/sdk';
 
 /**
  * Résultats « gagnant seul » par circonscription pour la choroplèthe.
@@ -74,7 +74,7 @@ export default defineCachedEventHandler(
             ...(electionId ? { filter: { election: { _eq: parseInt(electionId) } } } : {}),
             limit: -1,
             sort: ['id'],
-          })
+          }),
         )
         .catch(() => null)) as Record<string, unknown>[] | null;
 
@@ -104,26 +104,32 @@ export default defineCachedEventHandler(
               winningList && Array.isArray(winningList.candidates)
                 ? {
                     ...winningList,
-                    candidates: (winningList.candidates as Record<string, unknown>[]).map(mergePersonIdentity),
+                    candidates: (winningList.candidates as Record<string, unknown>[]).map(
+                      mergePersonIdentity,
+                    ),
                   }
                 : winningList,
           };
         });
 
       if (results && results.length > 0) {
+        const geoSnapshot = await getGeoSnapshot();
+
         // Clés legacy conservées : constituencie + coalition_gagnante.
-        // Identité géographique (name/slug/region/population/parent) résolue via le
-        // référentiel geo_* (fallback legacy) ; constituencie reconstruit explicitement
-        // pour ne pas exposer les relations geo_* brutes.
+        // Identité géographique (name/region/population/parent) résolue via le référentiel
+        // versionné geo_entity (fallback legacy) ; constituencie reconstruit explicitement
+        // pour ne pas exposer la relation geo_entity brute. `slug` reste TOUJOURS celui de
+        // la circonscription (URLs publiques stables), `geo_slug` est additif.
         return mapWinners(results, 'winning_coalition').map((item) => {
           const mapped = { ...(item as Record<string, unknown>) };
           const constituency = mapped.constituency as Record<string, unknown> | null;
-          const geo = resolveGeoUnit(constituency);
+          const geo = resolveGeoUnit(constituency, geoSnapshot);
           mapped.constituencie = constituency
             ? {
                 id: constituency.id,
                 name: geo?.name || constituency.name,
-                slug: geo?.slug ?? constituency.slug ?? null,
+                slug: constituency.slug ?? null,
+                geo_slug: geoSlugOf(geo),
                 region: geo?.region?.name ?? null,
                 type: constituency.type,
                 nationale_type: constituency.nationale_type,
@@ -134,7 +140,10 @@ export default defineCachedEventHandler(
           delete mapped.constituency;
           delete mapped.winning_coalition;
           // Second tour : même traitement identité/tête de liste que coalition_gagnante
-          const round2 = mapped.round_2_winning_coalition as Record<string, unknown> | null | undefined;
+          const round2 = mapped.round_2_winning_coalition as
+            | Record<string, unknown>
+            | null
+            | undefined;
           mapped.round_2_coalition_gagnante = round2
             ? { ...mergeEntityIdentity(round2), head_of_list: headOfListOf(round2) }
             : (round2 ?? null);
@@ -144,7 +153,10 @@ export default defineCachedEventHandler(
       }
 
       // Fallback legacy : lecture de `carte` (sert encore Position, géré côté front)
-      warnElectoralLegacyFallback('/api/carte/result', electionId ? `election ${electionId}` : 'all');
+      warnElectoralLegacyFallback(
+        '/api/carte/result',
+        electionId ? `election ${electionId}` : 'all',
+      );
 
       const legacyFields = [
         '*',
@@ -176,7 +188,7 @@ export default defineCachedEventHandler(
           fields: legacyFields,
           ...(electionId ? { filter: { election: { _eq: parseInt(electionId) } } } : {}),
           limit: -1,
-        })
+        }),
       )) as Record<string, unknown>[];
 
       return mapWinners(legacyResponse, 'coalition_gagnante');
@@ -185,13 +197,13 @@ export default defineCachedEventHandler(
 
       throw createError({
         statusCode: 500,
-        statusMessage: 'Erreur lors de la récupération des données de résultats de carte'
+        statusMessage: 'Erreur lors de la récupération des données de résultats de carte',
       });
     }
   },
   {
     maxAge: 60 * 60, // 1 heure
-    name: 'carte-result-v3',
+    name: 'carte-result-v5',
     getKey: (event) => {
       const query = getQuery(event);
       return `carte-result-${query.election || 'all'}`;

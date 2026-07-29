@@ -1,6 +1,8 @@
 // app/config/map-elections.ts — Configuration du composant carte électoral unifié.
 // Construit un SenegalMapConfig par mode (bureaux / résultats / résultats communaux),
-// joint aux contours statiques public/geo/elections/ par slug de circonscription.
+// joint aux contours statiques public/geo/ par le slug du référentiel géographique
+// (`geoSlug`, ex. « departement-bambey »). `slug` reste le slug de CIRCONSCRIPTION :
+// c'est la clé des URLs publiques et de l'API de classement, il ne joint plus rien.
 import type { SenegalMapConfig, MapDatasetConfig, RGBAColor, LegendConfig } from '~~/types/map'
 
 /** Convertit un hex en RGBA */
@@ -22,7 +24,10 @@ type BuilderMode = ElectionMapMode | 'results-locale-departments'
 
 /** Item du mode bureaux : une circonscription départementale du fichier électoral */
 export interface OfficeMapItem {
+  /** Slug de circonscription — URLs et API, jamais la jointure des contours */
   slug: string
+  /** Slug du référentiel géographique — clé de jointure des contours */
+  geoSlug: string
   name: string
   region?: string | null
   voters: number
@@ -34,14 +39,22 @@ export interface OfficeMapItem {
 
 /** Item des modes résultats : gagnant d'une circonscription */
 export interface ResultMapItem {
+  /** Slug de circonscription — URLs et API de classement, jamais la jointure des contours */
   slug: string
+  /** Slug du référentiel géographique — clé de jointure des contours */
+  geoSlug: string
   name: string
   winnerName: string
   winnerColor: string
   headOfList: string
   voters: number
+  /** Slug de circonscription du département parent (affichage, classement) */
   parentSlug?: string | null
+  /** Slug géographique du département parent — pilote l'agrégat et le drill-down */
+  parentGeoSlug?: string | null
   parentName?: string | null
+  /** Commune sans limite cartographiée : rendue en point, signalée dans l'info-bulle */
+  contourUnavailable?: boolean
   /** Indicateurs de résultat (nullables : saisis éditorialement au fil de l'eau) */
   votersCount?: number | null
   nullBallots?: number | null
@@ -60,10 +73,16 @@ export interface ResultMapItem {
   round2WinningPercentage?: number | null
 }
 
-/** Agrège des résultats communaux en un item par département (majorité des communes) */
+/**
+ * Agrège des résultats communaux en un item par département (majorité des communes).
+ * Le regroupement se fait sur le slug GÉOGRAPHIQUE du parent — c'est lui qui joint le
+ * fond départemental et qui pilote le drill-down ; le slug de circonscription est
+ * conservé à côté pour le panneau de classement.
+ */
 export function aggregateResultsByDepartment(communes: ResultMapItem[]): ResultMapItem[] {
   interface Bucket {
     slug: string
+    geoSlug: string
     name: string
     voters: number
     winners: Map<string, { color: string; count: number }>
@@ -72,18 +91,19 @@ export function aggregateResultsByDepartment(communes: ResultMapItem[]): ResultM
   const byDept = new Map<string, Bucket>()
 
   for (const commune of communes) {
-    const slug = commune.parentSlug
-    if (!slug) continue
-    if (!byDept.has(slug)) {
-      byDept.set(slug, {
-        slug,
-        name: commune.parentName || slug,
+    const geoSlug = commune.parentGeoSlug
+    if (!geoSlug) continue
+    if (!byDept.has(geoSlug)) {
+      byDept.set(geoSlug, {
+        slug: commune.parentSlug || geoSlug,
+        geoSlug,
+        name: commune.parentName || geoSlug,
         voters: 0,
         winners: new Map(),
         total: 0,
       })
     }
-    const bucket = byDept.get(slug)!
+    const bucket = byDept.get(geoSlug)!
     bucket.voters += commune.voters || 0
     bucket.total++
     if (commune.winnerName) {
@@ -98,6 +118,7 @@ export function aggregateResultsByDepartment(communes: ResultMapItem[]): ResultM
       [...bucket.winners.entries()].sort((a, b) => b[1].count - a[1].count)[0] || []
     return {
       slug: bucket.slug,
+      geoSlug: bucket.geoSlug,
       name: bucket.name,
       winnerName: majorityName || '',
       winnerColor: majority?.color || '',
@@ -120,7 +141,9 @@ function buildOfficesDataset(data: OfficeMapItem[]): MapDatasetConfig<OfficeMapI
     visible: true,
     data,
     geoLevel: 'departements',
-    joinField: 'slug',
+    // Jointure sur le slug du référentiel des deux côtés : `geoSlug` sur la donnée,
+    // `slug` sur les features GeoJSON (réindexées sur le référentiel).
+    joinField: 'geoSlug',
     geoJoinField: 'slug',
     getValue: (d) => d.voters || 0,
     colorScale: {
@@ -166,7 +189,9 @@ function buildResultsDataset(
     visible: true,
     data,
     geoLevel,
-    joinField: 'slug',
+    // Jointure sur le slug du référentiel des deux côtés : `geoSlug` sur la donnée,
+    // `slug` sur les features GeoJSON (réindexées sur le référentiel).
+    joinField: 'geoSlug',
     geoJoinField: 'slug',
     getColor: (d) => hexToRgba(d.winnerColor),
     colorScale: {
@@ -178,6 +203,14 @@ function buildResultsDataset(
     popup: {
       title: (d) => d.name,
       fields: [
+        // Commune sans limite cartographiée : le dire explicitement, sinon un simple
+        // point sur la carte se lirait comme une commune oubliée.
+        {
+          key: 'contourUnavailable',
+          label: 'Contour',
+          showIf: (d) => !!d.contourUnavailable,
+          formatter: () => 'Non disponible - position approximative',
+        },
         {
           key: 'winnerName',
           label: 'Vainqueur',
@@ -310,8 +343,8 @@ export function buildElectionMapConfig(
     interactionMode: 'flat',
     geoSources: {
       regions: null,
-      // Départements : le fichier canonique porte les slugs de circonscriptions
-      communes: isCommunesLevel ? '/geo/senegal-communes-contours.geojson' : null,
+      // Départements : le fichier canonique de SenegalMap, réindexé sur le référentiel
+      communes: isCommunesLevel ? '/geo/communes-senegal.geojson' : null,
     },
     datasets: [dataset],
     legend,

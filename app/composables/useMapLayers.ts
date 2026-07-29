@@ -67,6 +67,16 @@ function applyFilters(
   });
 }
 
+/**
+ * Feature enrichie d'une entité sans contour cartographié : géométrie Point et donnée
+ * jointe sous `_mapData`, comme les features de la choroplèthe (c'est cette forme que
+ * useMapPopup et l'émission `region-click` de SenegalMap attendent).
+ */
+interface EnrichedPointFeature {
+  geometry: { coordinates: number[] };
+  properties?: { _mapData?: unknown };
+}
+
 // ─── Calcul du centroïde d'une feature GeoJSON ──────────────────
 
 function computeCentroid(feature: any): [number, number] {
@@ -85,6 +95,9 @@ function computeCentroid(feature: any): [number, number] {
           coords.push(coord);
         }
       }
+    } else if (geometry.type === 'Point') {
+      // Communes sans limite cartographiée : le point EST la position
+      coords.push(geometry.coordinates);
     }
   }
 
@@ -206,15 +219,33 @@ export function useMapLayers(options: UseMapLayersOptions) {
     const enrichedFeatures: any[] = geoJson.features.map((feature) => {
       const code = feature.properties?.[geoJoinField];
       const itemData = code ? dataMap.get(code) : null;
+      const isPoint = feature.geometry?.type === 'Point';
       return {
         ...feature,
         properties: {
           ...feature.properties,
-          _mapData: itemData,
+          // Les entités sans contour cartographié signalent leur limite jusque dans
+          // l'info-bulle : un point muet se lirait comme une entité oubliée.
+          _mapData: itemData && isPoint ? { ...itemData, contourUnavailable: true } : itemData,
           _hasData: !!itemData,
         },
       };
     });
+
+    // Un GeoJsonLayer de polygones ne rend pas les Point : on les sort du calque de
+    // remplissage et on les sert par un ScatterplotLayer dédié (voir plus bas).
+    const polygonFeatures = enrichedFeatures.filter((f) => f.geometry?.type !== 'Point');
+    const pointFeatures: EnrichedPointFeature[] = enrichedFeatures.filter(
+      (f) => f.geometry?.type === 'Point',
+    );
+
+    /** Couleur d'une entité à partir de sa donnée jointe (mêmes règles que la choroplèthe) */
+    const fillColorFor = (itemData: unknown): RGBAColor => {
+      if (!itemData) return ds.colorScale?.fallback ?? [128, 128, 128, 80];
+      if (ds.getColor) return ds.getColor(itemData);
+      if (ds.getValue && ds.colorScale) return interpolateColor(ds.getValue(itemData), ds.colorScale);
+      return ds.colorScale?.fallback ?? [128, 128, 128, 80];
+    };
 
     const isPickable = ds.pickable ?? true;
 
@@ -222,7 +253,7 @@ export function useMapLayers(options: UseMapLayersOptions) {
       _type: 'choropleth',
       _dsId: ds.id,
       id: `layer-${ds.id}`,
-      data: { ...geoJson, features: enrichedFeatures },
+      data: { ...geoJson, features: polygonFeatures },
       pickable: isPickable,
       autoHighlight: isPickable,
       highlightColor: [255, 255, 255, 50],
@@ -251,6 +282,36 @@ export function useMapLayers(options: UseMapLayersOptions) {
     const currentZoom = viewport.value.zoom;
     const layers: any[] = [choropleth];
 
+    // ─── Entités sans contour cartographié : points cliquables ────────────────
+    // Même comportement de sélection que les polygones (survol, info-bulle, clic) :
+    // les objets gardent la forme `{ properties: { _mapData } }` attendue par
+    // useMapPopup et par l'émission `region-click` de SenegalMap.
+    if (pointFeatures.length > 0) {
+      layers.push({
+        _type: 'scatterplot',
+        _dsId: ds.id,
+        id: `layer-${ds.id}-nogeom-points`,
+        data: pointFeatures,
+        pickable: isPickable,
+        autoHighlight: isPickable,
+        highlightColor: [255, 255, 255, 90],
+        stroked: true,
+        filled: true,
+        radiusUnits: 'pixels',
+        getRadius: 6,
+        radiusMinPixels: 5,
+        radiusMaxPixels: 10,
+        lineWidthMinPixels: 1.5,
+        getPosition: (f: EnrichedPointFeature) => f.geometry.coordinates,
+        getFillColor: (f: EnrichedPointFeature) => fillColorFor(f.properties?._mapData),
+        getLineColor: theme.value === 'dark' ? [255, 255, 255, 200] : [30, 30, 30, 200],
+        updateTriggers: {
+          getFillColor: [data.length, JSON.stringify(Object.keys(activeFilters.value))],
+          getLineColor: [theme.value],
+        },
+      });
+    }
+
     // ─── Labels des features de base (communes : seulement à partir du zoom 8) ─
     if (geoLevel !== 'communes' || currentZoom >= 8) {
       const regionLabelData = (enrichedFeatures as any[])
@@ -274,9 +335,14 @@ export function useMapLayers(options: UseMapLayersOptions) {
         getTextAnchor: 'middle',
         getAlignmentBaseline: 'center',
         fontFamily: 'Inter, system-ui, sans-serif',
+        // Atlas de glyphes construit depuis les données : l'atlas deck.gl par défaut est
+        // ASCII et laisserait un blanc à la place des accents (« K b mer » pour Kébémer).
+        // Atlas de glyphes construit depuis les données : l'atlas deck.gl par défaut est
+        // ASCII et laisserait un blanc à la place des accents (« K b mer » pour Kébémer).
+        // Pas de halo (`outlineWidth`) : il exigerait `fontSettings.sdf`, dont le rendu
+        // érode les accents — deck.gl se contentait jusqu'ici d'avertir sans rien dessiner.
+        characterSet: 'auto',
         fontWeight: 700,
-        outlineWidth: 3,
-        outlineColor: theme.value === 'dark' ? [0, 0, 0, 220] : [255, 255, 255, 220],
         sizeUnits: 'pixels',
         billboard: false,
         updateTriggers: {
@@ -347,9 +413,10 @@ export function useMapLayers(options: UseMapLayersOptions) {
         getTextAnchor: 'middle',
         getAlignmentBaseline: 'center',
         fontFamily: 'Inter, system-ui, sans-serif',
+        // Atlas de glyphes construit depuis les données : l'atlas deck.gl par défaut est
+        // ASCII et laisserait un blanc à la place des accents (« K b mer » pour Kébémer).
+        characterSet: 'auto',
         fontWeight: 500,
-        outlineWidth: 2,
-        outlineColor: theme.value === 'dark' ? [0, 0, 0, 180] : [255, 255, 255, 180],
         sizeUnits: 'pixels',
         billboard: false,
         updateTriggers: {
@@ -359,7 +426,7 @@ export function useMapLayers(options: UseMapLayersOptions) {
       });
     }
 
-    // ─── Labels des communes (zoom ≥ 9, base régions — points senegal-communes) ─
+    // ─── Labels des communes (zoom ≥ 9, base régions — points communes-senegal-labels) ─
     const communeGeojson = geoLevel === 'regions' ? geoJsonCommunes?.value : null;
     if (communeGeojson && currentZoom >= 9) {
       const communeLabelData = communeGeojson.features
@@ -384,10 +451,11 @@ export function useMapLayers(options: UseMapLayersOptions) {
         getTextAnchor: 'middle',
         getAlignmentBaseline: 'center',
         fontFamily: 'Inter, system-ui, sans-serif',
+        // Atlas de glyphes construit depuis les données : l'atlas deck.gl par défaut est
+        // ASCII et laisserait un blanc à la place des accents (« K b mer » pour Kébémer).
+        characterSet: 'auto',
         fontWeight: 400,
         fontStyle: 'italic',
-        outlineWidth: 2,
-        outlineColor: theme.value === 'dark' ? [0, 0, 0, 160] : [255, 255, 255, 160],
         sizeUnits: 'pixels',
         billboard: false,
         updateTriggers: {
@@ -511,9 +579,10 @@ export function useMapLayers(options: UseMapLayersOptions) {
       getTextAnchor: 'middle',
       getAlignmentBaseline: 'center',
       fontFamily: 'Inter, system-ui, sans-serif',
+      // Atlas de glyphes construit depuis les données : l'atlas deck.gl par défaut est
+      // ASCII et laisserait un blanc à la place des accents (« K b mer » pour Kébémer).
+      characterSet: 'auto',
       fontWeight: 600,
-      outlineWidth: 2,
-      outlineColor: theme.value === 'dark' ? [0, 0, 0, 200] : [255, 255, 255, 200],
       updateTriggers: {
         getText: [data.length],
         getColor: [theme.value],
