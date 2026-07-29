@@ -7,7 +7,6 @@ const router = useRouter();
 const department = decodeURIComponent(route.params.department as string);
 
 const { siteUrl, siteName } = useSiteMetadata();
-const canonicalUrl = `${siteUrl}/elections-senegal/carte-electorale/nationale/${route.params.department}`;
 
 // Contexte : révision de la carte électorale (?revision=) ou élection (?election=, compat)
 const {
@@ -47,6 +46,23 @@ const {
   error: statsError,
   refresh: refreshStats,
 } = await getDepartmentStats(department);
+
+/**
+ * Libellé affiché : la graphie du référentiel résolue par l'API (« Kédougou »), et non le
+ * segment d'URL — celui-ci peut arriver dans n'importe laquelle des graphies acceptées.
+ */
+const departmentLabel = computed(() => stats.value?.department || department);
+
+/**
+ * Canonical : plusieurs graphies de la même URL répondent (« KEDOUGOU », « Kédougou », et
+ * « Malem Hoddar » pour « MALEM HODAR »). Elle doit donc pointer une forme UNIQUE, la graphie
+ * historique renvoyée par l'API — un `toHistoricalGeoName` du segment reçu ne suffit pas, il
+ * ne corrige pas les changements d'orthographe et laisserait chaque graphie s'auto-canonicaliser.
+ */
+const canonicalUrl = computed(
+  () =>
+    `${siteUrl}${nationalDepartmentPath(stats.value?.electoral_name || toHistoricalGeoName(department))}`,
+);
 
 // Colonnes du tableau
 const columns = [
@@ -176,7 +192,7 @@ const goBack = () => {
 
 // Titre de la page : contexte élection si la navigation en vient, sinon la révision
 const pageTitle = computed(() => {
-  let title = `Département ${department}`;
+  let title = `Département ${departmentLabel.value}`;
   if (electionName.value) {
     title += ` - ${electionName.value}`;
   } else if (revisionLabel.value) {
@@ -209,22 +225,22 @@ useSeoMeta({
   title: () => `${pageTitle.value} | Carte Électorale Sénégal`,
   description: () =>
     electionName.value
-      ? `Carte électorale du département ${department} pour ${electionName.value} - Liste des bureaux de vote, communes et électeurs.`
-      : `Carte électorale du département ${department} - Liste des bureaux de vote, communes et électeurs.`,
+      ? `Carte électorale du département ${departmentLabel.value} pour ${electionName.value} - Liste des bureaux de vote, communes et électeurs.`
+      : `Carte électorale du département ${departmentLabel.value} - Liste des bureaux de vote, communes et électeurs.`,
   ogTitle: () => pageTitle.value,
   ogDescription: () =>
-    `Découvrez les bureaux de vote et statistiques électorales du département ${department}.`,
-  ogUrl: canonicalUrl,
+    `Découvrez les bureaux de vote et statistiques électorales du département ${departmentLabel.value}.`,
+  ogUrl: () => canonicalUrl.value,
   ogImage,
   twitterCard: 'summary_large_image',
   twitterTitle: () => `${pageTitle.value} | Carte Électorale Sénégal`,
   twitterDescription: () =>
-    `Découvrez les bureaux de vote et statistiques électorales du département ${department}.`,
+    `Découvrez les bureaux de vote et statistiques électorales du département ${departmentLabel.value}.`,
   twitterImage: ogImage,
 });
 
 useHead({
-  link: [{ rel: 'canonical', href: canonicalUrl }],
+  link: [{ rel: 'canonical', href: () => canonicalUrl.value }],
   meta: [
     { property: 'og:type', content: 'website' },
     { property: 'og:site_name', content: siteName },
@@ -239,7 +255,7 @@ useHead({
       :items="[
         { label: 'Élections', to: '/elections-senegal' },
         { label: 'Carte électorale', to: backUrl },
-        { label: department },
+        { label: departmentLabel },
       ]"
     />
 
@@ -249,7 +265,7 @@ useHead({
         <UButton icon="i-heroicons-arrow-left" variant="ghost" @click="goBack" />
         <div>
           <h1 class="text-xl font-bold dark:text-white sm:text-2xl">
-            {{ department }}
+            {{ departmentLabel }}
           </h1>
         </div>
       </div>

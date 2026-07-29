@@ -1,4 +1,5 @@
-import { aggregate } from "@directus/sdk";
+import { aggregate } from '@directus/sdk';
+import { normalizeGeoName } from '#shared/geo-name';
 
 /**
  * Endpoint pour récupérer les statistiques des départements
@@ -7,6 +8,9 @@ import { aggregate } from "@directus/sdk";
  * Source : election_polling_stations via le fichier électoral national publié
  * le plus récent. Fallback : election_map_national tant que la prod n'est pas
  * migrée.
+ *
+ * ⚠️ `department` est accepté dans les deux graphies (fichiers électoraux et référentiel) :
+ * il est résolu en identifiant de circonscription, jamais comparé en égalité de nom.
  *
  * @returns Statistiques agrégées des départements
  */
@@ -18,35 +22,44 @@ export default defineCachedEventHandler(
     try {
       const directus = getCmsClient();
 
-      const fileId = await resolveElectoralFileId(null, "national");
+      const fileId = await resolveElectoralFileId(null, 'national');
 
       if (fileId) {
-        const filter: Record<string, unknown> = { electoral_file: { _eq: fileId } };
-        if (department) {
-          filter.constituency = { name: { _eq: department } };
+        const match = department
+          ? await resolveConstituencyByName(department, { nationaleType: 'departement' })
+          : null;
+
+        if (department && !match) {
+          return { data: [] };
         }
 
+        const filter: Record<string, unknown> = { electoral_file: { _eq: fileId } };
+        if (match) {
+          filter.constituency = { _in: match.ids };
+        }
+
+        // Pas de groupBy quand un département est demandé : le filtre restreint déjà
+        // l'agrégat, et un groupBy en aurait masqué les homonymes au-delà du 1er groupe.
         const statsData = (await directus.request(
-          aggregate("election_polling_stations", {
+          aggregate('election_polling_stations', {
             aggregate: {
-              count: ["office_number"],
-              sum: ["voters"],
-              countDistinct: ["municipality", "polling_place"],
+              count: ['office_number'],
+              sum: ['voters'],
+              countDistinct: ['municipality', 'polling_place'],
             },
-            query: department
-              ? { filter, groupBy: ["constituency"] }
-              : { filter },
-          })
+            query: { filter },
+          }),
         )) as {
           count?: Record<string, string>;
           sum?: Record<string, string>;
           countDistinct?: Record<string, string>;
         }[];
 
-        if (department && statsData && statsData.length > 0) {
+        if (match && statsData && statsData.length > 0) {
           const row = statsData[0];
           return {
-            department,
+            // Graphie des fichiers électoraux, quelle que soit celle reçue en entrée
+            department: match.name,
             count: row.count,
             sum: row.sum,
             countDistinct: row.countDistinct,
@@ -59,7 +72,7 @@ export default defineCachedEventHandler(
       }
 
       // Fallback legacy : election_map_national
-      warnElectoralLegacyFallback("/api/elections/map/department-stats", department);
+      warnElectoralLegacyFallback('/api/elections/map/department-stats', department);
 
       interface AggregateParams {
         aggregate: {
@@ -79,9 +92,9 @@ export default defineCachedEventHandler(
 
       const aggregateParams: AggregateParams = {
         aggregate: {
-          count: ["office_number"],
-          sum: ["voters"],
-          countDistinct: ["municipality", "polling_place"],
+          count: ['office_number'],
+          sum: ['voters'],
+          countDistinct: ['municipality', 'polling_place'],
         },
       };
 
@@ -92,20 +105,17 @@ export default defineCachedEventHandler(
               _eq: department,
             },
           },
-          groupBy: ["department"],
+          groupBy: ['department'],
         };
       }
 
       const statsData = await directus
-        .request(
-          aggregate("election_map_national", aggregateParams),
-        )
+        .request(aggregate('election_map_national', aggregateParams))
         .catch((error) => {
-          console.error("Erreur Directus:", error);
+          console.error('Erreur Directus:', error);
           throw createError({
             statusCode: error.errors?.[0]?.extensions?.code || 500,
-            message:
-              error.errors?.[0]?.message || "Erreur interne du serveur",
+            message: error.errors?.[0]?.message || 'Erreur interne du serveur',
           });
         });
 
@@ -117,23 +127,23 @@ export default defineCachedEventHandler(
         data: statsData || [],
       };
     } catch (error) {
-      console.error("Erreur lors de la récupération des stats:", error);
+      console.error('Erreur lors de la récupération des stats:', error);
       throw createError({
         statusCode: 500,
-        statusMessage:
-          "Une erreur est survenue lors de la récupération des statistiques",
+        statusMessage: 'Une erreur est survenue lors de la récupération des statistiques',
       });
     }
   },
   {
     maxAge: 60 * 30, // 30 minutes de cache
-    name: "election-department-stats-v2",
+    name: 'election-department-stats-v3',
+    // Clé normalisée : les deux graphies d'un même département partagent une entrée de cache
     getKey: (event) => {
       const query = getQuery(event);
       const department = query.department as string | undefined;
       return department
-        ? `department-stats-${department}`
-        : "departments-stats-all";
+        ? `department-stats-${normalizeGeoName(department)}`
+        : 'departments-stats-all';
     },
   },
 );

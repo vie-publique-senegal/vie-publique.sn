@@ -101,7 +101,7 @@
                   </div>
                   <NuxtLink
                     v-if="region.departement"
-                    :to="getDepartmentDetailUrl(region.departement.toUpperCase())"
+                    :to="getDepartmentDetailUrl(region.departement)"
                     class="text-black-800 mt-0 inline-block rounded-md bg-green-100 p-2 font-bold"
                   >
                     Voir plus
@@ -495,8 +495,10 @@ const getDepartmentDetailUrl = (departement: string) => {
     query.year = route.query.year as string;
   }
 
+  // Graphie historique via le helper partagé (les noms reçus viennent du référentiel,
+  // accentués) : un `.toUpperCase()` local ne retirerait pas les accents.
   return {
-    path: `/elections-senegal/carte-electorale/nationale/${encodeURIComponent(departement)}`,
+    path: nationalDepartmentPath(departement),
     query,
   };
 };

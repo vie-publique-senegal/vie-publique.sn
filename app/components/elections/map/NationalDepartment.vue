@@ -103,8 +103,11 @@ const handleRowClick = (row: DepartmentStats) => {
     query.year = route.query.year as string;
   }
 
+  // `row.department` porte le nom du référentiel (accentué, parfois réorthographié) : ce n'est
+  // pas la valeur d'URL indexée. On préfère `electoral_name`, fourni par l'API, et on retombe
+  // sur le helper de graphie historique s'il manque.
   router.push({
-    path: `/elections-senegal/carte-electorale/nationale/${row.department}`,
+    path: nationalDepartmentPath(row.electoral_name || row.department),
     query,
   });
 };

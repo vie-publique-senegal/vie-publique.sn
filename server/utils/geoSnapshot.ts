@@ -1,4 +1,5 @@
 import { readItems } from '@directus/sdk';
+import { normalizeGeoName } from '#shared/geo-name';
 
 /**
  * Instantané du référentiel géographique versionné (geo_entity / geo_entity_version /
@@ -108,6 +109,22 @@ export class GeoSnapshot {
     return [...this.byId.values()]
       .filter((entity) => entity.level === level)
       .sort((a, b) => a.name.localeCompare(b.name, 'fr'));
+  }
+
+  /**
+   * Entité d'un niveau donné par son NOM, comparé de façon normalisée (casse, accents,
+   * ponctuation). Indispensable parce que les valeurs reçues circulent dans les deux
+   * graphies : celle du référentiel (« Kédougou ») et celle, historique, des fichiers
+   * électoraux (« KEDOUGOU »).
+   */
+  findByName(level: GeoLevel, name: string | null | undefined): GeoEntity | null {
+    const key = normalizeGeoName(name);
+    if (!key) return null;
+    return (
+      [...this.byId.values()].find(
+        (entity) => entity.level === level && normalizeGeoName(entity.name) === key,
+      ) ?? null
+    );
   }
 
   /** Identifiants de tous les descendants d'une entité (l'entité elle-même exclue). */

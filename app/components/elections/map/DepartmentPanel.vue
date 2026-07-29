@@ -89,7 +89,7 @@ const getDepartmentDetailUrl = () => {
   }
 
   return {
-    path: `/elections-senegal/carte-electorale/nationale/${encodeURIComponent(props.department.departement.toUpperCase())}`,
+    path: nationalDepartmentPath(props.department.departement),
     query,
   };
 };

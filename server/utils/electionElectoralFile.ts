@@ -67,6 +67,14 @@ export async function resolveElectoralFileId(
 /** Identité exposée d'une circonscription dans les payloads de carte agrégés. */
 export interface ConstituencyIdentity {
   name: string;
+  /**
+   * Graphie des fichiers électoraux (`election_constituencies.name`, MAJUSCULES sans accents).
+   * `name` porte la graphie du référentiel, destinée à l'AFFICHAGE ; celle-ci est la clé
+   * d'URL historique de `/carte-electorale/nationale/<departement>`, la seule indexée —
+   * elle ne se déduit pas de `name` quand l'orthographe a changé (« MALEM HODAR » /
+   * « Malem Hoddar », « NIORO DU RIP » / « Nioro »).
+   */
+  electoral_name: string;
   /** Slug de la circonscription (URLs publiques) — jamais celui du référentiel */
   slug: string | null;
   /** Slug du référentiel géographique, pour la jointure des contours ; null hors référentiel */
@@ -104,6 +112,7 @@ export async function getConstituencyNamesById(
     const geo = resolveGeoUnit(row, geoSnapshot);
     namesById.set(row.id, {
       name: geo?.name || row.name,
+      electoral_name: row.name,
       slug: row.slug ?? null,
       geo_slug: geoSlugOf(geo),
       population: geo?.population ?? null,

@@ -1,5 +1,6 @@
 // server/api/elections/map/national.get.ts
 import { readItems, aggregate } from '@directus/sdk';
+import { normalizeGeoName } from '#shared/geo-name';
 
 interface StationRow {
   id: number;
@@ -31,6 +32,9 @@ interface StationStatsRow {
  * Source : election_polling_stations via le fichier électoral national de
  * l'élection (fichier publié le plus récent sans paramètre election).
  * Fallback : election_map_national tant que la prod n'est pas migrée.
+ *
+ * ⚠️ `department` est accepté dans les deux graphies (fichiers électoraux et référentiel) :
+ * il est résolu en identifiant de circonscription, jamais comparé en égalité de nom.
  */
 export default defineCachedEventHandler(
   async (event) => {
@@ -49,9 +53,18 @@ export default defineCachedEventHandler(
         : await resolveElectoralFileId(electionId ? parseInt(electionId) : null, 'national');
 
       if (fileId) {
+        const match = department
+          ? await resolveConstituencyByName(department, { nationaleType: 'departement' })
+          : null;
+
+        // Nom inconnu : réponse vide, comme le faisait l'ancienne égalité de nom
+        if (department && !match) {
+          return { data: [] };
+        }
+
         const baseFilter: Record<string, unknown> = { electoral_file: { _eq: fileId } };
-        if (department) {
-          baseFilter.constituency = { name: { _eq: department } };
+        if (match) {
+          baseFilter.constituency = { _in: match.ids };
         }
 
         // Stats par commune d'un département (additif — panneau département)
@@ -142,6 +155,8 @@ export default defineCachedEventHandler(
         return {
           data: statsData.map((row) => ({
             department: namesById.get(Number(row.constituency))?.name || null,
+            // Clé d'URL historique, à utiliser pour construire les liens et la canonical
+            electoral_name: namesById.get(Number(row.constituency))?.electoral_name || null,
             slug: namesById.get(Number(row.constituency))?.slug || null,
             geo_slug: namesById.get(Number(row.constituency))?.geo_slug ?? null,
             population: namesById.get(Number(row.constituency))?.population ?? null,
@@ -251,7 +266,12 @@ export default defineCachedEventHandler(
   },
   {
     maxAge: 60 * 60, // Cache de 1 heure
-    name: 'election-map-national-v3',
-    getKey: (event) => buildCacheKey('election-map-national', getQuery(event)),
+    name: 'election-map-national-v4',
+    // `department` est normalisé dans la clé : les deux graphies partagent une entrée de cache
+    getKey: (event) => {
+      const query = { ...getQuery(event) };
+      if (query.department) query.department = normalizeGeoName(String(query.department));
+      return buildCacheKey('election-map-national', query);
+    },
   },
 );

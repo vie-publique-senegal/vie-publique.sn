@@ -1,4 +1,5 @@
-import { readItems } from "@directus/sdk";
+import { readItems } from '@directus/sdk';
+import { normalizeGeoName } from '#shared/geo-name';
 
 /**
  * Liste des départements filtrés par région
@@ -29,30 +30,31 @@ export default defineCachedEventHandler(
       // La hiérarchie n'est pas traversable en filtre Directus (pas de relation inverse
       // sur geo_entity) : on résout d'abord les entités « département » de la région dans
       // l'instantané, puis on filtre les circonscriptions sur `geo_entity: { _in }`.
+      // Comparaison NORMALISÉE : la valeur reçue peut être la graphie du référentiel
+      // (« Kédougou », ce que renvoie l'étape région) comme la graphie historique
+      // (« KEDOUGOU », état de formulaire ou lien plus ancien).
       const geoSnapshot = await getGeoSnapshot();
-      const regionEntity = geoSnapshot
-        .entitiesOfLevel("region")
-        .find((entity) => entity.name === region);
+      const regionEntity = geoSnapshot.findByName('region', region);
       const departmentEntityIds = regionEntity
         ? geoSnapshot
             .descendantIds(regionEntity.id)
-            .filter((id) => geoSnapshot.get(id)?.level === "departement")
+            .filter((id) => geoSnapshot.get(id)?.level === 'departement')
         : [];
 
       const referentialDepartments =
         departmentEntityIds.length > 0
           ? ((await directus
               .request(
-                readItems("election_constituencies", {
-                  fields: ["name"],
+                readItems('election_constituencies', {
+                  fields: ['name'],
                   filter: {
-                    nationale_type: { _eq: "departement" },
-                    status: { _neq: "archived" },
+                    nationale_type: { _eq: 'departement' },
+                    status: { _neq: 'archived' },
                     geo_entity: { _in: departmentEntityIds },
                   },
-                  sort: ["name"],
+                  sort: ['name'],
                   limit: -1,
-                })
+                }),
               )
               .catch(() => [])) as { name: string }[])
           : [];
@@ -62,17 +64,17 @@ export default defineCachedEventHandler(
       }
 
       // Fallback legacy : textes department des bureaux election_map_national
-      warnElectoralLegacyFallback("/api/elections/pvs-upload/departments", region);
+      warnElectoralLegacyFallback('/api/elections/pvs-upload/departments', region);
 
       const data = await directus.request(
-        readItems("election_map_national", {
-          fields: ["department"],
+        readItems('election_map_national', {
+          fields: ['department'],
           filter: {
             region: { _eq: region },
             department: { _nnull: true },
           },
           limit: -1,
-        })
+        }),
       );
 
       // Extraire les départements uniques et trier
@@ -82,19 +84,20 @@ export default defineCachedEventHandler(
 
       return { data: departments };
     } catch (error: any) {
-      console.error("[pvs-upload/departments] Erreur:", error);
+      console.error('[pvs-upload/departments] Erreur:', error);
       throw createError({
         statusCode: 500,
-        message: "Erreur lors de la récupération des départements",
+        message: 'Erreur lors de la récupération des départements',
       });
     }
   },
   {
     maxAge: 300, // Cache 5 minutes
-    name: "election-pvs-departments-v3",
+    name: 'election-pvs-departments-v4',
+    // Clé normalisée : les deux graphies d'une même région partagent une entrée de cache
     getKey: (event) => {
       const query = getQuery(event);
-      return `departments-${query.region || "all"}`;
+      return `departments-${query.region ? normalizeGeoName(String(query.region)) : 'all'}`;
     },
-  }
+  },
 );
