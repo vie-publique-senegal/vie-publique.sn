@@ -273,8 +273,8 @@ carte (`fallback` du `colorScale`) sans erreur visible.
    appelle `useElectoralRevision()`, qui va chercher `/api/elections/electoral-files`
    et en déduit `nationalFileId` = l'`id` de la ligne `election_electoral_files`
    (scope `national`) de la révision affichée ;
-2. Elle rend `<ElectionUnifiedMap mode="offices" :electoral-file-id="nationalFileId" />` ;
-3. Le composant ([app/components/Election/ElectionUnifiedMap.vue:107](../../../app/components/Election/ElectionUnifiedMap.vue))
+2. Elle rend `<ElectionsMapUnifiedMap mode="offices" :electoral-file-id="nationalFileId" />` ;
+3. Le composant ([app/components/elections/map/UnifiedMap.vue:139](../../../app/components/elections/map/UnifiedMap.vue))
    appelle `GET /api/elections/map/national?electoral_file=<id>&groupBy=department` ;
 4. Le serveur ([server/api/elections/map/national.get.ts:125](../../../server/api/elections/map/national.get.ts))
    fait un `aggregate('election_polling_stations', { groupBy: ['constituency'], filter: { electoral_file } })`
