@@ -1,108 +1,141 @@
-# Résolution des noms géographiques (communes et départements)
+# Résolution des noms géographiques
 
-> Comment le site fait correspondre les noms de communes et de départements
-> rencontrés dans les différentes sources (fichiers électoraux, recensement,
-> saisies passées ou futures) avec le référentiel géographique canonique.
+> Comment le site et les scripts font correspondre les noms de lieux rencontrés
+> dans les différentes sources (fichiers électoraux, recensement, Journal
+> officiel, saisies passées ou futures) avec le référentiel géographique.
 
-## 1. Pourquoi ce dictionnaire existe
+**Dernière mise à jour** : 2026-07-29
 
-La source canonique retenue à la place est le **recensement ANSD 2023**
-(`scripts/elections/data/communes_senegal_2023.json`). Problème : les fichiers
-électoraux de la DAF (2024 et antérieurs/futurs) n'orthographient pas toujours
-les communes et départements comme l'ANSD — abréviations, désambiguïsations
-locales, coquilles, variantes graphiques (`M'Backé` vs `Mbacké`, `Nioro` vs
-`Nioro du Rip`, `Djinaki` vs `Djinaky`...). Sans mécanisme de correspondance,
-chaque nouvel import buterait sur les mêmes divergences.
+## 1. Pourquoi ce mécanisme existe
 
-`geo-name-aliases.json` est ce mécanisme : un dictionnaire qui relie toute
-graphie rencontrée dans une source au nom officiel du référentiel ANSD.
+Un même lieu s'écrit rarement pareil d'une source à l'autre : abréviations,
+désambiguïsations locales, coquilles, variantes graphiques (`M'Backé` contre
+`Mbacké`, `Nioro` contre `Nioro du Rip`, `Djinaki` contre `Djinaky`). Sans
+mécanisme de correspondance, chaque nouvel import buterait sur les mêmes
+divergences, et chaque script réinventerait ses propres correspondances en dur.
 
-## 2. Portée et permanence
+Le référentiel tranche par une **graphie officielle** — celle du Journal
+officiel, portée par `geo_entity.name_current` — et enregistre **toutes les
+autres graphies rencontrées** dans une collection dédiée.
 
-- **Dictionnaire permanent et cumulatif** : jamais régénéré depuis zéro. Un
-  alias validé une fois reste valable à vie, y compris après un renommage
-  officiel de l'entité. Exemple : le département historique « Birkilane »
-  devient officiellement « Birkelane » — l'alias `Birkilane → Birkelane`
-  continue de résoudre correctement tout fichier électoral passé qui
-  utiliserait encore l'ancienne graphie ;
-- **Valable pour tout fichier électoral**, passé ou futur, pas seulement celui
-  en cours de traitement au moment de l'écriture d'une entrée ;
-- **Jamais de correspondance en dur dans un script** : toute résolution nom →
-  entité passe par ce fichier, pour que la logique reste auditable et
-  réutilisable d'un script à l'autre.
+## 2. Où vit le dictionnaire
+
+Collection Directus **`geo_entity_name`**. Une ligne = une graphie d'une
+entité, telle qu'une source l'écrit.
+
+| Champ | Rôle |
+|---|---|
+| `entity` | l'entité concernée (M2O vers `geo_entity`) |
+| `name` | la graphie telle que publiée par la source (`M'BACKE`, `SAINT LOUIS`) |
+| `name_normalized` | forme de comparaison : minuscules, sans accents, ponctuation et blancs réduits à un espace simple |
+| `source` | provenance de la graphie : `jo` (Journal officiel), `rgph5` (recensement 2023), `daf` (fichiers électoraux) |
+| `uk` | clé technique d'unicité `<entity>|<name_normalized>|<source>` |
+
+État au 2026-07-29 : **1 488 lignes** — 753 `jo`, 553 `rgph5`, 182 `daf`.
+
+Propriétés de ce choix :
+
+- le dictionnaire vit **à côté du référentiel qu'il résout**, et non dans un
+  fichier annexe ;
+- un alias **survit à un renommage officiel** : il pointe l'entité, pas le nom.
+  L'ancienne graphie continue de résoudre les fichiers historiques ;
+- la même graphie vue au Journal officiel et dans un fichier électoral fait
+  **deux lignes**, c'est voulu — la clé d'unicité inclut la source, qui
+  documente qui écrit quoi ;
+- une rédactrice peut ajouter un alias sans toucher au code.
 
 ## 3. Algorithme de résolution
 
-Pour toute graphie rencontrée dans une source :
+La recherche se fait sur le **triplet (niveau, nom normalisé, parent)**. Une
+recherche par nom seul est un défaut, pas un raccourci :
 
-1. **Normaliser** la graphie (majuscules, sans accents ni ponctuation, espaces
-   réduits) ;
-2. Chercher l'**égalité normalisée** directement dans le référentiel ANSD ;
-3. Sinon, chercher la graphie normalisée dans les **aliases** du dictionnaire
-   → renvoie le nom officiel (`canonical`) ;
-4. Pour les **communes**, toujours qualifier par le département : 5 homonymes
-   avérés existent dans le référentiel (Mlomp, Médina Gounass, Dinguiraye,
-   Missirah, Vélingara), donc une commune ne se résout jamais par son seul nom ;
-5. **Aucune correspondance trouvée** = entité potentiellement nouvelle ou
-   graphie non encore vue → le script remonte le cas **sans le résoudre
-   silencieusement**, arbitrage humain, puis ajout de l'entrée au dictionnaire.
+- **151 graphies normalisées désignent plusieurs entités de niveaux
+  différents** — l'arrondissement et la commune de Dakar-Plateau, la région, le
+  département et la ville de Dakar ;
+- **5 noms de communes sont de vrais homonymes** entre départements : Médina
+  Gounass, Dinguiraye, Missirah, Vélingara, Mlomp.
 
-Exemple bout en bout : un fichier électoral mentionne le département
-`Birkilane`. Étape 2 échoue (le référentiel ANSD porte `Birkelane`). Étape 3
-trouve l'alias `Birkilane` sous l'entrée canonique `Birkelane` → résolution
-réussie, aucun arbitrage nécessaire.
+Pour toute graphie rencontrée :
 
-## 4. Structure du fichier
+1. **normaliser** la graphie (même règle que `name_normalized`) ;
+2. chercher l'**égalité normalisée** sur `geo_entity.name_current`, au bon
+   niveau, qualifiée par le parent ;
+3. sinon, chercher dans **`geo_entity_name`**, mêmes qualifications ;
+4. **aucune correspondance, ou plusieurs candidats** : ne pas résoudre. Le cas
+   est remonté pour arbitrage humain. Jamais de résolution silencieuse, jamais
+   d'appariement approximatif en production, jamais de correspondance codée en
+   dur dans un script.
 
-Deux sections, chacune une liste d'entités ayant **au moins un alias** (une
-graphie absente du dictionnaire se résout d'abord par égalité normalisée avec
-le référentiel, elle n'a pas besoin d'entrée ici) :
+**Traiter les niveaux de haut en bas.** Une commune se qualifie par son
+département *résolu*, pas par la graphie brute du département : sinon une seule
+graphie de département non résolue fait échouer toutes ses communes — 2 graphies
+suffisent à en bloquer 22.
 
-- **`departments`** : 6 cas où la graphie officielle a dû être arbitrée
-  (Birkelane, Malem Hodar, Nioro du Rip, Mbacké, Koumpentoum, Mbour) — chaque
-  entrée porte le nom retenu (`canonical`), ses graphies alternatives
-  (`aliases`) et une `note` expliquant l'arbitrage ;
-- **`municipalities`** : ~70 communes, chaque entrée qualifiée par son
-  `department` (obligatoire, à cause des homonymes) et un `status` qui indique
-  l'origine de la correspondance :
-  - *« désambiguïsation/abréviation du fichier électoral »* : le fichier
-    électoral utilise une forme raccourcie ou désambiguïsée (ex. `PLATEAU` →
-    `DAKAR PLATEAU`, `NIORO` → `NIORO DU RIP`) ;
-  - *« appariement automatique par distance d'édition, même département »* :
-    coquille ou variante orthographique détectée automatiquement (distance de
-    Levenshtein) puis validée manuellement, jamais appliquée hors du même
-    département.
+> **Piège de la hiérarchie.** Le parent immédiat d'une commune est le plus
+> souvent son **arrondissement** (497 communes sur 553 ; les 56 autres relèvent
+> directement d'un département). Pour qualifier une commune par son
+> département, remonter au **premier ancêtre de niveau département**, jamais le
+> parent immédiat.
 
-## 5. Validation déjà effectuée
+## 4. Deux graphies coexistent en base, et ce n'est pas une anomalie
 
-Validation croisée à 3 sources indépendantes (2026-07-14) :
+`election_constituencies.name` porte la graphie des **fichiers électoraux** :
+majuscules, sans accents (`KEDOUGOU`, `MALEM HODAR`, `NIORO DU RIP`).
+`geo_entity.name_current` porte celle du **Journal officiel** (`Kédougou`,
+`Malem Hoddar`, `Nioro`). **181 des 599 circonscriptions rattachées** diffèrent
+ainsi de leur entité.
 
-- **ANSD 2023** (source canonique) ;
-- **base des bureaux de vote** (`election_polling_stations.municipality` via
-  `constituency`, CMS dev = miroir prod 2024) ;
-- **export ponctuel de la carte électorale 2023** (15 633 bureaux nationaux,
-  champ `collectivite`) : fichier fourni hors repo pour cette seule
-  vérification croisée, non conservé dans `scripts/elections/data/` (jamais
-  consommé par un script — la résolution en base passe uniquement par les 2
-  premières sources).
+L'affichage public vient du référentiel. Le champ de la circonscription reste
+la donnée d'origine, et sert encore de clé à la cascade de l'upload des procès-
+verbaux.
 
-Les trois sources portent les **mêmes 553 paires (département, commune)** :
-468 par égalité exacte, 85 via ce dictionnaire, **0 orpheline** dans les trois
-sens. Seule divergence relevée : 4 électeurs sur 7 033 854 entre base et
-fichier (mêmes comptes de bureaux) — écart jugé sans impact.
+Conséquence côté application : [`shared/geo-name.ts`](../../../shared/geo-name.ts)
+fournit les deux règles, **non interchangeables** :
 
-## 6. Qui l'utilise
+- `normalizeGeoName()` pour **comparer** deux graphies (résolution d'une valeur
+  reçue en entrée) ;
+- `toHistoricalGeoName()` pour **écrire** une valeur d'URL, la route de détail
+  d'un département étant indexée en graphie historique.
 
-Construit et validé en amont de son premier usage, puis consommé par 2
-scripts : `backfill-geo-municipalities-ansd.mjs` (résolution du département de
-chaque commune ANSD) et `reconcile-communes-contours.mjs` (réconciliation des
-slugs des contours GeoJSON communaux). Tout script de résolution géographique
-écrit par la suite doit passer par ce mécanisme plutôt que de coder ses
-propres correspondances.
+`normalizeGeoName()` ne réconcilie que casse, accents et ponctuation :
+`MALEM HODAR` et `Malem Hoddar` restent deux clés distinctes. C'est pourquoi la
+résolution serveur ([`server/utils/electionConstituencyLookup.ts`](../../../server/utils/electionConstituencyLookup.ts))
+indexe les **deux** graphies d'une circonscription — toute URL déjà indexée
+continue de répondre, quelle que soit sa graphie.
 
-## 7. Étendre le dictionnaire
+## 5. Qui l'utilise
 
-Un cas non résolu par l'algorithme (étape 5) ne doit **jamais** être tranché
-silencieusement dans le code. Il doit être remonté pour arbitrage, puis, une
-fois la décision prise, ajouté ici comme nouvelle entrée ou nouvel alias —
-jamais réécrit en dur dans un script.
+- **Les scripts d'import** (repo `vpsn-scripts`, dossier `elections/`) :
+  rattachement des circonscriptions au référentiel, imports de fichiers
+  électoraux, imports de données de recensement. C'est l'usage principal ;
+- **le site ne lit pas `geo_entity_name`** : il n'en a pas besoin, l'identité
+  lui vient de la clé étrangère `election_constituencies.geo_entity`. Seule
+  exception de principe : la résolution d'un nom reçu dans une URL, qui passe
+  par les graphies déjà présentes en base et non par le dictionnaire.
+
+## 6. Étendre le dictionnaire
+
+Le dictionnaire n'est **jamais régénéré** : il grossit par l'usage, et un alias
+validé une fois reste valable à vie. Pour tout import futur :
+
+1. le script remonte les graphies non résolues, sans les résoudre ;
+2. arbitrage humain : soit une **entité nouvelle** (création d'une entité, de sa
+   version et d'un événement sourcé par le texte officiel), soit une **graphie
+   de plus** d'une entité existante ;
+3. l'arbitrage est écrit dans `geo_entity_name` **par script**, depuis un
+   fichier de correspondances, avec le drapeau d'écriture explicite — pas à la
+   main, pour rester traçable et rejouable ;
+4. le script d'import est rejoué : la graphie se résout, définitivement.
+
+## 7. Validation croisée des correspondances
+
+Trois sources indépendantes ont été comparées : recensement ANSD 2023, base des
+bureaux de vote (`election_polling_stations.municipality` via `constituency`) et
+un export ponctuel de la carte électorale 2023 (15 633 bureaux nationaux).
+
+Les trois portent les **mêmes 553 paires (département, commune)** : 468 par
+égalité exacte, 85 via le dictionnaire, **0 orpheline** dans les trois sens.
+
+Ce contrôle vaut toujours : `geo_entity_name` porte l'intégralité de ces
+correspondances, et le rattachement des 599 circonscriptions au référentiel se
+fait sans aucune non-résolue.

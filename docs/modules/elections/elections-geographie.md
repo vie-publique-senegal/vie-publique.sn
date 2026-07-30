@@ -1,6 +1,6 @@
 # Carte électorale, fichier électoral et résultats - architecture
 
-**Dernière mise à jour** : 2026-07-17
+**Dernière mise à jour** : 2026-07-29
 
 > Comment le site modélise et sert la géographie électorale du Sénégal : le fichier
 > électoral (et sa carte électorale), les bureaux de vote, les circonscriptions,
@@ -31,7 +31,7 @@ seul » - le détail des voix par coalition et circonscription n'est pas modéli
 | `election_electoral_files` | Une ligne = un fichier électoral (une révision × un scope). Champs : `name`, `scope` (`national`/`diaspora`), `year`, `revision_date`, `document` (M2O → `documents`, l'arrêté officiel consultable), `notes` | Pérenne, partagé entre élections |
 | `elections` | Les scrutins. Deux FK nullables pointent la révision utilisée : `electoral_file_national` et `electoral_file_diaspora` | Par scrutin |
 | `election_polling_stations` | Une ligne = un bureau de vote d'un fichier électoral. FK `electoral_file` + FK `constituency` (département au national, zone à l'étranger). Textes descriptifs conservés : `municipality`, `implantation` (national), `country`, `locality`, `diplomatic_representation` (diaspora) | Par fichier électoral |
-| `election_constituencies` | Référentiel hiérarchique des circonscriptions : régions → départements → communes, plus les 8 zones de la diaspora. Champs propres : `slug` (clé publique de jointure), `nationale_type`, `seats`. Identité (nom, slug, population, hiérarchie parent/région) déléguée au référentiel générique `geo_regions`/`geo_departments`/`geo_municipalities` via un des 3 FK `geo_region`/`geo_department`/`geo_municipality`, résolue par `resolveGeoUnit()` (voir [elections-geo-resolution.md](./elections-geo-resolution.md)) | Pérenne (change aux redécoupages) |
+| `election_constituencies` | Les circonscriptions : 46 départements, 553 communes, 8 zones de la diaspora et Territoire National. Champs propres : `slug` (clé d'URL publique), `name` (graphie des fichiers électoraux), `nationale_type`, `seats`. Identité affichée (nom, population, hiérarchie parent/région) **déléguée au référentiel géographique versionné** via la FK unique `geo_entity`, résolue par `resolveGeoUnit()` (voir section 2.1) | Pérenne (change aux redécoupages) |
 | `election_constituency_results` | Une ligne = le résultat d'une élection dans une circonscription : FK `election` + `constituency`, `winning_coalition` (la participation gagnante), `winning_list`, `voters`, `seat`, relevés horaires `participation_10h/12h/14h/17h`. Unicité métier : 1 ligne par (élection, circonscription) | Par élection × circonscription |
 | `election_constituency_coalition_results` | Détail du classement complet : une ligne = le score d'une coalition dans une circonscription pour un tour (FK `result` → `election_constituency_results`, `coalition`, `round`, `votes`, `percentage`). Saisie éditoriale au fil de l'eau, peut être vide sans que ce soit une erreur | Par élection × circonscription × coalition × tour |
 
@@ -43,31 +43,65 @@ Ce que ce modèle garantit :
 - les résultats sont **normalisés** par circonscription et reliés aux entités
   politiques via la participation gagnante (`election_coalition` → `political_entity`).
 
+### 2.1 Le référentiel géographique versionné
+
+L'identité géographique ne vit pas dans le module électoral : elle est déléguée à un
+référentiel générique, versionné dans le temps, que les circonscriptions référencent par
+la seule FK `election_constituencies.geo_entity` (599 lignes sur 608).
+
+| Collection | Rôle |
+|---|---|
+| `geo_entity` | 745 entités : 14 régions, 46 départements, 127 arrondissements, 553 communes, 5 villes. Identité stable : `slug`, `level`, `name_current` (nom en vigueur, dénormalisé), `country` |
+| `geo_entity_version` | L'état **daté** de chaque entité : `name`, `parent`, `chef_lieu`, `ville`, `valid_from`/`valid_to`, `source_event`. Version en vigueur = `valid_to` nul. **Seule table qui porte la hiérarchie** |
+| `geo_event` / `geo_event_entity` | Les textes fondateurs (décrets) de chaque changement. Non lus par le site |
+| `geo_entity_name` | Les graphies alternatives, par source (voir [elections-geo-resolution.md](./elections-geo-resolution.md)). Non lue par le site |
+| `geo_demographic_observation` | Population par entité, année et source. **Niveau commune uniquement** (553 lignes, recensement 2023) |
+
+Trois conséquences structurantes :
+
+- **la population d'un département ou d'une région est la somme de ses communes**, calculée
+  à la lecture, jamais stockée ;
+- **le parent d'une commune est son arrondissement** dans 497 cas sur 553. Les endpoints
+  n'exposent jamais l'arrondissement : `resolveGeoUnit()` remonte au **premier ancêtre de
+  niveau département**, et à la région au-dessus ;
+- **les 9 lignes purement électorales** (8 zones de diaspora, Territoire National) n'ont pas
+  d'entité géographique : leur `geo_entity` est nul et leur identité vient de leurs propres
+  champs. Ce repli est permanent, et c'est aussi lui qui fait fonctionner le code sur un
+  environnement où le référentiel n'est pas déployé.
+
+`geo_entity` n'expose **aucune relation inverse** : ni la hiérarchie ni la population ne sont
+lisibles par expansion Directus. La lecture passe par un **instantané mis en cache**
+(`server/utils/geoSnapshot.ts`), construit en 3 requêtes (entités, versions en vigueur,
+observations) et exploité en mémoire.
+
 ## 3. Contours cartographiques (fichiers statiques)
 
 Les polygones ne sont **pas stockés dans le CMS** : ce sont des GeoJSON statiques
-versionnés dans `public/geo/`, joints aux données par le **`slug`** de circonscription
-(propriété `slug` de chaque feature, alignée sur `election_constituencies.slug`).
+versionnés dans `public/geo/`, joints aux données par le **slug de l'entité géographique**
+(propriété `slug` de chaque feature, exposée par les API sous la clé `geo_slug`).
 
 | Fichier | Contenu | Propriétés |
 |---|---|---|
-| `senegal-departements.geojson` | Les **46 départements** du découpage administratif actuel (Keur Massar inclus, créé en 2021) | `slug`, `name`, `department`, `code` (pcode), `parent` (slug de région) |
-| `senegal-communes-contours.geojson` | Les polygones de **539 communes** | `slug`, `name`, `code`, `parent` (slug de département) |
+| `senegal-departements.geojson` | Les **46 départements** du découpage actuel (Keur Massar inclus, créé en 2021) | `slug`, `name`, `level`, `parent` (slug de région), `code` (pcode) |
+| `communes-senegal.geojson` | Les **553 communes** : 549 polygones et 4 points | `slug`, `name`, `level`, `parent` (slug de département), `country`, `source`, `match_method`, `precision`, `note` |
+| `communes-senegal-labels.geojson` | 553 points d'étiquetage (point d'inaccessibilité du polygone), calque de libellés des cartes génériques | `slug`, `name`, `level`, `parent` |
 | `senegal-regions.geojson` | Les 14 régions (fond des cartes génériques) | `code`, `name` |
-| `senegal-communes.geojson` | Points (centres) de 58 communes - fichier historique des cartes génériques, conservé tel quel | `name`, `department`, `region` |
 
 Provenance et limites :
 
-- les contours départementaux et communaux sont **consolidés à partir des données
-  cartographiques du projet**, simplifiés avec mapshaper (objectif ~1 Mo par fichier) ;
-- les **pcodes** (`code`) des régions et départements viennent du référentiel
-  humanitaire OCHA COD-AB (v02, 2024) ;
-- **6 communes n'ont pas de contour connu** (aucune source ouverte au niveau communal :
-  geoBoundaries s'arrête à l'ADM3, OCHA aux arrondissements) - elles apparaissent dans
-  les données mais pas sur la carte ; toute source future comblera le trou sans
-  changement de modèle ;
-- un redécoupage administratif = une mise à jour de ces fichiers (versionnée en git)
-  + les nouvelles lignes du référentiel.
+- les contours communaux viennent d'**OpenStreetMap** (complétés par GADM pour 4 communes
+  absentes d'OSM), nettoyés topologiquement et simplifiés avec mapshaper : **0 chevauchement,
+  0 trou, 0 géométrie invalide**, union des surfaces 197 853 km² pour un pays de 196 712 km² ;
+- les **pcodes** (`code`) des régions et départements viennent du référentiel humanitaire
+  OCHA COD-AB (v02, 2024) ;
+- **4 communes n'ont pas de limite cartographiée** — Sibassor (Kaolack), Ndombo Sandjiry
+  (Dagana), Guédé Chantier (Podor), Samine (Goudomp). Elles portent une géométrie `Point`
+  (leur chef-lieu) et `precision: approx_point`. La carte les affiche en **point cliquable**
+  avec mention explicite, jamais en polygone : elles sont exclues du calque de remplissage.
+  Pour Sibassor, la seule limite disponible était celle de l'arrondissement homonyme, écartée
+  à dessein plutôt que de publier un polygone faux ;
+- un redécoupage administratif = une mise à jour de ces fichiers (versionnée en git) + les
+  nouvelles entités et versions du référentiel.
 
 ## 4. Lecture API
 
@@ -100,19 +134,21 @@ Endpoints principaux :
   agrégats ; `GET /api/elections/diaspora/countries?zone=<slug>` : les pays d'une
   zone ; `country-stats`/`country-details` : le détail d'un pays ;
 - `GET /api/elections/pvs-upload/regions|departments` : la hiérarchie vient du
-  **référentiel** (lignes régions et leurs départements enfants), plus des textes
-  dénormalisés des bureaux.
+  **référentiel** — les entités de niveau région, puis les circonscriptions dont l'entité
+  descend de la région demandée (résolution dans l'instantané, la hiérarchie n'étant pas
+  filtrable côté Directus). L'étape « département » renvoie le **nom de la circonscription**,
+  pas celui du référentiel : sa valeur est réinjectée comme filtre à l'étape suivante.
 
 ### 4.2 Résultats
 
 - `GET /api/carte/result?election=<id>` : les lignes `election_constituency_results`
   de l'élection. Clés de réponse historiques conservées pour le front :
   `coalition_gagnante` (identité fusionnée via l'entité politique de la participation),
-  `constituencie` (avec `slug`, `nationale_type`, `region`, `parent` — ces trois
-  derniers résolus via `resolveGeoUnit()`/`GEO_UNIT_FIELDS`, pas des champs directs
-  de `election_constituencies`), `winning_list` (candidats avec identité fusionnée
-  via leur person). **Les polygones ne sont plus servis** : le front joint les
-  contours statiques par `constituencie.slug` ;
+  `constituencie` (avec `slug`, `geo_slug`, `nationale_type`, `region`, `parent` — le nom,
+  la hiérarchie et la population résolus via `resolveGeoUnit()` contre l'instantané, pas des
+  champs directs de `election_constituencies`), `winning_list` (candidats avec identité
+  fusionnée via leur person). **Les polygones ne sont plus servis** : le front joint les
+  contours statiques par `constituencie.geo_slug` ;
 - `GET /api/carte?election=<id>` : électeurs/bureaux/lieux/population par
   circonscription (bureaux et lieux **recalculés** par agrégation des
   `election_polling_stations` du fichier de l'élection - plus de valeurs dénormalisées) ;
@@ -158,11 +194,14 @@ remplace les cartes Leaflet des pages `elections-senegal` :
 |---|---|---|
 | `offices` | stats bureaux par département | `senegal-departements.geojson` |
 | `results` | gagnant par département | idem |
-| `results-locale` | gagnant par commune (élections locales) | `senegal-communes-contours.geojson` + bordures départementales |
+| `results-locale` | gagnant par commune (élections locales) | `communes-senegal.geojson` + bordures départementales |
 
-La jointure données ↔ polygones se fait par `slug` (mécanisme `joinField`/`geoJoinField`
-de `SenegalMap`, étendu d'un `geoLevel` par dataset et de sources GeoJSON surchargables).
-`useConstituencyContours` fournit les mêmes contours aux composants non-deck.gl.
+La jointure données ↔ polygones se fait par le **slug de l'entité géographique**
+(`geo_slug` côté données, `properties.slug` côté fichiers ; mécanisme
+`joinField`/`geoJoinField` de `SenegalMap`, étendu d'un `geoLevel` par dataset et de sources
+GeoJSON surchargeables). `useConstituencyContours` fournit les mêmes contours aux composants
+non-deck.gl, en conservant les 4 communes sans polygone sous forme de points afin qu'elles
+alimentent le calque de points cliquables au lieu de disparaître silencieusement.
 
 Le mode bureaux n'a **pas de choroplèthe communale** (les bureaux sont rattachés au
 département ; le niveau commune est une liste dans le panneau de détail). En mode
@@ -183,12 +222,19 @@ un rapprochement de noms.
 
 Point central à comprendre : **il n'y a aucune jointure géographique en base**. Le
 CMS ne stocke pas de polygone utilisable pour croiser avec un GeoJSON à
-la volée. Toute la mécanique repose sur **une seule clé partagée : `slug`**, portée
-par `election_constituencies.slug` côté DB et par la propriété `slug` de chaque
-feature GeoJSON côté fichiers statiques. Cette clé a été posée une fois (script
-`backfill-constituencies.mjs`) puis n'est plus jamais recalculée : les
-deux mondes (base et fichiers `public/geo/`) sont figés indépendamment et ne se
-retrouvent qu'au moment du rendu, côté navigateur.
+la volée. Toute la mécanique repose sur **une seule clé partagée : le slug de l'entité
+géographique**, porté par `geo_entity.slug` côté CMS et par la propriété `slug` de chaque
+feature GeoJSON côté fichiers statiques. Ce slug est posé à la création d'une entité et
+**ne change jamais**, même en cas de renommage : les deux mondes (base et fichiers
+`public/geo/`) sont figés indépendamment et ne se retrouvent qu'au moment du rendu, côté
+navigateur.
+
+⚠️ **Ne pas confondre les deux slugs.** `election_constituencies.slug` (`dakar-plateau`) est
+la clé d'**URL publique** ; `geo_entity.slug` (`commune-dakar-plateau-dakar`) est la clé de
+**jointure des contours**, préfixée par le niveau et suffixée par le département parce
+qu'elle doit rester unique sur 745 entités de 5 niveaux. Les deux ne sont **jamais dérivés
+ni comparés l'un de l'autre** — la FK `geo_entity` est l'unique lien entre les deux objets.
+Les API exposent les deux : `slug` pour les liens, `geo_slug` pour la carte.
 
 Il n'y a **aucun join SQL** ni appel réseau qui rapproche directement une ligne
 `election_polling_stations`/`election_constituency_results` d'un polygone : le
@@ -200,24 +246,26 @@ carte (`fallback` du `colorScale`) sans erreur visible.
 
 ### 6bis.1 Où vit la clé côté DB
 
-- `election_constituencies.slug` : unique, nullable (ex. `kaolack`,
-  `medina-yoro-foulah`, pour les 45 collisions de noms communaux → suffixe
-  département type `kaolack-kaolack`) — porté directement par `election_constituencies`
-  (contrairement au nom/code/population/parent, délégués au référentiel `geo_*`
-  depuis le 2026-07-14, voir section 2) ;
+- `geo_entity.slug` : la clé de jointure, unique sur les 745 entités, construite à la
+  création sous la forme `<niveau>-<nom>-<département parent>` et jamais recalculée ;
+- `election_constituencies.geo_entity` : la FK qui relie une circonscription à son entité,
+  renseignée sur 599 lignes, nulle sur les 9 lignes purement électorales ;
+- `election_constituencies.slug` : la clé d'URL publique, indépendante (voir l'avertissement
+  ci-dessus) ;
 - `election_polling_stations.constituency` et `election_constituency_results.constituency`
   sont des **FK numériques** vers `election_constituencies.id` — jamais de texte.
-  Le `slug` n'est donc jamais stocké sur ces deux collections : il est résolu **à
-  la lecture**, en repassant par le référentiel.
+  Aucun slug n'est stocké sur ces deux collections : il est résolu **à la lecture**, en
+  repassant par le référentiel.
 
 ### 6bis.2 Où vit la clé côté fichiers statiques
 
 - `public/geo/senegal-departements.geojson` (46 features) et
-  `public/geo/senegal-communes-contours.geojson` (539 features) : chaque feature
-  porte `properties.slug`, `name`, `code` (pcode), `parent` (slug du niveau
-  parent) — générés en même temps que les slugs du référentiel, donc
-  **par construction identiques** à `election_constituencies.slug` au moment de
-  l'export ; un redécoupage futur doit régénérer les deux ensembles ensemble.
+  `public/geo/communes-senegal.geojson` (553 features) : chaque feature porte
+  `properties.slug`, `name`, `level`, `parent` (slug de l'entité parente) — tous deux
+  indexés sur le **même** schéma de slug que `geo_entity`. Contrôle de non-régression :
+  toute circonscription dont le `geo_slug` n'est pas nul doit trouver un contour
+  (vérifié : 0 manquant, dont 4 servis par un point) ;
+- un redécoupage futur doit régénérer les fichiers et les entités ensemble.
 
 ### 6bis.3 Parcours complet — mode « Carte » de `/carte-electorale/nationale`
 
@@ -234,18 +282,18 @@ carte (`fallback` du `colorScale`) sans erreur visible.
    (`voters`, `office_number`, `polling_place` distincts) mais **aucun nom, aucun slug** ;
 5. `getConstituencyNamesById()` ([server/utils/electionElectoralFile.ts:68](../../../server/utils/electionElectoralFile.ts))
    fait une **deuxième requête**, sur `election_constituencies`, filtrée sur les ids
-   obtenus à l'étape 4, demandant `id`/`name`/`slug` + `GEO_UNIT_FIELDS` puis
-   passe chaque ligne dans `resolveGeoUnit()` pour obtenir `population`/`region` —
-   c'est **le seul endroit où le `slug` apparaît** dans toute la chaîne bureaux/agrégats ;
-6. La réponse `{ department, slug, population, region, count, sum, countDistinct }`
+   obtenus à l'étape 4, demandant `id`/`name`/`slug`/`geo_entity`, puis passe chaque ligne
+   dans `resolveGeoUnit()` avec l'instantané pour obtenir `population`/`region` — c'est
+   **le seul endroit où les slugs apparaissent** dans toute la chaîne bureaux/agrégats ;
+6. La réponse `{ department, slug, geo_slug, population, region, count, sum, countDistinct }`
    est mappée côté client en `OfficeMapItem { slug, name, voters, offices, places, ... }` ;
-7. `buildElectionMapConfig()` ([app/config/map-elections.ts:97](../../../app/config/map-elections.ts))
-   construit un dataset avec `geoLevel: 'departements'`, `joinField: 'slug'`,
-   `geoJoinField: 'slug'` ;
+7. `buildElectionMapConfig()` ([app/config/map-elections.ts](../../../app/config/map-elections.ts))
+   construit un dataset avec `geoLevel: 'departements'` et une jointure sur le slug du
+   référentiel de part et d'autre ;
 8. `SenegalMap.vue` charge `public/geo/senegal-departements.geojson` (fond par
    défaut du niveau `departements`, pas de surcharge en mode bureaux) ;
-9. **Le join lui-même** a lieu dans [app/composables/useMapLayers.ts:196-217](../../../app/composables/useMapLayers.ts) :
-   pour chaque item de données, `dataMap.set(item.slug, item)` ; pour chaque
+9. **Le join lui-même** a lieu dans [app/composables/useMapLayers.ts](../../../app/composables/useMapLayers.ts) :
+   pour chaque item de données, `dataMap.set(<slug du référentiel>, item)` ; pour chaque
    feature GeoJSON, on lit `feature.properties.slug` et on va chercher dans
    `dataMap` — une correspondance trouvée alimente `getFillColor`/le popup, une
    absence laisse la feature dans sa couleur `fallback`, grise.
@@ -256,37 +304,61 @@ Même schéma, source différente :
 
 1. `<ElectionUnifiedMap mode="results" :election-id="..." />` appelle
    `GET /api/carte/result?election=<id>` ;
-2. Le serveur ([server/api/carte/result.get.ts:52-59](../../../server/api/carte/result.get.ts))
+2. Le serveur ([server/api/carte/result.get.ts](../../../server/api/carte/result.get.ts))
    lit `election_constituency_results` avec les champs `constituency.slug`,
-   `constituency.nationale_type` + `GEO_UNIT_FIELDS` (préfixés `constituency.`)
-   **directement dans la requête Directus** (pas de deuxième requête ici :
-   `election_constituency_results` pointe déjà le référentiel par FK, et Directus
-   résout les champs liés en un seul appel), puis `resolveGeoUnit()` calcule
-   `parent`/`region` à partir de ces champs ; la clé de réponse `constituency` est
-   renommée `constituencie` pour compat avec l'ancien contrat ;
+   `constituency.nationale_type` et `constituency.geo_entity` **dans la requête Directus**,
+   puis `resolveGeoUnit()` calcule nom, `parent`, `region` et population **contre
+   l'instantané** — la hiérarchie n'étant pas traversable par expansion ; la clé de réponse
+   `constituency` est renommée `constituencie` pour compat avec l'ancien contrat ;
 3. Côté client, `ElectionUnifiedMap.vue` filtre les lignes reçues sur
    `constituencie.nationale_type === 'departement'` (mode `results`) ou
    `'commune'` (mode `results-locale`) — **c'est ce champ qui distingue une carte
    nationale d'une carte communale**, pas un paramètre d'API séparé ;
-4. Chaque ligne devient un `ResultMapItem { slug: constituencie.slug, winnerName,
+4. Chaque ligne devient un `ResultMapItem { slug: constituencie.geo_slug, winnerName,
    winnerColor, parentSlug: constituencie.parent.slug, ... }` ;
 5. Même mécanique de join que ci-dessus (étape 9 du 6bis.3), sur
    `senegal-departements.geojson` (mode `results`) ou
-   `senegal-communes-contours.geojson` (mode `results-locale`) ;
+   `communes-senegal.geojson` (mode `results-locale`) ;
 6. Pour le drill-down départemental du mode `results-locale`,
-   `aggregateResultsByDepartment()` ([app/config/map-elections.ts:48](../../../app/config/map-elections.ts))
+   `aggregateResultsByDepartment()` ([app/config/map-elections.ts](../../../app/config/map-elections.ts))
    regroupe les communes par `parentSlug` — donc par le **`parent` résolu par
-   `resolveGeoUnit()`** (via `geo_municipality.department`), jamais par un
-   rapprochement de noms.
+   `resolveGeoUnit()`**, c'est-à-dire le premier ancêtre de niveau département dans
+   l'instantané (jamais l'arrondissement, jamais un rapprochement de noms). Ce `parentSlug`
+   est un slug du référentiel, donc directement comparable aux clés du fichier des
+   départements.
 
 ### 6bis.5 En une phrase
 
-> Le CMS ne connaît des circonscriptions que par **id numérique** (FK) ; le
-> `slug` du référentiel est la seule traduction texte de cet id, résolue à la
-> lecture API ; les fichiers `public/geo/*.geojson` portent le **même** `slug`
-> en dur dans leurs propriétés ; la carte affichée est donc le résultat d'un
-> **rapprochement en mémoire côté navigateur** entre deux listes indépendantes
-> qui doivent rester synchronisées sur cette seule valeur. 
+> Le CMS ne connaît des circonscriptions que par **id numérique** (FK) ; le slug de
+> l'**entité géographique** est la seule traduction texte de cet id, résolue à la lecture
+> API et exposée sous la clé `geo_slug` ; les fichiers `public/geo/*.geojson` portent le
+> **même** slug en dur dans leurs propriétés ; la carte affichée est donc le résultat d'un
+> **rapprochement en mémoire côté navigateur** entre deux listes indépendantes qui doivent
+> rester synchronisées sur cette seule valeur.
+
+### 6bis.6 L'exception : la route de détail d'un département
+
+La page `/elections-senegal/carte-electorale/nationale/<département>` est le **dernier
+endroit du module indexé sur un nom** et non sur un identifiant. Elle est fragile par
+construction, et sa fragilité s'est révélée à la bascule : les liens se sont mis à émettre
+la graphie du référentiel (`Bignona`, `Kédougou`) alors que les endpoints filtraient en
+égalité stricte sur la graphie des fichiers électoraux (`BIGNONA`, `KEDOUGOU`) — page vide,
+sans erreur.
+
+Le dispositif en place :
+
+- côté serveur, [`electionConstituencyLookup.ts`](../../../server/utils/electionConstituencyLookup.ts)
+  résout un nom reçu **par comparaison normalisée** et indexe les **deux** graphies d'une
+  circonscription, puis filtre les bureaux par identifiant. Toute graphie déjà indexée
+  continue donc de répondre ;
+- côté application, [`shared/geo-name.ts`](../../../shared/geo-name.ts) fournit les deux
+  règles, **non interchangeables** : `normalizeGeoName()` pour **comparer**,
+  `toHistoricalGeoName()` pour **écrire** une valeur d'URL. `nationalDepartmentPath()` est le
+  **seul** constructeur de cette URL, et il émet la graphie historique — celle qui est
+  indexée. La canonical de la page s'aligne dessus pour éviter le contenu dupliqué.
+
+Sortie souhaitable à terme : passer cette route au slug de circonscription, avec des
+redirections 301 depuis les formes en nom. Non fait à ce jour.
 
 ## 7. Transition
 

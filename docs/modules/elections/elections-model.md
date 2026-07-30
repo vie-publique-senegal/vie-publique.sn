@@ -50,7 +50,7 @@ Table pivot regroupant toutes les élections organisées au Sénégal.
 > 🔁 Une élection peut contenir plusieurs coalitions, listes, candidats, circonscriptions et résultats.
 > 📊 Les champs `registered_voters`, `voters_count`, `null_ballots`, `valid_votes` permettent d'afficher les statistiques KPI sur le dashboard.
 > 🏆 Le champ `absolute_majority` est utilisé pour les élections présidentielles, `national_quotient` pour les législatives.
-> 🗂️ `electoral_file_national`/`electoral_file_diaspora` remplacent l'ancienne collection `election_revisions` (fusionnée le 2026-07-14 dans `election_electoral_files`, voir 6️⃣ ci-dessous) — plusieurs élections peuvent pointer la même révision.
+> 🗂️ `electoral_file_national`/`electoral_file_diaspora` pointent la révision (fichier électoral) utilisée par le scrutin, voir 6️⃣ ci-dessous — plusieurs élections peuvent pointer la même révision.
 
 ---
 
@@ -205,32 +205,33 @@ Découpage géographique pour les élections législatives et locales. Référen
 | --------------- | -------------------------------------------- | -------------------------------------- | ------------ |
 | id              | int                                       | ID interne                           | 1            |
 | name            | string                                    | Nom de la circonscription            | "Dakar"      |
-| slug            | text (**unique**, nullable)               | Clé de jointure publique (API + contours GeoJSON statiques) | "dakar" |
+| slug            | text (**unique**, nullable)               | Clé d'**URL publique** — jamais la clé de jointure des contours (voir l'avertissement ci-dessous) | "dakar" |
 | type            | enum (`department`, `diaspora`)            | Type de circonscription              | "department" |
 | nationale_type  | string (select-dropdown)                  | Niveau (`departement`/`commune`, valeur libre pour la diaspora) — sert de filtre rapide et distingue carte nationale vs. communale | "departement"|
 | seats           | int                                       | Nombre de sièges alloués             | 20           |
-| geo_region      | M2O → `geo_regions` (nullable)            | Prévu pour une ligne de niveau région ; **aucune ligne `election_constituencies` n'a `nationale_type = "region"` en pratique** — les régions n'apparaissent que comme parent d'un département dans le référentiel `geo_*`, jamais comme circonscription à part | null      |
-| geo_department  | M2O → `geo_departments` (nullable)        | Rattachement si la ligne EST un département | 12    |
-| geo_municipality| M2O → `geo_municipalities` (nullable)     | Rattachement si la ligne EST une commune | null      |
+| geo_entity      | M2O → `geo_entity` (nullable)             | L'entité géographique de la ligne, tous niveaux confondus — source de son identité affichée. Renseigné sur 599 lignes sur 608 | 9 |
 | sort            | int                                       | Ordre d'affichage                    | 1            |
 | status          | string                                    | État de publication                  | "published"  |
 
-> ⚠️ **Depuis 2026-07-14**, les anciens champs `region` (string), `parent` (M2O self), `code` et `population` ont été **supprimés** de `election_constituencies` : l'identité géographique (nom, slug, code, population, hiérarchie parent/région) est désormais lue via le référentiel générique `geo_regions`/`geo_departments`/`geo_municipalities` (un seul des 3 FK est renseigné selon le niveau de la ligne), via `resolveGeoUnit()` (`server/utils/electionGeoUnit.ts`) — jamais d'accès direct aux champs du référentiel sans passer par cet utilitaire. Les lignes purement électorales sans équivalent administratif (8 zones diaspora, « Territoire National ») n'ont aucun FK geo et gardent leur `name`/`slug` en dur (repli permanent, pas transitoire).
+> ⚠️ L'identité géographique (nom, population, hiérarchie parent/région) est lue via le référentiel **versionné**, par la FK unique `geo_entity`, et résolue par `resolveGeoUnit()` (`server/utils/electionGeoUnit.ts`) avec l'instantané `getGeoSnapshot()` — jamais d'accès direct au référentiel sans passer par cet utilitaire. `election_constituencies` ne porte donc plus de champ géographique en propre : ni `region` (string), ni `parent` (M2O self), ni `code`, ni `population`. Les lignes purement électorales sans équivalent administratif (8 zones diaspora, « Territoire National ») n'ont pas de `geo_entity` et gardent leur `name`/`slug` en dur (repli permanent, pas transitoire).
+
+> ⚠️ **Deux slugs, deux rôles, jamais interchangeables.** `election_constituencies.slug` (`dakar-plateau`) est la clé d'**URL publique**. `geo_entity.slug` (`commune-dakar-plateau-dakar`) est la clé de **jointure des contours GeoJSON**, préfixée par le niveau et suffixée par le département pour rester unique sur 745 entités. Les API exposent les deux : `slug` et `geo_slug`. Ils ne sont jamais dérivés ni comparés l'un de l'autre — la FK est l'unique lien.
 
 ---
 
-### 5️⃣bis `geo_regions` / `geo_departments` / `geo_municipalities` — *Référentiel géographique générique*
+### 5️⃣bis `geo_entity` et collections associées — *Référentiel géographique versionné*
 
-Référentiel administratif générique (partagé avec d'autres modules du site), utilisé comme source d'identité pour `election_constituencies`. Hiérarchie : `geo_municipalities.department` → `geo_departments`, `geo_departments.region` → `geo_regions`.
+Référentiel générique (partagé avec d'autres modules), source d'identité de `election_constituencies`. Une **entité** stable porte l'identité, ses **versions** datées portent l'état (dont la hiérarchie), les **événements** portent les décrets qui les fondent.
 
-| Champ (selon niveau)   | Description | Exemple |
-| ------------------------ | ------------- | ------- |
-| `name`                   | Nom | "Dakar" |
-| `population`             | Population (régions et départements) | 1146053 |
-| `slug` (communes uniquement) | Clé de jointure avec les contours GeoJSON | "plateau" |
-| `department` (communes) / `region` (départements) | FK vers le niveau parent | ... |
+| Collection | Rôle | Volume |
+| --- | --- | --- |
+| `geo_entity` | Identité stable : `slug`, `level` (`region`/`departement`/`arrondissement`/`commune`/`ville`), `name_current`, `country`, `official_code` (vide à ce jour) | 745 |
+| `geo_entity_version` | État daté : `name`, `parent`, `chef_lieu`, `ville`, `valid_from`/`valid_to`, `source_event`. Version en vigueur = `valid_to` nul. **Seule table portant la hiérarchie** | 747 |
+| `geo_event` / `geo_event_entity` | Décrets fondateurs et rôle des entités concernées. **Non lus par le site** | 3 / 2 |
+| `geo_entity_name` | Graphies alternatives par source (`jo`, `rgph5`, `daf`). **Non lue par le site** — usage scripts | 1 488 |
+| `geo_demographic_observation` | Population par entité, année et édition de source. **Niveau commune uniquement** | 553 |
 
-> Régions et départements n'ont **pas** de `slug` propre (retiré le 2026-07-14) : seules les communes en portent, la résolution des niveaux supérieurs se fait par leur `name`. Le champ `code` (Pcode officiel) porté par `geo_municipalities` a également été **supprimé** ; `GEO_UNIT_FIELDS`/`ResolvedGeoUnit` (`server/utils/electionGeoUnit.ts`) ne l'exposent plus.
+> Points structurants : la population d'un département ou d'une région est la **somme de ses communes**, calculée à la lecture ; le parent d'une commune est son **arrondissement** dans 497 cas sur 553, aussi `resolveGeoUnit()` remonte-t-il au premier ancêtre de niveau département ; `geo_entity` n'expose **aucune relation inverse**, donc ni la hiérarchie ni la population ne sont lisibles par expansion Directus — d'où l'instantané en cache (`server/utils/geoSnapshot.ts`, 3 requêtes).
 
 ---
 
@@ -250,7 +251,7 @@ Collection pérenne : une ligne = une révision du fichier électoral × un scop
 | document        | M2O → documents                            | Arrêté officiel consultable                      | 12            |
 | notes           | text                                       | Notes                                            | "..."         |
 
-> `elections.electoral_file_national`/`electoral_file_diaspora` pointent la révision utilisée par un scrutin. Fusion des anciennes lignes `election_revisions` faite le 2026-07-14 (collection `election_revisions` **supprimée**, avec ses endpoints `/api/elections/revisions/*` et pages `/revision-electorale/*`, remplacée par ces 3 champs).
+> `elections.electoral_file_national`/`electoral_file_diaspora` pointent la révision utilisée par un scrutin. La révision n'est pas une entité séparée : elle est décrite par les champs `revision_type`, `period_start` et `period_end` du fichier électoral lui-même.
 
 ---
 
@@ -287,7 +288,7 @@ Collection pérenne, remplace `carte`. Une ligne = le résultat d'une élection 
 | seat                 | int                                | Nombre de sièges                       | 7              |
 | participation_10h/12h/14h/17h | float                     | Relevés horaires de participation (%)  | 42.1           |
 
-> Unicité métier : une seule ligne par couple (`election`, `constituency`), imposée par les scripts de backfill (pas de contrainte DB). `population` a été déplacé sur le référentiel (`geo_department`/`geo_municipality`), il n'est plus porté par les résultats.
+> Unicité métier : une seule ligne par couple (`election`, `constituency`), imposée par les scripts de backfill (pas de contrainte DB). `population` n'est plus porté par les résultats : il vient du référentiel géographique (`geo_demographic_observation`, sommé pour un département).
 
 ---
 
@@ -374,7 +375,7 @@ elections ──┬── election_coalition ──┬── election_electoral_
             │       └── political_entity          └── election_coalition_videos         └── documents (programme)      (identité pérenne, candidacies O2M)
             │            (election_political_entities, alias programs → election_programs)
             │
-            ├── election_constituencies ──┬── geo_region / geo_department / geo_municipality (référentiel générique)
+            ├── election_constituencies ──┬── geo_entity (référentiel versionné : versions, graphies, population)
             │                             │
             ├── electoral_file_national ──┴── election_electoral_files ── election_polling_stations (FK electoral_file + constituency)
             ├── electoral_file_diaspora ──┘

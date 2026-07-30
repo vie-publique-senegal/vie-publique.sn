@@ -1,6 +1,6 @@
 # Guide d'Insertion des Données Électorales
 
-**Dernière mise à jour** : 2026-07-17
+**Dernière mise à jour** : 2026-07-29
 
 > ⚠️ Ce guide décrit le workflow de saisie CMS. Le modèle de données de référence est
 > [elections-model.md](./elections-model.md) ; la géographie électorale (fichiers
@@ -98,11 +98,11 @@ Le référentiel des circonscriptions (46 départements, ~552 communes, 8 zones 
   "nationale_type": "departement", // "departement", "commune", ou libellé diaspora
   "seats": 7,
   "status": "published",
-  "geo_department": 12             // FK vers geo_departments (ou geo_region/geo_municipality selon le niveau)
+  "geo_entity": 9                  // FK vers geo_entity, tous niveaux confondus
 }
 ```
 
-> ⚠️ Les anciens champs `region` (texte) et `parent` (M2O self) **n'existent plus** sur `election_constituencies` : l'identité géographique (nom, slug, population, hiérarchie) est portée par le référentiel `geo_regions`/`geo_departments`/`geo_municipalities`, référencé via **un seul** des FK `geo_region`/`geo_department`/`geo_municipality` selon le niveau de la ligne. Voir [elections-model.md sections 5️⃣/5️⃣bis](./elections-model.md) et [elections-geo-resolution.md](./elections-geo-resolution.md).
+> ⚠️ Les anciens champs `region` (texte) et `parent` (M2O self) **n'existent plus** sur `election_constituencies` ont été remplacées par la FK **`geo_entity`** : l'identité géographique (nom, population, hiérarchie) est portée par le référentiel versionné. À la saisie, choisir l'entité au **bon niveau** — l'interface affiche `<niveau> (<nom>)` parce qu'une commune et un arrondissement peuvent porter le même nom. Voir [elections-model.md sections 5️⃣/5️⃣bis](./elections-model.md) et [elections-geo-resolution.md](./elections-geo-resolution.md).
 
 **Types de circonscriptions** :
 
@@ -357,7 +357,7 @@ Voir la section [Données cartographiques](#données-cartographiques).
 ### Spécificités
 
 - **Type** : `locale`
-- **Circonscriptions** : Communes (référentiel `geo_municipality` rattaché à son département)
+- **Circonscriptions** : Communes (référentiel `geo_entity` de niveau `commune`)
 - **Listes** : `communale` uniquement
 - **Résultats** : `winning_list` obligatoire (pas de `winning_coalition`)
 
@@ -366,7 +366,7 @@ Voir la section [Données cartographiques](#données-cartographiques).
 ```
 1. Créer l'élection (type: "locale")
 2. Vérifier les circonscriptions communales (référentiel déjà peuplé, nationale_type: "commune",
-   rattachées via geo_municipality)
+   rattachées via geo_entity)
 3. Créer/retrouver les entités politiques puis leurs participations
 4. Pour chaque participation et chaque commune :
    - Créer la liste communale (type: "communale", constituency: id_commune)
@@ -385,7 +385,7 @@ Voir la section [Données cartographiques](#données-cartographiques).
   "type": "communale",
   "coalition": 1,
   "election": 1,
-  "constituency": 42                // ID de la commune Plateau (rattachée à geo_municipality)
+  "constituency": 42                // ID de la commune Plateau (rattachée à geo_entity)
 }
 
 // Résultat local (election_constituency_results)

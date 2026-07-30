@@ -1,6 +1,7 @@
 # Migration prod — Géographie, carte électorale et résultats par circonscription (plan unifié)
 
 > **Statut** : prêt à exécuter, phase par phase, chaque phase validée avant lancement.
+> **Révisé le 2026-07-29** : la cible du référentiel géographique est le **référentiel versionné** `geo_entity` et ses collections associées, en place et vérifié en développement. Les parties fichier électoral, bureaux de vote et résultats sont inchangées.
 > **Rédigé le** : 2026-07-16, sur la base d'un audit en lecture seule exécuté le jour même directement contre la prod, et de simulations en lecture seule des résolutions de données (chaque résolution de nom rejouée contre les données prod réelles avant écriture du plan).
 
 ---
@@ -11,9 +12,9 @@ Aligner la prod sur le modèle géographique et cartographique cible, déjà en 
 
 | Objet métier | Avant (prod actuelle) | Après |
 |---|---|---|
-| Référentiel géographique (régions, départements, communes) | Inexistant — `election_constituencies` porte des champs texte dénormalisés (`region`) et une hiérarchie jamais renseignée (`parent`) | 3 collections dédiées `geo_regions` / `geo_departments` / `geo_municipalities` à hiérarchie typée, référencées par `election_constituencies` via 3 FK |
+| Référentiel géographique | Inexistant — `election_constituencies` porte des champs texte dénormalisés (`region`) et une hiérarchie jamais renseignée (`parent`) | Référentiel **versionné** : `geo_entity` (identité stable), `geo_entity_version` (état daté, seule table portant la hiérarchie), `geo_event` / `geo_event_entity` (décrets fondateurs), `geo_entity_name` (graphies), `geo_demographic_observation` (population) — référencé par `election_constituencies` via la FK unique `geo_entity` |
 | Circonscriptions | 55 lignes sans slug ni rattachement géographique | 608 lignes (46 départements + 553 communes + 8 zones diaspora + 1 Territoire National) avec `slug` unique, clé publique des URLs et de la jointure des contours |
-| Contours | Polygones dupliqués par élection dans `carte.Position` | Fichiers GeoJSON statiques versionnés dans le repo (`public/geo/senegal-departements.geojson`, `public/geo/senegal-communes-contours.geojson`), joints par `slug` |
+| Contours | Polygones dupliqués par élection dans `carte.Position` | Fichiers GeoJSON statiques versionnés dans le repo (`public/geo/senegal-departements.geojson`, `public/geo/communes-senegal.geojson`), joints par le **slug de l'entité géographique** |
 | Carte électorale (lieux et bureaux de vote) | `election_map_national` (15 633) + `election_map_diaspora` (807), rattachées à une seule élection — la page carte électorale de la présidentielle 2024 est vide | `election_electoral_files` (fichier électoral pérenne, décliné national/diaspora, partagé entre scrutins) + `election_polling_stations` (16 440 bureaux) — les deux élections 2024 partagent le même fichier |
 | Résultats par circonscription | `carte` (46 lignes, législatives 2024 uniquement) | `election_constituency_results` (gagnant, sièges, indicateurs de participation et de dépouillement, second tour) + `election_constituency_coalition_results` (classement complet des coalitions, à remplir quand les données seront sourcées) |
 
@@ -41,17 +42,16 @@ Volumétrie et faits vérifiés le jour de la rédaction :
 - `election_map_national` : 15 633 lignes (élection 1 uniquement), 46 départements distincts, somme `voters` = 7 033 854.
 - `election_map_diaspora` : 807 lignes (élection 1 uniquement), 50 pays distincts, somme `voters` = 338 040.
 - `election_coalition` : pas de champ `election` (le rattachement d'une coalition à son scrutin passe par `election_electoral_lists.election`) ; les colonnes `round_2_voix`/`round_2_pourcentage` n'existent pas encore en prod (périmètre du plan candidats/coalitions).
-- Aucune des 7 collections cibles n'existe : `geo_regions`, `geo_departments`, `geo_municipalities`, `election_electoral_files`, `election_polling_stations`, `election_constituency_results`, `election_constituency_coalition_results`.
+- Aucune des collections cibles n'existe : les 6 collections du référentiel versionné (`geo_entity`, `geo_entity_version`, `geo_event`, `geo_event_entity`, `geo_entity_name`, `geo_demographic_observation`), `election_electoral_files`, `election_polling_stations`, `election_constituency_results`, `election_constituency_coalition_results`.
 - Documents : la collection `documents` contient notamment les arrêtés 2024 de la carte électorale (ids 8102, 8132, 8142, tous `published`) — voir phase C pour leur usage éditorial.
 
 ## 4. Prérequis (avant la phase A)
 
 1. **Scripts et données** : par convention d'équipe, aucun script ne vit dans le repo applicatif — les scripts d'exploitation électoraux et leurs données sources vivent dans le repo [vpsn-scripts](https://github.com/vie-publique-senegal/vpsn-scripts), dossier `elections/` (mode d'emploi dans son README ; les commandes s'exécutent depuis la racine de ce repo). Un runbook d'exécution condensé accompagne ce plan : `elections/MIGRATION-PROD.md` dans ce même repo. Sont utilisés par ce plan :
-   - `backfill-geo-referential-prod.mjs` — prêt (dry-run vérifié ; échoue proprement en 403 tant que la phase A n'est pas faite, c'est attendu) ;
-   - `backfill-geo-municipalities-ansd.mjs` — prêt (dry-run vérifié) ;
+   - le peuplement du référentiel versionné (entités, versions en vigueur, événements fondateurs, graphies, observations de population) puis le rattachement des circonscriptions — scripts à porter en production depuis ceux validés en développement ;
    - `backfill-polling-stations.mjs` — prêt : la résolution des départements passe par la table d'alias (la graphie « BIRKILANE » des bureaux prod ne correspond plus au nom « BIRKELANE » du référentiel après renommage) ;
-   - `backfill-constituency-results.mjs` — prêt : copie 1:1 seule (la population départementale vit sur `geo_departments`, posée en phase B) ;
-   - `elections/data/communes_senegal_2023.json` (source ANSD 2023, 553 communes) et `elections/data/geo-name-aliases.json` (table d'alias des graphies, départements et communes).
+   - `backfill-constituency-results.mjs` — prêt : copie 1:1 seule (la population n'est plus stockée nulle part : elle est la somme des observations communales, calculée à la lecture) ;
+   - `elections/data/communes_senegal_2023.json` (source ANSD 2023, 553 communes). Les graphies alternatives sont portées par la collection `geo_entity_name`, peuplée avec le référentiel (voir [elections-geo-resolution.md](../elections-geo-resolution.md)).
 2. **Exports JSON de schéma** : les 7 collections à importer sont dans le repo [vpsn-directus-collections](https://github.com/vie-publique-senegal/vpsn-directus-collections) (liens et ordre d'import en phase A).
 3. **Token prod avec droits d'écriture** disponible pour les phases B à D (créations d'items) et un accès admin Directus pour les phases A et E (schéma, permissions, réglages d'interface).
 4. **Sauvegardes initiales** : export JSON des 55 lignes `election_constituencies` et des 2 lignes `elections`.
@@ -60,8 +60,8 @@ Volumétrie et faits vérifiés le jour de la rédaction :
 
 | Phase | Contenu | Impact front en place |
 |---|---|---|
-| A | Schéma : import des 7 collections + champs manuels + levée de la contrainte d'unicité sur `election_constituencies.name` + permissions | Aucun (additif) |
-| B | Données — référentiel géographique : 14 régions, 46 départements, 553 communes ; slugs et FK sur les circonscriptions ; renommage Birkelane | Aucun (le code en place ne lit ni les slugs ni les FK) |
+| A | Schéma : import des collections (référentiel versionné, carte électorale, résultats) + champs manuels + levée de la contrainte d'unicité sur `election_constituencies.name` + permissions | Aucun (additif) |
+| B | Données — référentiel versionné : 745 entités et leurs versions en vigueur, événements fondateurs, graphies, 553 observations de population ; création des 553 circonscriptions communales ; slugs et FK `geo_entity` | Aucun (le code en place ne lit ni les slugs ni la FK) |
 | C | Données — fichier électoral 2024 (2 lignes) + 16 440 bureaux + rattachement des 2 élections | Aucun (collections non lues par le code en place) |
 | D | Données — 46 résultats législatives (copie interne de `carte`) | Aucun |
 | E | Déploiement du code (exige A-D **et** la migration candidats/coalitions) + réglages de saisie CMS | Bascule de lecture — vérifications complètes |
@@ -77,9 +77,9 @@ Importer les schémas JSON, **dans cet ordre** (dépendances de FK) :
 
 | Ordre | Collection | Fichier JSON | Points notables |
 |-------|------------|--------------|-----------------|
-| 1 | `geo_regions` | [geo_regions.json](https://github.com/vie-publique-senegal/vpsn-directus-collections/blob/main/geo_regions.json) | Inclut le dossier Directus « Geography ». `name`, `population`, statut/audit |
-| 2 | `geo_departments` | [geo_departments.json](https://github.com/vie-publique-senegal/vpsn-directus-collections/blob/main/geo_departments.json) | Mêmes champs + `region` (M2O requis → `geo_regions`, RESTRICT) |
-| 3 | `geo_municipalities` | [geo_municipalities.json](https://github.com/vie-publique-senegal/vpsn-directus-collections/blob/main/geo_municipalities.json) | `name`, `slug` (unique), ~~`code`~~ (supprimé depuis, voir note), `population` + `department` (M2O requis → `geo_departments`, RESTRICT). Le slug est conservé à ce niveau : des communes homonymes existent dans des départements différents |
+| 1 | `geo_entity` | JSON du repo de schémas | Identité stable : `slug` (unique), `level`, `country`, `name_current`, `official_code`, `notes`. Inclut le dossier Directus « Geography » |
+| 2 | `geo_event` puis `geo_event_entity` | JSON du repo de schémas | Décrets fondateurs (`slug`, `type`, `effective_date`, `signature_date`, `publication_date_jo`, `reason`, `source_document` → `documents`) et rôle des entités dans l'événement. À importer avant les versions, qui les référencent |
+| 3 | `geo_entity_version`, `geo_entity_name`, `geo_demographic_observation` | JSON du repo de schémas | L'état daté (`name`, `parent`, `chef_lieu`, `ville`, `valid_from`/`valid_to`, `valid_from_precision`, `source_event`, `uk`, `open_key`), les graphies (`name`, `name_normalized`, `source`, `uk`) et la population (`year`, `observation_type`, `source_edition`, `population`, `male`, `female`, `households`, `compounds`, `extra_indicators`, `uk`) |
 | 4 | `election_electoral_files` | [election_electoral_files.json](https://github.com/vie-publique-senegal/vpsn-directus-collections/blob/main/election_electoral_files.json) | `name`, `scope` (national/diaspora), `year`, `revision_type`, `period_start`, `period_end`, `document` (M2O nullable → `documents`), `notes` |
 | 5 | `election_polling_stations` | [election_polling_stations.json](https://github.com/vie-publique-senegal/vpsn-directus-collections/blob/main/election_polling_stations.json) | `polling_place`, `office_number`, `voters`, `municipality`, `implantation`, `country`, `locality`, `diplomatic_representation` + FK `electoral_file` et `constituency` |
 | 6 | `election_constituency_results` | [election_constituency_results.json](https://github.com/vie-publique-senegal/vpsn-directus-collections/blob/main/election_constituency_results.json) | FK `election`, `constituency`, `winning_coalition`, `winning_list` + `voters`, `seat`, participations horaires + les indicateurs (`voters_count`, `null_ballots`, `valid_votes`, `participation_rate`, `winning_votes`, `winning_percentage`) + les 7 champs de second tour (`round_2_*`, dont la FK `round_2_winning_coalition`) |
@@ -87,10 +87,10 @@ Importer les schémas JSON, **dans cet ordre** (dépendances de FK) :
 
 Notes :
 
-- les fichiers 4 à 7 portent des relations vers des collections existantes (`documents`, `elections`, `election_constituencies`, `election_coalition`, `election_electoral_lists`) : vérifier après chaque import que ces relations sont bien présentes — sinon les créer manuellement (M2O, on delete SET NULL, sauf les deux FK de `election_constituency_coalition_results` qui sont en NO ACTION).
-- le champ `code` de `geo_municipalities` (Pcode officiel, présent lors de cet import) a été **supprimé depuis** du CMS. Voir `docs/modules/elections/elections-model.md` section5️⃣bis pour l'état actuel du référentiel géographique.
+- les fichiers de la carte électorale et des résultats portent des relations vers des collections existantes (`documents`, `elections`, `election_constituencies`, `election_coalition`, `election_electoral_lists`) : vérifier après chaque import que ces relations sont bien présentes — sinon les créer manuellement (M2O, on delete SET NULL, sauf les deux FK de `election_constituency_coalition_results` qui sont en NO ACTION).
+- `geo_entity.official_code` (accueil d'une future codification officielle) reste **vide** : aucune codification n'est posée à ce stade. Voir `docs/modules/elections/elections-model.md` section 5️⃣bis pour l'état du référentiel.
 
-Vérifications après import : les 7 collections existent et sont vides ; chaque FK a un `schema` non nul (contrainte SQL réelle, pas une simple meta) ; le front prod est inchangé.
+Vérifications après import : toutes les collections existent et sont vides ; chaque FK a un `schema` non nul (contrainte SQL réelle, pas une simple meta) ; le front prod est inchangé.
 
 ### 6.2 Champs manuels sur les collections existantes
 
@@ -102,7 +102,7 @@ Sur `elections` (Settings → Data Model) :
 Sur `election_constituencies` :
 
 - `slug` : string, **unique**, nullable ;
-- `geo_region`, `geo_department`, `geo_municipality` : M2O nullables vers les 3 collections geo.
+- `geo_entity` : M2O nullable vers `geo_entity`, **on delete RESTRICT**. L'interface Directus ne propose pas cette valeur : passer par l'API en renvoyant le **bloc de schéma complet**, une modification partielle d'une relation supprimant la contrainte au lieu de la modifier. Interface recommandée : liste déroulante au gabarit `{{level}} ({{name_current}})`, qui lève l'ambiguïté entre une commune et l'arrondissement homonyme à la saisie.
 
 ### 6.3 Levée de la contrainte d'unicité sur `election_constituencies.name`
 
@@ -110,36 +110,82 @@ La prod porte une contrainte SQL d'unicité sur `name`. Les 553 communes comport
 
 ### 6.4 Permissions
 
-Donner au rôle public (celui qui sert les API du site) la **lecture** sur les 7 nouvelles collections, à l'identique des permissions d'`election_constituencies`. Sans cela, les endpoints renverront des réponses vides sans erreur visible après la bascule (les erreurs 403 de Directus sont avalées par les handlers). Vérification : un GET anonyme sur chaque collection répond 200.
+Donner au rôle public (celui qui sert les API du site) la **lecture** sur les nouvelles collections — dont `geo_entity`, `geo_entity_version` et `geo_demographic_observation`, les trois que l'instantané serveur interroge ; `geo_entity_name`, `geo_event` et `geo_event_entity` ne sont lues par aucun endpoint, à l'identique des permissions d'`election_constituencies`. Sans cela, les endpoints renverront des réponses vides sans erreur visible après la bascule (les erreurs 403 de Directus sont avalées par les handlers). Vérification : un GET anonyme sur chaque collection répond 200.
 
-## 7. Phase B — Référentiel géographique
+## 7. Phase B — Référentiel géographique versionné
 
-Deux scripts, exécutés dans cet ordre, depuis la racine du repo `vpsn-scripts` — le fichier `elections/.env` pointant la prod avec le token d'écriture (section prod active, les autres commentées).
+Exécution depuis la racine du repo `vpsn-scripts`, le fichier `elections/.env` pointant la prod
+avec le token d'écriture (section prod active, les autres commentées). Trois étapes, dans cet
+ordre : le référentiel, puis les circonscriptions communales, puis le rattachement.
 
-### 7.1 `backfill-geo-referential-prod.mjs` (régions, départements, enrichissement des circonscriptions)
+**Principe inchangé** : aucune donnée n'est copiée depuis un autre environnement. La production
+constitue son référentiel depuis les sources versionnées (décrets et recensement) et ses propres
+lignes.
 
-Le script embarque ses tables de référence (noms, rattachements, slugs attendus) et n'invente rien : les populations départementales proviennent de `carte.population` (donnée prod existante, déplacée au bon endroit), les populations régionales restent vides, les populations communales viendront de l'ANSD (7.2).
+### 7.1 Peuplement du référentiel
 
-Actions, dans l'ordre :
+Dans cet ordre, chaque étape étant un prérequis de la suivante :
 
-1. **Créer les 14 `geo_regions`** (graphie accentuée : Dakar, Diourbel, Fatick, Kaffrine, Kaolack, Kédougou, Kolda, Louga, Matam, Saint-Louis, Sédhiou, Tambacounda, Thiès, Ziguinchor), `population` null, statut `published`.
-2. **Renommer la circonscription « BIRKILANE » en « BIRKELANE »** (graphie officielle du département — sauvegarde de la ligne avant modification). C'est le seul renommage : les 45 autres noms prod correspondent déjà, à la normalisation près, au référentiel.
-3. **Créer les 46 `geo_departments`** : nom repris de la circonscription prod correspondante (égalité normalisée + table d'alias), FK `region` posée d'après la table de rattachement embarquée, `population` copiée depuis `carte.population` de la ligne carte du département.
-4. **Enrichir les 55 circonscriptions existantes** :
-   - poser `slug` sur les 46 départements (slugification du nom : `dakar`, `birkelane`, `medina-yoro-foulah`…) — ces slugs sont la clé de jointure des 46 features de `public/geo/senegal-departements.geojson` ;
-   - poser `slug` sur les 8 zones diaspora (`afrique-australe`, `afrique-centre`, `afrique-nord`, `afrique-ouest`, `amerique-oceanie`, `asie-moyen-orient`, `europe-du-sud`, `europe-ouest-centre-nord`) et sur « Territoire national » (`territoire-national`) ;
-   - poser `geo_department` sur les 46 lignes départementales. Les 9 lignes diaspora/Territoire national ne reçoivent **aucune** FK geo (ce ne sont pas des unités administratives).
-   - Ne toucher ni `region` ni `parent` (champs legacy, supprimés en phase F — ne jamais les remplir).
+1. **Les événements fondateurs** (`geo_event`) : le décret de référence qui republie l'état
+   complet du découpage, puis les textes de modification postérieurs. Chacun porte sa date
+   d'effet, sa date de signature, sa date de publication au Journal officiel et son
+   `source_document` — **aucune donnée sans source** ;
+2. **Les 745 entités** (`geo_entity`) : 14 régions, 46 départements, 127 arrondissements,
+   553 communes, 5 villes. `slug` construit à la création sous la forme
+   `<niveau>-<nom>-<département parent>` et **jamais recalculé** ; `name_current` en graphie du
+   Journal officiel ; `official_code` laissé vide ;
+3. **Les versions en vigueur** (`geo_entity_version`) : une par entité, `valid_to` nul, portant
+   le `parent` — c'est la seule table qui porte la hiérarchie. Plus les versions fermées des
+   entités déjà modifiées par un texte postérieur ;
+4. **Les graphies** (`geo_entity_name`) : les libellés du Journal officiel, ceux du recensement,
+   et ceux des fichiers électoraux. C'est ce qui permettra aux imports futurs de résoudre les
+   variantes sans arbitrage (voir [elections-geo-resolution.md](../elections-geo-resolution.md)) ;
+5. **La population** (`geo_demographic_observation`) : 553 observations, une par commune,
+   recensement 2023. **Aucune observation aux niveaux département et région** : leur population
+   est la somme de leurs communes, calculée à la lecture.
 
-Contrôles bloquants de fin de script : 14 régions, 46 départements ; 55 slugs posés, tous uniques ; `geo_department` rempli sur exactement 46 lignes, les 3 FK null sur les 9 autres ; chaque `slug` des 46 features du GeoJSON départemental résout vers une circonscription.
+Contrôles bloquants : 745 entités et 745 versions en vigueur, une par entité ; 0 entité sans
+version ; chaque version pointe un événement, chaque événement un document ; la chaîne
+ascendante de chaque commune atteint une région ; population totale 18 154 015 ; 0 slug dupliqué.
 
-### 7.2 `backfill-geo-municipalities-ansd.mjs` (communes)
+### 7.2 Création des circonscriptions communales
 
-Crée les communes depuis la source ANSD 2023 (`data/communes_senegal_2023.json`) : **553 `geo_municipalities`** (nom, slug, population ANSD, FK `department` résolue par égalité normalisée + table d'alias `data/geo-name-aliases.json`) et **553 `election_constituencies`** (`type=national`, `nationale_type=commune`, slug identique, FK `geo_municipality`). Les collisions de slug entre communes homonymes sont résolues par suffixe du département (`<commune>-<departement>`). Idempotent, résolution bloquante (un département ANSD non résolu arrête tout avant écriture).
+La production ne compte que 55 circonscriptions (46 départements et 9 lignes électorales). Les
+**553 circonscriptions communales** sont à créer : `type=national`, `nationale_type=commune`,
+`slug` unique (slugification du nom, suffixé du département pour les homonymes), `name` en
+graphie de la source.
 
-Contrôles bloquants : 553 + 553 créées ; population totale = 18 152 795 (total RGPH 2023) ; 0 doublon de slug sur l'ensemble des 608 circonscriptions ; exactement une FK geo par ligne communale ; re-dry-run = 0 changement.
+Contrôles bloquants : 608 circonscriptions au total, 608 slugs uniques.
 
-Note sur les contours : `public/geo/senegal-communes-contours.geojson` compte 539 features — certaines communes du référentiel n'ont pas encore de contour versionné (aucune source ouverte au niveau communal à ce jour) ; c'est attendu et sans impact (la carte n'affiche simplement pas ces polygones). Contrôle : chaque feature du fichier résout par `slug` vers une circonscription communale.
+### 7.3 Rattachement des circonscriptions au référentiel
+
+Pose de la FK `geo_entity` sur les 599 circonscriptions géographiques, par résolution du nom.
+
+**Règle de résolution** : sur le triplet **(niveau, nom normalisé, parent)**. Une recherche par
+nom seul est un défaut — 151 graphies normalisées désignent plusieurs entités de niveaux
+différents, et 5 noms de communes sont de vrais homonymes entre départements. Ordre d'essai :
+égalité normalisée sur `name_current`, puis sur `geo_entity_name`, puis **arrêt et remontée du
+cas** — jamais de résolution silencieuse, jamais de correspondance codée en dur.
+
+**Descente hiérarchique obligatoire** : traiter les départements d'abord, puis les communes
+qualifiées par le département *résolu*. Une seule graphie de département non résolue fait
+échouer toutes ses communes : 2 graphies de département non résolues suffisent à en bloquer 22.
+
+Les 9 lignes diaspora et Territoire National ne reçoivent **aucune** FK : ce ne sont pas des
+lieux. Ne toucher ni `region` ni `parent` (champs legacy, supprimés en phase F).
+
+Contrôles bloquants : 599 circonscriptions rattachées, 9 à null, 0 non résolue ; le niveau de
+l'entité correspond au `nationale_type` sur 100 pour cent des lignes ; aucune entité rattachée à
+deux circonscriptions ; re-dry-run à 0 changement.
+
+### 7.4 Contours
+
+Les contours sont des fichiers versionnés du repo applicatif, indexés sur le **slug de l'entité
+géographique** : `senegal-departements.geojson` (46 features) et `communes-senegal.geojson`
+(553 features, dont 4 en géométrie `Point` faute de limite cartographiée). Rien à faire en base.
+
+Contrôle : toute circonscription dont le `geo_slug` n'est pas nul trouve un contour — 0 manquant,
+dont 4 servis par un point cliquable.
 
 ## 8. Phase C — Fichier électoral 2024 et bureaux de vote
 
@@ -208,14 +254,14 @@ Le décommissionnement des collections `carte`, `election_map_national` et `elec
 
 | Vérification | Valeur attendue |
 |---|---|
-| `election_constituencies` | 608 lignes, 608 slugs uniques, 46 `geo_department` + 553 `geo_municipality`, 9 lignes sans FK geo |
-| `geo_regions` / `geo_departments` / `geo_municipalities` | 14 / 46 / 553 |
-| Population communale totale | 18 152 795 |
+| `election_constituencies` | 608 lignes, 608 slugs uniques, 599 FK `geo_entity` posées, 9 lignes sans FK |
+| `geo_entity` / `geo_entity_version` | 745 entités / 745 versions en vigueur (une par entité) |
+| `geo_demographic_observation` | 553 observations, population totale 18 154 015 |
 | `election_electoral_files` | 2 lignes (national + diaspora, 2024), rattachées aux 2 élections |
 | `election_polling_stations` | 16 440 (15 633 national + 807 diaspora) ; sommes voters 7 033 854 / 338 040 |
 | `election_constituency_results` | 46 lignes (législatives 2024), 46 gagnants |
 | `election_constituency_coalition_results` | 0 ligne (remplissage éditorial ultérieur) |
-| Jointure contours | 46/46 features départementales et 539/539 features communales résolues par slug |
+| Jointure contours | 46/46 features départementales et 553/553 features communales résolues par le slug du référentiel |
 | Re-dry-run de chaque script | 0 changement |
 
 ---

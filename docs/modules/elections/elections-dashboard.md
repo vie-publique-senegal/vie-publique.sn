@@ -2,13 +2,13 @@
 
 > **Specs de référence** : [Document de spécifications - Dashboard Électoral](https://docs.google.com/document/d/1_O5dHPXORhyltH0f-yIhU-319FdjxhlsOVDsyIEHYok/edit?tab=t.0#heading=h.s087gd8gcxn2)
 >
-> **Dernière mise à jour** : 2026-07-18
+> **Dernière mise à jour** : 2026-07-29
 
 Ce document décrit le fonctionnement du dashboard électoral de Vie-Publique.sn, ses règles métier et sa gestion des déploiements. Il complète :
 
 - [elections-model.md](./elections-model.md) - modèle de données CMS (collections, champs, relations)
 - [elections-geographie.md](./elections-geographie.md) - fichier électoral, bureaux de vote, circonscriptions, résultats et cartes
-- [elections-geo-resolution.md](./elections-geo-resolution.md) - résolution du référentiel géographique générique (`geo_regions`/`geo_departments`/`geo_municipalities`)
+- [elections-geo-resolution.md](./elections-geo-resolution.md) - résolution des noms contre le référentiel géographique versionné (`geo_entity` et collections associées)
 - [elections-insertion.md](./elections-insertion.md) - procédure d'insertion des données par type d'élection
 - [elections-pages-architecture.md](./elections-pages-architecture.md) - structure des pages et URLs
 - [pvs-upload-deploiement.md](./pvs-upload-deploiement.md) - module d'upload des PVs
