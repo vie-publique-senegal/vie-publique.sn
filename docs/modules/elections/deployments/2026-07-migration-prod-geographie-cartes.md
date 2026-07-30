@@ -20,7 +20,7 @@ Aligner la prod sur le modèle géographique et cartographique cible, déjà en 
 
 **Principe cardinal de cette migration : aucune donnée n'est importée depuis l'environnement de développement.** La prod migre ses propres données vers les bonnes collections (copie interne), complétées par le référentiel géographique, importé séparément par sa chaîne dédiée depuis les textes officiels. Tout champ dont la prod ne possède pas la donnée (document officiel du fichier électoral, résultats de la présidentielle, indicateurs détaillés, classements par coalition, périodes de révision) **reste vide et sera rempli éditorialement** — jamais copié depuis le dev.
 
-Hors périmètre de ce plan : la suppression des collections `carte`, `election_map_national` et `election_map_diaspora` (décommissionnement ultérieur, après période d'observation et vérification qu'aucune lecture résiduelle ne subsiste) ; la migration du modèle candidats/coalitions, qui a son propre plan ([2026-07-migration-prod.md](./2026-07-migration-prod.md)) — voir la dépendance en phase E.
+Hors périmètre de ce plan : la suppression des collections `carte`, `election_map_national` et `election_map_diaspora` (décommissionnement ultérieur, après période d'observation et vérification qu'aucune lecture résiduelle ne subsiste) ; la migration du modèle candidats/coalitions, qui a son propre plan ([2026-07-migration-prod-identites-perennes.md](./2026-07-migration-prod-identites-perennes.md)) — voir la dépendance en phase E.
 
 ## 2. Principes de sécurité
 
@@ -223,7 +223,7 @@ Ce qui reste volontairement vide après cette phase (remplissage éditorial, auc
 
 ### 10.1 Dépendance : migration du modèle candidats/coalitions
 
-Le code à déployer lit l'identité des candidats via `election_persons` et celle des coalitions via `election_political_entities` : **les phases schéma et données de [2026-07-migration-prod.md](./2026-07-migration-prod.md) doivent avoir été exécutées en prod avant le déploiement** (c'est la même branche de code). Les phases A à D du présent plan et celles de l'autre plan sont indépendantes entre elles et peuvent se dérouler dans n'importe quel ordre ; seul le déploiement du code exige que **tout** soit en place.
+Le code à déployer lit l'identité des candidats via `election_persons` et celle des coalitions via `election_political_entities` : **les phases schéma et données de [2026-07-migration-prod-identites-perennes.md](./2026-07-migration-prod-identites-perennes.md) doivent avoir été exécutées en prod avant le déploiement** (c'est la même branche de code). Les phases A à D du présent plan et celles de l'autre plan sont indépendantes entre elles et peuvent se dérouler dans n'importe quel ordre ; seul le déploiement du code exige que **tout** soit en place.
 
 ### 10.2 Déploiement
 

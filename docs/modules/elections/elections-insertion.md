@@ -118,7 +118,7 @@ Le référentiel des circonscriptions (46 départements, ~552 communes, 8 zones 
 
 **Collections** : `election_political_entities` (identité pérenne) puis `election_coalition` (participation à CETTE élection, sans `head_of_list`)
 
-> ⚠️ **Important** : vérifier d'abord si l'entité politique existe déjà (parti/coalition réutilisé d'une élection précédente, ex. PASTEF, Rewmi) avant d'en créer une nouvelle — sinon les fusions d'identité entre élections doivent être faites a posteriori (voir `deployments/2026-07-migration-prod.md`).
+> ⚠️ **Important** : vérifier d'abord si l'entité politique existe déjà (parti/coalition réutilisé d'une élection précédente, ex. PASTEF, Rewmi) avant d'en créer une nouvelle — sinon les fusions d'identité entre élections doivent être faites a posteriori (voir `deployments/2026-07-migration-prod-identites-perennes.md`).
 
 ```json
 // election_political_entities (créée une seule fois, réutilisée)

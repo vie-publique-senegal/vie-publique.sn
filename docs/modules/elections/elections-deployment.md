@@ -8,7 +8,7 @@
 > singulier : il désigne une entité), voir [elections-model.md](./elections-model.md#5️⃣-election_constituencies--circonscriptions-électorales)),
 > et les évolutions ultérieures du schéma (identités pérennes persons/entités
 > politiques, géographie/cartes) sont documentées dans
-> [deployments/2026-07-migration-prod.md](./deployments/2026-07-migration-prod.md) et
+> [deployments/2026-07-migration-prod-identites-perennes.md](./deployments/2026-07-migration-prod-identites-perennes.md) et
 > [deployments/2026-07-migration-prod-geographie-cartes.md](./deployments/2026-07-migration-prod-geographie-cartes.md).
 > Conservé pour l'historique des champs `slug`/`short_bio`/`long_bio` candidats/élections.
 >

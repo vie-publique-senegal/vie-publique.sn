@@ -84,7 +84,7 @@ Entités politiques participant aux élections.
 | political_entity   | M2O → election_political_entities          | Identité pérenne de l'entité politique   | 4                |
 
 > ⚠️ Pour les résultats, les champs utilisent des noms en français (`voix`, `pourcentage`, `sieges`).
-> 🔀 `election_coalition` porte un FK **requis** `political_entity` → `election_political_entities` : l'identité pérenne (nom, sigle, description) vit sur l'entité, `election_coalition` est devenue la **participation** (une entité × une élection — une ligne coalition n'est jamais liée à deux élections). Les champs `name`/`acronym`/`type`/`description` historiques ont été **supprimés** de `election_coalition` (2026-07, chantier E5) ; `logo`/`color` restent en override éditable sur la participation. Alias `programs` (O2M ← `election_programs.participation`). Voir `deployments/2026-07-migration-prod.md`.
+> 🔀 `election_coalition` porte un FK **requis** `political_entity` → `election_political_entities` : l'identité pérenne (nom, sigle, description) vit sur l'entité, `election_coalition` est devenue la **participation** (une entité × une élection — une ligne coalition n'est jamais liée à deux élections). Les champs `name`/`acronym`/`type`/`description` historiques ont été **supprimés** de `election_coalition` (2026-07, chantier E5) ; `logo`/`color` restent en override éditable sur la participation. Alias `programs` (O2M ← `election_programs.participation`). Voir `deployments/2026-07-migration-prod-identites-perennes.md`.
 
 ---
 
