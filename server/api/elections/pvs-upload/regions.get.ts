@@ -5,7 +5,7 @@ import { readItems } from "@directus/sdk";
  * Route: GET /api/elections/pvs-upload/regions
  * Query params: ?election=ID (optionnel, ignoré par le référentiel — conservé pour compat)
  *
- * Source : entités de niveau `region` du référentiel versionné (geo_entity).
+ * Source : entités de niveau `region` du référentiel versionné (geo_entities).
  * Fallback : textes region de election_map_national tant que la prod n'est pas migrée.
  */
 export default defineCachedEventHandler(

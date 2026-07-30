@@ -117,7 +117,7 @@ export default defineCachedEventHandler(
 
         // Clés legacy conservées : constituencie + coalition_gagnante.
         // Identité géographique (name/region/population/parent) résolue via le référentiel
-        // versionné geo_entity (fallback legacy) ; constituencie reconstruit explicitement
+        // versionné geo_entities (fallback legacy) ; constituencie reconstruit explicitement
         // pour ne pas exposer la relation geo_entity brute. `slug` reste TOUJOURS celui de
         // la circonscription (URLs publiques stables), `geo_slug` est additif.
         return mapWinners(results, 'winning_coalition').map((item) => {

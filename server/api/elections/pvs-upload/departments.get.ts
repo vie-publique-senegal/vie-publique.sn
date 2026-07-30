@@ -28,7 +28,7 @@ export default defineCachedEventHandler(
 
     try {
       // La hiérarchie n'est pas traversable en filtre Directus (pas de relation inverse
-      // sur geo_entity) : on résout d'abord les entités « département » de la région dans
+      // sur geo_entities) : on résout d'abord les entités « département » de la région dans
       // l'instantané, puis on filtre les circonscriptions sur `geo_entity: { _in }`.
       // Comparaison NORMALISÉE : la valeur reçue peut être la graphie du référentiel
       // (« Kédougou », ce que renvoie l'étape région) comme la graphie historique

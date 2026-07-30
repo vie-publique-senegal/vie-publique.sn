@@ -73,7 +73,7 @@ export default defineCachedEventHandler(
 
         // Expansion département → communes via la hiérarchie du référentiel versionné.
         // Celle-ci n'est pas traversable en filtre Directus (pas de relation inverse sur
-        // geo_entity) : on calcule d'abord les entités descendantes du département dans
+        // geo_entities) : on calcule d'abord les entités descendantes du département dans
         // l'instantané, puis on filtre les circonscriptions sur `geo_entity: { _in }`.
         const [requested, geoSnapshot] = await Promise.all([
           directus.request(

@@ -39,7 +39,7 @@ interface ResultRow {
  * Données carte par circonscription (électeurs, bureaux, participation).
  * Source : election_constituency_results + agrégats election_polling_stations.
  * L'identité géographique (departement/region/municipality/population) est résolue
- * via le référentiel versionné geo_entity (resolveGeoUnit + instantané, fallback
+ * via le référentiel versionné geo_entities (resolveGeoUnit + instantané, fallback
  * champs legacy pour les lignes diaspora/Territoire National). Fallback : collection
  * legacy `carte` tant que les résultats ne sont pas backfillés (prod non migrée).
  * Les contours ne sont plus servis : le front les charge depuis public/geo/ et les
@@ -146,7 +146,7 @@ export default defineCachedEventHandler(
       // Contrat de réponse conservé (clés de `carte`), sans Position ;
       // constituencie.slug reste TOUJOURS le slug de la circonscription (URLs publiques
       // stables) et `geo_slug` porte, en plus, le slug du référentiel géographique ;
-      // identité géographique résolue via le référentiel geo_entity (fallback legacy)
+      // identité géographique résolue via le référentiel geo_entities (fallback legacy)
       return results.map((row) => {
         const constituency = row.constituency;
         const geo = resolveGeoUnit(constituency, geoSnapshot);

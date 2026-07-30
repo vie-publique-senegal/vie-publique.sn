@@ -23,7 +23,7 @@ interface ParticipationRow {
  * - election: ID de l'élection (optionnel, additif — le legacy ne filtrait pas)
  *
  * Source : election_constituency_results (departement/region résolus via le
- * référentiel versionné geo_entity — resolveGeoUnit + instantané). Fallback :
+ * référentiel versionné geo_entities — resolveGeoUnit + instantané). Fallback :
  * collection `carte` tant que les résultats ne sont pas backfillés (prod non migrée).
  */
 export default defineCachedEventHandler(

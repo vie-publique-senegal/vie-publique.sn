@@ -51,11 +51,11 @@ la seule FK `election_constituencies.geo_entity` (599 lignes sur 608).
 
 | Collection | Rôle |
 |---|---|
-| `geo_entity` | 745 entités : 14 régions, 46 départements, 127 arrondissements, 553 communes, 5 villes. Identité stable : `slug`, `level`, `name_current` (nom en vigueur, dénormalisé), `country` |
-| `geo_entity_version` | L'état **daté** de chaque entité : `name`, `parent`, `chef_lieu`, `ville`, `valid_from`/`valid_to`, `source_event`. Version en vigueur = `valid_to` nul. **Seule table qui porte la hiérarchie** |
-| `geo_event` / `geo_event_entity` | Les textes fondateurs (décrets) de chaque changement. Non lus par le site |
-| `geo_entity_name` | Les graphies alternatives, par source (voir [elections-geo-resolution.md](./elections-geo-resolution.md)). Non lue par le site |
-| `geo_demographic_observation` | Population par entité, année et source. **Niveau commune uniquement** (553 lignes, recensement 2023) |
+| `geo_entities` | 745 entités : 14 régions, 46 départements, 127 arrondissements, 553 communes, 5 villes. Identité stable : `slug`, `level`, `name_current` (nom en vigueur, dénormalisé), `country` |
+| `geo_entity_versions` | L'état **daté** de chaque entité : `name`, `parent`, `chef_lieu`, `ville`, `valid_from`/`valid_to`, `source_event`. Version en vigueur = `valid_to` nul. **Seule table qui porte la hiérarchie** |
+| `geo_events` / `geo_event_entities` | Les textes fondateurs (décrets) de chaque changement. Non lus par le site |
+| `geo_entity_names` | Les graphies alternatives, par source (voir [elections-geo-resolution.md](./elections-geo-resolution.md)). Non lue par le site |
+| `geo_demographic_observations` | Population par entité, année et source. **Niveau commune uniquement** (553 lignes, recensement 2023) |
 
 Trois conséquences structurantes :
 
@@ -65,11 +65,11 @@ Trois conséquences structurantes :
   n'exposent jamais l'arrondissement : `resolveGeoUnit()` remonte au **premier ancêtre de
   niveau département**, et à la région au-dessus ;
 - **les 9 lignes purement électorales** (8 zones de diaspora, Territoire National) n'ont pas
-  d'entité géographique : leur `geo_entity` est nul et leur identité vient de leurs propres
+  d'entité géographique : leur `geo_entities` est nul et leur identité vient de leurs propres
   champs. Ce repli est permanent, et c'est aussi lui qui fait fonctionner le code sur un
   environnement où le référentiel n'est pas déployé.
 
-`geo_entity` n'expose **aucune relation inverse** : ni la hiérarchie ni la population ne sont
+`geo_entities` n'expose **aucune relation inverse** : ni la hiérarchie ni la population ne sont
 lisibles par expansion Directus. La lecture passe par un **instantané mis en cache**
 (`server/utils/geoSnapshot.ts`), construit en 3 requêtes (entités, versions en vigueur,
 observations) et exploité en mémoire.
@@ -223,14 +223,14 @@ un rapprochement de noms.
 Point central à comprendre : **il n'y a aucune jointure géographique en base**. Le
 CMS ne stocke pas de polygone utilisable pour croiser avec un GeoJSON à
 la volée. Toute la mécanique repose sur **une seule clé partagée : le slug de l'entité
-géographique**, porté par `geo_entity.slug` côté CMS et par la propriété `slug` de chaque
+géographique**, porté par `geo_entities.slug` côté CMS et par la propriété `slug` de chaque
 feature GeoJSON côté fichiers statiques. Ce slug est posé à la création d'une entité et
 **ne change jamais**, même en cas de renommage : les deux mondes (base et fichiers
 `public/geo/`) sont figés indépendamment et ne se retrouvent qu'au moment du rendu, côté
 navigateur.
 
 ⚠️ **Ne pas confondre les deux slugs.** `election_constituencies.slug` (`dakar-plateau`) est
-la clé d'**URL publique** ; `geo_entity.slug` (`commune-dakar-plateau-dakar`) est la clé de
+la clé d'**URL publique** ; `geo_entities.slug` (`commune-dakar-plateau-dakar`) est la clé de
 **jointure des contours**, préfixée par le niveau et suffixée par le département parce
 qu'elle doit rester unique sur 745 entités de 5 niveaux. Les deux ne sont **jamais dérivés
 ni comparés l'un de l'autre** — la FK `geo_entity` est l'unique lien entre les deux objets.
@@ -246,7 +246,7 @@ carte (`fallback` du `colorScale`) sans erreur visible.
 
 ### 6bis.1 Où vit la clé côté DB
 
-- `geo_entity.slug` : la clé de jointure, unique sur les 745 entités, construite à la
+- `geo_entities.slug` : la clé de jointure, unique sur les 745 entités, construite à la
   création sous la forme `<niveau>-<nom>-<département parent>` et jamais recalculée ;
 - `election_constituencies.geo_entity` : la FK qui relie une circonscription à son entité,
   renseignée sur 599 lignes, nulle sur les 9 lignes purement électorales ;
@@ -262,7 +262,7 @@ carte (`fallback` du `colorScale`) sans erreur visible.
 - `public/geo/senegal-departements.geojson` (46 features) et
   `public/geo/communes-senegal.geojson` (553 features) : chaque feature porte
   `properties.slug`, `name`, `level`, `parent` (slug de l'entité parente) — tous deux
-  indexés sur le **même** schéma de slug que `geo_entity`. Contrôle de non-régression :
+  indexés sur le **même** schéma de slug que `geo_entities`. Contrôle de non-régression :
   toute circonscription dont le `geo_slug` n'est pas nul doit trouver un contour
   (vérifié : 0 manquant, dont 4 servis par un point) ;
 - un redécoupage futur doit régénérer les fichiers et les entités ensemble.
@@ -282,7 +282,7 @@ carte (`fallback` du `colorScale`) sans erreur visible.
    (`voters`, `office_number`, `polling_place` distincts) mais **aucun nom, aucun slug** ;
 5. `getConstituencyNamesById()` ([server/utils/electionElectoralFile.ts:68](../../../server/utils/electionElectoralFile.ts))
    fait une **deuxième requête**, sur `election_constituencies`, filtrée sur les ids
-   obtenus à l'étape 4, demandant `id`/`name`/`slug`/`geo_entity`, puis passe chaque ligne
+   obtenus à l'étape 4, demandant `id`/`name`/`slug`/`geo_entities`, puis passe chaque ligne
    dans `resolveGeoUnit()` avec l'instantané pour obtenir `population`/`region` — c'est
    **le seul endroit où les slugs apparaissent** dans toute la chaîne bureaux/agrégats ;
 6. La réponse `{ department, slug, geo_slug, population, region, count, sum, countDistinct }`

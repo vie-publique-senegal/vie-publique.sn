@@ -5,7 +5,7 @@
  * graphies :
  * - celle des fichiers électoraux (`election_constituencies.name`) : MAJUSCULES sans accents
  *   (« KEDOUGOU », « MALEM HODAR », « NIORO DU RIP ») ;
- * - celle du référentiel (`geo_entity.name_current`, Journal officiel) : accentuée et parfois
+ * - celle du référentiel (`geo_entities.name_current`, Journal officiel) : accentuée et parfois
  *   orthographiée autrement (« Kédougou », « Malem Hoddar », « Nioro »).
  *
  * ⚠️ Les deux règles ci-dessous ne sont PAS interchangeables :

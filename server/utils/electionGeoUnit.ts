@@ -1,9 +1,11 @@
 /**
  * Lecture de l'identité géographique des circonscriptions via le référentiel versionné
- * geo_entity / geo_entity_version / geo_demographic_observation, avec fallback legacy.
+ * geo_entities / geo_entity_versions / geo_demographic_observations, avec fallback legacy.
  *
  * Une circonscription (election_constituencies) référence le référentiel par la seule FK
- * `geo_entity` (599 lignes sur 608 : 46 départements + 553 communes). La hiérarchie et la
+ * `geo_entity` — nom de CHAMP, volontairement au singulier puisqu'il désigne une entité, à
+ * ne pas confondre avec la collection `geo_entities` (599 lignes sur 608 : 46 départements
+ * + 553 communes). La hiérarchie et la
  * population ne sont PAS lisibles par expansion Directus : elles viennent de l'instantané
  * (`getGeoSnapshot()`), passé en second argument.
  *

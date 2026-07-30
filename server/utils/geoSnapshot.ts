@@ -2,15 +2,15 @@ import { readItems } from '@directus/sdk';
 import { normalizeGeoName } from '#shared/geo-name';
 
 /**
- * Instantané du référentiel géographique versionné (geo_entity / geo_entity_version /
- * geo_demographic_observation).
+ * Instantané du référentiel géographique versionné (geo_entities / geo_entity_versions /
+ * geo_demographic_observations).
  *
- * `geo_entity` n'expose aucune relation inverse : impossible de traverser depuis une
+ * `geo_entities` n'expose aucune relation inverse : impossible de traverser depuis une
  * circonscription jusqu'à la hiérarchie en une seule requête Directus. On charge donc
  * le référentiel entier (745 entités, ~1500 lignes au total) une fois, en cache, et on
  * répond ensuite en mémoire.
  *
- * ⚠️ La hiérarchie est portée par `geo_entity_version.parent` (PAS par `geo_entity`) :
+ * ⚠️ La hiérarchie est portée par `geo_entity_versions.parent` (PAS par `geo_entities`) :
  * seule la version en vigueur (`valid_to` nul) est chargée.
  *
  * ⚠️ La chaîne ascendante compte un niveau de plus que l'ancien référentiel plat : le
@@ -201,19 +201,19 @@ const fetchGeoSnapshotData = defineCachedFunction(
     const [entityRows, versionRows, observationRows] = await Promise.all([
       cmsClient
         .request(
-          readItems('geo_entity', {
+          readItems('geo_entities', {
             fields: ['id', 'slug', 'level', 'name_current'],
             limit: -1,
             sort: ['id'],
           }),
         )
         .catch((error: unknown) => {
-          reportServerError(error, 'utils/geoSnapshot', { collection: 'geo_entity' });
+          reportServerError(error, 'utils/geoSnapshot', { collection: 'geo_entities' });
           return [] as EntityRow[];
         }) as Promise<EntityRow[]>,
       cmsClient
         .request(
-          readItems('geo_entity_version', {
+          readItems('geo_entity_versions', {
             fields: ['entity', 'parent'],
             // Version en vigueur : celle qui n'a pas encore été fermée
             filter: { valid_to: { _null: true } },
@@ -222,12 +222,12 @@ const fetchGeoSnapshotData = defineCachedFunction(
           }),
         )
         .catch((error: unknown) => {
-          reportServerError(error, 'utils/geoSnapshot', { collection: 'geo_entity_version' });
+          reportServerError(error, 'utils/geoSnapshot', { collection: 'geo_entity_versions' });
           return [] as VersionRow[];
         }) as Promise<VersionRow[]>,
       cmsClient
         .request(
-          readItems('geo_demographic_observation', {
+          readItems('geo_demographic_observations', {
             fields: ['entity', 'population', 'year'],
             limit: -1,
             sort: ['id'],
@@ -235,7 +235,7 @@ const fetchGeoSnapshotData = defineCachedFunction(
         )
         .catch((error: unknown) => {
           reportServerError(error, 'utils/geoSnapshot', {
-            collection: 'geo_demographic_observation',
+            collection: 'geo_demographic_observations',
           });
           return [] as ObservationRow[];
         }) as Promise<ObservationRow[]>,

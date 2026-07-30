@@ -15,17 +15,17 @@ mécanisme de correspondance, chaque nouvel import buterait sur les mêmes
 divergences, et chaque script réinventerait ses propres correspondances en dur.
 
 Le référentiel tranche par une **graphie officielle** — celle du Journal
-officiel, portée par `geo_entity.name_current` — et enregistre **toutes les
+officiel, portée par `geo_entities.name_current` — et enregistre **toutes les
 autres graphies rencontrées** dans une collection dédiée.
 
 ## 2. Où vit le dictionnaire
 
-Collection Directus **`geo_entity_name`**. Une ligne = une graphie d'une
+Collection Directus **`geo_entity_names`**. Une ligne = une graphie d'une
 entité, telle qu'une source l'écrit.
 
 | Champ | Rôle |
 |---|---|
-| `entity` | l'entité concernée (M2O vers `geo_entity`) |
+| `entity` | l'entité concernée (M2O vers `geo_entities`) |
 | `name` | la graphie telle que publiée par la source (`M'BACKE`, `SAINT LOUIS`) |
 | `name_normalized` | forme de comparaison : minuscules, sans accents, ponctuation et blancs réduits à un espace simple |
 | `source` | provenance de la graphie : `jo` (Journal officiel), `rgph5` (recensement 2023), `daf` (fichiers électoraux) |
@@ -58,9 +58,9 @@ recherche par nom seul est un défaut, pas un raccourci :
 Pour toute graphie rencontrée :
 
 1. **normaliser** la graphie (même règle que `name_normalized`) ;
-2. chercher l'**égalité normalisée** sur `geo_entity.name_current`, au bon
+2. chercher l'**égalité normalisée** sur `geo_entities.name_current`, au bon
    niveau, qualifiée par le parent ;
-3. sinon, chercher dans **`geo_entity_name`**, mêmes qualifications ;
+3. sinon, chercher dans **`geo_entity_names`**, mêmes qualifications ;
 4. **aucune correspondance, ou plusieurs candidats** : ne pas résoudre. Le cas
    est remonté pour arbitrage humain. Jamais de résolution silencieuse, jamais
    d'appariement approximatif en production, jamais de correspondance codée en
@@ -81,7 +81,7 @@ suffisent à en bloquer 22.
 
 `election_constituencies.name` porte la graphie des **fichiers électoraux** :
 majuscules, sans accents (`KEDOUGOU`, `MALEM HODAR`, `NIORO DU RIP`).
-`geo_entity.name_current` porte celle du **Journal officiel** (`Kédougou`,
+`geo_entities.name_current` porte celle du **Journal officiel** (`Kédougou`,
 `Malem Hoddar`, `Nioro`). **181 des 599 circonscriptions rattachées** diffèrent
 ainsi de leur entité.
 
@@ -108,7 +108,7 @@ continue de répondre, quelle que soit sa graphie.
 - **Les scripts d'import** (repo `vpsn-scripts`, dossier `elections/`) :
   rattachement des circonscriptions au référentiel, imports de fichiers
   électoraux, imports de données de recensement. C'est l'usage principal ;
-- **le site ne lit pas `geo_entity_name`** : il n'en a pas besoin, l'identité
+- **le site ne lit pas `geo_entity_names`** : il n'en a pas besoin, l'identité
   lui vient de la clé étrangère `election_constituencies.geo_entity`. Seule
   exception de principe : la résolution d'un nom reçu dans une URL, qui passe
   par les graphies déjà présentes en base et non par le dictionnaire.
@@ -122,7 +122,7 @@ validé une fois reste valable à vie. Pour tout import futur :
 2. arbitrage humain : soit une **entité nouvelle** (création d'une entité, de sa
    version et d'un événement sourcé par le texte officiel), soit une **graphie
    de plus** d'une entité existante ;
-3. l'arbitrage est écrit dans `geo_entity_name` **par script**, depuis un
+3. l'arbitrage est écrit dans `geo_entity_names` **par script**, depuis un
    fichier de correspondances, avec le drapeau d'écriture explicite — pas à la
    main, pour rester traçable et rejouable ;
 4. le script d'import est rejoué : la graphie se résout, définitivement.
@@ -136,6 +136,6 @@ un export ponctuel de la carte électorale 2023 (15 633 bureaux nationaux).
 Les trois portent les **mêmes 553 paires (département, commune)** : 468 par
 égalité exacte, 85 via le dictionnaire, **0 orpheline** dans les trois sens.
 
-Ce contrôle vaut toujours : `geo_entity_name` porte l'intégralité de ces
+Ce contrôle vaut toujours : `geo_entity_names` porte l'intégralité de ces
 correspondances, et le rattachement des 599 circonscriptions au référentiel se
 fait sans aucune non-résolue.
