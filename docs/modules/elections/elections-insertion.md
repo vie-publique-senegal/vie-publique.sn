@@ -98,7 +98,7 @@ Le référentiel des circonscriptions (46 départements, ~552 communes, 8 zones 
   "nationale_type": "departement", // "departement", "commune", ou libellé diaspora
   "seats": 7,
   "status": "published",
-  "geo_entity": 9                  // FK vers geo_entities, tous niveaux confondus
+  "geo_entity": 9                  // FK vers la collection geo_entities, tous niveaux confondus
 }
 ```
 
@@ -366,7 +366,7 @@ Voir la section [Données cartographiques](#données-cartographiques).
 ```
 1. Créer l'élection (type: "locale")
 2. Vérifier les circonscriptions communales (référentiel déjà peuplé, nationale_type: "commune",
-   rattachées via geo_entities)
+   rattachées via geo_entity)
 3. Créer/retrouver les entités politiques puis leurs participations
 4. Pour chaque participation et chaque commune :
    - Créer la liste communale (type: "communale", constituency: id_commune)
@@ -385,7 +385,7 @@ Voir la section [Données cartographiques](#données-cartographiques).
   "type": "communale",
   "coalition": 1,
   "election": 1,
-  "constituency": 42                // ID de la commune Plateau (rattachée à geo_entities)
+  "constituency": 42                // ID de la commune Plateau (rattachée via geo_entity)
 }
 
 // Résultat local (election_constituency_results)

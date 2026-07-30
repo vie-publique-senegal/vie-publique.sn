@@ -65,7 +65,7 @@ Trois conséquences structurantes :
   n'exposent jamais l'arrondissement : `resolveGeoUnit()` remonte au **premier ancêtre de
   niveau département**, et à la région au-dessus ;
 - **les 9 lignes purement électorales** (8 zones de diaspora, Territoire National) n'ont pas
-  d'entité géographique : leur `geo_entities` est nul et leur identité vient de leurs propres
+  d'entité géographique : leur `geo_entity` est nul et leur identité vient de leurs propres
   champs. Ce repli est permanent, et c'est aussi lui qui fait fonctionner le code sur un
   environnement où le référentiel n'est pas déployé.
 

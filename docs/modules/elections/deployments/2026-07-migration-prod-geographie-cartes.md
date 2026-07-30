@@ -18,7 +18,7 @@ Aligner la prod sur le modèle géographique et cartographique cible, déjà en 
 | Carte électorale (lieux et bureaux de vote) | `election_map_national` (15 633) + `election_map_diaspora` (807), rattachées à une seule élection — la page carte électorale de la présidentielle 2024 est vide | `election_electoral_files` (fichier électoral pérenne, décliné national/diaspora, partagé entre scrutins) + `election_polling_stations` (16 440 bureaux) — les deux élections 2024 partagent le même fichier |
 | Résultats par circonscription | `carte` (46 lignes, législatives 2024 uniquement) | `election_constituency_results` (gagnant, sièges, indicateurs de participation et de dépouillement, second tour) + `election_constituency_coalition_results` (classement complet des coalitions, à remplir quand les données seront sourcées) |
 
-**Principe cardinal de cette migration : aucune donnée n'est importée depuis l'environnement de développement.** La prod migre ses propres données vers les bonnes collections (copie interne), complétées uniquement par deux sources versionnées dans le repo de scripts : le fichier ANSD 2023 des communes et la table d'alias de graphies géographiques. Tout champ dont la prod ne possède pas la donnée (document officiel du fichier électoral, résultats de la présidentielle, indicateurs détaillés, classements par coalition, périodes de révision) **reste vide et sera rempli éditorialement** — jamais copié depuis le dev.
+**Principe cardinal de cette migration : aucune donnée n'est importée depuis l'environnement de développement.** La prod migre ses propres données vers les bonnes collections (copie interne), complétées par le référentiel géographique, importé séparément par sa chaîne dédiée depuis les textes officiels. Tout champ dont la prod ne possède pas la donnée (document officiel du fichier électoral, résultats de la présidentielle, indicateurs détaillés, classements par coalition, périodes de révision) **reste vide et sera rempli éditorialement** — jamais copié depuis le dev.
 
 Hors périmètre de ce plan : la suppression des collections `carte`, `election_map_national` et `election_map_diaspora` (décommissionnement ultérieur, après période d'observation et vérification qu'aucune lecture résiduelle ne subsiste) ; la migration du modèle candidats/coalitions, qui a son propre plan ([2026-07-migration-prod.md](./2026-07-migration-prod.md)) — voir la dépendance en phase E.
 
@@ -48,10 +48,10 @@ Volumétrie et faits vérifiés le jour de la rédaction :
 ## 4. Prérequis (avant la phase A)
 
 1. **Scripts et données** : par convention d'équipe, aucun script ne vit dans le repo applicatif — les scripts d'exploitation électoraux et leurs données sources vivent dans le repo [vpsn-scripts](https://github.com/vie-publique-senegal/vpsn-scripts), dossier `elections/` (mode d'emploi dans son README ; les commandes s'exécutent depuis la racine de ce repo). Un runbook d'exécution condensé accompagne ce plan : `elections/MIGRATION-PROD.md` dans ce même repo. Sont utilisés par ce plan :
-   - le peuplement du référentiel versionné (entités, versions en vigueur, événements fondateurs, graphies, observations de population) puis le rattachement des circonscriptions — scripts à porter en production depuis ceux validés en développement ;
-   - `backfill-polling-stations.mjs` — prêt : la résolution des départements passe par la table d'alias (la graphie « BIRKILANE » des bureaux prod ne correspond plus au nom « BIRKELANE » du référentiel après renommage) ;
+   - `backfill-polling-stations.mjs` — prêt : la résolution des départements passe par les graphies du référentiel (la graphie « BIRKILANE » des bureaux prod ne correspond pas au nom « Birkelane » du référentiel) ;
    - `backfill-constituency-results.mjs` — prêt : copie 1:1 seule (la population n'est plus stockée nulle part : elle est la somme des observations communales, calculée à la lecture) ;
-   - `elections/data/communes_senegal_2023.json` (source ANSD 2023, 553 communes). Les graphies alternatives sont portées par la collection `geo_entity_names`, peuplée avec le référentiel (voir [elections-geo-resolution.md](../elections-geo-resolution.md)).
+
+   **Le peuplement du référentiel géographique lui-même n'appartient pas à ce repo** : entités, versions, événements fondateurs, graphies et observations de population sont produits et importés par la chaîne dédiée du référentiel géographique (extraction des décrets, arbitrages, `import-decoupage.mjs` et `import-population.mjs`). La phase B s'appuie sur un référentiel déjà importé en production par cette chaîne.
 2. **Exports JSON de schéma** : les 7 collections à importer sont dans le repo [vpsn-directus-collections](https://github.com/vie-publique-senegal/vpsn-directus-collections) (liens et ordre d'import en phase A).
 3. **Token prod avec droits d'écriture** disponible pour les phases B à D (créations d'items) et un accès admin Directus pour les phases A et E (schéma, permissions, réglages d'interface).
 4. **Sauvegardes initiales** : export JSON des 55 lignes `election_constituencies` et des 2 lignes `elections`.
@@ -102,7 +102,7 @@ Sur `elections` (Settings → Data Model) :
 Sur `election_constituencies` :
 
 - `slug` : string, **unique**, nullable ;
-- `geo_entities` : M2O nullable vers `geo_entities`, **on delete RESTRICT**. L'interface Directus ne propose pas cette valeur : passer par l'API en renvoyant le **bloc de schéma complet**, une modification partielle d'une relation supprimant la contrainte au lieu de la modifier. Interface recommandée : liste déroulante au gabarit `{{level}} ({{name_current}})`, qui lève l'ambiguïté entre une commune et l'arrondissement homonyme à la saisie.
+- `geo_entity` : M2O nullable vers `geo_entities`, **on delete RESTRICT**. L'interface Directus ne propose pas cette valeur : passer par l'API en renvoyant le **bloc de schéma complet**, une modification partielle d'une relation supprimant la contrainte au lieu de la modifier. Interface recommandée : liste déroulante au gabarit `{{level}} ({{name_current}})`, qui lève l'ambiguïté entre une commune et l'arrondissement homonyme à la saisie.
 
 ### 6.3 Levée de la contrainte d'unicité sur `election_constituencies.name`
 
@@ -122,9 +122,11 @@ ordre : le référentiel, puis les circonscriptions communales, puis le rattache
 constitue son référentiel depuis les sources versionnées (décrets et recensement) et ses propres
 lignes.
 
-### 7.1 Peuplement du référentiel
+### 7.1 Peuplement du référentiel (chaîne du référentiel géographique, hors de ce repo)
 
-Dans cet ordre, chaque étape étant un prérequis de la suivante :
+Ce peuplement est réalisé par la chaîne dédiée du référentiel géographique, pas par les scripts
+électoraux. Il est un **prérequis** de la suite, et son contenu attendu est le suivant, dans cet
+ordre :
 
 1. **Les événements fondateurs** (`geo_events`) : le décret de référence qui republie l'état
    complet du découpage, puis les textes de modification postérieurs. Chacun porte sa date
@@ -159,7 +161,7 @@ Contrôles bloquants : 608 circonscriptions au total, 608 slugs uniques.
 
 ### 7.3 Rattachement des circonscriptions au référentiel
 
-Pose de la FK `geo_entity` sur les 599 circonscriptions géographiques, par résolution du nom.
+Pose de la FK `geo_entity` sur les 599 circonscriptions géographiques, par résolution du nom, avec le script de rattachement du repo de scripts.
 
 **Règle de résolution** : sur le triplet **(niveau, nom normalisé, parent)**. Une recherche par
 nom seul est un défaut — 151 graphies normalisées désignent plusieurs entités de niveaux
@@ -189,7 +191,7 @@ dont 4 servis par un point cliquable.
 
 ## 8. Phase C — Fichier électoral 2024 et bureaux de vote
 
-Script `backfill-polling-stations.mjs` (la résolution des départements passe par la table d'alias, cf. prérequis). Actions :
+Script `backfill-polling-stations.mjs` (la résolution des départements passe par les graphies du référentiel, cf. prérequis). Actions :
 
 1. **Créer les 2 lignes `election_electoral_files`** (si absentes — recherche par `scope` + `year`) : « Fichier électoral 2024 — national » et « … — diaspora », `year=2024`, statut `published`. Les champs `revision_type`, `period_start`, `period_end`, `notes` et **`document` restent vides** : à compléter éditorialement (voir 8.1).
 2. **Rattacher les 2 élections 2024** (résolues par `type` + `year`, jamais par ID) aux 2 fichiers via `electoral_file_national`/`electoral_file_diaspora`, uniquement si la FK est null. Les deux scrutins partagent le même fichier : c'est ce qui rend la page carte électorale de la présidentielle enfin servie.

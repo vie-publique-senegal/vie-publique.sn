@@ -209,7 +209,7 @@ Découpage géographique pour les élections législatives et locales. Référen
 | type            | enum (`department`, `diaspora`)            | Type de circonscription              | "department" |
 | nationale_type  | string (select-dropdown)                  | Niveau (`departement`/`commune`, valeur libre pour la diaspora) — sert de filtre rapide et distingue carte nationale vs. communale | "departement"|
 | seats           | int                                       | Nombre de sièges alloués             | 20           |
-| geo_entities      | M2O → `geo_entities` (nullable)             | L'entité géographique de la ligne, tous niveaux confondus — source de son identité affichée. Renseigné sur 599 lignes sur 608 | 9 |
+| geo_entity        | M2O → `geo_entities` (nullable)             | L'entité géographique de la ligne, tous niveaux confondus — source de son identité affichée. Renseigné sur 599 lignes sur 608 | 9 |
 | sort            | int                                       | Ordre d'affichage                    | 1            |
 | status          | string                                    | État de publication                  | "published"  |
 
@@ -375,7 +375,7 @@ elections ──┬── election_coalition ──┬── election_electoral_
             │       └── political_entity          └── election_coalition_videos         └── documents (programme)      (identité pérenne, candidacies O2M)
             │            (election_political_entities, alias programs → election_programs)
             │
-            ├── election_constituencies ──┬── geo_entities (référentiel versionné : versions, graphies, population)
+            ├── election_constituencies ──┬── geo_entity → geo_entities (référentiel versionné)
             │                             │
             ├── electoral_file_national ──┴── election_electoral_files ── election_polling_stations (FK electoral_file + constituency)
             ├── electoral_file_diaspora ──┘
