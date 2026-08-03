@@ -274,7 +274,9 @@ useHead({
              filtrer et changer de vue à n'importe quel moment du défilement,
              sans remonter. Les filtres défilent horizontalement sur mobile. -->
         <div class="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div class="scrollbar-hide -mx-4 flex shrink-0 items-center gap-2 overflow-x-auto px-4 py-1">
+          <div
+            class="scrollbar-hide -mx-4 flex shrink-0 items-center gap-2 overflow-x-auto px-4 py-1"
+          >
             <div v-for="f in FILTRES" :key="f.key" class="relative shrink-0">
               <select
                 :value="f.model.value"
