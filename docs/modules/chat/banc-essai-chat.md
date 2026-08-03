@@ -18,6 +18,8 @@ l'adaptateur n'a pas fait son travail de traduction.
 | `types/chat.ts` | Contrat client : `ChatEvent`, `ChatAdapter`, `ChatVariant`. |
 | `app/config/chat-variants.ts` | **Registre — source de vérité unique** des variantes. |
 | `app/lib/chat/adapters/` | Un fichier par backend. Chargement paresseux depuis le registre. |
+| `app/lib/chat/sse.ts` | Parseur SSE + lecture du `ReadableStream`. |
+| `app/lib/chat/session-token.ts` | Jeton de session anonyme : cache, renouvellement, dédup. |
 | `app/lib/chat/markdown.ts` | Rendu markdown des réponses, assaini par DOMPurify. |
 | `app/components/Chat/` | La coquille : `Shell`, `Message`, `Composer`. |
 | `app/pages/chat/[variant].vue` | Page unique de **toutes** les variantes. Inconnue → 404. |
@@ -57,6 +59,84 @@ Trois règles de flux appliquées par la coquille :
 `done.meta` est **opaque** pour la coquille : elle l'affiche en clé/valeur sans jamais nommer une
 clé. C'est ce qui lui permet d'exposer des métadonnées de diagnostic (latence, modèle) sans rien
 savoir du backend.
+
+## Transport de la variante `gemini`
+
+Deux appels, tous deux **depuis le navigateur, en direct** (voir « Pas de proxy Nitro » plus bas).
+
+### `POST /session` → jeton (`session-token.ts`)
+
+Aucun corps ; le tenant est résolu depuis l'en-tête `Origin` que le navigateur pose seul. Le jeton
+vaut 15 min et **reste en mémoire** : anonyme et éphémère, le persister dans `localStorage`
+n'apporterait rien. Trois règles, chacune couverte par un test :
+
+1. **renouvellement à 80 % de la durée de vie**, pour ne pas découvrir un `401` au milieu d'une
+   conversation ;
+2. **une seule requête `/session` en vol** : deux questions coup sur coup ne consomment pas deux
+   jetons (quota `/session` = 20/min par IP, partagé par tout un bureau) ;
+3. **aucun retry automatique** : une requête refusée est elle aussi décomptée du quota. La seule
+   reprise est **une** ré-authentification après un `401` sur `/ask`, jamais en boucle.
+
+### `POST /ask` → réponse en SSE (`sse.ts`)
+
+⚠️ **`EventSource` ne sait faire ni `POST` ni `Authorization`** : il faut `fetch` + lecture du
+`ReadableStream` + un parseur SSE maison. C'est là que se cachent les bugs, parce qu'un chunk
+réseau ne s'arrête jamais sur une frontière utile. Le découpage est donc **séparé de la lecture du
+flux** pour être testable sans réseau (`test/unit/chat/sse.test.ts`, 18 cas) : ligne coupée en
+plein milieu, `\n\n` à cheval sur deux chunks, `\r\n` coupé entre ses deux caractères, `data:`
+multi-lignes, événement sans `data`, flux reconstitué caractère par caractère.
+
+Le flux porte un **keep-alive** (`: keep-alive`) parce que Cloudflare coupe les flux inactifs et
+que le premier token peut demander plusieurs secondes. C'est un commentaire SSE : un parseur
+correct l'ignore, un parseur naïf le prend pour de la donnée.
+
+### Erreurs et quotas
+
+| Code | HTTP | Traitement |
+| --- | --- | --- |
+| `unauthorized` | 401 | jeton invalidé, **une** reprise, puis message d'erreur. |
+| `origin_not_allowed` | 403 | l'origine n'est pas déclarée dans `RAG_TENANTS` côté API. |
+| `rate_limited` | 429 | message explicite + décompte ; `Retry-After` en secondes. |
+
+Limites **par IP** : 10 req/min sur `/ask`, 20 sur `/session`. Comme VP teste depuis un même
+bureau, ces 10 questions/minute sont partagées par tout le bâtiment — d'où un message explicite
+plutôt qu'« une erreur est survenue ». La limite est réglable côté API.
+
+**Freinage préventif** : `X-RateLimit-Remaining` accompagne toutes les réponses des routes
+limitées. Quand il tombe à 0, l'adaptateur refuse la question suivante **sans appeler l'API**
+jusqu'à `X-RateLimit-Reset` — une requête refusée serait elle aussi décomptée. `Retry-After`, lui,
+n'apparaît que sur le 429, donc trop tard pour se freiner.
+
+> ⚠️ **Bloqué côté API au 2026-08-04 — CORS sur les réponses d'erreur et en-têtes de quota.**
+> Le code ci-dessus est écrit et testé unitairement, mais il ne peut **pas** fonctionner dans un
+> navigateur tant que l'API n'a pas été corrigée :
+>
+> 1. **La réponse `429` ne porte pas `Access-Control-Allow-Origin`** (les `200`, si). Le navigateur
+>    la bloque donc avant que le code n'y accède : `fetch` lève un `TypeError: Failed to fetch`
+>    indiscernable d'une coupure réseau. Résultat observé : « La réponse n'a pas pu être obtenue »
+>    au lieu de « trop de questions à la minute, réessayez dans 60 s ». Le contrat présente
+>    pourtant le 429 comme « un cas normal à gérer » — un client navigateur ne peut pas le gérer.
+> 2. **Aucune réponse ne porte `Access-Control-Expose-Headers`.** Depuis le navigateur, seul
+>    `content-type` est lisible (vérifié : `[...response.headers.keys()]` → `['content-type']`).
+>    `X-RateLimit-Remaining`, `-Reset` et `Retry-After` sont donc **invisibles**, alors que le
+>    contrat invite explicitement le client à s'en servir pour se freiner avant d'être refusé.
+>
+> Il n'y a **rien à contourner côté widget** : deviner un quota à partir d'un `TypeError` serait
+> faux (une vraie coupure réseau donne la même chose). Le jour où l'API ajoutera ces en-têtes, le
+> message explicite et le freinage préventif s'activeront sans modification ici.
+
+### Doublons du corpus
+
+Le corpus contient un même PDF indexé sous deux `external_id`. La déduplication serveur porte sur
+`(external_id, page)` et ne peut donc pas les voir : l'adaptateur dédoublonne sur l'URL du
+fichier, pour ne pas afficher deux cartes identiques.
+
+## Tests
+
+`npx vitest run test/unit/chat` — 38 cas. Le parseur SSE et la gestion du jeton sont testés **avant
+l'UI** : ce sont les deux endroits où une régression est invisible à l'œil (le flux « marche » sur
+un réseau rapide et casse en production ; un jeton mal renouvelé ne se voit qu'au bout de 15 min).
+L'adaptateur est testé avec un `fetch` bouchonné — donc **sans consommer le quota**.
 
 ## Traçabilité des retours
 
@@ -107,10 +187,34 @@ SSE.
 | Brique | État |
 | --- | --- |
 | 2 — squelette du banc (registre, routes, coquille, adaptateur factice) | ✅ |
-| 3 — adaptateur Azure | à faire |
-| 4 — transport Gemini (jeton + parseur SSE, testés unitairement) | à faire |
-| 5 — adaptateur Gemini (`conversation_id`, sources, erreurs, quotas) | à faire |
+| 3 — adaptateur Azure | à faire — la variante `azure` tourne encore sur l'adaptateur factice |
+| 4 — transport Gemini (jeton + parseur SSE, testés unitairement) | ✅ |
+| 5 — adaptateur Gemini (`conversation_id`, sources, erreurs, quotas) | ✅ éprouvé contre l'API — sauf le 429, bloqué côté API |
 | 6 — finitions et retrait de `/chatbot` | à faire |
+
+## Recette
+
+Le corpus indexé ne contient que **136 documents** (conseils des ministres, lois de finances, Cour
+des comptes, statistiques ANSD) : toute question hors périmètre répond « je ne sais pas », c'est
+le comportement attendu.
+
+Passée le 2026-08-04 contre `https://rag.vie-publique.sn` :
+
+| Question | Ce que ça vérifie | Résultat |
+| --- | --- | --- |
+| Départements touchés par l'insécurité alimentaire sévère ? | streaming, rendu markdown des listes, liens cliquables | ✅ (sources ANSD, pas le CM du 29/07 — affaire de recherche côté API) |
+| Qui préside la Commission des Finances qui a examiné le PLF 2026 ? | pas deux cartes identiques | ✅ Chérif Ahmed DICKO ; 2 cartes **distinctes** (documents 5219 et 1974), même PDF dupliqué dans le catalogue |
+| Déficit du PLF 2026 ? puis « Et le plafond d'emplois publics ? » | `conversation_id` du `done` repassé au tour suivant | ✅ 1 245,1 Mds / 5,37 % du PIB, puis 206 375 |
+| Budget de la commune de Ziguinchor 2026 ? | pas de bloc « Sources » vide | ✅ « pas d'information », aucun bloc Sources |
+| Taux de croissance révisé par la LFR 2025 ? | exactitude de la réponse | ✅ 8,0 % contre 8,8 % |
+| `429` provoqué (14 requêtes parallèles) | message explicite + délai | ❌ **bloqué par la CORS de l'API** (voir l'encadré § Erreurs et quotas) |
+
+⚠️ Le doublon du 2ᵉ cas n'est **pas** dédoublonnable côté widget : les deux entrées ont des
+titres, des `external_id` et des URLs différents — ce sont deux fiches distinctes du catalogue
+pointant sur le même PDF. Les fusionner demanderait de comparer les extraits, ce qui masquerait
+de vraies sources distinctes. Le bon niveau de correction est le catalogue (Directus), pas l'UI.
+La déduplication implémentée ne fusionne que les sources **strictement identiques**
+(même fichier, même page).
 
 > Contrat de l'API RAG : **source de vérité = `../rag-platform/docs/ARCHITECTURE.md`, § Contrat
 > d'API**. Ne rien recopier ici qui puisse diverger.

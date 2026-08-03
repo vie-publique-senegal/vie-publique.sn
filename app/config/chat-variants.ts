@@ -22,13 +22,17 @@ export const CHAT_VARIANTS: ChatVariant[] = [
     description:
       "POC d'API RAG développée en interne : recherche dans les documents publics puis réponse générée, avec citation des sources.",
     status: 'active',
-    warning: "Adaptateur factice — aucun backend n'est encore branché sur cette variante.",
+    // Le corpus indexé est volontairement étroit : une question hors périmètre
+    // reçoit « je ne sais pas ». C'est le comportement attendu, pas une panne —
+    // le dire ici évite des retours de testeurs sur un faux bug.
+    warning:
+      'Corpus indexé limité à 136 documents (conseils des ministres, lois de finances, Cour des comptes, statistiques ANSD). Toute autre question recevra « je ne sais pas ».',
     starterQuestions: [
-      'Résumé du dernier conseil des ministres ?',
-      'Quel âge faut-il avoir pour se syndiquer au Sénégal ?',
-      'Les Sénégalais majeurs ont-ils le droit de prendre une autre nationalité ?',
+      'Quels départements sont cités comme touchés par l’insécurité alimentaire sévère ?',
+      'Quel déficit budgétaire le projet de loi de finances 2026 prévoit-il ?',
+      'À quel taux la loi de finances rectificative 2025 révise-t-elle la croissance du PIB ?',
     ],
-    loadAdapter: () => import('~/lib/chat/adapters/mock').then((m) => m.createMockAdapter),
+    loadAdapter: () => import('~/lib/chat/adapters/gemini').then((m) => m.createGeminiAdapter),
   },
   {
     id: 'azure',
