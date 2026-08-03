@@ -47,6 +47,15 @@
         />
       </div>
     </div>
+
+    <div
+      class="rounded-xl bg-white p-6 ring-1 ring-gray-200 dark:bg-gray-800 dark:ring-gray-700 lg:col-span-3"
+    >
+      <h2 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Localisation</h2>
+      <!-- La carte ouvre d'elle-même le département de la commune et la met en
+           couleur d'accent au milieu de ses voisines (cf. CommunesMap). -->
+      <CollectivitesCommunesMap :communes="[commune]" height="360px" :focus-slug="commune.slug" />
+    </div>
   </div>
 </template>
 

@@ -38,9 +38,10 @@ export interface CommuneGeo {
   chefLieu: boolean;
   population: number | null;
   populationAnnee: number | null;
-  // Pas de coordonnées ici : le référentiel ne porte aucune géométrie. La carte
-  // rapproche elle-même les centroïdes de `public/geo/senegal-communes.geojson`
-  // (cf. CommunesMap.vue), qui n'en couvre qu'une partie.
+  // Pas de géométrie ici : le référentiel n'en porte aucune. La carte rapproche
+  // elle-même chaque commune de son polygone dans `public/geo/` par nom +
+  // département (cf. useCommunesGeoJoin) : 553 des 558 collectivités y figurent,
+  // les 5 « villes » n'ayant pas de contour propre dans le fond.
   maire: CommuneResponsable | null;
   secretaireMunicipal: CommuneResponsable | null;
   contact: CommuneContact | null;

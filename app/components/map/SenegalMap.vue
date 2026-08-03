@@ -10,7 +10,7 @@
 // PERF-8 : le CSS MapLibre est importé ICI (pas dans le css: global de nuxt.config)
 // → Vite le rattache au chunk de ce composant, chargé seulement sur les pages cartes.
 import 'maplibre-gl/dist/maplibre-gl.css';
-import type { SenegalMapConfig, LegendConfig, FilterConfig } from '~~/types/map';
+import type { SenegalMapConfig, LegendConfig, FilterConfig, GeoSourceKey } from '~~/types/map';
 import { DEFAULT_MAP_PRESETS } from '~/config/map-presets';
 import { useMapEngine } from '~/composables/useMapEngine';
 import { useMapLayers } from '~/composables/useMapLayers';
@@ -20,7 +20,16 @@ import { useMapExport } from '~/composables/useMapExport';
 import { useMapStore } from '~/stores/map';
 import type { FeatureCollection } from 'geojson';
 
-const props = defineProps<{ config: SenegalMapConfig }>();
+const props = defineProps<{
+  config: SenegalMapConfig;
+  /**
+   * Hauteur du conteneur. Non renseignée = plein écran sous l'en-tête, ce
+   * qu'attendent les pages carte dédiées ; les cartes encapsulées dans une page
+   * (annuaire, fiche commune) passent leur propre hauteur.
+   */
+  height?: string;
+}>();
+
 
 const emit = defineEmits<{
   'region-click': [payload: { code: string; name: string; data: any }];
@@ -28,6 +37,8 @@ const emit = defineEmits<{
   'viewport-change': [payload: { center: [number, number]; zoom: number }];
   'filter-change': [payload: Record<string, any>];
   action: [payload: { event: string; data: any }];
+  /** Moteur initialisé : avant cet événement, flyTo/fitBounds sont sans effet. */
+  ready: [];
 }>();
 
 // ─── Core ──────────────────────────────────────────────────────
@@ -37,9 +48,63 @@ const store = useMapStore();
 const engine = useMapEngine();
 
 // ─── GeoJSON ───────────────────────────────────────────────────
+// `communes` = polygones (1 Mo), `communeLabels` = centroïdes (111 Ko) : deux
+// fichiers, deux rôles. Ne jamais confondre, le second seul sert à étiqueter.
 const geoJsonRegions = shallowRef<FeatureCollection | null>(null);
 const geoJsonDepartements = shallowRef<FeatureCollection | null>(null);
 const geoJsonCommunes = shallowRef<FeatureCollection | null>(null);
+const geoJsonCommuneLabels = shallowRef<FeatureCollection | null>(null);
+
+const GEO_FILES: Record<GeoSourceKey, string> = {
+  regions: '/geo/senegal-regions.geojson',
+  departements: '/geo/senegal-departements.geojson',
+  communes: '/geo/senegal-communes.geojson',
+  communeLabels: '/geo/senegal-communes-labels.geojson',
+};
+
+/** Ce que chargeaient toutes les cartes avant l'arrivée des polygones de commune. */
+const DEFAULT_GEO_SOURCES: GeoSourceKey[] = ['regions', 'departements', 'communeLabels'];
+
+const geoTargets: Record<GeoSourceKey, typeof geoJsonRegions> = {
+  regions: geoJsonRegions,
+  departements: geoJsonDepartements,
+  communes: geoJsonCommunes,
+  communeLabels: geoJsonCommuneLabels,
+};
+
+/** Fonds déjà demandés — un fond chargé n'est jamais rechargé ni relâché. */
+const geoRequested = new Set<GeoSourceKey>();
+
+/**
+ * Charge les fonds manquants. Appelée au montage ET à chaque changement de
+ * `config.geoSources` : une carte à drill-down ne demande les polygones de
+ * commune qu'au moment où l'utilisateur descend d'un niveau.
+ */
+async function loadGeoSources(keys: GeoSourceKey[]) {
+  const missing = keys.filter((key) => !geoRequested.has(key));
+  if (!missing.length) return;
+  for (const key of missing) geoRequested.add(key);
+
+  await Promise.all(
+    // Échec de chargement = fond absent, jamais d'erreur : le reste de la carte
+    // doit rester utilisable.
+    missing.map((key) =>
+      fetch(GEO_FILES[key])
+        .then((r) => (r.ok ? r.json() : null))
+        .catch(() => null)
+        .then((data) => {
+          geoTargets[key].value = data;
+        }),
+    ),
+  );
+}
+
+watch(
+  () => props.config.geoSources,
+  (keys) => {
+    if (keys) loadGeoSources(keys);
+  },
+);
 
 // ─── Filtres ───────────────────────────────────────────────────
 const filterConfigs = computed<FilterConfig[]>(() => props.config.filters ?? []);
@@ -51,6 +116,7 @@ const { layers: layerConfigs } = useMapLayers({
   geoJsonRegions,
   geoJsonDepartements,
   geoJsonCommunes,
+  geoJsonCommuneLabels,
   theme: toRef(store, 'theme'),
   activeFilters,
   filterConfigs,
@@ -219,22 +285,13 @@ onMounted(async () => {
   window.addEventListener('resize', checkMobile);
   store.initFromConfig(props.config);
 
-  // Charger deck.gl + GeoJSON en parallèle
-  const [, regions, departements, communes] = await Promise.all([
+  // Charger deck.gl + les seuls fonds géo que la config exploite. Le fichier des
+  // polygones de commune pèse 1 Mo : le télécharger sur toutes les cartes du
+  // site alors qu'une seule s'en sert serait payé par tous les visiteurs.
+  await Promise.all([
     loadDeckModules().catch(() => null),
-    fetch('/geo/senegal-regions.geojson')
-      .then((r) => (r.ok ? r.json() : null))
-      .catch(() => null),
-    fetch('/geo/senegal-departements.geojson')
-      .then((r) => (r.ok ? r.json() : null))
-      .catch(() => null),
-    fetch('/geo/senegal-communes.geojson')
-      .then((r) => (r.ok ? r.json() : null))
-      .catch(() => null),
+    loadGeoSources(props.config.geoSources ?? DEFAULT_GEO_SOURCES),
   ]);
-  geoJsonRegions.value = regions;
-  geoJsonDepartements.value = departements;
-  geoJsonCommunes.value = communes;
 
   await engine.initMap(mapContainer.value, {
     center: props.config.center ?? [-14.4524, 14.4974],
@@ -255,16 +312,26 @@ onMounted(async () => {
   activeFilters.value = { ...store.activeFilters };
   await nextTick();
   engine.resize();
+  emit('ready');
 });
 
 onUnmounted(() => window.removeEventListener('resize', checkMobile));
+
+// Pilotage de la caméra depuis le parent : une carte à drill-down doit pouvoir
+// cadrer le territoire qu'elle vient d'ouvrir.
+defineExpose({
+  flyTo: engine.flyTo,
+  fitBounds: engine.fitBounds,
+  closePopup,
+  // Exposé pour cadrer sur une feature précise sans refetcher ni reparser le
+  // fichier des polygones (1 Mo) que ce composant vient déjà de charger.
+  geoJsonCommunes,
+});
 </script>
 
 <template>
-  <div
-    class="senegal-map relative w-full"
-    style="height: calc(100vh - 64px); height: calc(100dvh - 64px)"
-  >
+  <!-- Sans `height`, la hauteur plein écran vient de la règle .senegal-map ci-dessous. -->
+  <div class="senegal-map relative w-full" :style="{ height }">
     <!--
       Inline styles obligatoires : MapLibre injecte .maplibregl-map { position: relative }
       qui écrase Tailwind `absolute` → le container perd ses dimensions.
@@ -276,7 +343,7 @@ onUnmounted(() => window.removeEventListener('resize', checkMobile));
     />
 
     <div
-      v-if="config.title && !isMobile"
+      v-if="config.title && config.showTitle !== false && !isMobile"
       class="pointer-events-none absolute left-4 top-4 z-20 max-w-[50%]"
     >
       <h2
@@ -381,6 +448,14 @@ onUnmounted(() => window.removeEventListener('resize', checkMobile));
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
+}
+
+/* Hauteur par défaut (aucune prop `height`) : plein écran sous l'en-tête. La
+   seconde déclaration l'emporte là où `dvh` existe — elle suit la barre d'URL
+   mobile ; la première reste le filet pour les navigateurs sans. */
+.senegal-map {
+  height: calc(100vh - 64px);
+  height: calc(100dvh - 64px);
 }
 
 .senegal-map :deep(.maplibregl-canvas) {

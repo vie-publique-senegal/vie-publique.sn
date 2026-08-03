@@ -68,8 +68,8 @@ useHead({
             {{ formatNumber(filtered.length) }} collectivité{{
               filtered.length > 1 ? 's' : ''
             }}
-            référencée{{ filtered.length > 1 ? 's' : '' }} - cliquez sur une commune pour ouvrir sa
-            fiche.
+            référencée{{ filtered.length > 1 ? 's' : '' }} - cliquez sur un département pour
+            afficher ses communes, puis sur une commune pour ouvrir sa fiche.
           </p>
         </div>
         <NuxtLink
@@ -84,10 +84,9 @@ useHead({
         <span class="mb-1 uppercase tracking-wider">Filtrer par région</span>
         <USelect v-model="region" :options="regionOptions" />
       </label>
-      <div class="mt-3 flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-        <span class="inline-block h-3 w-3 rounded-full bg-sky-600 opacity-70" />
-        Commune (rayon proportionnel à la population)
-      </div>
+      <!-- L'échelle de couleurs est portée par la légende de la carte
+           (bas-droite) : la répéter ici la ferait diverger au premier
+           ajustement des seuils. -->
     </div>
   </div>
 </template>
