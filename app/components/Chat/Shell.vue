@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useClipboard } from '@vueuse/core';
 import { toast } from 'vue-sonner';
-import { CHAT_STATUS_LABELS } from '~/config/chat-variants';
+import { CHAT_ASSISTANT_NAME } from '~/config/chat-variants';
 import { construireRetour } from '~/lib/chat/report';
 import type { ChatMessageModel } from './Message.vue';
 import type { ChatAdapter, ChatVariant } from '~~/types/chat';
@@ -34,9 +34,16 @@ let abandon: AbortController | null = null;
 let compteur = 0;
 let minuteurCooldown: ReturnType<typeof setInterval> | null = null;
 
+/** Métadonnées de la dernière réponse aboutie, pour le pied de conversation. */
+const dernieresMeta = computed(() => {
+  const derniere = [...messages.value].reverse().find((message) => message.meta);
+  return Object.entries(derniere?.meta ?? {});
+});
+
 /** L'adaptateur n'est chargé qu'à la première question : /chat/liste ne le paie pas. */
 async function obtenirAdaptateur(): Promise<ChatAdapter> {
   if (adaptateur) return adaptateur;
+  if (!props.variant.loadAdapter) throw new Error('variante sans adaptateur');
   chargementAdaptateur.value = true;
   try {
     const fabrique = await props.variant.loadAdapter();
@@ -204,72 +211,74 @@ onBeforeUnmount(() => {
 <template>
   <!-- `h-full` : la hauteur vient du conteneur plein écran d'app.vue. -->
   <div class="flex h-full flex-col bg-gray-50 dark:bg-gray-900">
-    <!-- En-tête : le nom de la variante est visible en PERMANENCE, pour qu'une
-         capture d'écran de testeur se suffise à elle-même. -->
+    <!-- En-tête minimal, à la manière des assistants grand public : retour,
+         nom, nouveau fil. Tout le diagnostic est repoussé sous la saisie. -->
     <header
-      class="flex items-center justify-between gap-3 border-b border-gray-200 bg-white px-4 py-2 dark:border-gray-700 dark:bg-gray-800"
+      class="flex items-center justify-between gap-2 border-b border-gray-200 bg-white px-2 py-2 dark:border-gray-700 dark:bg-gray-900 sm:px-4"
     >
-      <div class="flex min-w-0 items-center gap-2">
-        <span class="truncate text-sm font-semibold text-gray-900 dark:text-white">
-          {{ variant.label }}
+      <div class="flex min-w-0 items-center gap-1">
+        <UTooltip text="Toutes les variantes" :delay-duration="0">
+          <UButton
+            to="/chat/liste"
+            color="gray"
+            variant="ghost"
+            icon="i-heroicons-arrow-left"
+            size="sm"
+            aria-label="Retour à la liste des variantes"
+          />
+        </UTooltip>
+        <span class="truncate font-semibold text-gray-900 dark:text-white">
+          {{ CHAT_ASSISTANT_NAME }}
         </span>
-        <UBadge size="xs" variant="soft" color="gray">{{ variant.id }}</UBadge>
-        <UBadge
-          size="xs"
-          variant="subtle"
-          :color="variant.status === 'active' ? 'primary' : 'gray'"
-          class="hidden sm:inline-flex"
-        >
-          {{ CHAT_STATUS_LABELS[variant.status] }}
-        </UBadge>
       </div>
-      <div class="flex items-center gap-1">
-        <UButton
-          to="/chat/liste"
-          size="xs"
-          color="gray"
-          variant="ghost"
-          icon="i-heroicons-squares-2x2"
-          label="Variantes"
-        />
-        <UButton
-          size="xs"
-          color="gray"
-          variant="ghost"
-          icon="i-heroicons-arrow-path"
-          label="Nouveau fil"
-          :disabled="!messages.length"
-          @click="reinitialiser"
-        />
-      </div>
-    </header>
 
-    <div
-      v-if="variant.warning"
-      class="bg-amber-50 px-4 py-2 text-sm text-amber-900 dark:bg-amber-950 dark:text-amber-200"
-    >
-      {{ variant.warning }}
-    </div>
+      <!-- Icône seule sur mobile, icône + libellé dès qu'il y a de la place. -->
+      <UButton
+        color="gray"
+        variant="ghost"
+        size="sm"
+        icon="i-heroicons-pencil-square"
+        :disabled="!messages.length"
+        aria-label="Nouveau fil"
+        @click="reinitialiser"
+      >
+        <span class="hidden sm:inline">Nouveau fil</span>
+      </UButton>
+    </header>
 
     <!-- Conversation -->
     <div ref="zoneMessages" class="flex-1 overflow-y-auto px-4 py-6">
-      <div v-if="!messages.length" class="mx-auto max-w-3xl py-10 text-center">
-        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Assistant Vie Publique</h1>
-        <p class="mx-auto mt-2 max-w-xl text-gray-600 dark:text-gray-300">
-          {{ variant.description }}
+      <div v-if="!messages.length" class="mx-auto max-w-2xl py-8 text-center sm:py-12">
+        <UIcon
+          v-if="variant.icon"
+          :name="variant.icon"
+          class="mx-auto mb-4 h-8 w-8 text-gray-400 dark:text-gray-500"
+        />
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">
+          {{ CHAT_ASSISTANT_NAME }}
+        </h1>
+        <p class="mx-auto mt-2 text-gray-600 dark:text-gray-300">
+          L’assistant de Vie Publique Sénégal. Il recherche dans les lois, rapports, décrets,
+          budgets et autres documents publics pour vous fournir une réponse sourcée.
         </p>
 
-        <ul v-if="variant.starterQuestions?.length" class="mx-auto mt-8 max-w-md space-y-2">
+        <ul v-if="variant.starterQuestions?.length" class="mt-8 space-y-2 text-left">
           <li v-for="question in variant.starterQuestions" :key="question">
-            <UButton
-              :label="question"
-              class="w-full py-3 text-left font-normal ring-1 ring-gray-200 dark:bg-gray-800 dark:text-gray-200 dark:ring-gray-700 dark:hover:bg-gray-700"
-              color="gray"
-              variant="soft"
+            <button
+              type="button"
+              class="w-full rounded-xl px-4 py-3 text-sm text-gray-700 ring-1 ring-gray-200 transition-colors hover:bg-gray-100 dark:text-gray-200 dark:ring-gray-700 dark:hover:bg-gray-800"
               @click="envoyer(question)"
-            />
+            >
+              {{ question }}
+            </button>
           </li>
         </ul>
+
+        <!-- Limite du corpus : rappelée à l'accueil, jamais en bandeau fixe —
+             elle est déjà expliquée sur /chat/liste. -->
+        <p v-if="variant.warning" class="mt-6 text-xs text-gray-400 dark:text-gray-500">
+          {{ variant.warning }}
+        </p>
       </div>
 
       <div v-else class="mx-auto max-w-3xl space-y-6">
@@ -283,34 +292,6 @@ onBeforeUnmount(() => {
       </div>
     </div>
 
-    <!-- Pied de conversation : clé de jointure entre un retour de testeur et
-         les traces côté backend. Sans lui, un retour n'est pas diagnosticable. -->
-    <div
-      class="flex items-center justify-between gap-2 border-t border-gray-200 bg-white px-4 py-1.5 text-xs text-gray-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400"
-    >
-      <span class="truncate">
-        Variante <span class="font-medium text-gray-700 dark:text-gray-300">{{ variant.id }}</span>
-      </span>
-      <span v-if="conversationId" class="flex min-w-0 items-center gap-1">
-        <span class="hidden sm:inline">Conversation</span>
-        <code class="truncate font-mono text-gray-700 dark:text-gray-300">{{
-          conversationId
-        }}</code>
-        <UTooltip text="Copier l'identifiant" :delay-duration="0">
-          <UButton
-            :icon="identifiantCopie ? 'i-lucide-check' : 'i-lucide-copy'"
-            variant="ghost"
-            size="2xs"
-            color="gray"
-            @click="copierPressePapier(conversationId)"
-          />
-        </UTooltip>
-      </span>
-      <span v-else class="italic">
-        {{ messages.length ? 'Pas d’identifiant de conversation' : 'Aucune conversation en cours' }}
-      </span>
-    </div>
-
     <ChatComposer
       ref="composer"
       :busy="enCours || chargementAdaptateur"
@@ -318,5 +299,57 @@ onBeforeUnmount(() => {
       @send="envoyer"
       @stop="arreter"
     />
+
+    <!-- Pied de conversation, SOUS la saisie : la variante reste visible en
+         permanence (une capture d'écran doit se suffire) et l'identifiant de
+         conversation, clé de jointure avec les traces backend, reste copiable —
+         mais rien de tout cela ne s'interpose entre l'utilisateur et sa question. -->
+    <details
+      class="group border-t border-gray-200 bg-white px-4 text-xs text-gray-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-400"
+    >
+      <summary
+        class="flex cursor-pointer select-none list-none items-center justify-between gap-2 py-2"
+      >
+        <span class="truncate">{{ variant.label }}</span>
+        <span class="flex items-center gap-1">
+          <span class="hidden sm:inline">Détails</span>
+          <UIcon
+            name="i-heroicons-chevron-up"
+            class="h-3.5 w-3.5 transition-transform group-open:rotate-180"
+          />
+        </span>
+      </summary>
+
+      <dl class="space-y-1 pb-3">
+        <div class="flex items-center gap-2">
+          <dt class="shrink-0">Conversation</dt>
+          <dd class="flex min-w-0 flex-1 items-center gap-1">
+            <code v-if="conversationId" class="truncate text-gray-700 dark:text-gray-300">
+              {{ conversationId }}
+            </code>
+            <span v-else class="italic">
+              {{ messages.length ? 'non fournie par cette variante' : 'aucune en cours' }}
+            </span>
+            <UButton
+              v-if="conversationId"
+              :icon="identifiantCopie ? 'i-lucide-check' : 'i-lucide-copy'"
+              variant="ghost"
+              size="2xs"
+              color="gray"
+              aria-label="Copier l'identifiant de conversation"
+              @click="copierPressePapier(conversationId)"
+            />
+          </dd>
+        </div>
+
+        <!-- Métadonnées de la dernière réponse. Rendues en clé/valeur SANS que la
+             coquille sache ce qu'elles signifient : c'est ce qui la garde
+             ignorante du backend qu'elle sert. -->
+        <div v-for="[cle, valeur] in dernieresMeta" :key="cle" class="flex items-center gap-2">
+          <dt class="shrink-0">{{ cle }}</dt>
+          <dd class="truncate text-gray-700 dark:text-gray-300">{{ valeur }}</dd>
+        </div>
+      </dl>
+    </details>
   </div>
 </template>

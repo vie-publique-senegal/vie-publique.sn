@@ -75,9 +75,17 @@ export interface ChatVariant {
   label: string;
   description: string;
   status: ChatVariantStatus;
-  /** Bandeau affiché en tête de la conversation (limite connue, POC branché à moitié…). */
+  /** Icône de la stack (Iconify), affichée dans la liste et l'en-tête. */
+  icon?: string;
+  /**
+   * Variante listée mais NON testable (backend pas encore branché).
+   * On la laisse visible — le banc doit montrer ce qui est prévu — mais sans
+   * adaptateur : faire tester un faux chat produirait de faux retours.
+   */
+  available: boolean;
+  /** Limite connue, affichée à l'accueil de la conversation (jamais en bandeau fixe). */
   warning?: string;
   starterQuestions?: string[];
   /** Chargement paresseux : le code d'une variante ne pèse pas sur les autres. */
-  loadAdapter: () => Promise<ChatAdapterFactory>;
+  loadAdapter?: () => Promise<ChatAdapterFactory>;
 }

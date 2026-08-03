@@ -26,8 +26,6 @@ defineEmits<{
 const { copy, copied } = useClipboard({ legacy: true });
 
 const html = computed(() => renderChatMarkdown(props.message.text));
-
-const metaEntries = computed(() => Object.entries(props.message.meta ?? {}));
 </script>
 
 <template>
@@ -40,7 +38,7 @@ const metaEntries = computed(() => Object.entries(props.message.meta ?? {}));
           variant="ghost"
           size="xs"
           color="gray"
-          class="opacity-0 transition-opacity group-hover:opacity-100"
+          class="opacity-0 transition-opacity focus-visible:opacity-100 group-hover:opacity-100"
           @click="copy(message.text)"
         />
       </UTooltip>
@@ -142,7 +140,11 @@ const metaEntries = computed(() => Object.entries(props.message.meta ?? {}));
       </UButton>
     </div>
 
-    <div class="flex items-center gap-3 opacity-0 transition-opacity group-hover:opacity-100">
+    <!-- Toujours visibles au doigt : sans survol, un `opacity-0` rendrait ces
+         actions inatteignables sur mobile. -->
+    <div
+      class="flex items-center gap-3 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100"
+    >
       <UTooltip text="Copier la réponse" :delay-duration="0">
         <UButton
           :icon="copied ? 'i-lucide-check' : 'i-lucide-copy'"
@@ -162,23 +164,12 @@ const metaEntries = computed(() => Object.entries(props.message.meta ?? {}));
           variant="ghost"
           size="xs"
           color="gray"
-          label="Signaler"
-          :ui="{ label: 'text-xs' }"
+          aria-label="Copier le contexte pour un retour"
           @click="$emit('report', message.id)"
-        />
+        >
+          <span class="hidden text-xs sm:inline">Signaler</span>
+        </UButton>
       </UTooltip>
-
-      <!-- Métadonnées de diagnostic. Rendues en clé/valeur SANS que la coquille
-           sache ce qu'elles signifient : c'est ce qui la garde ignorante du backend. -->
-      <details v-if="metaEntries.length" class="text-xs text-gray-500 dark:text-gray-400">
-        <summary class="cursor-pointer select-none">Détails techniques</summary>
-        <dl class="mt-1 space-y-0.5 font-mono">
-          <div v-for="[key, value] in metaEntries" :key="key" class="flex gap-2">
-            <dt>{{ key }}</dt>
-            <dd class="text-gray-700 dark:text-gray-300">{{ value }}</dd>
-          </div>
-        </dl>
-      </details>
     </div>
   </div>
 </template>

@@ -12,6 +12,12 @@ import type { ChatVariant, ChatVariantStatus } from '~~/types/chat';
  * (le wolof comme langue d'interaction).
  */
 
+/** Nom public de l'assistant, commun à toutes les variantes. */
+export const CHAT_ASSISTANT_NAME = 'Sira';
+
+export const CHAT_ASSISTANT_TAGLINE =
+  'Sira, l’assistant de Vie Publique Sénégal. Il recherche dans les lois, rapports, décrets, budgets et autres documents publics pour vous fournir une réponse sourcée.';
+
 /** Cible de la redirection `/chat`. ⚠️ Dupliqué en dur dans les `routeRules` de nuxt.config.ts. */
 export const CHAT_DEFAULT_VARIANT = 'gemini';
 
@@ -20,37 +26,37 @@ export const CHAT_VARIANTS: ChatVariant[] = [
     id: 'gemini',
     label: 'API RAG Gemini',
     description:
-      "POC d'API RAG développée en interne : recherche dans les documents publics puis réponse générée, avec citation des sources.",
+      'Recherche dans les documents publics puis réponse générée avec citation des sources. API développée en interne.',
     status: 'active',
+    icon: 'i-simple-icons-googlegemini',
+    available: true,
     // Le corpus indexé est volontairement étroit : une question hors périmètre
-    // reçoit « je ne sais pas ». C'est le comportement attendu, pas une panne —
-    // le dire ici évite des retours de testeurs sur un faux bug.
+    // reçoit « je ne sais pas ». C'est le comportement attendu, pas une panne.
     warning:
-      'Corpus indexé limité à 136 documents (conseils des ministres, lois de finances, Cour des comptes, statistiques ANSD). Toute autre question recevra « je ne sais pas ».',
+      'Corpus limité à 136 documents (conseils des ministres, lois de finances, Cour des comptes, statistiques ANSD).',
     starterQuestions: [
-      'Quels départements sont cités comme touchés par l’insécurité alimentaire sévère ?',
+      'Quels départements sont touchés par l’insécurité alimentaire sévère ?',
       'Quel déficit budgétaire le projet de loi de finances 2026 prévoit-il ?',
-      'À quel taux la loi de finances rectificative 2025 révise-t-elle la croissance du PIB ?',
+      'À quel taux la LFR 2025 révise-t-elle la croissance du PIB ?',
     ],
     loadAdapter: () => import('~/lib/chat/adapters/gemini').then((m) => m.createGeminiAdapter),
   },
   {
     id: 'azure',
-    label: 'Chat historique (Azure)',
+    label: 'Azure AI Search',
     description:
       'Le chatbot en service depuis 2025, adossé au backend Azure. Conservé comme point de comparaison.',
     status: 'legacy',
-    warning: "Adaptateur factice — aucun backend n'est encore branché sur cette variante.",
-    starterQuestions: [
-      'Résumé du dernier conseil des ministres ?',
-      'Quel âge faut-il avoir pour se syndiquer au Sénégal ?',
-    ],
-    loadAdapter: () => import('~/lib/chat/adapters/mock').then((m) => m.createMockAdapter),
+    icon: 'i-simple-icons-microsoftazure',
+    // Pas d'adaptateur tant que le backend n'est pas branché : faire tester un
+    // faux chat produirait de faux retours, ce qui ruinerait la comparaison.
+    available: false,
+    loadAdapter: undefined,
   },
 ];
 
 export const CHAT_STATUS_LABELS: Record<ChatVariantStatus, string> = {
-  active: 'En cours',
+  active: 'En test',
   legacy: 'Historique',
   retired: 'Abandonné',
 };

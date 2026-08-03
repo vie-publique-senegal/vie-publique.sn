@@ -1,7 +1,12 @@
-# Banc d'essai de chatbots (`/chat/**`)
+# Sira — banc d'essai de chatbots (`/chat/**`)
 
 > Doc d'entrée du module. Plusieurs stacks de RAG conversationnel tournent en parallèle **sous
 > la même interface**, chacune à son URL, pour que les équipes internes les testent et comparent.
+
+**Sira** est le nom public de l'assistant, commun à toutes les variantes : *« l'assistant de Vie
+Publique Sénégal. Il recherche dans les lois, rapports, décrets, budgets et autres documents
+publics pour vous fournir une réponse sourcée. »* Le nom vit dans le registre
+(`CHAT_ASSISTANT_NAME`) — une variante est un **moteur**, pas un assistant différent.
 
 ## Pourquoi une coquille unique
 
@@ -166,11 +171,39 @@ canaux habituels de l'équipe.
 
 ## Mise en page
 
-Les pages `/chat/<variante>` sont en **plein écran** (branche `isFullscreenPage` de `app/app.vue`,
-comme `/carte` et `/dashboard`) : une conversation doit tenir dans la fenêtre, saisie comprise.
-Dans le conteneur normal du site, la bannière appli et le pied de page repoussaient le champ de
-saisie hors de l'écran sur mobile. `/chat/liste` reste une page normale — c'est une liste, pas une
-conversation.
+Repère : **l'interface doit ressembler aux assistants grand public**, mobile d'abord. Tout ce qui
+sert au diagnostic est reculé sous la saisie ; rien ne s'interpose entre l'utilisateur et sa
+question.
+
+- **En-tête** réduit à trois éléments : retour vers `/chat/liste`, « Sira », nouveau fil (icône
+  seule sur mobile, icône + libellé dès `sm`).
+- **Pas de bandeau fixe.** La limite du corpus est rappelée une fois à l'accueil de la
+  conversation et disparaît dès le premier message — elle est déjà expliquée sur `/chat/liste`.
+- **Pied de conversation** sous la saisie, replié : nom du moteur toujours visible, puis
+  `conversation_id` copiable et métadonnées de la dernière réponse au déroulé.
+- Les actions d'un message (copier, signaler) sont **toujours visibles sur mobile** : sans survol,
+  un `opacity-0` les rendrait inatteignables au doigt.
+
+Les pages `/chat/<variante>` utilisent le **layout `fullscreen`** ET la branche `isFullscreenPage`
+de `app/app.vue` (comme `/carte`) : une conversation doit tenir dans la fenêtre, saisie comprise.
+
+> ⚠️ Les deux sont nécessaires. Sans `definePageMeta({ layout: 'fullscreen' })`, le layout par
+> défaut interpose un `UContainer.min-h-96` : la hauteur devient indéfinie, le `h-full` de la
+> coquille ne résout plus, et la zone de saisie déborde **sous le bas de l'écran** sur mobile.
+> Symptôme mesurable : la coquille est plus haute que `window.innerHeight`.
+
+`/chat/liste` reste une page normale du site — c'est une liste, pas une conversation.
+
+## Variante indisponible
+
+Une variante déclarée mais sans backend porte `available: false` et **pas d'adaptateur**. Elle
+reste listée — le banc doit montrer ce qui est prévu — mais n'est ni cliquable dans la liste (carte
+grisée, badge « Désactivé ») ni ouvrable en conversation (`/chat/<id>` affiche un état sobre
+« pas encore branchée »).
+
+**Pourquoi pas l'adaptateur factice ?** Faire tester un faux chat produirait de faux retours, ce
+qui ruinerait exactement ce que le banc cherche à obtenir : des retours comparables. Le
+`mock` reste dans le dépôt pour valider la coquille sans backend, jamais pour être testé.
 
 ## Exposition
 

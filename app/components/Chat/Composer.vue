@@ -35,7 +35,7 @@ defineExpose({ focus });
 </script>
 
 <template>
-  <div class="border-t border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+  <div class="border-t border-gray-200 bg-white px-4 py-3 dark:border-gray-700 dark:bg-gray-900">
     <div class="mx-auto max-w-3xl">
       <p v-if="disabled" class="mb-2 text-center text-sm text-amber-700 dark:text-amber-400">
         Nouvelle question possible dans {{ cooldown }} seconde{{ (cooldown ?? 0) > 1 ? 's' : '' }}.
@@ -49,12 +49,12 @@ defineExpose({ focus });
           color="primary"
           variant="outline"
           class="w-full"
-          :rows="3"
-          :max-rows="12"
+          :rows="1"
+          :max-rows="8"
           size="xl"
           :disabled="disabled"
           :autoresize="true"
-          :ui="{ base: 'rounded-3xl resize-none pb-12 px-4 pt-4 md:text-sm' }"
+          :ui="{ base: 'rounded-3xl resize-none pb-12 px-4 pt-3.5 md:text-sm' }"
           @keydown.enter.exact.prevent="submit"
         />
         <div class="absolute bottom-3 right-3">
