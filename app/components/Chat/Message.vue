@@ -18,7 +18,10 @@ export interface ChatMessageModel {
 
 const props = defineProps<{ message: ChatMessageModel }>();
 
-defineEmits<{ (e: 'ask', question: string): void }>();
+defineEmits<{
+  /** `ask` : rejouer une question suggérée. `report` : copier le contexte du message. */
+  (e: 'ask' | 'report', valeur: string): void;
+}>();
 
 const { copy, copied } = useClipboard({ legacy: true });
 
@@ -147,6 +150,21 @@ const metaEntries = computed(() => Object.entries(props.message.meta ?? {}));
           size="xs"
           color="gray"
           @click="copy(message.text)"
+        />
+      </UTooltip>
+
+      <!-- Raison d'être du banc : un retour sans son contexte n'est pas
+           diagnosticable. Le bouton copie tout d'un coup, pour que le testeur
+           n'ait qu'à coller. -->
+      <UTooltip text="Copier le contexte complet pour un retour" :delay-duration="0">
+        <UButton
+          icon="i-heroicons-flag"
+          variant="ghost"
+          size="xs"
+          color="gray"
+          label="Signaler"
+          :ui="{ label: 'text-xs' }"
+          @click="$emit('report', message.id)"
         />
       </UTooltip>
 

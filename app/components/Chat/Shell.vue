@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { useClipboard } from '@vueuse/core';
+import { toast } from 'vue-sonner';
 import { CHAT_STATUS_LABELS } from '~/config/chat-variants';
+import { construireRetour } from '~/lib/chat/report';
 import type { ChatMessageModel } from './Message.vue';
 import type { ChatAdapter, ChatVariant } from '~~/types/chat';
 
@@ -134,6 +136,11 @@ async function envoyer(question: string) {
   } catch (erreur) {
     if (abandon.signal.aborted) {
       reponse.error = { code: 'aborted', message: 'Réponse interrompue.' };
+    } else if (navigator.onLine === false) {
+      reponse.error = {
+        code: 'offline',
+        message: 'Vous semblez hors ligne. Vérifiez votre connexion, puis reposez la question.',
+      };
     } else {
       console.error('[chat] échec de la variante', props.variant.id, erreur);
       reponse.error = {
@@ -148,6 +155,35 @@ async function envoyer(question: string) {
     await defilerEnBas();
     composer.value?.focus();
   }
+}
+
+/** Copie le contexte complet d'une réponse, pour un retour diagnosticable. */
+function signaler(messageId: string) {
+  const index = messages.value.findIndex((message) => message.id === messageId);
+  if (index === -1) return;
+
+  const reponse = messages.value[index]!;
+  const question = messages.value
+    .slice(0, index)
+    .reverse()
+    .find((message) => message.role === 'user');
+
+  copierPressePapier(
+    construireRetour({
+      variant: props.variant,
+      url: window.location.href,
+      conversationId: conversationId.value,
+      question: question?.text,
+      reponse: reponse.text,
+      sources: reponse.sources,
+      meta: reponse.meta,
+      erreur: reponse.error,
+      date: new Date(),
+    }),
+  );
+  toast.success('Contexte copié', {
+    description: 'Collez-le tel quel dans votre retour : il contient de quoi remonter la trace.',
+  });
 }
 
 function reinitialiser() {
@@ -166,7 +202,8 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="flex h-[calc(100dvh-8rem)] flex-col bg-gray-50 dark:bg-gray-900">
+  <!-- `h-full` : la hauteur vient du conteneur plein écran d'app.vue. -->
+  <div class="flex h-full flex-col bg-gray-50 dark:bg-gray-900">
     <!-- En-tête : le nom de la variante est visible en PERMANENCE, pour qu'une
          capture d'écran de testeur se suffise à elle-même. -->
     <header
@@ -226,7 +263,7 @@ onBeforeUnmount(() => {
           <li v-for="question in variant.starterQuestions" :key="question">
             <UButton
               :label="question"
-              class="w-full py-3 text-left font-normal dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
+              class="w-full py-3 text-left font-normal ring-1 ring-gray-200 dark:bg-gray-800 dark:text-gray-200 dark:ring-gray-700 dark:hover:bg-gray-700"
               color="gray"
               variant="soft"
               @click="envoyer(question)"
@@ -241,6 +278,7 @@ onBeforeUnmount(() => {
           :key="message.id"
           :message="message"
           @ask="envoyer"
+          @report="signaler"
         />
       </div>
     </div>

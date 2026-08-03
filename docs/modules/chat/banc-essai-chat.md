@@ -21,6 +21,7 @@ l'adaptateur n'a pas fait son travail de traduction.
 | `app/lib/chat/sse.ts` | Parseur SSE + lecture du `ReadableStream`. |
 | `app/lib/chat/session-token.ts` | Jeton de session anonyme : cache, renouvellement, dédup. |
 | `app/lib/chat/markdown.ts` | Rendu markdown des réponses, assaini par DOMPurify. |
+| `app/lib/chat/report.ts` | Construction du retour de testeur (fonction pure, testée). |
 | `app/components/Chat/` | La coquille : `Shell`, `Message`, `Composer`. |
 | `app/pages/chat/[variant].vue` | Page unique de **toutes** les variantes. Inconnue → 404. |
 | `app/pages/chat/liste.vue` | Page d'atterrissage, **générée depuis le registre**. |
@@ -140,12 +141,36 @@ L'adaptateur est testé avec un `fetch` bouchonné — donc **sans consommer le 
 
 ## Traçabilité des retours
 
-Sans elle, on récolte « ça hallucine » sans pouvoir remonter à quoi que ce soit. Deux garanties :
+Sans elle, on récolte « ça hallucine » sans pouvoir remonter à quoi que ce soit. Trois garanties :
 
 - le **nom de la variante** est visible en permanence (en-tête + pied), pour qu'une capture
   d'écran se suffise à elle-même ;
 - le **`conversation_id` est affiché et copiable** — clé de jointure avec les traces côté backend.
-  Quand une variante n'en fournit pas, son absence est affichée explicitement.
+  Quand une variante n'en fournit pas, son absence est affichée explicitement ;
+- un bouton **« Signaler »** sous chaque réponse copie le **contexte complet** prêt à coller :
+  variante, URL, `conversation_id`, date, question, réponse, sources citées, métadonnées et
+  éventuelle erreur (`app/lib/chat/report.ts`, fonction pure testée).
+
+**Ce n'est pas un doublon de Langfuse.** Langfuse enregistre ce que le **backend** a vu (prompt,
+récupération, latence) et n'existe que pour la variante Gemini. Il ne sait rien de ce que le
+**testeur** a vu ni jugé : quelle variante, quel rendu à l'écran, quel verdict humain. Le bouton
+produit exactement ce qui manque — le jugement, plus le `conversation_id` qui **pointe vers** la
+trace Langfuse. C'est la jointure entre les deux, pas une seconde collecte.
+
+> Piste côté API si elle devient utile : exposer l'URL de la trace Langfuse dans `done.meta`. La
+> coquille l'afficherait sans modification (les métadonnées sont opaques pour elle) et le retour
+> copié contiendrait un lien direct vers la trace au lieu d'un identifiant à rechercher.
+
+Conformément au cadrage, **aucune collecte de feedback en base** : le retour transite par les
+canaux habituels de l'équipe.
+
+## Mise en page
+
+Les pages `/chat/<variante>` sont en **plein écran** (branche `isFullscreenPage` de `app/app.vue`,
+comme `/carte` et `/dashboard`) : une conversation doit tenir dans la fenêtre, saisie comprise.
+Dans le conteneur normal du site, la bannière appli et le pied de page repoussaient le champ de
+saisie hors de l'écran sur mobile. `/chat/liste` reste une page normale — c'est une liste, pas une
+conversation.
 
 ## Exposition
 
@@ -216,7 +241,8 @@ SSE.
 | 3 — adaptateur Azure | à faire — la variante `azure` tourne encore sur l'adaptateur factice |
 | 4 — transport Gemini (jeton + parseur SSE, testés unitairement) | ✅ |
 | 5 — adaptateur Gemini (`conversation_id`, sources, erreurs, quotas) | ✅ éprouvé contre l'API — sauf le 429, bloqué côté API |
-| 6 — finitions et retrait de `/chatbot` | à faire |
+| 6 — finitions (traçabilité, états d'erreur, mise en page) | ✅ |
+| 6 bis — retrait de `/chatbot` et de `ChatBot.vue` | **bloqué par la brique 3** : `/chatbot` est aujourd'hui le seul chat Azure qui fonctionne |
 
 ## Recette
 
