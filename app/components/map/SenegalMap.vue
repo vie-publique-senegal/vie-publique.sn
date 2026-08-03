@@ -240,7 +240,7 @@ onMounted(async () => {
     // Par défaut, les communes ne servent que de calque de LIBELLÉS (zoom ≥ 9) :
     // le fichier de points d'étiquetage couvre les 553 communes du référentiel.
     // Les cartes qui dessinent les communes surchargent `geoSources.communes`.
-    fetchGeo(geoUrl('communes', '/geo/communes-senegal-labels.geojson')),
+    fetchGeo(geoUrl('communes', '/geo/senegal-communes-labels.geojson')),
   ]);
   geoJsonRegions.value = regions;
   geoJsonDepartements.value = departements;

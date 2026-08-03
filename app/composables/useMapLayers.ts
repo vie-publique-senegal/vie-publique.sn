@@ -426,7 +426,7 @@ export function useMapLayers(options: UseMapLayersOptions) {
       });
     }
 
-    // ─── Labels des communes (zoom ≥ 9, base régions — points communes-senegal-labels) ─
+    // ─── Labels des communes (zoom ≥ 9, base régions — points senegal-communes-labels) ─
     const communeGeojson = geoLevel === 'regions' ? geoJsonCommunes?.value : null;
     if (communeGeojson && currentZoom >= 9) {
       const communeLabelData = communeGeojson.features

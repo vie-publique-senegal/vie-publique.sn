@@ -83,8 +83,8 @@ versionnés dans `public/geo/`, joints aux données par le **slug de l'entité g
 | Fichier | Contenu | Propriétés |
 |---|---|---|
 | `senegal-departements.geojson` | Les **46 départements** du découpage actuel (Keur Massar inclus, créé en 2021) | `slug`, `name`, `level`, `parent` (slug de région), `code` (pcode) |
-| `communes-senegal.geojson` | Les **553 communes** : 549 polygones et 4 points | `slug`, `name`, `level`, `parent` (slug de département), `country`, `source`, `match_method`, `precision`, `note` |
-| `communes-senegal-labels.geojson` | 553 points d'étiquetage (point d'inaccessibilité du polygone), calque de libellés des cartes génériques | `slug`, `name`, `level`, `parent` |
+| `senegal-communes.geojson` | Les **553 communes** : 549 polygones et 4 points | `slug`, `name`, `level`, `parent` (slug de département), `country`, `source`, `match_method`, `precision`, `note` |
+| `senegal-communes-labels.geojson` | 553 points d'étiquetage (point d'inaccessibilité du polygone), calque de libellés des cartes génériques | `slug`, `name`, `level`, `parent` |
 | `senegal-regions.geojson` | Les 14 régions (fond des cartes génériques) | `code`, `name` |
 
 Provenance et limites :
@@ -194,7 +194,7 @@ remplace les cartes Leaflet des pages `elections-senegal` :
 |---|---|---|
 | `offices` | stats bureaux par département | `senegal-departements.geojson` |
 | `results` | gagnant par département | idem |
-| `results-locale` | gagnant par commune (élections locales) | `communes-senegal.geojson` + bordures départementales |
+| `results-locale` | gagnant par commune (élections locales) | `senegal-communes.geojson` + bordures départementales |
 
 La jointure données ↔ polygones se fait par le **slug de l'entité géographique**
 (`geo_slug` côté données, `properties.slug` côté fichiers ; mécanisme
@@ -260,7 +260,7 @@ carte (`fallback` du `colorScale`) sans erreur visible.
 ### 6bis.2 Où vit la clé côté fichiers statiques
 
 - `public/geo/senegal-departements.geojson` (46 features) et
-  `public/geo/communes-senegal.geojson` (553 features) : chaque feature porte
+  `public/geo/senegal-communes.geojson` (553 features) : chaque feature porte
   `properties.slug`, `name`, `level`, `parent` (slug de l'entité parente) — tous deux
   indexés sur le **même** schéma de slug que `geo_entities`. Contrôle de non-régression :
   toute circonscription dont le `geo_slug` n'est pas nul doit trouver un contour
@@ -318,7 +318,7 @@ Même schéma, source différente :
    winnerColor, parentSlug: constituencie.parent.slug, ... }` ;
 5. Même mécanique de join que ci-dessus (étape 9 du 6bis.3), sur
    `senegal-departements.geojson` (mode `results`) ou
-   `communes-senegal.geojson` (mode `results-locale`) ;
+   `senegal-communes.geojson` (mode `results-locale`) ;
 6. Pour le drill-down départemental du mode `results-locale`,
    `aggregateResultsByDepartment()` ([app/config/map-elections.ts](../../../app/config/map-elections.ts))
    regroupe les communes par `parentSlug` — donc par le **`parent` résolu par

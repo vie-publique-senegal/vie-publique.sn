@@ -14,7 +14,7 @@ Aligner la prod sur le modèle géographique et cartographique cible, déjà en 
 |---|---|---|
 | Référentiel géographique | Inexistant — `election_constituencies` porte des champs texte dénormalisés (`region`) et une hiérarchie jamais renseignée (`parent`) | Référentiel **versionné** : `geo_entities` (identité stable), `geo_entity_versions` (état daté, seule table portant la hiérarchie), `geo_events` / `geo_event_entities` (décrets fondateurs), `geo_entity_names` (graphies), `geo_demographic_observations` (population) — référencé par `election_constituencies` via la FK unique `geo_entity` |
 | Circonscriptions | 55 lignes sans slug ni rattachement géographique | 608 lignes (46 départements + 553 communes + 8 zones diaspora + 1 Territoire National) avec `slug` unique, clé publique des URLs et de la jointure des contours |
-| Contours | Polygones dupliqués par élection dans `carte.Position` | Fichiers GeoJSON statiques versionnés dans le repo (`public/geo/senegal-departements.geojson`, `public/geo/communes-senegal.geojson`), joints par le **slug de l'entité géographique** |
+| Contours | Polygones dupliqués par élection dans `carte.Position` | Fichiers GeoJSON statiques versionnés dans le repo (`public/geo/senegal-departements.geojson`, `public/geo/senegal-communes.geojson`), joints par le **slug de l'entité géographique** |
 | Carte électorale (lieux et bureaux de vote) | `election_map_national` (15 633) + `election_map_diaspora` (807), rattachées à une seule élection — la page carte électorale de la présidentielle 2024 est vide | `election_electoral_files` (fichier électoral pérenne, décliné national/diaspora, partagé entre scrutins) + `election_polling_stations` (16 440 bureaux) — les deux élections 2024 partagent le même fichier |
 | Résultats par circonscription | `carte` (46 lignes, législatives 2024 uniquement) | `election_constituency_results` (gagnant, sièges, indicateurs de participation et de dépouillement, second tour) + `election_constituency_coalition_results` (classement complet des coalitions, à remplir quand les données seront sourcées) |
 
@@ -183,7 +183,7 @@ deux circonscriptions ; re-dry-run à 0 changement.
 ### 7.4 Contours
 
 Les contours sont des fichiers versionnés du repo applicatif, indexés sur le **slug de l'entité
-géographique** : `senegal-departements.geojson` (46 features) et `communes-senegal.geojson`
+géographique** : `senegal-departements.geojson` (46 features) et `senegal-communes.geojson`
 (553 features, dont 4 en géométrie `Point` faute de limite cartographiée). Rien à faire en base.
 
 Contrôle : toute circonscription dont le `geo_slug` n'est pas nul trouve un contour — 0 manquant,

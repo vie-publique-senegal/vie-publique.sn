@@ -14,7 +14,7 @@ export type ContourLevel = 'departements' | 'communes';
 
 const CONTOUR_SOURCES: Record<ContourLevel, string> = {
   departements: '/geo/senegal-departements.geojson',
-  communes: '/geo/communes-senegal.geojson',
+  communes: '/geo/senegal-communes.geojson',
 };
 
 export interface ConstituencyContour {

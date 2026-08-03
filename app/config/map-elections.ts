@@ -344,7 +344,7 @@ export function buildElectionMapConfig(
     geoSources: {
       regions: null,
       // Départements : le fichier canonique de SenegalMap, réindexé sur le référentiel
-      communes: isCommunesLevel ? '/geo/communes-senegal.geojson' : null,
+      communes: isCommunesLevel ? '/geo/senegal-communes.geojson' : null,
     },
     datasets: [dataset],
     legend,
