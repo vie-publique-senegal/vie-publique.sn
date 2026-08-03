@@ -24,7 +24,6 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
-    "@ai-sdk/vue": "^1.2.9",
     "@deck.gl/aggregation-layers": "^9.2.11",
     "@deck.gl/core": "^9.2.11",
     "@deck.gl/geo-layers": "^9.2.11",
@@ -35,7 +34,6 @@
     "@nuxt/image": "^1.7.0",
     "@nuxt/ui": "2.18.3",
     "@nuxtjs/leaflet": "^1.2.4",
-    "@nuxtjs/mdc": "^0.17.0",
     "@nuxtjs/seo": "^3.2.2",
     "@pinia/nuxt": "^0.5.4",
     "@sentry/nuxt": "^10.65.0",

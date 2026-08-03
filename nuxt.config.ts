@@ -469,7 +469,6 @@ export default defineNuxtConfig({
     },
     '@vite-pwa/nuxt',
     '@vueuse/nuxt',
-    '@nuxtjs/mdc',
     'nuxt-security',
     '@sentry/nuxt/module',
   ],
@@ -695,7 +694,6 @@ export default defineNuxtConfig({
       '/publications/recrutement',
       '/quiz',
       '/chatbot',
-      '/chat-bot',
       '/a-propos/barometre-politique',
       '/a-propos/charte-dons',
       '/don/bictorys',
@@ -928,32 +926,4 @@ export default defineNuxtConfig({
     },
   },
   compatibilityDate: '2025-07-15',
-  // Used by the AI Chat to highlight code
-  mdc: {
-    headings: {
-      anchorLinks: false,
-    },
-    highlight: {
-      langs: [
-        'ts',
-        'js',
-        'html',
-        'css',
-        'json',
-        'md',
-        'yaml',
-        'bash',
-        'css',
-        'py',
-        'tsx',
-        'jsx',
-        'go',
-        'rust',
-        'java',
-        'kotlin',
-        'swift',
-        'csharp',
-      ],
-    },
-  },
 });
