@@ -47,6 +47,7 @@
 | **Proxy images CMS** | [`guidelines/proxy-images.md`](./guidelines/proxy-images.md) | [`guidelines/proxy-images-migration.md`](./guidelines/proxy-images-migration.md) |
 | **Serveurs MCP (Claude Code)** | [`guidelines/mcp-servers.md`](./guidelines/mcp-servers.md) | [`infra/sentry.md`](./infra/sentry.md) (§5 MCP Sentry) |
 | **Skills Claude Code (quand utiliser lequel)** | [`guidelines/claude-skills.md`](./guidelines/claude-skills.md) | catalogue : [skills.sh](https://skills.sh/) |
+| **Formatage du code (Prettier)** | [`guidelines/formatage-prettier.md`](./guidelines/formatage-prettier.md) (⚠️ ne pas lancer `npm run format` global pour l'instant) | — |
 | **Versioning** | [`guidelines/versioning.md`](./guidelines/versioning.md) | — |
 | **Global settings** | [`guidelines/global-settings.md`](./guidelines/global-settings.md) | — |
 | **Modules du site** | [`modules/README.md`](./modules/README.md) | 1 dossier par feature |
@@ -61,6 +62,7 @@
 - [`modules/dashboard/`](./modules/dashboard/) — dashboards RAC et projets publics
 - [`audits/audit-recherche-2026-07.md`](./audits/audit-recherche-2026-07.md) — checklist recherche Typesense
 - [`infra/todo-migration-minio-r2.md`](./infra/todo-migration-minio-r2.md) — migration stockage assets MinIO → Cloudflare R2 (INFRA-9/INFRA-2)
+- [`guidelines/formatage-prettier.md`](./guidelines/formatage-prettier.md#chantier--passer-tout-le-dépôt-au-format-à-faire-avec-léquipe) — passage de tout le dépôt à Prettier + garde-fous (à faire avec l'équipe, après merge des branches en cours)
 
 ## 📌 Statut des docs
 
