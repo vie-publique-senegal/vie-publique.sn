@@ -17,9 +17,9 @@
  * rattachée directement à son département.
  *
  * Ce que le référentiel ne porte PAS (et qui vaut donc `null`, jamais inventé) :
- * superficie, géométrie, budget, conseil municipal. Les maires restent `null`
- * tant que les phases 2-3 de l'import (`schemas/collectivites/PLAN-DE-TRAVAIL.md`)
- * ne sont pas déroulées : le câblage est en place, il se remplira tout seul.
+ * superficie, géométrie, budget, conseil municipal. Un maire ou un contact
+ * absent de la base reste `null` : le câblage est en place, la fiche se remplit
+ * d'elle-même dès que la donnée est saisie.
  *
  * Dégradation : chaque requête est isolée. Une panne sur la population ou les
  * profils omet la donnée, elle ne fait jamais échouer l'annuaire (cf. CLAUDE.md).

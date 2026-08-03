@@ -22,8 +22,8 @@ export default defineCachedEventHandler(
       regions,
       departements,
       total: communes.length,
-      // Repères de complétude : ce qui est réel aujourd'hui et ce qui manque
-      // encore (maires = phases 2-3 de l'import), affiché tel quel à l'utilisateur.
+      // Repères de complétude, affichés tels quels à l'utilisateur : ils disent
+      // ce qui est renseigné à l'instant T, sans arrondir ni masquer les trous.
       completude: {
         avecPopulation: communes.filter((c) => c.population !== null).length,
         avecMaire: communes.filter((c) => c.maire !== null).length,
