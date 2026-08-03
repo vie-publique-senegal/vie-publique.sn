@@ -5,14 +5,18 @@ import { useNotifications } from './composables/useNotifications';
 // Push Notifications
 const { initState, setupForegroundHandler, validateAndRefreshToken } = useNotifications();
 
-const isChatPage = ref(useRoute().path === '/chatbot');
+// Pages de chat (chat historique + banc d'essai /chat/**) : la nav mobile fixe
+// mangerait la zone de saisie.
+const isChatRoute = (path: string) => path === '/chatbot' || path.startsWith('/chat/');
+
+const isChatPage = ref(isChatRoute(useRoute().path));
 const isFullscreenPage = ref(
   useRoute().path.startsWith('/carte/') || useRoute().path.startsWith('/dashboard/'),
 );
 watch(
   () => useRoute().path,
   (newPath) => {
-    isChatPage.value = newPath === '/chatbot';
+    isChatPage.value = isChatRoute(newPath);
     isFullscreenPage.value = newPath.startsWith('/carte/') || newPath.startsWith('/dashboard/');
   },
 );

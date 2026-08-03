@@ -9,6 +9,21 @@ const buildTime = new Date().toISOString();
 const gitCommit =
   process.env.VERCEL_GIT_COMMIT_SHA || process.env.GITHUB_SHA || process.env.GIT_COMMIT || null; // null au lieu de 'unknown' pour les conditions
 
+// Origine de l'API RAG (banc d'essai chat) : le navigateur l'appelle EN DIRECT,
+// il faut donc l'autoriser dans `connect-src`. Sur *.vie-publique.sn elle est déjà
+// couverte par l'entrée générique ; cet ajout explicite couvre le cas d'une URL
+// hors domaine, pour qu'un changement d'hôte ne casse pas la CSP en silence.
+// ⚠️ La CSP est figée AU BUILD : changer cette URL en production exige un REBUILD,
+// pas seulement une variable d'environnement.
+let ragApiOrigin: string | null = null;
+try {
+  if (process.env.NUXT_PUBLIC_RAG_API_URL) {
+    ragApiOrigin = new URL(process.env.NUXT_PUBLIC_RAG_API_URL).origin;
+  }
+} catch {
+  console.warn('[config] NUXT_PUBLIC_RAG_API_URL invalide — ignorée dans la CSP');
+}
+
 const securityConfig =
   process.env.NODE_ENV === 'production'
     ? {
@@ -54,6 +69,8 @@ const securityConfig =
               'https://*.ingest.de.sentry.io',
               // Cloudflare Web Analytics (beacon injecté par le proxy Cloudflare)
               'https://cloudflareinsights.com',
+              // API RAG appelée en direct par le navigateur (banc d'essai chat)
+              ...(ragApiOrigin ? [ragApiOrigin] : []),
             ],
             'script-src': [
               "'self'",
@@ -223,6 +240,13 @@ export default defineNuxtConfig({
     },
     // Pages carte : désactiver SSR (WebGL client-only)
     '/carte/**': { ssr: false },
+    // Banc d'essai chat : /chat pointe sur la variante par défaut.
+    // ⚠️ 302 et NON 301 : la variante par défaut changera au fil des POC, et un
+    // 301 resterait caché indéfiniment dans le navigateur des testeurs. Le jour
+    // du lancement public, /chat deviendra une page à part entière.
+    // Cible dupliquée de CHAT_DEFAULT_VARIANT (app/config/chat-variants.ts) :
+    // nuxt.config ne peut pas importer de module applicatif.
+    '/chat': { redirect: { to: '/chat/gemini', statusCode: 302 } },
     // Redirections SEO
     '/budget': { redirect: { to: '/budget-senegal', statusCode: 301 }, prerender: true },
     '/budget/**': { redirect: { to: '/budget-senegal', statusCode: 301 }, prerender: true },
@@ -514,6 +538,10 @@ export default defineNuxtConfig({
       firebaseAppId: process.env.NUXT_PUBLIC_FIREBASE_APP_ID,
       firebaseMeasurementId: process.env.NUXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
       firebaseVapidKey: process.env.NUXT_PUBLIC_FIREBASE_VAPID_KEY,
+      // Banc d'essai chat — chaque URL de backend est une variable de config.
+      // Appelée EN DIRECT par le navigateur (pas de proxy Nitro) : le tenant est
+      // résolu depuis l'Origin et le quota est par IP. Voir docs/modules/chat/.
+      ragApiUrl: process.env.NUXT_PUBLIC_RAG_API_URL || 'https://rag.vie-publique.sn',
       // Sentry (monitoring d'erreurs) — DSN vide = désactivé (voir docs/infra/sentry.md)
       sentry: {
         dsn: process.env.NUXT_PUBLIC_SENTRY_DSN || '',
@@ -668,7 +696,9 @@ export default defineNuxtConfig({
   sitemap: {
     sources: ['/api/__sitemap__/urls'],
     // La recherche interne est noindex (règle SEO §10 CLAUDE.md) → hors sitemap
-    exclude: ['/recherche'],
+    // Le banc d'essai chat est interne : noindex + hors sitemap, mais PAS de
+    // Disallow robots.txt (fichier public → publierait l'inventaire des POC).
+    exclude: ['/recherche', '/chat', '/chat/**'],
   },
 
   // Robots.txt
