@@ -1,63 +1,70 @@
+<!--
+  Onglet « Contacts » : contact INSTITUTIONNEL de la mairie, issu du profil
+  d'entité (`public_entity_profiles`). Rendu seulement si au moins un canal
+  existe (cf. communeTabs). Les coordonnées personnelles des élus, elles, ne
+  sont jamais publiées ici.
+-->
 <template>
   <div class="grid gap-6 md:grid-cols-2">
     <div class="rounded-xl bg-white p-6 ring-1 ring-gray-200 dark:bg-gray-800 dark:ring-gray-700">
       <h2 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">
         Mairie de {{ commune.nom }}
       </h2>
-      <CollectivitesInfoRow label="Adresse" :value="mairie.adresse" />
-      <CollectivitesInfoRow label="Téléphone">
+
+      <CollectivitesInfoRow v-if="contact.adresse" label="Adresse" :value="contact.adresse" />
+
+      <CollectivitesInfoRow v-if="contact.telephone" label="Téléphone">
         <a
-          :href="`tel:${mairie.telephone.replace(/\s/g, '')}`"
+          :href="`tel:${contact.telephone.replace(/\s/g, '')}`"
           class="text-primary-600 dark:text-primary-400 hover:underline"
         >
-          {{ mairie.telephone }}
+          {{ contact.telephone }}
         </a>
       </CollectivitesInfoRow>
-      <CollectivitesInfoRow label="Email">
+
+      <CollectivitesInfoRow v-if="contact.email" label="E-mail">
         <a
-          :href="`mailto:${mairie.email}`"
+          :href="`mailto:${contact.email}`"
           class="text-primary-600 dark:text-primary-400 hover:underline"
         >
-          {{ mairie.email }}
+          {{ contact.email }}
         </a>
       </CollectivitesInfoRow>
-      <CollectivitesInfoRow v-if="mairie.siteWeb" label="Site internet">
+
+      <CollectivitesInfoRow v-if="contact.siteWeb" label="Site internet">
         <a
-          :href="mairie.siteWeb"
+          :href="contact.siteWeb"
           target="_blank"
           rel="noreferrer"
           class="text-primary-600 dark:text-primary-400 hover:underline"
         >
-          {{ mairie.siteWeb }}
+          {{ contact.siteWeb }}
         </a>
       </CollectivitesInfoRow>
-      <CollectivitesInfoRow v-if="mairie.facebook" label="Facebook">
-        <a
-          :href="mairie.facebook"
-          target="_blank"
-          rel="noreferrer"
-          class="text-primary-600 dark:text-primary-400 hover:underline"
-        >
-          Page officielle
-        </a>
-      </CollectivitesInfoRow>
-      <CollectivitesInfoRow label="Horaires" :value="mairie.horaires" />
     </div>
+
     <div class="rounded-xl bg-white p-6 ring-1 ring-gray-200 dark:bg-gray-800 dark:ring-gray-700">
-      <h2 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Localisation</h2>
-      <CollectivitesCommunesMap :communes="[commune]" height="320px" :focus-slug="commune.slug" />
+      <h2 class="mb-4 text-lg font-semibold text-gray-900 dark:text-white">Rattachement</h2>
+      <CollectivitesInfoRow label="Statut" :value="commune.type" />
+      <CollectivitesInfoRow label="Département" :value="commune.departement" />
+      <CollectivitesInfoRow label="Région" :value="commune.region" />
+      <CollectivitesInfoRow
+        v-if="commune.arrondissement"
+        label="Arrondissement"
+        :value="commune.arrondissement"
+      />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import type { Commune } from '~~/types/collectivite';
+import type { CommuneGeo } from '~~/types/collectivite';
 
 interface Props {
-  commune: Commune;
+  commune: CommuneGeo;
 }
 
 const props = defineProps<Props>();
 
-const mairie = computed(() => props.commune.mairie);
+const contact = computed(() => props.commune.contact!);
 </script>

@@ -11,10 +11,9 @@
           <tr>
             <th class="px-4 py-3 font-medium">Commune</th>
             <th class="px-4 py-3 font-medium">Région</th>
+            <th class="px-4 py-3 font-medium">Arrondissement</th>
             <th class="px-4 py-3 font-medium">Maire</th>
-            <th class="px-4 py-3 font-medium">Parti</th>
             <th class="px-4 py-3 text-right font-medium">Population</th>
-            <th class="px-4 py-3 text-right font-medium">Superficie</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
@@ -33,13 +32,15 @@
               <div class="text-xs text-gray-500 dark:text-gray-400">{{ c.departement }}</div>
             </td>
             <td class="px-4 py-3 text-gray-500 dark:text-gray-400">{{ c.region }}</td>
-            <td class="px-4 py-3 text-gray-900 dark:text-gray-200">{{ c.maire.nom }}</td>
-            <td class="px-4 py-3"><CollectivitesPartiBadge :parti="c.maire.parti" /></td>
-            <td class="px-4 py-3 text-right tabular-nums text-gray-900 dark:text-gray-200">
-              {{ formatNumber(c.population) }}
+            <td class="px-4 py-3 text-gray-500 dark:text-gray-400">
+              {{ c.arrondissement ?? '-' }}
+            </td>
+            <td class="px-4 py-3">
+              <span v-if="c.maire" class="text-gray-900 dark:text-gray-200">{{ c.maire.nom }}</span>
+              <span v-else class="italic text-gray-400 dark:text-gray-500">Non renseigné</span>
             </td>
             <td class="px-4 py-3 text-right tabular-nums text-gray-900 dark:text-gray-200">
-              {{ c.superficie }} km²
+              {{ c.population === null ? '-' : formatNumber(c.population) }}
             </td>
           </tr>
         </tbody>
@@ -54,24 +55,21 @@
         :to="`/collectivites-territoriales/communes/${c.slug}`"
         class="hover:ring-primary-300 dark:hover:ring-primary-700 block rounded-xl bg-white p-4 ring-1 ring-gray-200 transition dark:bg-gray-800 dark:ring-gray-700"
       >
-        <div class="flex items-start justify-between gap-3">
-          <div>
-            <div class="font-medium text-gray-900 dark:text-white">{{ c.nom }}</div>
-            <div class="text-xs text-gray-500 dark:text-gray-400">
-              {{ c.region }} · {{ c.departement }}
-            </div>
+        <div>
+          <div class="font-medium text-gray-900 dark:text-white">{{ c.nom }}</div>
+          <div class="text-xs text-gray-500 dark:text-gray-400">
+            {{ c.region }} · {{ c.departement }}
           </div>
-          <CollectivitesPartiBadge :parti="c.maire.parti" />
         </div>
         <div class="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500 dark:text-gray-400">
-          <span
-            >Maire :
-            <span class="font-medium text-gray-900 dark:text-gray-200">{{
-              c.maire.nom
-            }}</span></span
-          >
-          <span>{{ formatNumber(c.population) }} hab.</span>
-          <span>{{ c.superficie }} km²</span>
+          <span>
+            Maire :
+            <span v-if="c.maire" class="font-medium text-gray-900 dark:text-gray-200">
+              {{ c.maire.nom }}
+            </span>
+            <span v-else class="italic">non renseigné</span>
+          </span>
+          <span v-if="c.population !== null">{{ formatNumber(c.population) }} hab.</span>
         </div>
       </NuxtLink>
     </div>
@@ -79,11 +77,11 @@
 </template>
 
 <script setup lang="ts">
-import type { Commune } from '~~/types/collectivite';
-import { formatNumber } from '#shared/communes';
+import type { CommuneGeo } from '~~/types/collectivite';
+import { formatNumber } from '#shared/format';
 
 interface Props {
-  communes: Commune[];
+  communes: CommuneGeo[];
 }
 
 defineProps<Props>();

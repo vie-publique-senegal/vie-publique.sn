@@ -1,11 +1,14 @@
 <script setup lang="ts">
-import { COMMUNES, REGIONS, formatNumber } from '#shared/communes';
+import { formatNumber } from '#shared/format';
+import { useCommunesGeo } from '~/composables/collectivites/useCommunesGeo';
 
 definePageMeta({ layout: 'fullscreen' });
 
 const route = useRoute();
 const router = useRouter();
 const { siteUrl, themeColor } = useSiteMetadata();
+
+const { communes, regions } = useCommunesGeo();
 
 // Filtre région lu de façon synchrone depuis l'URL (SSR-correct + partageable)
 const region = ref((route.query.region as string) || '');
@@ -15,13 +18,13 @@ watch(region, (r) => {
 });
 
 const filtered = computed(() =>
-  region.value ? COMMUNES.filter((c) => c.region === region.value) : COMMUNES,
+  region.value ? communes.value.filter((c) => c.region === region.value) : communes.value,
 );
 
-const regionOptions = [
+const regionOptions = computed(() => [
   { label: 'Toutes les régions', value: '' },
-  ...REGIONS.map((r) => ({ label: r, value: r })),
-];
+  ...regions.value.map((r) => ({ label: r, value: r })),
+]);
 
 // ── SEO ────────────────────────────────────────────────────────────
 const pageTitle = 'Carte interactive des communes du Sénégal';
@@ -65,7 +68,7 @@ useHead({
             {{ formatNumber(filtered.length) }} collectivité{{
               filtered.length > 1 ? 's' : ''
             }}
-            affichée{{ filtered.length > 1 ? 's' : '' }} - cliquez sur une commune pour ouvrir sa
+            référencée{{ filtered.length > 1 ? 's' : '' }} - cliquez sur une commune pour ouvrir sa
             fiche.
           </p>
         </div>

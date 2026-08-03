@@ -1,19 +1,24 @@
 ﻿import { defineSitemapEventHandler } from '#imports';
 import { readItems } from '@directus/sdk';
 import { AUDIT_INSTITUTION_PAGES } from '~~/types/document';
-import { COMMUNES } from '#shared/communes';
 
 export default defineSitemapEventHandler(async () => {
   const urls: any[] = [];
 
-  // 0. Collectivités territoriales (données statiques — hors du try Directus)
+  // 0. Collectivités territoriales — référentiel géo réel (558 collectivités).
+  // Requête isolée : une panne du référentiel retire ces URLs du sitemap, elle
+  // ne doit pas priver le sitemap de tout le reste.
   // Les pages statiques du module (index, carte, a-propos) sont auto-découvertes.
-  for (const commune of COMMUNES) {
-    urls.push({
-      loc: `/collectivites-territoriales/communes/${commune.slug}`,
-      changefreq: 'monthly',
-      priority: 0.6,
-    });
+  try {
+    for (const commune of await getCommunesGeo()) {
+      urls.push({
+        loc: `/collectivites-territoriales/communes/${commune.slug}`,
+        changefreq: 'monthly',
+        priority: 0.6,
+      });
+    }
+  } catch (error) {
+    reportServerError(error, 'sitemap/collectivites');
   }
 
   const toISODate = (date: string | null | undefined): string | undefined => {

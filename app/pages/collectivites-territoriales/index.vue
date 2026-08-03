@@ -1,16 +1,22 @@
 <script setup lang="ts">
-import { COMMUNES, REGIONS, DEPARTEMENTS, PARTIS, formatNumber } from '#shared/communes';
+import { formatNumber } from '#shared/format';
+import { useCommunesGeo } from '~/composables/collectivites/useCommunesGeo';
 
 const { siteName, siteUrl, themeColor, keywords } = useSiteMetadata();
 const route = useRoute();
 const router = useRouter();
 
+// ── Référentiel géo réel (Directus) — cf. server/utils/collectivites-geo.ts
+// `departements` (liste plate des 46) n'est pas utilisé ici : le sélecteur de
+// département est dérivé de la région choisie (drill-down, cf. plus bas).
+const { communes, regions, total, completude } = useCommunesGeo();
+
 // ── État UI initialisé depuis route.query DE FAÇON SYNCHRONE (règle SSR CLAUDE.md)
 type ViewMode = 'cartes' | 'liste' | 'carte';
-const VIEWS: { key: ViewMode; label: string }[] = [
-  { key: 'cartes', label: 'Cartes' },
-  { key: 'liste', label: 'Liste' },
-  { key: 'carte', label: 'Carte' },
+const VIEWS: { key: ViewMode; label: string; icon: string }[] = [
+  { key: 'cartes', label: 'Cartes', icon: 'i-heroicons-squares-2x2-20-solid' },
+  { key: 'liste', label: 'Liste', icon: 'i-heroicons-list-bullet-20-solid' },
+  { key: 'carte', label: 'Carte', icon: 'i-heroicons-map-20-solid' },
 ];
 
 const view = ref<ViewMode>(
@@ -19,25 +25,23 @@ const view = ref<ViewMode>(
 const q = ref((route.query.q as string) || '');
 const region = ref((route.query.region as string) || '');
 const departement = ref((route.query.departement as string) || '');
-const parti = ref((route.query.parti as string) || '');
 const type = ref((route.query.type as string) || '');
-const popMin = ref((route.query.popmin as string) || '');
-const hasWeb = ref(route.query.web === '1');
-const hasFb = ref(route.query.fb === '1');
+const page = ref(Math.max(1, parseInt(route.query.page as string) || 1));
+
+// Nombre d'éléments par page pour les vues « Cartes » et « Liste ». La vue
+// « Carte » n'est pas paginée : une carte tronquée n'aurait pas de sens.
+const PAGE_SIZE = 24;
 
 // Miroir de l'état dans l'URL (filtres partageables)
-watch([view, q, region, departement, parti, type, popMin, hasWeb, hasFb], () => {
+watch([view, q, region, departement, type, page], () => {
   router.replace({
     query: {
       ...(view.value !== 'cartes' && { vue: view.value }),
       ...(q.value && { q: q.value }),
       ...(region.value && { region: region.value }),
       ...(departement.value && { departement: departement.value }),
-      ...(parti.value && { parti: parti.value }),
       ...(type.value && { type: type.value }),
-      ...(popMin.value && { popmin: popMin.value }),
-      ...(hasWeb.value && { web: '1' }),
-      ...(hasFb.value && { fb: '1' }),
+      ...(page.value > 1 && { page: String(page.value) }),
     },
   });
 });
@@ -47,34 +51,102 @@ const normalize = (s: string) => s.toLowerCase().normalize('NFD').replace(/[̀-�
 
 const filtered = computed(() => {
   const query = normalize(q.value.trim());
-  return COMMUNES.filter((c) => {
+  return communes.value.filter((c) => {
     if (query) {
-      const hay = normalize(`${c.nom} ${c.maire.nom} ${c.region} ${c.departement}`);
+      const hay = normalize(
+        `${c.nom} ${c.maire?.nom ?? ''} ${c.region} ${c.departement} ${c.arrondissement ?? ''}`,
+      );
       if (!hay.includes(query)) return false;
     }
     if (region.value && c.region !== region.value) return false;
     if (departement.value && c.departement !== departement.value) return false;
-    if (parti.value && c.maire.parti !== parti.value) return false;
     if (type.value && c.type !== type.value) return false;
-    if (hasWeb.value && !c.mairie.siteWeb) return false;
-    if (hasFb.value && !c.mairie.facebook) return false;
-    if (popMin.value && c.population < Number(popMin.value)) return false;
     return true;
   });
+});
+
+// ── Drill-down : le sélecteur de département ne propose que les départements
+// de la région choisie (46 départements bruts sont inexploitables au doigt).
+const departementsDisponibles = computed(() => {
+  const source = region.value
+    ? communes.value.filter((c) => c.region === region.value)
+    : communes.value;
+  return [...new Set(source.map((c) => c.departement).filter(Boolean))].sort((a, b) =>
+    a.localeCompare(b, 'fr'),
+  );
+});
+
+// Changer de région invalide un département d'une autre région : on le vide
+// plutôt que de laisser un couple région/département qui ne renvoie rien.
+watch(region, () => {
+  if (departement.value && !departementsDisponibles.value.includes(departement.value)) {
+    departement.value = '';
+  }
+});
+
+// Niveaux du référentiel : la « commune d'arrondissement » n'existe pas, les
+// communes de Dakar/Pikine/Guédiawaye/Rufisque/Thiès sont des communes de plein
+// exercice rattachées à une ville.
+const TYPES = ['Commune', 'Ville'];
+
+// Les trois sélecteurs rendus en pilules dans l'en-tête collant.
+const FILTRES = [
+  { key: 'region', label: 'Région', model: region, options: computed(() => regions.value) },
+  {
+    key: 'departement',
+    label: 'Département',
+    model: departement,
+    options: departementsDisponibles,
+  },
+  { key: 'type', label: 'Statut', model: type, options: computed(() => TYPES) },
+];
+
+const hasActiveFilters = computed(() =>
+  Boolean(region.value || departement.value || type.value || q.value),
+);
+
+// Tout changement de critère renvoie en page 1 : rester en page 7 d'un jeu de
+// résultats qui n'en compte plus que 2 afficherait « aucun résultat » à tort.
+watch([q, region, departement, type], () => {
+  page.value = 1;
+});
+
+const totalPages = computed(() => Math.max(1, Math.ceil(filtered.value.length / PAGE_SIZE)));
+
+// Page hors limites (?page=999, ou filtrage qui réduit le jeu) : le recalage doit
+// être SYNCHRONE, pas dans un watch — un watch ne s'exécute pas pendant le rendu
+// serveur, qui afficherait donc « aucun résultat » à tort (règle « listes
+// paginées » du CLAUDE.md). Le watch ci-dessous ne fait que réaligner l'URL.
+const safePage = computed(() => Math.min(Math.max(1, page.value), totalPages.value));
+
+watch([totalPages, page], () => {
+  if (page.value !== safePage.value) page.value = safePage.value;
+});
+
+const paginated = computed(() =>
+  filtered.value.slice((safePage.value - 1) * PAGE_SIZE, safePage.value * PAGE_SIZE),
+);
+
+// Changer de page remonte en haut : sinon on atterrit au milieu de la nouvelle
+// liste, à hauteur des boutons de pagination. Défilement animé, sauf si le
+// système demande de réduire les animations (accessibilité).
+watch(page, () => {
+  if (import.meta.server) return;
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  window.scrollTo({ top: 0, behavior: reducedMotion ? 'auto' : 'smooth' });
 });
 
 const resetFilters = () => {
   q.value = '';
   region.value = '';
   departement.value = '';
-  parti.value = '';
   type.value = '';
-  popMin.value = '';
-  hasWeb.value = false;
-  hasFb.value = false;
+  page.value = 1;
 };
 
-const totalPopulation = COMMUNES.reduce((s, c) => s + c.population, 0);
+const totalPopulation = computed(() =>
+  communes.value.reduce((sum, c) => sum + (c.population ?? 0), 0),
+);
 
 // ── SEO (en dernier - helpers et computeds déclarés avant) ─────────
 const pageTitle = 'Collectivités territoriales du Sénégal : annuaire des communes';
@@ -100,8 +172,10 @@ useSeoMeta({
   ].join(', '),
 });
 
+const LD_ITEMS_MAX = 100;
+
 // Nœud d'entité propre à la page (le BreadcrumbList est émis par <AppBreadcrumb>).
-const collectionPageSchema = {
+const collectionPageSchema = computed(() => ({
   '@context': 'https://schema.org',
   '@type': 'CollectionPage',
   name: pageTitle,
@@ -111,15 +185,17 @@ const collectionPageSchema = {
   isPartOf: { '@type': 'WebSite', name: siteName, url: siteUrl },
   mainEntity: {
     '@type': 'ItemList',
-    numberOfItems: COMMUNES.length,
-    itemListElement: COMMUNES.map((c, i) => ({
+    numberOfItems: communes.value.length,
+    // Échantillon : lister les 558 collectivités alourdirait le HTML de ~40 Ko
+    // sans bénéfice (l'exhaustivité de l'indexation passe par le sitemap).
+    itemListElement: communes.value.slice(0, LD_ITEMS_MAX).map((c, i) => ({
       '@type': 'ListItem',
       position: i + 1,
       name: c.nom,
       url: `${siteUrl}/collectivites-territoriales/communes/${c.slug}`,
     })),
   },
-};
+}));
 
 useHead({
   htmlAttrs: { lang: 'fr-SN' },
@@ -132,7 +208,7 @@ useHead({
     {
       key: 'ld-collectivites',
       type: 'application/ld+json',
-      innerHTML: JSON.stringify(collectionPageSchema),
+      innerHTML: computed(() => JSON.stringify(collectionPageSchema.value)),
     },
   ],
 });
@@ -159,7 +235,7 @@ useHead({
         </div>
         <p class="mt-1 hidden text-sm text-gray-500 dark:text-gray-400 sm:block">
           Fiches complètes de chaque commune : gouvernance locale, conseil municipal, données
-          territoriales, résultats électoraux, budget, projets et documents publics.
+          territoriales, budget, projets et documents publics.
         </p>
 
         <!-- Recherche -->
@@ -193,55 +269,50 @@ useHead({
             </span>
           </button>
         </div>
-      </div>
-    </header>
 
-    <!-- ─── Repères chiffrés ───────────────────────────────────────── -->
-    <section class="mx-auto max-w-7xl px-4">
-      <div class="flex flex-wrap gap-6 border-b border-gray-100 py-4 text-sm dark:border-gray-700">
-        <div>
-          <span class="font-bold text-gray-900 dark:text-white">{{
-            formatNumber(COMMUNES.length)
-          }}</span>
-          <span class="text-gray-500 dark:text-gray-400"> collectivités référencées</span>
-        </div>
-        <div>
-          <span class="font-bold text-gray-900 dark:text-white">{{
-            formatNumber(REGIONS.length)
-          }}</span>
-          <span class="text-gray-500 dark:text-gray-400"> régions couvertes</span>
-        </div>
-        <div>
-          <span class="font-bold text-gray-900 dark:text-white">{{
-            formatNumber(totalPopulation)
-          }}</span>
-          <span class="text-gray-500 dark:text-gray-400"> habitants</span>
-        </div>
-      </div>
-    </section>
+        <!-- Filtres + bascule de vue, dans l'en-tête collant : on doit pouvoir
+             filtrer et changer de vue à n'importe quel moment du défilement,
+             sans remonter. Les filtres défilent horizontalement sur mobile. -->
+        <div class="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div class="scrollbar-hide -mx-4 flex shrink-0 items-center gap-2 overflow-x-auto px-4 py-1">
+            <div v-for="f in FILTRES" :key="f.key" class="relative shrink-0">
+              <select
+                :value="f.model.value"
+                :aria-label="f.label"
+                class="appearance-none rounded-full border-0 bg-gray-100 py-1.5 pl-3 pr-7 text-xs font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-400 dark:bg-gray-800 dark:text-gray-300 dark:focus:ring-gray-500"
+                @change="f.model.value = ($event.target as HTMLSelectElement).value"
+              >
+                <option value="">{{ f.label }} : toutes</option>
+                <option v-for="o in f.options.value" :key="o" :value="o">{{ o }}</option>
+              </select>
+              <UIcon
+                name="i-heroicons-chevron-down"
+                class="pointer-events-none absolute right-2 top-1/2 h-3 w-3 -translate-y-1/2 text-gray-400"
+              />
+            </div>
 
-    <!-- ─── Filtres + bascule de vue ───────────────────────────────── -->
-    <section class="mx-auto mt-6 max-w-7xl px-4">
-      <CollectivitesCommunesFilters
-        v-model:region="region"
-        v-model:departement="departement"
-        v-model:parti="parti"
-        v-model:type="type"
-        v-model:pop-min="popMin"
-        v-model:has-web="hasWeb"
-        v-model:has-fb="hasFb"
-        :regions="REGIONS"
-        :departements="DEPARTEMENTS"
-        :partis="PARTIS"
-        @reset="resetFilters"
-      >
-        <template #actions>
-          <div class="flex rounded-lg ring-1 ring-gray-200 dark:ring-gray-700">
+            <button
+              v-if="hasActiveFilters"
+              type="button"
+              class="shrink-0 rounded-full px-3 py-1.5 text-xs font-medium text-gray-500 underline-offset-2 hover:underline dark:text-gray-400"
+              @click="resetFilters"
+            >
+              Réinitialiser
+            </button>
+          </div>
+
+          <div
+            class="inline-flex w-full rounded-lg p-0.5 ring-1 ring-gray-200 dark:ring-gray-700 sm:w-auto"
+            role="tablist"
+            aria-label="Mode d'affichage"
+          >
             <button
               v-for="v in VIEWS"
               :key="v.key"
               type="button"
-              class="rounded-md px-4 py-1.5 text-sm transition"
+              role="tab"
+              :aria-selected="view === v.key"
+              class="flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-md px-3 py-1.5 text-sm transition sm:flex-none sm:px-4"
               :class="
                 view === v.key
                   ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900'
@@ -249,19 +320,56 @@ useHead({
               "
               @click="view = v.key"
             >
+              <UIcon :name="v.icon" class="h-4 w-4 shrink-0" />
               {{ v.label }}
             </button>
           </div>
-        </template>
-      </CollectivitesCommunesFilters>
+        </div>
+      </div>
+    </header>
+
+    <!-- ─── Repères chiffrés ───────────────────────────────────────── -->
+    <section class="mx-auto max-w-7xl px-4">
+      <div class="flex flex-wrap gap-6 border-b border-gray-100 py-4 text-sm dark:border-gray-700">
+        <div>
+          <span class="font-bold text-gray-900 dark:text-white">{{ formatNumber(total) }}</span>
+          <span class="text-gray-500 dark:text-gray-400"> collectivités référencées</span>
+        </div>
+        <div>
+          <span class="font-bold text-gray-900 dark:text-white">{{
+            formatNumber(regions.length)
+          }}</span>
+          <span class="text-gray-500 dark:text-gray-400"> régions couvertes</span>
+        </div>
+        <div>
+          <span class="font-bold text-gray-900 dark:text-white">{{
+            formatNumber(totalPopulation)
+          }}</span>
+          <span class="text-gray-500 dark:text-gray-400"> habitants (RGPH 2023)</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── Avertissement de complétude ────────────────────────────── -->
+    <section class="mx-auto mt-4 max-w-7xl px-4">
+      <p
+        class="rounded-lg bg-amber-50 px-4 py-3 text-xs text-amber-900 ring-1 ring-amber-200 dark:bg-amber-950/40 dark:text-amber-200 dark:ring-amber-900"
+      >
+        <strong>Données partielles.</strong> Le découpage administratif et la population
+        (recensement 2023) proviennent du référentiel officiel. Les maires, les contacts des mairies
+        et les données de gestion (budget, conseil municipal, projets) sont en cours d'intégration :
+        {{ formatNumber(completude.avecMaire) }} maire{{ completude.avecMaire > 1 ? 's' : '' }} sur
+        {{ formatNumber(total) }} collectivités à ce jour.
+      </p>
     </section>
 
     <!-- ─── Résultats ──────────────────────────────────────────────── -->
-    <section class="mx-auto mt-8 max-w-7xl px-4">
+    <section class="mx-auto mt-4 max-w-7xl px-4">
       <div v-if="view === 'cartes'" class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-        <CollectivitesCommuneCard v-for="c in filtered" :key="c.slug" :commune="c" />
+        <CollectivitesCommuneCard v-for="c in paginated" :key="c.slug" :commune="c" />
       </div>
-      <CollectivitesCommunesTable v-else-if="view === 'liste'" :communes="filtered" />
+      <CollectivitesCommunesTable v-else-if="view === 'liste'" :communes="paginated" />
+      <!-- La carte reçoit l'ensemble filtré : paginer des points serait absurde. -->
       <CollectivitesCommunesMap v-else :communes="filtered" height="72vh" />
 
       <p
@@ -270,6 +378,31 @@ useHead({
       >
         Aucune commune ne correspond à ces critères.
       </p>
+
+      <!-- Pagination (vues Cartes et Liste) — même style que /documents/public -->
+      <div v-else-if="view !== 'carte' && totalPages > 1" class="mt-8 flex justify-center">
+        <UPagination
+          v-model="page"
+          :total="filtered.length"
+          :page-count="PAGE_SIZE"
+          size="sm"
+          :ui="{
+            wrapper: 'flex items-center gap-1',
+            rounded: 'rounded-lg',
+          }"
+        />
+      </div>
     </section>
   </div>
 </template>
+
+<style scoped>
+/* Rangée de filtres défilable sans barre visible (même règle que /documents/public). */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+</style>

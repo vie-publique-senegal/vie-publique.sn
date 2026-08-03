@@ -6,6 +6,10 @@ l'historique git (`git log --grep="^feat"`, Conventional Commits).
 
 ## 2026
 
+### Août 2026
+
+- **Collectivités territoriales : données officielles** — le module passe des données de démonstration au référentiel administratif réel : 558 collectivités (553 communes et 5 villes), rattachement région/département/arrondissement, population du recensement 2023, maires et secrétaires municipaux en fonction. Chaque fiche n'affiche que les sections réellement renseignées.
+
 ### Juillet 2026
 
 - **Collectivités territoriales** (`/collectivites-territoriales`) : annuaire des communes du Sénégal — fiches maires, conseils municipaux, budgets locaux, projets et carte interactive (données de démonstration en attendant les données officielles)
