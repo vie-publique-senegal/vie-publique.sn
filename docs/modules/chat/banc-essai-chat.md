@@ -169,6 +169,32 @@ variable d'environnement : l'origine est injectée dans la directive CSP `connec
 build. (Tant que l'API reste sur `*.vie-publique.sn`, elle est déjà couverte par l'entrée
 générique.)
 
+## Mise en service
+
+**Aucune variable à ajouter sur Coolify** pour un déploiement sur `rag.vie-publique.sn` :
+`NUXT_PUBLIC_RAG_API_URL` a cette valeur par défaut dans `nuxt.config.ts`, et la CSP de production
+autorise déjà `https://*.vie-publique.sn` dans `connect-src`. La déclarer explicitement reste une
+bonne pratique de traçabilité ; elle ne devient **obligatoire** que si l'API déménage hors du
+domaine — et il faudra alors **rebuild**, pas seulement redéployer.
+
+**Origines autorisées côté API** (`RAG_TENANTS`, tenant `vpsn`) : `https://www.vie-publique.sn`
+est déclarée (vérifié le 2026-08-04, `/session` → 200). L'apex `https://vie-publique.sn` répond
+403, ce qui est **sans conséquence** : `server/middleware/host-redirect.ts` redirige apex → www en
+301 avant qu'une page ne s'exécute, donc le navigateur est toujours sur www au moment de l'appel.
+
+À vérifier après déploiement :
+
+```bash
+curl -sL https://www.vie-publique.sn/chat -o /dev/null -w '%{http_code} %{redirect_url}\n'  # 302 -> /chat/gemini
+curl -s https://www.vie-publique.sn/chat/gemini | grep -i robots                            # noindex, nofollow
+curl -s https://www.vie-publique.sn/robots.txt | grep -i chat                                # ne doit PAS lister /chat
+curl -s https://www.vie-publique.sn/sitemap.xml | grep -c '/chat'                            # 0
+```
+
+Puis, dans un navigateur, poser une question sur `/chat/gemini` : le texte doit s'afficher au fil
+de l'eau. Si rien ne vient et que la console montre une erreur CSP `connect-src`, c'est que
+l'origine de l'API a changé sans rebuild.
+
 ## Pas de proxy Nitro pour l'API RAG
 
 Le navigateur appelle l'API **en direct**. Le modèle de `server/api/chat.ts` (proxy vers Azure)
