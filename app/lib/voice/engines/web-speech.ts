@@ -228,6 +228,20 @@ export function creerMoteurWebSpeech(): MoteurVocal {
       });
     },
 
+    amorcer() {
+      const moteur = synthese();
+      if (!moteur) return;
+      // Énoncé muet, dont le seul rôle est de partir DANS le geste utilisateur.
+      // C'est lui qui débloque la synthèse sur iOS ; le contenu n'a aucune
+      // importance, seul compte le fait qu'un `speak()` ait eu lieu à cet
+      // instant précis. Surtout pas de `cancel()` derrière : il annulerait
+      // l'amorce. Ré-amorcer à chaque activation est volontaire — la session
+      // audio peut avoir été perdue après un passage en arrière-plan.
+      const amorce = new SpeechSynthesisUtterance(' ');
+      amorce.volume = 0;
+      moteur.speak(amorce);
+    },
+
     parler(texte: string, { lang, signal }: OptionsLecture) {
       return new Promise<void>((resoudre, rejeter) => {
         const moteur = synthese();

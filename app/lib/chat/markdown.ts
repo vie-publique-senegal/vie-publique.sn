@@ -1,5 +1,6 @@
 import DOMPurify from 'dompurify';
 import { Marked } from 'marked';
+import { normaliserLatex } from './latex';
 
 /**
  * Rendu markdown des réponses de chat.
@@ -35,12 +36,17 @@ const echapper = (texte: string) =>
 export function renderChatMarkdown(texte: string): string {
   if (!texte) return '';
 
+  // Le modèle écrit les numéros d'actes en LaTeX (`$n^{\circ}2023-18$`). Sans
+  // cette passe, l'utilisateur lit la formule brute — sur la majorité des
+  // réponses, puisque le corpus est fait de lois et de décrets.
+  const sansLatex = normaliserLatex(texte);
+
   // Aucun message n'existe au rendu serveur (la conversation naît d'un clic) ;
   // ce repli couvre le cas improbable et évite d'appeler DOMPurify sans DOM.
-  if (import.meta.server) return echapper(texte);
+  if (import.meta.server) return echapper(sansLatex);
 
   // Syntaxe maison héritée du chat Azure : [[libellé]](url).
-  const prepare = texte.replace(/\[\[(.*?)\]\]\((.*?)\)/g, '[$1]($2)');
+  const prepare = sansLatex.replace(/\[\[(.*?)\]\]\((.*?)\)/g, '[$1]($2)');
 
   return DOMPurify.sanitize(md.parse(prepare, { async: false }) as string, {
     ADD_ATTR: ['target', 'rel'],

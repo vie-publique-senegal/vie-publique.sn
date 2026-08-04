@@ -32,8 +32,9 @@ export function useLectureVocale(options: OptionsLectureVocale) {
 
   /**
    * SILENCE PAR DÉFAUT — décision, pas un oubli. Un service public ne se met pas
-   * à parler sans qu'on le lui demande ; et le clic d'activation fournit au
-   * passage l'activation utilisateur que Safari exige avant toute synthèse.
+   * à parler sans qu'on le lui demande. Le clic d'activation sert au passage à
+   * consommer l'activation utilisateur exigée par iOS : voir `basculer()`, qui
+   * DOIT amorcer le moteur — lever ce drapeau ne débloque rien à lui seul.
    */
   const actif = useLocalStorage(CLE_ACTIF, false);
 
@@ -115,10 +116,26 @@ export function useLectureVocale(options: OptionsLectureVocale) {
     mettreEnFile(tampon.vider());
   }
 
+  /**
+   * ⚠️ **Appeler DIRECTEMENT depuis le gestionnaire de clic**, jamais après un
+   * `await` : l'amorce ci-dessous n'a de valeur que dans le geste utilisateur.
+   */
   function basculer() {
-    actif.value = !actif.value;
+    const activation = !actif.value;
+
+    if (activation) {
+      // iOS n'autorise la synthèse que si le PREMIER `speak()` part d'un geste
+      // utilisateur. Les phrases, elles, partent d'une continuation asynchrone
+      // du flux SSE : sans cette amorce, elles sont ignorées EN SILENCE — pas
+      // d'erreur, pas d'événement, le bouton semble simplement ne rien faire.
+      // (Symptôme observé sur l'app iOS 1.1 (5) : muet, et un bref bruit au
+      // changement d'application quand la session audio se libère.)
+      moteur.value?.amorcer?.();
+    }
+
+    actif.value = activation;
     // Couper le son doit couper MAINTENANT, pas à la fin de la phrase en cours.
-    if (!actif.value) arreter();
+    if (!activation) arreter();
   }
 
   // La synthèse est un service GLOBAL du navigateur : elle survit au composant

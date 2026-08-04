@@ -82,6 +82,19 @@ export interface MoteurVocal {
    */
   parler(texte: string, options: OptionsLecture): Promise<void>;
 
+  /**
+   * Consomme l'activation utilisateur pour débloquer la synthèse.
+   *
+   * ⚠️ **DOIT être appelée SYNCHRONIQUEMENT depuis un gestionnaire d'événement
+   * utilisateur** (le clic sur le bouton son). iOS n'autorise la synthèse que si
+   * le tout PREMIER `speak()` part d'un geste : sans cette amorce, tous les
+   * énoncés suivants — qui partent d'une continuation asynchrone du flux SSE —
+   * sont ignorés **en silence**, sans erreur ni événement.
+   *
+   * Optionnelle : un moteur serveur n'aura pas cette contrainte.
+   */
+  amorcer?(): void;
+
   /** Nombre de voix installées pour `lang`. Diagnostic uniquement. */
   voixDisponibles?(lang: string): number;
 }

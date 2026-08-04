@@ -1,4 +1,5 @@
 import { cleanCmsText } from '#shared/clean-text';
+import { normaliserLatex } from '../chat/latex';
 
 /**
  * Nettoyage d'une phrase AVANT de la passer à la synthèse — fonction pure, testée.
@@ -23,7 +24,10 @@ const DEBUTS_DE_LIGNE = /^\s*(?:#{1,6}\s+|>+\s*|[-*+]\s+|\d+[.)]\s+)/gm;
 const FILET_HORIZONTAL = /^\s*([-*_])\s*(?:\1\s*){2,}$/gm;
 
 export function nettoyerPourLecture(texte: string): string {
-  let sortie = texte;
+  // 0. LaTeX AVANT tout le reste : `$n^{\circ}2023-18$` se lirait « dollar n
+  //    accent circonflexe accolade ». La passe 6 retire les `_` et `*` d'emphase
+  //    et détruirait les indices avant qu'on ait pu les interpréter.
+  let sortie = normaliserLatex(texte);
 
   // 1. Blocs de code : illisibles à voix haute, et souvent TRONQUÉS puisqu'on
   //    travaille phrase par phrase (la clôture ``` peut n'être jamais arrivée).

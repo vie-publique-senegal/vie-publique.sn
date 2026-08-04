@@ -195,9 +195,9 @@ de `app/app.vue` (comme `/carte`) : une conversation doit tenir dans la fenêtre
 
 `/chat/liste` reste une page normale du site — c'est une liste, pas une conversation.
 
-### 🐞 À FAIRE — du LaTeX brut s'affiche dans les réponses (constaté 04/08/2026)
+### LaTeX brut dans les réponses — corrigé le 04/08/2026
 
-Le modèle produit du LaTeX pour les numéros d'actes, et le rendu markdown le laisse **tel quel** :
+Le modèle produit du LaTeX pour les numéros d'actes, et le rendu markdown le laissait **tel quel** :
 
 | Ce que l'utilisateur voit | Ce qu'il devrait lire |
 | --- | --- |
@@ -208,15 +208,21 @@ Le modèle produit du LaTeX pour les numéros d'actes, et le rendu markdown le l
 **pas rare** : ça touche toute réponse citant une loi, un décret ou un arrêté — donc l'essentiel
 du corpus.
 
-Deux angles :
+**Correction retenue : au RENDU**, pas au prompt. Elle ne dépend pas du bon vouloir du modèle et
+rattrape les conversations déjà enregistrées.
+[`normaliserLatex()`](../../../app/lib/chat/latex.ts) est une fonction pure, appelée à deux endroits :
 
-1. **au rendu** — convertir/neutraliser les motifs `$…$` avant affichage. Plus fiable : rattrape
-   aussi les conversations déjà enregistrées, et ne dépend pas du modèle ;
-2. **au prompt** — demander au modèle de ne pas émettre de LaTeX. Ne corrige rien rétroactivement
-   et reste au bon vouloir du modèle.
+- `renderChatMarkdown()` — l'affichage ;
+- `nettoyerPourLecture()` — la synthèse vocale, **en toute première passe** : le nettoyage markdown
+  retire les `_` et `*`, ce qui détruirait les indices avant qu'on ait pu les lire.
 
-⚠️ Penser au **vocal** en même temps : `nettoyerPourLecture` doit écarter ces motifs, sinon la
-lecture énonce la ponctuation LaTeX (voir [`voix.md`](./voix.md)).
+> ⚠️ **On ne touche PAS à tous les `$…$`.** Une expression n'est ouverte que si son contenu porte
+> une marque de LaTeX (`\`, `^` ou `_`). Sans cette exigence, « coûte $100 et $200 » serait avalé
+> comme une formule — c'est le cas de non-régression le plus important du fichier de tests
+> (`test/unit/chat/latex.test.ts`, 14 cas).
+
+Le parti pris est de **dégrader en texte lisible**, pas de rendre des mathématiques : on ne veut
+pas embarquer un moteur de formules pour afficher « n° 2023-18 ».
 
 ## Variante indisponible
 
@@ -300,8 +306,8 @@ SSE.
 | 5 — adaptateur Gemini (`conversation_id`, sources, erreurs, quotas) | ✅ éprouvé contre l'API — sauf le 429, bloqué côté API |
 | 6 — finitions (traçabilité, états d'erreur, mise en page) | ✅ |
 | 6 bis — retrait de `/chatbot` et de `ChatBot.vue` | **bloqué par la brique 3** : `/chatbot` est aujourd'hui le seul chat Azure qui fonctionne |
-| 7 — vocal (dictée + lecture au fil du flux), derrière le flag `chat_voice` | **dictée ✅ web, Android et iOS** (débloqué dans l'app 1.1 (5), vérifié sur appareil le 04/08/2026) — **lecture ❌ muette sur iOS**, amorce d'activation utilisateur manquante, voir [`voix.md`](./voix.md) §4 bis |
-| 8 — rendu du LaTeX dans les réponses | ❌ **à faire** — `$n^{\circ}2023-18$` s'affiche brut, voir § Mise en page |
+| 7 — vocal (dictée + lecture au fil du flux), derrière le flag `chat_voice` | **dictée ✅ web, Android et iOS** (débloquée dans l'app 1.1 (5), vérifiée sur appareil le 04/08/2026) — **lecture** : amorce d'activation corrigée le 04/08/2026, ⏳ **à re-tester sur iPhone**, voir [`voix.md`](./voix.md) §4 bis |
+| 8 — rendu du LaTeX dans les réponses | ✅ `normaliserLatex()` au rendu et avant lecture, 14 tests — voir § Mise en page |
 
 ## Recette
 

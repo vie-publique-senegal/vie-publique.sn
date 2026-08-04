@@ -142,7 +142,11 @@ sont **soumis à la revue App Store**.
 > Le correctif avait été préparé pour le build **4**, jamais archivé ni uploadé. Il est parti avec
 > le lot des notifications push, d'où sa livraison dans le 1.1 (5).
 
-## 4 bis. 🐞 À FAIRE — la LECTURE reste muette sur iOS (constaté 04/08/2026)
+## 4 bis. La LECTURE était muette sur iOS — amorce d'activation (04/08/2026)
+
+> ✅ **Corrigé le 04/08/2026** (`amorcer()` sur le moteur, appelée par `basculer()`).
+> **Reste à vérifier sur appareil réel** : ne se teste ni au simulateur ni sur desktop, qui
+> n'ont pas cette restriction. Le correctif est **côté web** — pas besoin d'un nouveau build iOS.
 
 **Symptôme, sur l'app 1.1 (5) :** on active l'icône haut-parleur, **rien n'est lu**. Aucun message
 d'erreur. En quittant l'app pour une autre, on entend un **bref bruit** — le son qui aurait dû
@@ -173,10 +177,19 @@ pas tuer la lecture »), qui n'écrit qu'un `console.warn`. D'où le silence tot
 > L'intention était juste, l'implémentation ne la réalise pas : lever un booléen ne débloque rien.
 > Ne pas se fier à ce commentaire pour conclure que le sujet est traité.
 
-**Correctif attendu** : dans `basculer()`, à l'activation, émettre **synchroniquement** un énoncé
-d'amorce (chaîne vide ou espace, volume nul) pour consommer l'activation utilisateur, avant toute
-mise en file. Le reste de l'architecture (tampon de phrases, sérialisation, ping `resume()`) n'a
-pas à bouger.
+**Correctif appliqué** : `MoteurVocal.amorcer()` (optionnelle — un moteur serveur n'aura pas cette
+contrainte) émet un énoncé muet (`' '`, `volume = 0`), et `basculer()` l'appelle **avant** de lever
+le drapeau, à l'activation seulement. Le reste de l'architecture n'a pas bougé : tampon de phrases,
+sérialisation, ping `resume()`.
+
+Trois détails qui comptent :
+
+- **Aucun `cancel()` derrière l'amorce** — il annulerait l'activation qu'on vient d'obtenir.
+- **On ré-amorce à CHAQUE activation**, pas une seule fois : la session audio peut être perdue
+  après un passage en arrière-plan.
+- `basculer()` doit rester appelée **directement** depuis le `@click`, jamais après un `await` :
+  l'amorce ne vaut que dans le geste. C'est le cas dans `Shell.vue`
+  (`@click="lecture.basculer()"`), à préserver.
 
 **Points de vigilance pour la vérification :**
 
