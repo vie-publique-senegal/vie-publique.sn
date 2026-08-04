@@ -124,6 +124,69 @@ S'y ajoute probablement le délégué
    le point 1 ;
 3. rebuild PWABuilder + **re-soumission App Store**.
 
+### ✅ Corrigé et vérifié sur appareil — 04/08/2026, build **1.1 (5)**
+
+Les deux points ont été livrés (`NSSpeechRecognitionUsageDescription` + le délégué
+`requestMediaCapturePermissionFor`, qui n'accorde la capture qu'aux `allowedOrigins`). **Testé sur
+iPhone via TestFlight**, la séquence attendue se déroule enfin :
+
+1. carte de consentement du site (« Votre voix est transmise au service de reconnaissance vocale… ») ;
+2. invite système **« Vie Publique SN souhaite accéder à la reconnaissance vocale »** ;
+3. invite système **« Vie Publique SN souhaite accéder au micro »** ;
+4. dictée transcrite dans la saisie, question envoyée, réponse sourcée.
+
+C'est exactement la séquence observée dans Chrome iOS, celle qui manquait. Les textes affichés
+dans les deux invites sont ceux d'`Info.plist` — les relire si la formulation doit évoluer, ils
+sont **soumis à la revue App Store**.
+
+> Le correctif avait été préparé pour le build **4**, jamais archivé ni uploadé. Il est parti avec
+> le lot des notifications push, d'où sa livraison dans le 1.1 (5).
+
+## 4 bis. 🐞 À FAIRE — la LECTURE reste muette sur iOS (constaté 04/08/2026)
+
+**Symptôme, sur l'app 1.1 (5) :** on active l'icône haut-parleur, **rien n'est lu**. Aucun message
+d'erreur. En quittant l'app pour une autre, on entend un **bref bruit** — le son qui aurait dû
+sortir, libéré au changement d'état de la session audio.
+
+La **dictée** fonctionne (§4). C'est bien l'autre moitié du vocal qui est en cause.
+
+**Cause — l'amorce d'activation utilisateur n'est jamais jouée.** iOS n'autorise la synthèse que
+si le **tout premier** `speechSynthesis.speak()` part **de façon synchrone depuis un geste
+utilisateur**. Sans cette amorce, tous les `speak()` suivants sont ignorés **en silence**.
+
+Or [`useLectureVocale.ts`](../../../app/composables/useLectureVocale.ts) fait ceci :
+
+```ts
+function basculer() {
+  actif.value = !actif.value;   // ← ne fait que lever un drapeau
+  if (!actif.value) arreter();
+}
+```
+
+Le clic sur le haut-parleur **ne déclenche aucun `speak()`**. Les phrases ne partent qu'ensuite,
+depuis `traiterFile()`, dans une continuation asynchrone du flux SSE — **hors geste utilisateur**.
+iOS refuse, et l'échec est avalé par le `catch` de `traiterFile()` (« un énoncé qui échoue ne doit
+pas tuer la lecture »), qui n'écrit qu'un `console.warn`. D'où le silence total, sans erreur visible.
+
+> ⚠️ **Le commentaire du code affirme le contraire** — « le clic d'activation fournit au passage
+> l'activation utilisateur que Safari exige avant toute synthèse » (`useLectureVocale.ts`, ~l.34).
+> L'intention était juste, l'implémentation ne la réalise pas : lever un booléen ne débloque rien.
+> Ne pas se fier à ce commentaire pour conclure que le sujet est traité.
+
+**Correctif attendu** : dans `basculer()`, à l'activation, émettre **synchroniquement** un énoncé
+d'amorce (chaîne vide ou espace, volume nul) pour consommer l'activation utilisateur, avant toute
+mise en file. Le reste de l'architecture (tampon de phrases, sérialisation, ping `resume()`) n'a
+pas à bouger.
+
+**Points de vigilance pour la vérification :**
+
+- ne se teste **que sur appareil réel** — desktop et simulateur n'ont pas cette restriction, donc
+  un test vert ailleurs ne prouve rien (même piège que le push) ;
+- vérifier aussi la **reprise après passage en arrière-plan** : c'est là que le « bruit bref »
+  apparaît aujourd'hui ;
+- le ping `moteur.resume()` toutes les `PING_REPRISE_MS` existe pour le bug de pause de Chrome
+  desktop — vérifier qu'il ne produit pas de blip sur iOS une fois l'amorce en place.
+
 **Aucune ligne de code web à changer.** `peutEcouter()` répond déjà `true` : le jour où l'app est
 resoumise avec la permission, la dictée s'active seule.
 

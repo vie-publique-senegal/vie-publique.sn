@@ -195,6 +195,29 @@ de `app/app.vue` (comme `/carte`) : une conversation doit tenir dans la fenêtre
 
 `/chat/liste` reste une page normale du site — c'est une liste, pas une conversation.
 
+### 🐞 À FAIRE — du LaTeX brut s'affiche dans les réponses (constaté 04/08/2026)
+
+Le modèle produit du LaTeX pour les numéros d'actes, et le rendu markdown le laisse **tel quel** :
+
+| Ce que l'utilisateur voit | Ce qu'il devrait lire |
+| --- | --- |
+| `la loi $n^{\circ}2023-18$ du 15 décembre 2023` | la loi n° 2023-18 du 15 décembre 2023 |
+| `le décret $n^{\circ}2024-921$ du 2 avril 2024` | le décret n° 2024-921 du 2 avril 2024 |
+
+**Ce n'est pas propre à l'app iOS** (constaté là, mais le rendu est le même partout) et ce n'est
+**pas rare** : ça touche toute réponse citant une loi, un décret ou un arrêté — donc l'essentiel
+du corpus.
+
+Deux angles :
+
+1. **au rendu** — convertir/neutraliser les motifs `$…$` avant affichage. Plus fiable : rattrape
+   aussi les conversations déjà enregistrées, et ne dépend pas du modèle ;
+2. **au prompt** — demander au modèle de ne pas émettre de LaTeX. Ne corrige rien rétroactivement
+   et reste au bon vouloir du modèle.
+
+⚠️ Penser au **vocal** en même temps : `nettoyerPourLecture` doit écarter ces motifs, sinon la
+lecture énonce la ponctuation LaTeX (voir [`voix.md`](./voix.md)).
+
 ## Variante indisponible
 
 Une variante déclarée mais sans backend porte `available: false` et **pas d'adaptateur**. Elle
@@ -277,7 +300,8 @@ SSE.
 | 5 — adaptateur Gemini (`conversation_id`, sources, erreurs, quotas) | ✅ éprouvé contre l'API — sauf le 429, bloqué côté API |
 | 6 — finitions (traçabilité, états d'erreur, mise en page) | ✅ |
 | 6 bis — retrait de `/chatbot` et de `ChatBot.vue` | **bloqué par la brique 3** : `/chatbot` est aujourd'hui le seul chat Azure qui fonctionne |
-| 7 — vocal (dictée + lecture au fil du flux), derrière le flag `chat_voice` | ✅ web & Android — **micro iOS bloqué côté natif**, voir [`voix.md`](./voix.md) §4 |
+| 7 — vocal (dictée + lecture au fil du flux), derrière le flag `chat_voice` | **dictée ✅ web, Android et iOS** (débloqué dans l'app 1.1 (5), vérifié sur appareil le 04/08/2026) — **lecture ❌ muette sur iOS**, amorce d'activation utilisateur manquante, voir [`voix.md`](./voix.md) §4 bis |
+| 8 — rendu du LaTeX dans les réponses | ❌ **à faire** — `$n^{\circ}2023-18$` s'affiche brut, voir § Mise en page |
 
 ## Recette
 
