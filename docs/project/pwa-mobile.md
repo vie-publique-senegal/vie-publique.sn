@@ -67,6 +67,21 @@ Tout le reste (manifest, SW, precache, contenu, styles) est lu **live** → modi
    (`WKAppBoundDomains`). Un changement de domaine = re-build + re-soumission des 2 apps.
 6. **`public/.well-known/apple-app-site-association`** : équivalent iOS (universal links).
 
+## 3 bis. Capture micro/caméra : le wrapper iOS la refuse (constaté 04/08/2026)
+
+`Info.plist` contient bien `NSMicrophoneUsageDescription` et `NSCameraUsageDescription`, mais
+**`WebView.swift` n'implémente pas
+`webView(_:requestMediaCapturePermissionFor:initiatedByFrame:type:decisionHandler:)`**. Sur iOS 15+,
+quand ce délégué est absent, **WKWebView refuse automatiquement toute capture** — sans prompt et
+sans erreur lisible côté web.
+
+Conséquence : **aucune fonctionnalité micro ou caméra ne peut marcher dans l'app iOS**, quelle que
+soit la technique côté site (`getUserMedia` comme Web Speech). Le correctif est ~8 lignes de Swift,
+mais il impose un **rebuild + une re-soumission App Store**. Le TWA Android n'est pas concerné : la
+permission y appartient à Chrome.
+
+Premier cas rencontré : la dictée vocale du chat — [`../modules/chat/voix.md`](../modules/chat/voix.md) §4.
+
 ## 4. Quand faut-il re-builder les apps stores ?
 
 Uniquement si l'un de ces éléments change : **nom de l'app, icône launcher, start_url,

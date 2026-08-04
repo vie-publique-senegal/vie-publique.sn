@@ -85,6 +85,16 @@ export interface ChatVariant {
   available: boolean;
   /** Limite connue, affichée à l'accueil de la conversation (jamais en bandeau fixe). */
   warning?: string;
+  /**
+   * Langue du vocal (BCP-47) pour cette variante. Absente → `voiceLang` de la
+   * config runtime (`NUXT_PUBLIC_VOICE_LANG`, défaut `fr-FR`).
+   *
+   * C'est ici que vivra la variante wolof : la langue n'est JAMAIS codée en dur
+   * dans la coquille ni dans le moteur. ⚠️ Déclarer `wo-SN` ne suffira pas —
+   * Web Speech ne connaît pas le wolof, il faudra un moteur serveur
+   * (docs/modules/chat/voix.md § Après Web Speech).
+   */
+  voiceLang?: string;
   starterQuestions?: string[];
   /** Chargement paresseux : le code d'une variante ne pèse pas sur les autres. */
   loadAdapter?: () => Promise<ChatAdapterFactory>;

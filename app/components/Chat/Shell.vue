@@ -3,6 +3,7 @@ import { useClipboard } from '@vueuse/core';
 import { toast } from 'vue-sonner';
 import { CHAT_ASSISTANT_NAME } from '~/config/chat-variants';
 import { construireRetour } from '~/lib/chat/report';
+import { moteurEcoute, moteurLecture } from '~/lib/voice';
 import type { ChatMessageModel } from './Message.vue';
 import type { ChatAdapter, ChatVariant } from '~~/types/chat';
 
@@ -27,7 +28,50 @@ const chargementAdaptateur = ref(false);
 const cooldown = ref(0);
 
 const zoneMessages = ref<HTMLElement | null>(null);
-const composer = ref<{ focus: () => void } | null>(null);
+const composer = ref<{ focus: () => void; arreterDictee: () => void } | null>(null);
+
+/**
+ * Vocal — additif : tout reste utilisable au clavier sans lui.
+ *
+ * Coupable sans redéploiement via le flag Directus `chat_voice`
+ * (`vp_feature_flags`, cache 5 min). `isFeatureEnabled` rend `false` tant que les
+ * flags ne sont pas chargés : le défaut est donc « pas de vocal », ce qui est le
+ * bon sens de sécurité.
+ */
+const { isFeatureEnabled } = useFeatureFlags();
+const vocalAutorise = computed(() => isFeatureEnabled('chat_voice'));
+
+// La langue n'est JAMAIS codée en dur : variante > config runtime. C'est ici que
+// se branchera le wolof (voir docs/modules/chat/voix.md).
+const langueVocale = computed(
+  () => props.variant.voiceLang ?? String(publicConfig.voiceLang ?? 'fr-FR'),
+);
+
+const lecture = useLectureVocale({ lang: langueVocale });
+
+/**
+ * Sonde de compatibilité, affichée dans le pied de conversation.
+ *
+ * Sa raison d'être : je ne peux pas tester les apps des stores depuis un poste de
+ * développement. Ouvrir `/chat/<variante>` dans l'app installée et déplier
+ * « Détails » donne la réponse — c'est exactement la vocation de traçabilité du
+ * banc, et ça évite une page de diagnostic à maintenir.
+ *
+ * Attendu au 2026-08 : Chrome/Edge/Safari et app Android → dictée ✅ ;
+ * Firefox et app iOS (WKWebView) → dictée ❌, lecture ✅.
+ */
+const capacitesVocales = ref<{ dictee: string | null; lecture: boolean; voix: number } | null>(
+  null,
+);
+
+function sonderVocal() {
+  const ecoute = moteurEcoute();
+  capacitesVocales.value = {
+    dictee: ecoute?.id ?? null,
+    lecture: moteurLecture() !== null,
+    voix: lecture.nombreDeVoix(),
+  };
+}
 
 let adaptateur: ChatAdapter | null = null;
 let abandon: AbortController | null = null;
@@ -74,6 +118,9 @@ function demarrerCooldown(secondes: number) {
 
 function arreter() {
   abandon?.abort();
+  // Couper la génération coupe aussi la lecture : sinon l'assistant continuerait
+  // d'énoncer les phrases déjà en file après l'arrêt demandé.
+  lecture.arreter();
 }
 
 async function envoyer(question: string) {
@@ -94,6 +141,8 @@ async function envoyer(question: string) {
   enCours.value = true;
   abandon = new AbortController();
   let termine = false;
+  // Une nouvelle question annule la lecture de la précédente.
+  lecture.arreter();
   await defilerEnBas();
 
   try {
@@ -106,6 +155,11 @@ async function envoyer(question: string) {
       switch (evenement.type) {
         case 'token':
           reponse.text += evenement.text;
+          // Lecture AU FIL du flux : chaque token alimente le tampon, qui émet
+          // dès qu'une phrase est complète. Attendre `done` pour lire ferait
+          // entendre le premier mot après la fin de la génération — le streaming
+          // ne servirait alors plus à rien.
+          lecture.pousser(evenement.text);
           await defilerEnBas();
           break;
         case 'sources':
@@ -116,12 +170,18 @@ async function envoyer(question: string) {
           break;
         case 'done':
           termine = true;
+          // La dernière phrase n'a pas de ponctuation finale garantie : sans ce
+          // vidage, elle resterait dans le tampon et ne serait jamais lue.
+          lecture.terminer();
           if (evenement.conversationReset) reponse.reset = true;
           if (evenement.conversationId) conversationId.value = evenement.conversationId;
           reponse.meta = evenement.meta;
           break;
         case 'error':
           termine = true;
+          // Le message d'erreur s'affiche, il ne s'énonce pas : on coupe plutôt
+          // que de lire une réponse tronquée jusqu'au point d'échec.
+          lecture.arreter();
           reponse.error = {
             code: evenement.code,
             message: evenement.message,
@@ -135,12 +195,14 @@ async function envoyer(question: string) {
     // Règle de flux : un flux qui se termine sans événement terminal est un
     // ÉCHEC, pas un succès — la réponse affichée peut être tronquée en silence.
     if (!termine) {
+      lecture.arreter();
       reponse.error = {
         code: 'stream_incomplete',
         message: 'La réponse a été interrompue avant sa fin. Reposez votre question.',
       };
     }
   } catch (erreur) {
+    lecture.arreter();
     if (abandon.signal.aborted) {
       reponse.error = { code: 'aborted', message: 'Réponse interrompue.' };
     } else if (navigator.onLine === false) {
@@ -195,16 +257,30 @@ function signaler(messageId: string) {
 
 function reinitialiser() {
   arreter();
+  composer.value?.arreterDictee();
   messages.value = [];
   conversationId.value = null;
   composer.value?.focus();
 }
 
-onMounted(() => composer.value?.focus());
+onMounted(() => {
+  composer.value?.focus();
+  sonderVocal();
+  // `getVoices()` est souvent VIDE au premier appel : la liste arrive de façon
+  // asynchrone. Sans cet écouteur, le diagnostic annoncerait « 0 voix » sur des
+  // navigateurs parfaitement fonctionnels.
+  window.speechSynthesis?.addEventListener('voiceschanged', sonderVocal);
+});
+
+onBeforeUnmount(() => window.speechSynthesis?.removeEventListener('voiceschanged', sonderVocal));
 
 onBeforeUnmount(() => {
   abandon?.abort();
   if (minuteurCooldown) clearInterval(minuteurCooldown);
+  // `useLectureVocale` coupe déjà la synthèse à son propre démontage ; cet appel
+  // est là pour l'ORDRE : on veut le silence avant que la vue ne disparaisse,
+  // pas à la merci de l'ordre de démontage des composables.
+  lecture.arreter();
 });
 </script>
 
@@ -232,18 +308,40 @@ onBeforeUnmount(() => {
         </span>
       </div>
 
-      <!-- Icône seule sur mobile, icône + libellé dès qu'il y a de la place. -->
-      <UButton
-        color="gray"
-        variant="ghost"
-        size="sm"
-        icon="i-heroicons-pencil-square"
-        :disabled="!messages.length"
-        aria-label="Nouveau fil"
-        @click="reinitialiser"
-      >
-        <span class="hidden sm:inline">Nouveau fil</span>
-      </UButton>
+      <div class="flex items-center gap-1">
+        <!-- Sourdine. État mémorisé entre les sessions ; silence par défaut —
+             un service public ne se met pas à parler tout seul. -->
+        <UTooltip
+          v-if="vocalAutorise && lecture.disponible.value"
+          :text="lecture.actif.value ? 'Couper la lecture des réponses' : 'Lire les réponses'"
+          :delay-duration="0"
+        >
+          <UButton
+            color="gray"
+            variant="ghost"
+            size="sm"
+            :icon="lecture.actif.value ? 'i-lucide-volume-2' : 'i-lucide-volume-x'"
+            :aria-label="
+              lecture.actif.value ? 'Couper la lecture' : 'Lire les réponses à voix haute'
+            "
+            :aria-pressed="lecture.actif.value"
+            @click="lecture.basculer()"
+          />
+        </UTooltip>
+
+        <!-- Icône seule sur mobile, icône + libellé dès qu'il y a de la place. -->
+        <UButton
+          color="gray"
+          variant="ghost"
+          size="sm"
+          icon="i-heroicons-pencil-square"
+          :disabled="!messages.length"
+          aria-label="Nouveau fil"
+          @click="reinitialiser"
+        >
+          <span class="hidden sm:inline">Nouveau fil</span>
+        </UButton>
+      </div>
     </header>
 
     <!-- Conversation -->
@@ -296,8 +394,11 @@ onBeforeUnmount(() => {
       ref="composer"
       :busy="enCours || chargementAdaptateur"
       :cooldown="cooldown"
+      :voix="vocalAutorise"
+      :voix-lang="langueVocale"
       @send="envoyer"
       @stop="arreter"
+      @dictee-demarre="lecture.arreter()"
     />
 
     <!-- Pied de conversation, SOUS la saisie : la variante reste visible en
@@ -348,6 +449,18 @@ onBeforeUnmount(() => {
         <div v-for="[cle, valeur] in dernieresMeta" :key="cle" class="flex items-center gap-2">
           <dt class="shrink-0">{{ cle }}</dt>
           <dd class="truncate text-gray-700 dark:text-gray-300">{{ valeur }}</dd>
+        </div>
+
+        <!-- Sonde de compatibilité vocale. À relever depuis les apps installées
+             (Play Store / App Store), qu'on ne peut pas tester depuis un poste de
+             développement — voir docs/modules/chat/voix.md § Compatibilité. -->
+        <div v-if="vocalAutorise && capacitesVocales" class="flex items-center gap-2">
+          <dt class="shrink-0">Voix</dt>
+          <dd class="truncate text-gray-700 dark:text-gray-300">
+            dictée {{ capacitesVocales.dictee ? `✅ ${capacitesVocales.dictee}` : '❌' }} · lecture
+            {{ capacitesVocales.lecture ? '✅' : '❌' }} · {{ capacitesVocales.voix }} voix
+            {{ langueVocale }}
+          </dd>
         </div>
       </dl>
     </details>

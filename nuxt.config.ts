@@ -142,6 +142,21 @@ const securityConfig =
             maxAge: 31536000,
             includeSubdomains: true,
           },
+          // Rendu EXPLICITE plutôt que laissé au défaut de nuxt-security : sans
+          // cette ligne sous les yeux, on ne devine pas que le site interdit le
+          // micro sur TOUTES ses pages (`microphone=()`). Le vocal du chat est
+          // ré-autorisé pour `/chat/**` SEULEMENT, via `routeRules` — voir
+          // docs/modules/chat/voix.md § Permissions-Policy.
+          // ⚠️ En dev, `headers: false` : cet en-tête n'existe pas. Un micro qui
+          // marche en local ne prouve donc RIEN pour la production ; la seule
+          // vérification valable est `npm run build && npm run preview`.
+          permissionsPolicy: {
+            camera: [],
+            'display-capture': [],
+            fullscreen: [],
+            geolocation: [],
+            microphone: [],
+          },
         },
         rateLimiter: {
           tokensPerInterval: 60,
@@ -247,6 +262,15 @@ export default defineNuxtConfig({
     // Cible dupliquée de CHAT_DEFAULT_VARIANT (app/config/chat-variants.ts) :
     // nuxt.config ne peut pas importer de module applicatif.
     '/chat': { redirect: { to: '/chat/gemini', statusCode: 302 } },
+    // Micro ré-autorisé sur les seules pages de conversation. Le reste du site
+    // conserve `microphone=()`. Sans cette exception, le bouton micro
+    // fonctionnerait en dev (où les en-têtes sont désactivés) et serait mort en
+    // production — le pire des scénarios, parce qu'il ne se voit qu'après coup.
+    // `(self)` n'accorde rien : il rend seulement la demande de permission
+    // POSSIBLE. L'utilisateur doit toujours l'accorder dans son navigateur.
+    '/chat/**': {
+      security: { headers: { permissionsPolicy: { microphone: ['self'] } } },
+    },
     // Redirections SEO
     '/budget': { redirect: { to: '/budget-senegal', statusCode: 301 }, prerender: true },
     '/budget/**': { redirect: { to: '/budget-senegal', statusCode: 301 }, prerender: true },
@@ -542,6 +566,12 @@ export default defineNuxtConfig({
       // Appelée EN DIRECT par le navigateur (pas de proxy Nitro) : le tenant est
       // résolu depuis l'Origin et le quota est par IP. Voir docs/modules/chat/.
       ragApiUrl: process.env.NUXT_PUBLIC_RAG_API_URL || 'https://rag.vie-publique.sn',
+      // Langue du vocal (dictée + lecture). JAMAIS codée en dur : le wolof est
+      // la cible d'une version suivante, et une variante pourra surcharger cette
+      // valeur via `voiceLang` dans app/config/chat-variants.ts.
+      // Contrairement à `ragApiUrl` (figée au build par la CSP), celle-ci est lue
+      // au runtime : la changer ne demande PAS de rebuild.
+      voiceLang: process.env.NUXT_PUBLIC_VOICE_LANG || 'fr-FR',
       // Sentry (monitoring d'erreurs) — DSN vide = désactivé (voir docs/infra/sentry.md)
       sentry: {
         dsn: process.env.NUXT_PUBLIC_SENTRY_DSN || '',

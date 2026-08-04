@@ -27,6 +27,7 @@ l'adaptateur n'a pas fait son travail de traduction.
 | `app/lib/chat/session-token.ts` | Jeton de session anonyme : cache, renouvellement, dédup. |
 | `app/lib/chat/markdown.ts` | Rendu markdown des réponses, assaini par DOMPurify. |
 | `app/lib/chat/report.ts` | Construction du retour de testeur (fonction pure, testée). |
+| `app/lib/voice/` + `useDicteeVocale` / `useLectureVocale` | Vocal — doc dédiée : [`voix.md`](./voix.md). |
 | `app/components/Chat/` | La coquille : `Shell`, `Message`, `Composer`. |
 | `app/pages/chat/[variant].vue` | Page unique de **toutes** les variantes. Inconnue → 404. |
 | `app/pages/chat/liste.vue` | Page d'atterrissage, **générée depuis le registre**. |
@@ -276,6 +277,7 @@ SSE.
 | 5 — adaptateur Gemini (`conversation_id`, sources, erreurs, quotas) | ✅ éprouvé contre l'API — sauf le 429, bloqué côté API |
 | 6 — finitions (traçabilité, états d'erreur, mise en page) | ✅ |
 | 6 bis — retrait de `/chatbot` et de `ChatBot.vue` | **bloqué par la brique 3** : `/chatbot` est aujourd'hui le seul chat Azure qui fonctionne |
+| 7 — vocal (dictée + lecture au fil du flux), derrière le flag `chat_voice` | ✅ web & Android — **micro iOS bloqué côté natif**, voir [`voix.md`](./voix.md) §4 |
 
 ## Recette
 
