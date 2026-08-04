@@ -99,6 +99,47 @@ Le reste se teste par un envoi réel :
 3. Vérifier qu'un envoi **sans** donnée personnalisée ouvre bien l'accueil — c'est le
    comportement attendu, et le rappel que le lien se met à l'envoi.
 
+## 🚧 À FAIRE — le canal natif n'est pas encore vérifié de bout en bout
+
+État au 04/08/2026 : le code est livré (app 1.1 (5)), la permission est accordée sur appareil,
+**mais aucune notification n'a encore été reçue**. Restent à prouver : la réception, le lien
+profond au tap, et l'affichage au premier plan.
+
+**Ce qui a échoué.** Une campagne du composeur ciblant l'app iOS a affiché **« Envois 0 »** —
+rien n'est parti. Hypothèse (non vérifiée) : les campagnes ciblent une **audience Google
+Analytics**, or l'app n'embarque pas le SDK (`Podfile` = `Firebase/Messaging` seul,
+`IS_ANALYTICS_ENABLED = false`). Sans Analytics, l'app n'existe pas comme audience.
+
+**⚠️ Ne PAS tester via le topic `news`.** C'est le canal de **diffusion en production** : chaque
+navigateur, PWA et TWA ayant accepté les notifications y est abonné (`subscribeToTopic` dans
+[`subscribe.post.ts`](../../../server/api/notifications/subscribe.post.ts)). Un « test » y
+partirait à tous les abonnés web.
+
+**La voie sûre : « Nouveau test »**, qui envoie à des tokens FCM explicites — ni Analytics, ni
+topic, aucun risque de toucher quelqu'un d'autre.
+
+### Le blocage : récupérer le token FCM de l'appareil
+
+Aujourd'hui il faut brancher l'iPhone en USB et lire la Console macOS (`Firebase registration
+token`, loggé par `AppDelegate`). Pénible, et à refaire à chaque fois — le token change à la
+réinstallation ou à la restauration.
+
+**Piste retenue, à faire plus tard** : afficher le token dans l'app. Le pont existe **déjà** côté
+natif et personne ne l'écoute — le wrapper émet `CustomEvent('push-token')` vers la page et
+accepte qu'on le redemande via `webkit.messageHandlers['push-token']`
+(`PushNotifications.swift`, `handleFCMToken`). Donc :
+
+- **côté web uniquement**, ~20 lignes, **aucun nouveau build iOS** ;
+- à réserver au contexte app (`detectNativeIOSApp()`) et au diagnostic — un token FCM ne
+  s'affiche pas à tout le monde.
+
+### Décision en suspens
+
+Si VP veut pouvoir cibler « tous les utilisateurs de l'app » depuis la console, il faudra ajouter
+le pod **Firebase/Analytics** → nouveau build **et** déclaration de confidentialité App Store.
+Ce n'est pas neutre, ça se décide. Alternative sans SDK : diffuser via le topic `news`, auquel le
+natif abonne déjà les appareils à l'acceptation — un seul envoi couvrirait web et iOS.
+
 ## Ne pas casser
 
 - **`/api/notifications/*`**, le service worker et le **format des messages** : partagés par
