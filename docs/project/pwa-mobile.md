@@ -15,6 +15,27 @@ ou de `public/.well-known/`** — les apps publiées sur les stores en dépenden
 Artefacts locaux (AAB/APK signés, keystores, screenshots stores) : `C:\Devlabs\malicktech\2-mobile\`.
 Générateur d'icônes : <https://www.pwabuilder.com/imageGenerator>.
 
+### Fiches publiées et identifiants
+
+| | Fiche store | Identifiant |
+| --- | --- | --- |
+| **iOS** | [apps.apple.com/app/id6757257552](https://apps.apple.com/app/id6757257552) | `sn.viepublique.app` (Apple ID **6757257552**, Team `SHJMC27623`) |
+| **Android** | [play.google.com/store/apps/details?id=sn.viepublique.app](https://play.google.com/store/apps/details?id=sn.viepublique.app) | `sn.viepublique.app` |
+
+**Le même identifiant sert sur les deux plateformes** — c'est voulu, et c'est ce qui rend
+l'`appID` de l'AASA (`SHJMC27623.sn.viepublique.app`) lisible. Côté iOS, la configuration **Dev**
+utilise `sn.viepublique.app.dev` pour pouvoir cohabiter avec la prod sur un même téléphone
+(`Dev.xcconfig` / `Prod.xcconfig`).
+
+**Où ces liens sont exposés sur le site** — page dédiée [`/app`](../../app/pages/app/index.vue),
+plus `HomeAppPromo.vue`, `AppMobileAppBanner.vue`, `a-propos/qui-sommes-nous.vue`,
+`a-propos/financement-independance.vue`, et le gabarit de newsletter.
+
+> ⚠️ **Les deux URLs sont dupliquées en dur dans ces 5 fichiers**, sous deux formes différentes
+> (`/app/id…` et `/us/app/vie-publique-sénégal/id…`). Changer d'app, ajouter un paramètre de
+> suivi ou corriger la locale `us/` (inutile pour une app sénégalaise) demande donc 5 éditions.
+> À regrouper dans une constante partagée à la prochaine occasion d'y toucher.
+
 **Principe clé** : les deux apps affichent le site **en direct**. Un déploiement web met à jour
 les apps instantanément, sans re-soumission aux stores — c'est la force du montage, et sa
 fragilité : **casser un des invariants §3 casse les apps déjà installées**.
@@ -27,14 +48,42 @@ fragilité : **casser un des invariants §3 casse les apps déjà installées**.
 | Domaine | `host: www.vie-publique.sn` | `allowedOrigins` + **`WKAppBoundDomains`** (conditionne le support du service worker !) |
 | Icônes launcher/splash | téléchargées au build depuis `https://www.vie-publique.sn/pwa-1024x1024.png` (+ `pwa-192x192.png` pour les shortcuts) | fichiers locaux `launch-*.png` du repo |
 | Signature | `android.keystore` (fingerprint `E5:35:B0:76…`) + clé Play App Signing (`D8:77:38…`) | certificats Apple |
-| Notifications | `enableNotifications: true` (web push du site) | `GoogleService-Info.plist` (FCM) |
+| Notifications | `enableNotifications: true` (web push du site) | FCM — ⚠️ **pas encore configuré**, voir §2 ter |
 
 Tout le reste (manifest, SW, precache, contenu, styles) est lu **live** → modifiable sans re-build.
 
-> ⚠️ Historique 16/07/2026 : le repo iOS pointait `dev.vpsn.cloud` (Settings.swift +
-> `WKAppBoundDomains`) — l'app **publiée** pointe bien la prod (config faite dans Xcode mais
-> jamais poussée). Push de rattrapage prévu depuis le MacBook. **Vérifier ce point avant tout
-> re-build iOS** : builder depuis le repo tel quel enverrait les utilisateurs sur le site de test.
+> ✅ **Réglé le 04/08/2026** (remplace l'avertissement du 16/07 : le repo iOS codait `dev.vpsn.cloud`
+> en dur et le rattrapage n'était pas poussé). La branche `feature/multi-env` est **mergée dans
+> `main`** : le domaine vient désormais de `APP_DOMAIN`, défini dans `Prod.xcconfig`
+> (`www.vie-publique.sn`) et `Dev.xcconfig` (`dev.vpsn.cloud`), et se propage à `rootUrl`,
+> `allowedOrigins`, `WKAppBoundDomains` et aux associated-domains.
+>
+> ⚠️ Le piège n'a pas disparu, il a changé de forme : **les deux configurations compilent aussi
+> bien**. Avant toute archive, vérifier que le schéma Xcode utilise **Prod** — sinon l'app publiée
+> envoie les utilisateurs sur le site de test, sans le moindre signal.
+
+## 2 ter. Notifications push iOS : rien n'est configuré (constaté 04/08/2026)
+
+**L'app iOS ne reçoit aucune notification**, et ça ne se voit pas : le pod `Firebase/Messaging` est
+installé et `aps-environment: production` figure dans les entitlements — tout a l'air branché.
+
+Mais :
+
+- `GoogleService-Info.plist` est le **placeholder PWABuilder** (`BUNDLE_ID =
+  com.microsoft.pwabuilder-ios`, `PROJECT_ID = pwabuilder-ios-template`, `GCM_SENDER_ID =
+  000000000000`) ;
+- `FirebaseApp.configure()` est **commenté** (`AppDelegate.swift:15`, TODO d'origine jamais fait).
+
+Le web push, lui, fonctionne — mais il ne peut PAS servir ici : une WKWebView ne reçoit pas de web
+push. Il faut du push **natif**.
+
+> 💡 Ce qui décide qu'un appareil reçoit une diffusion, c'est d'être une **instance enregistrée
+> d'une app du projet Firebase** — pas un abonnement à un topic. Le code web abonne bien les
+> navigateurs au topic `news`, mais **rien n'envoie jamais vers ce topic** : `sendToTopic()`
+> (`server/utils/firebase-admin.ts`) n'est appelé nulle part, VP diffuse à tout le monde depuis la
+> console. Le lot iOS porte donc sur l'**enregistrement de l'app** + la clé APNs, pas sur les topics.
+
+Chantier à part, non entamé.
 
 ## 3. Invariants — ce qu'il ne faut JAMAIS casser côté web
 
