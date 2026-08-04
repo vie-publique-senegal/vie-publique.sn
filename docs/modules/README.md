@@ -21,4 +21,5 @@
 | [`a-propos/`](./a-propos/) | [`refonte-section-association.md`](./a-propos/refonte-section-association.md) | `/a-propos` |
 | [`actualites/`](./actualites/) | [`blog-directus.md`](./actualites/blog-directus.md) | `/actualites` |
 | [`analytics/`](./analytics/) | [`analytics-stack.md`](./analytics/analytics-stack.md) | — (transversal) |
+| [`notifications/`](./notifications/) | [`push-notifications.md`](./notifications/push-notifications.md) | — (web push + push natif iOS) |
 | [`newsletter/`](./newsletter/) | [`newsletter-dossier-constitution.html`](./newsletter/newsletter-dossier-constitution.html) (template) | `/newsletter` |

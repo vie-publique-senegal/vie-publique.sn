@@ -48,7 +48,7 @@ fragilité : **casser un des invariants §3 casse les apps déjà installées**.
 | Domaine | `host: www.vie-publique.sn` | `allowedOrigins` + **`WKAppBoundDomains`** (conditionne le support du service worker !) |
 | Icônes launcher/splash | téléchargées au build depuis `https://www.vie-publique.sn/pwa-1024x1024.png` (+ `pwa-192x192.png` pour les shortcuts) | fichiers locaux `launch-*.png` du repo |
 | Signature | `android.keystore` (fingerprint `E5:35:B0:76…`) + clé Play App Signing (`D8:77:38…`) | certificats Apple |
-| Notifications | `enableNotifications: true` (web push du site) | FCM — ⚠️ **pas encore configuré**, voir §2 ter |
+| Notifications | `enableNotifications: true` (web push du site) | **push natif** APNs + FCM, voir §2 ter |
 
 Tout le reste (manifest, SW, precache, contenu, styles) est lu **live** → modifiable sans re-build.
 
@@ -59,31 +59,56 @@ Tout le reste (manifest, SW, precache, contenu, styles) est lu **live** → modi
 > `allowedOrigins`, `WKAppBoundDomains` et aux associated-domains.
 >
 > ⚠️ Le piège n'a pas disparu, il a changé de forme : **les deux configurations compilent aussi
-> bien**. Avant toute archive, vérifier que le schéma Xcode utilise **Prod** — sinon l'app publiée
-> envoie les utilisateurs sur le site de test, sans le moindre signal.
+> bien**. Avant toute archive, vérifier la configuration — sinon l'app publiée envoie les
+> utilisateurs sur le site de test, sans le moindre signal.
+>
+> ⚠️ **Correction (04/08/2026)** : les configurations Xcode ne s'appellent **pas** `Prod`/`Dev`,
+> mais **`Debug`** (→ `Dev.xcconfig`, `dev.vpsn.cloud`) et **`Release`** (→ `Prod.xcconfig`,
+> `www.vie-publique.sn`). Une archive part en **`Release`** — c'est ça qu'il faut vérifier.
+> Et `xcodebuild -configuration Prod` **ne renvoie aucune erreur** : il retombe silencieusement
+> sur la configuration par défaut. Ne pas s'en servir comme vérification.
 
-## 2 ter. Notifications push iOS : rien n'est configuré (constaté 04/08/2026)
+## 2 ter. Notifications push iOS : canal natif en place (04/08/2026)
 
-**L'app iOS ne reçoit aucune notification**, et ça ne se voit pas : le pod `Firebase/Messaging` est
-installé et `aps-environment: production` figure dans les entitlements — tout a l'air branché.
+> Doc canonique : [`../modules/notifications/push-notifications.md`](../modules/notifications/push-notifications.md)
+> (recette d'envoi, comportements) et `docs/push-notifications.md` **dans le dépôt iOS** (code Swift,
+> invite, protocole de test appareil). Ce §  n'en garde que le résumé.
 
-Mais :
+**Une WKWebView ne reçoit pas de web push.** L'app iOS ne recevait donc aucune notification, alors
+que tout avait l'air branché (pod `Firebase/Messaging` installé, `aps-environment: production` dans
+les entitlements). Il manquait l'activation de Firebase. Le canal **natif** (APNs + FCM) s'**ajoute**
+désormais au web push, sans rien y changer.
 
-- `GoogleService-Info.plist` est le **placeholder PWABuilder** (`BUNDLE_ID =
-  com.microsoft.pwabuilder-ios`, `PROJECT_ID = pwabuilder-ios-template`, `GCM_SENDER_ID =
-  000000000000`) ;
-- `FirebaseApp.configure()` est **commenté** (`AppDelegate.swift:15`, TODO d'origine jamais fait).
+Ce qui a été fait :
 
-Le web push, lui, fonctionne — mais il ne peut PAS servir ici : une WKWebView ne reçoit pas de web
-push. Il faut du push **natif**.
+- app iOS `sn.viepublique.app` enregistrée dans le projet Firebase `vie-publique`, vrai
+  `GoogleService-Info.plist` en place (le placeholder PWABuilder est parti) ;
+- clé d'authentification APNs (`.p8`) créée et importée dans Firebase → Cloud Messaging.
+  **Elle vit dans Vaultwarden**, Apple ne permet pas de la retélécharger, `.gitignore` exclut `*.p8` ;
+- `FirebaseApp.configure()` + `registerForRemoteNotifications()` activés ;
+- invite de permission **différée** (jamais au premier lancement à froid), protégée par une
+  pré-invite maison — l'invite système iOS n'est présentable qu'une seule fois ;
+- lien profond au tap, **même recette d'envoi que le web** (`url` / `openUrl` dans les données
+  personnalisées) ; une URL hors domaine est ignorée.
+
+**Côté web, un seul changement** : dans l'app iOS, le modal de consentement web ne s'affiche plus
+(`detectNativeIOSApp()`, `app/composables/useIsInApp.ts`). Sans ça, l'utilisateur accepterait une
+permission qui ne délivrera jamais rien — et recevrait **deux** notifications par message le jour où
+WebKit activera le web push en WKWebView. La détection est **iOS-seulement** : le TWA Android garde
+son web push.
 
 > 💡 Ce qui décide qu'un appareil reçoit une diffusion, c'est d'être une **instance enregistrée
 > d'une app du projet Firebase** — pas un abonnement à un topic. Le code web abonne bien les
 > navigateurs au topic `news`, mais **rien n'envoie jamais vers ce topic** : `sendToTopic()`
 > (`server/utils/firebase-admin.ts`) n'est appelé nulle part, VP diffuse à tout le monde depuis la
-> console. Le lot iOS porte donc sur l'**enregistrement de l'app** + la clé APNs, pas sur les topics.
+> console. L'abonnement iOS au topic est gratuit et garde l'option ouverte — ne rien bâtir dessus.
 
-Chantier à part, non entamé.
+> ⚠️ **Deux pièges de configuration du projet Xcode**, constatés au passage et **non corrigés**
+> (les changer touche à l'identité de l'app) : les configurations s'appellent **`Debug`/`Release`**,
+> pas `Dev`/`Prod` — une archive part en **Release**, qui pointe sur `Prod.xcconfig`. Et
+> `PRODUCT_BUNDLE_IDENTIFIER` est codé en dur à `sn.viepublique.app` dans les build settings de la
+> cible **pour les deux configurations**, ce qui écrase le `sn.viepublique.app.dev` de
+> `Dev.xcconfig` : le bundle dev n'existe pas dans les faits. Détail dans le dépôt iOS.
 
 ## 3. Invariants — ce qu'il ne faut JAMAIS casser côté web
 

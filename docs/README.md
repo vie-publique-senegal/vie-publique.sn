@@ -35,6 +35,7 @@
 | **Mesure perf / Web Vitals** | [`infra/mesure-performance.md`](./infra/mesure-performance.md) (protocole + journal des relevés) | baseline [`audits/audit-web-vitals-2026-07.md`](./audits/audit-web-vitals-2026-07.md), pistes = items PERF de [`audits/audit-complet-2026-07.md`](./audits/audit-complet-2026-07.md) |
 | **Cache (HTML SWR + API)** | [`guidelines/cache-strategy.md`](./guidelines/cache-strategy.md) (valeurs actuelles + précos P1-P7) | [`guidelines/todo-cache-optimization.md`](./guidelines/todo-cache-optimization.md) (chantier dev/prod) |
 | **PWA / apps mobiles (stores)** | [`project/pwa-mobile.md`](./project/pwa-mobile.md) (invariants TWA/assetlinks, quand re-builder) | repos [android](https://github.com/vie-publique-senegal/vie-publique-mobile-android) · [ios](https://github.com/vie-publique-senegal/vie-publique-mobile-ios) |
+| **Notifications push (web + iOS natif)** | [`modules/notifications/push-notifications.md`](./modules/notifications/push-notifications.md) (recette d'envoi, lien profond) | `docs/push-notifications.md` du **dépôt iOS** (code Swift, tests appareil), [`project/pwa-mobile.md`](./project/pwa-mobile.md) §2 ter |
 | **Audience GA4 + Search Console (baseline KPI)** | [`audits/audit-analytics-2026-07.md`](./audits/audit-analytics-2026-07.md) | KPI edge/CDN : [`infra/cloudfare.md`](./infra/cloudfare.md) (§ KPI) |
 | **CI/CD** | [`infra/ci-cd-github.md`](./infra/ci-cd-github.md) | — |
 | **Déploiement / Docker** | [`infra/deployment.md`](./infra/deployment.md) | [`infra/docker.md`](./infra/docker.md) |
