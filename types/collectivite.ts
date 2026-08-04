@@ -34,6 +34,12 @@ export interface CommuneGeo {
   type: 'Commune' | 'Ville';
   region: string;
   departement: string;
+  /**
+   * Slug public du département de rattachement — la clé de l'URL hub
+   * `/collectivites-territoriales/departements/<slug>`. Chaîne vide quand le
+   * référentiel ne rattache la collectivité à aucun département.
+   */
+  departementSlug: string;
   arrondissement: string | null;
   chefLieu: boolean;
   population: number | null;
@@ -48,4 +54,44 @@ export interface CommuneGeo {
   // Identifiants de fichiers Directus (à passer à <CmsImage>), pas des URLs.
   logo: string | null;
   photoCouverture: string | null;
+}
+
+/**
+ * Département tel qu'exposé par le hub `/collectivites-territoriales/departements`.
+ *
+ * Ce n'est PAS une entité lue telle quelle : le module ne liste que des
+ * collectivités de base (cf. `COLLECTIVITE_LEVELS`). Un département est ici
+ * l'agrégat de ses communes — d'où des compteurs qui disent leur propre
+ * dénominateur (`avecPopulation`, `avecMaire`) plutôt qu'une population
+ * « officielle » qu'on n'a pas.
+ */
+export interface DepartementGeo {
+  slug: string;
+  nom: string;
+  region: string;
+  /** Collectivités de base rattachées (communes + villes). */
+  nbCollectivites: number;
+  /** Somme des populations connues ; `null` si aucune commune n'est renseignée. */
+  population: number | null;
+  /** Année de recensement la plus récente parmi les populations agrégées. */
+  populationAnnee: number | null;
+  /** Dénominateur du cumul : combien de collectivités ont une population. */
+  avecPopulation: number;
+  avecMaire: number;
+}
+
+/** Renvoi minimal vers une commune : de quoi la chercher et la lier. */
+export interface DepartementCommuneRef {
+  nom: string;
+  slug: string;
+  maire: string | null;
+}
+
+/**
+ * Département + ses communes en version allégée. Seul le hub en a besoin : sa
+ * recherche porte aussi sur les noms de communes et de maires, qu'il faut donc
+ * avoir sous la main. Les autres consommateurs restent sur `DepartementGeo`.
+ */
+export interface DepartementAvecCommunes extends DepartementGeo {
+  communes: DepartementCommuneRef[];
 }

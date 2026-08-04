@@ -1,22 +1,45 @@
 <!--
-  Bandeau de repères d'une collectivité. Uniquement des données du référentiel :
-  ce qui manque affiche « - » plutôt qu'une valeur reconstituée.
+  Repères d'une collectivité, dans le bandeau sobre de l'annuaire (valeur en gras
+  suivie de son contexte en gris) plutôt qu'en tuiles.
+
+  Uniquement des données du référentiel : une population absente le dit, elle
+  n'est pas remplacée par un « 0 » ni par un tiret muet. Le département renvoie à
+  son hub — la règle du module veut qu'un texte cliquable se voie sans survol.
 -->
 <template>
-  <section class="border-b border-gray-100 bg-gray-50 dark:border-gray-700 dark:bg-gray-800">
-    <div
-      class="mx-auto grid max-w-7xl grid-cols-2 divide-x divide-gray-100 px-4 dark:divide-gray-700 md:grid-cols-4"
-    >
-      <div v-for="kpi in kpis" :key="kpi.label" class="px-4 py-5 text-center">
-        <div class="text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400">
-          {{ kpi.label }}
-        </div>
-        <div class="mt-1 truncate text-lg font-bold text-gray-900 dark:text-white md:text-xl">
-          {{ kpi.value }}
-          <span v-if="kpi.unit" class="text-sm font-normal text-gray-500 dark:text-gray-400">
-            {{ kpi.unit }}
-          </span>
-        </div>
+  <section class="mx-auto max-w-7xl px-4">
+    <div class="flex flex-wrap gap-6 border-b border-gray-100 py-4 text-sm dark:border-gray-700">
+      <div v-if="commune.population !== null">
+        <span class="font-bold text-gray-900 dark:text-white">
+          {{ formatNumber(commune.population) }}
+        </span>
+        <span class="text-gray-500 dark:text-gray-400">
+          habitants{{ commune.populationAnnee ? ` (RGPH ${commune.populationAnnee})` : '' }}
+        </span>
+      </div>
+      <div v-else class="text-gray-500 dark:text-gray-400">Population non renseignée</div>
+
+      <div v-if="commune.departement">
+        <span class="text-gray-500 dark:text-gray-400">Département de </span>
+        <NuxtLink
+          v-if="commune.departementSlug"
+          :to="`/collectivites-territoriales/departements/${commune.departementSlug}`"
+          class="text-primary-600 dark:text-primary-400 font-bold hover:underline"
+        >
+          {{ commune.departement }}
+        </NuxtLink>
+        <span v-else class="font-bold text-gray-900 dark:text-white">
+          {{ commune.departement }}
+        </span>
+      </div>
+
+      <div v-if="commune.region">
+        <span class="text-gray-500 dark:text-gray-400">Région de </span>
+        <span class="font-bold text-gray-900 dark:text-white">{{ commune.region }}</span>
+      </div>
+
+      <div v-if="commune.chefLieu">
+        <span class="font-bold text-gray-900 dark:text-white">Chef-lieu</span>
       </div>
     </div>
   </section>
@@ -30,18 +53,5 @@ interface Props {
   commune: CommuneGeo;
 }
 
-const props = defineProps<Props>();
-
-const kpis = computed(() => [
-  {
-    label: props.commune.populationAnnee
-      ? `Population (${props.commune.populationAnnee})`
-      : 'Population',
-    value: props.commune.population === null ? '-' : formatNumber(props.commune.population),
-    unit: props.commune.population === null ? undefined : 'hab.',
-  },
-  { label: 'Département', value: props.commune.departement || '-' },
-  { label: 'Région', value: props.commune.region || '-' },
-  { label: 'Chef-lieu', value: props.commune.chefLieu ? 'Oui' : 'Non' },
-]);
+defineProps<Props>();
 </script>

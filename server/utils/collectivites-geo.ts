@@ -26,7 +26,7 @@
  */
 import { readItems } from '@directus/sdk';
 import { slugifyGeoName } from '#shared/geo-name';
-import type { CommuneGeo } from '~/types/collectivite';
+import type { CommuneGeo, DepartementGeo } from '~/types/collectivite';
 
 /** Niveaux du référentiel qui constituent une collectivité de base. */
 const COLLECTIVITE_LEVELS = ['commune', 'ville'] as const;
@@ -97,6 +97,35 @@ const buildPublicSlugs = (rows: { nom: string; departement: string }[]): string[
     const base = slugifyGeoName(row.nom);
     return occurrences.get(base) === 1 ? base : `${base}-${slugifyGeoName(row.departement)}`;
   });
+};
+
+/** Clé d'identité d'un département : le nom seul ne suffit pas, la région fait partie de l'identité. */
+const departementKey = (row: { region: string; departement: string }): string =>
+  `${row.region}|${row.departement}`;
+
+/**
+ * Slug public d'un département — même règle que les communes : le nom seul quand
+ * il est unique parmi les 46, suffixé de la région sinon. Deux départements
+ * homonymes de deux régions restent donc deux pages distinctes, jamais fusionnées.
+ */
+const buildDepartementSlugs = (
+  rows: { region: string; departement: string }[],
+): Map<string, string> => {
+  const cles = [...new Set(rows.filter((row) => row.departement).map(departementKey))];
+
+  const occurrences = new Map<string, number>();
+  for (const cle of cles) {
+    const base = slugifyGeoName(cle.split('|')[1] ?? '');
+    occurrences.set(base, (occurrences.get(base) ?? 0) + 1);
+  }
+
+  return new Map(
+    cles.map((cle) => {
+      const [region = '', departement = ''] = cle.split('|');
+      const base = slugifyGeoName(departement);
+      return [cle, occurrences.get(base) === 1 ? base : `${base}-${slugifyGeoName(region)}`];
+    }),
+  );
 };
 
 /**
@@ -273,6 +302,7 @@ export const getCommunesGeo = defineCachedFunction(
       .sort((a, b) => a.nom.localeCompare(b.nom, 'fr'));
 
     const slugs = buildPublicSlugs(bases);
+    const departementSlugs = buildDepartementSlugs(bases);
 
     return bases.map((base, index) => {
       const observation = observationByEntity.get(base.entity.id);
@@ -285,6 +315,7 @@ export const getCommunesGeo = defineCachedFunction(
         type: base.entity.level === 'ville' ? 'Ville' : 'Commune',
         region: base.region,
         departement: base.departement,
+        departementSlug: base.departement ? (departementSlugs.get(departementKey(base)) ?? '') : '',
         arrondissement: base.arrondissement,
         chefLieu: chefLieuIds.has(base.entity.id),
         population: observation?.population ?? null,
@@ -306,8 +337,68 @@ export const getCommunesGeo = defineCachedFunction(
     });
   },
   {
-    name: 'collectivites-communes-geo',
+    // Suffixe de version : le cache SWR persiste sur disque entre deux
+    // démarrages (cf. CLAUDE.md). L'ajout de `departementSlug` change la forme
+    // du payload — sans bump, les pages départements liraient des lignes
+    // périmées dépourvues du champ.
+    name: 'collectivites-communes-geo-v2',
     maxAge: process.env.NODE_ENV === 'production' ? 30 * 60 : 0,
     getKey: () => 'all',
   },
 );
+
+/**
+ * Les 46 départements, agrégés depuis les collectivités de base.
+ *
+ * Dérivé, pas lu : le référentiel porte bien des entités de niveau
+ * `departement`, mais elles ne sont chargées ici que pour reconstituer le
+ * rattachement (cf. en-tête). Les agrégats sont donc ceux des communes
+ * réellement publiées, ce qui est aussi ce que la page affiche.
+ *
+ * Pas de cache propre : `getCommunesGeo` en a déjà un, et l'agrégation de 558
+ * lignes ne justifie pas une seconde entrée à invalider.
+ */
+export const getDepartementsGeo = async (): Promise<DepartementGeo[]> => {
+  const communes = await getCommunesGeo();
+  const parSlug = new Map<string, DepartementGeo>();
+
+  for (const commune of communes) {
+    if (!commune.departementSlug) continue;
+
+    let departement = parSlug.get(commune.departementSlug);
+    if (!departement) {
+      departement = {
+        slug: commune.departementSlug,
+        nom: commune.departement,
+        region: commune.region,
+        nbCollectivites: 0,
+        population: null,
+        populationAnnee: null,
+        avecPopulation: 0,
+        avecMaire: 0,
+      };
+      parSlug.set(commune.departementSlug, departement);
+    }
+
+    departement.nbCollectivites += 1;
+    if (commune.maire) departement.avecMaire += 1;
+
+    // Le cumul ne porte que sur les populations connues : il reste sincère tant
+    // qu'on affiche à côté sur combien de collectivités il est calculé.
+    if (commune.population !== null) {
+      departement.population = (departement.population ?? 0) + commune.population;
+      departement.avecPopulation += 1;
+      departement.populationAnnee = Math.max(
+        departement.populationAnnee ?? 0,
+        commune.populationAnnee ?? 0,
+      );
+    }
+  }
+
+  return [...parSlug.values()]
+    .map((departement) => ({
+      ...departement,
+      populationAnnee: departement.populationAnnee || null,
+    }))
+    .sort((a, b) => a.nom.localeCompare(b.nom, 'fr'));
+};

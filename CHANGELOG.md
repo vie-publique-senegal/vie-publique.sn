@@ -8,6 +8,7 @@ l'historique git (`git log --grep="^feat"`, Conventional Commits).
 
 ### Août 2026
 
+- **Collectivités territoriales : navigation par département** — une page par département (`/collectivites-territoriales/departements`) listant ses communes, atteignable depuis l'annuaire et depuis le fil d'ariane de chaque fiche : 47 pages de plus, stables et partageables, là où le filtre par département n'existait qu'en paramètre d'URL.
 - **Collectivités territoriales : données officielles** — le module passe des données de démonstration au référentiel administratif réel : 558 collectivités (553 communes et 5 villes), rattachement région/département/arrondissement, population du recensement 2023, maires et secrétaires municipaux en fonction. Chaque fiche n'affiche que les sections réellement renseignées.
 
 ### Juillet 2026

@@ -25,17 +25,29 @@ const isActiveTab = (tab: CommuneTab) => route.path === getCommuneTabPath(commun
 const pageUrl = computed(
   () => `${siteUrl}/collectivites-territoriales/communes/${commune.value?.slug}`,
 );
+
+// Le fil d'ariane passe par le département : c'est le niveau intermédiaire réel
+// entre l'annuaire et la fiche, et il ouvre le hub qui liste les communes
+// voisines. Omis si le référentiel ne rattache la collectivité à aucun
+// département (chaîne `parent` incomplète) - pas de lien vers une page absente.
+const breadcrumbItems = computed(() => [
+  { label: 'Collectivités territoriales', to: '/collectivites-territoriales' },
+  ...(commune.value?.departementSlug
+    ? [
+        {
+          label: `Département de ${commune.value.departement}`,
+          to: `/collectivites-territoriales/departements/${commune.value.departementSlug}`,
+        },
+      ]
+    : []),
+  { label: commune.value?.nom ?? '' },
+]);
 </script>
 
 <template>
   <div v-if="commune" class="min-h-screen pb-16">
     <div class="mx-auto max-w-7xl px-4 pt-2">
-      <AppBreadcrumb
-        :items="[
-          { label: 'Collectivités territoriales', to: '/collectivites-territoriales' },
-          { label: commune.nom },
-        ]"
-      />
+      <AppBreadcrumb :items="breadcrumbItems" />
     </div>
 
     <!-- ─── Hero ───────────────────────────────────────────────────────
@@ -112,7 +124,7 @@ const pageUrl = computed(
     </section>
 
     <!-- ─── Bandeau de repères ─────────────────────────────────────── -->
-    <CollectivitesCommuneKpiStrip :commune="commune" class="mt-4 rounded-lg" />
+    <CollectivitesCommuneKpiStrip :commune="commune" class="mt-2" />
 
     <!-- ─── Barre d'onglets (liens réels, indexables) ──────────────── -->
     <div

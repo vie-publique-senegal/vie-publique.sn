@@ -10,7 +10,18 @@
         <CollectivitesInfoRow label="Nom officiel" :value="commune.nom" />
         <CollectivitesInfoRow label="Statut" :value="commune.type" />
         <CollectivitesInfoRow label="Région" :value="commune.region" />
-        <CollectivitesInfoRow label="Département" :value="commune.departement" />
+        <!-- Le département renvoie à son hub (les communes voisines) quand le
+             référentiel le rattache ; sinon simple valeur, pas de lien mort. -->
+        <CollectivitesInfoRow label="Département">
+          <NuxtLink
+            v-if="commune.departementSlug"
+            :to="`/collectivites-territoriales/departements/${commune.departementSlug}`"
+            class="text-primary-600 dark:text-primary-400 hover:underline"
+          >
+            {{ commune.departement }}
+          </NuxtLink>
+          <template v-else>{{ commune.departement }}</template>
+        </CollectivitesInfoRow>
         <CollectivitesInfoRow
           v-if="commune.arrondissement"
           label="Arrondissement"

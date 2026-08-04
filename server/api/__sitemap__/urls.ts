@@ -17,6 +17,23 @@ export default defineSitemapEventHandler(async () => {
         priority: 0.6,
       });
     }
+
+    // Hub par département : la page pivot + ses 46 enfants. Le hub est une page
+    // statique (donc déjà auto-découverte) mais on le pousse explicitement — le
+    // module dédoublonne les entrées par URL, et une page pivot absente du
+    // sitemap coûterait plus qu'une ligne redondante.
+    urls.push({
+      loc: '/collectivites-territoriales/departements',
+      changefreq: 'monthly',
+      priority: 0.7,
+    });
+    for (const departement of await getDepartementsGeo()) {
+      urls.push({
+        loc: `/collectivites-territoriales/departements/${departement.slug}`,
+        changefreq: 'monthly',
+        priority: 0.7,
+      });
+    }
   } catch (error) {
     reportServerError(error, 'sitemap/collectivites');
   }

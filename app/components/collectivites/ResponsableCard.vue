@@ -53,6 +53,7 @@
 
 <script setup lang="ts">
 import type { CommuneResponsable } from '~~/types/collectivite';
+import { getResponsableLien } from '~/composables/collectivites/responsable';
 
 interface Props {
   responsable: CommuneResponsable;
@@ -61,11 +62,7 @@ interface Props {
 
 const props = defineProps<Props>();
 
-const lien = computed(() =>
-  props.responsable.slug
-    ? `/personnalites/${props.responsable.id}/${props.responsable.slug}`
-    : undefined,
-);
+const lien = computed(() => getResponsableLien(props.responsable) ?? undefined);
 
 const formatDate = (iso: string) =>
   new Date(iso).toLocaleDateString('fr-FR', { year: 'numeric', month: 'long' });

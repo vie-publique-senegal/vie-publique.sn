@@ -62,6 +62,7 @@
 
 <script setup lang="ts">
 import type { CommuneGeo, CommuneResponsable } from '~~/types/collectivite';
+import { getResponsableLien } from '~/composables/collectivites/responsable';
 
 interface Props {
   responsable: CommuneResponsable;
@@ -72,11 +73,7 @@ interface Props {
 
 const props = defineProps<Props>();
 
-const lien = computed(() =>
-  props.responsable.slug
-    ? `/personnalites/${props.responsable.id}/${props.responsable.slug}`
-    : undefined,
-);
+const lien = computed(() => getResponsableLien(props.responsable) ?? undefined);
 
 const initiales = computed(() =>
   props.responsable.nom

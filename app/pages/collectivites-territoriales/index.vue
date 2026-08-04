@@ -6,10 +6,10 @@ const { siteName, siteUrl, themeColor, keywords } = useSiteMetadata();
 const route = useRoute();
 const router = useRouter();
 
-// ── Référentiel géo réel (Directus) — cf. server/utils/collectivites-geo.ts
+// ── Référentiel géo réel (Directus) - cf. server/utils/collectivites-geo.ts
 // `departements` (liste plate des 46) n'est pas utilisé ici : le sélecteur de
 // département est dérivé de la région choisie (drill-down, cf. plus bas).
-const { communes, regions, total, completude } = useCommunesGeo();
+const { communes, regions, total } = useCommunesGeo();
 
 // ── État UI initialisé depuis route.query DE FAÇON SYNCHRONE (règle SSR CLAUDE.md)
 type ViewMode = 'cartes' | 'liste' | 'carte';
@@ -114,7 +114,7 @@ watch([q, region, departement, type], () => {
 const totalPages = computed(() => Math.max(1, Math.ceil(filtered.value.length / PAGE_SIZE)));
 
 // Page hors limites (?page=999, ou filtrage qui réduit le jeu) : le recalage doit
-// être SYNCHRONE, pas dans un watch — un watch ne s'exécute pas pendant le rendu
+// être SYNCHRONE, pas dans un watch - un watch ne s'exécute pas pendant le rendu
 // serveur, qui afficherait donc « aucun résultat » à tort (règle « listes
 // paginées » du CLAUDE.md). Le watch ci-dessous ne fait que réaligner l'URL.
 const safePage = computed(() => Math.min(Math.max(1, page.value), totalPages.value));
@@ -349,20 +349,16 @@ useHead({
           }}</span>
           <span class="text-gray-500 dark:text-gray-400"> habitants (RGPH 2023)</span>
         </div>
-      </div>
-    </section>
 
-    <!-- ─── Avertissement de complétude ────────────────────────────── -->
-    <section class="mx-auto mt-4 max-w-7xl px-4">
-      <p
-        class="rounded-lg bg-amber-50 px-4 py-3 text-xs text-amber-900 ring-1 ring-amber-200 dark:bg-amber-950/40 dark:text-amber-200 dark:ring-amber-900"
-      >
-        <strong>Données partielles.</strong> Le découpage administratif et la population
-        (recensement 2023) proviennent du référentiel officiel. Les maires, les contacts des mairies
-        et les données de gestion (budget, conseil municipal, projets) sont en cours d'intégration :
-        {{ formatNumber(completude.avecMaire) }} maire{{ completude.avecMaire > 1 ? 's' : '' }} sur
-        {{ formatNumber(total) }} collectivités à ce jour.
-      </p>
+        <!-- Entrée du hub départements : les filtres de cette page vivent en
+             query params (non indexables), le hub offre les 46 URLs stables. -->
+        <NuxtLink
+          to="/collectivites-territoriales/departements"
+          class="text-primary-600 dark:text-primary-400 ml-auto font-medium underline-offset-2 hover:underline"
+        >
+          Parcourir par département
+        </NuxtLink>
+      </div>
     </section>
 
     <!-- ─── Résultats ──────────────────────────────────────────────── -->
@@ -381,7 +377,7 @@ useHead({
         Aucune commune ne correspond à ces critères.
       </p>
 
-      <!-- Pagination (vues Cartes et Liste) — même style que /documents/public -->
+      <!-- Pagination (vues Cartes et Liste) - même style que /documents/public -->
       <div v-else-if="view !== 'carte' && totalPages > 1" class="mt-8 flex justify-center">
         <UPagination
           v-model="page"
