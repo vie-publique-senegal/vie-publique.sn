@@ -15,6 +15,31 @@ construites par le pipeline. Les images poussées sur `ghcr.io` sont construites
 ne servent pas encore au déploiement — bascule vers un déploiement par image Docker à envisager
 plus tard.
 
+> 🚨 **La branche déployée est `develop`, PAS `prod` (constaté 04/08/2026).** Le tableau des
+> déclencheurs ci-dessous décrit fidèlement le workflow GitHub Actions, mais **ce n'est pas lui
+> qui déploie aujourd'hui** : `deploy` ne se déclenche que sur un push `prod`
+> (`if: github.ref == 'refs/heads/prod'`, `_ci-cd.yml`), or **`prod` est abandonnée — 380 commits
+> en retard sur `develop`**. C'est **Coolify**, configuré sur `develop`, qui construit ce qui est
+> en ligne.
+>
+> **Preuves :** des fonctionnalités présentes uniquement sur `develop` (le chat Sira, la dictée
+> vocale) tournent en production ; et du code poussé sur `develop` s'est retrouvé servi en prod
+> après un déploiement Coolify déclenché à la main (marqueur cherché dans le bundle `/_nuxt/`).
+>
+> **Conséquences pratiques :**
+>
+> - **lire ce tableau comme la description du pipeline GitHub, pas comme la voie de mise en
+>   production** — s'y fier fait conclure à tort que du code mergé dans `develop` n'est pas en ligne ;
+> - un push sur `develop` **ne déclenche pas** le webhook Coolify du workflow. Vérifier dans
+>   Coolify si l'auto-déploiement (webhook Git propre à Coolify) est actif, sinon le déploiement
+>   reste **manuel** ;
+> - **ne pas « rattraper » `prod` par un merge** sans décision d'équipe : ce serait rejouer
+>   380 commits déjà en ligne par une autre voie.
+>
+> À trancher : soit remettre `prod` dans la boucle (Coolify pointe sur `prod`, merges `develop` →
+> `prod` pour livrer), soit acter `develop` comme branche de déploiement et retirer le job
+> `deploy` devenu mort. **Le statu quo est le piège** — il fait cohabiter deux vérités.
+
 ### Déclencheurs
 
 | Événement | Branches | Jobs exécutés |

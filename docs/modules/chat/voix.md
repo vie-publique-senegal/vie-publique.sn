@@ -144,9 +144,14 @@ sont **soumis à la revue App Store**.
 
 ## 4 bis. La LECTURE était muette sur iOS — amorce d'activation (04/08/2026)
 
-> ✅ **Corrigé le 04/08/2026** (`amorcer()` sur le moteur, appelée par `basculer()`).
-> **Reste à vérifier sur appareil réel** : ne se teste ni au simulateur ni sur desktop, qui
-> n'ont pas cette restriction. Le correctif est **côté web** — pas besoin d'un nouveau build iOS.
+> ✅ **Corrigé ET VÉRIFIÉ sur iPhone le 04/08/2026** (`amorcer()` sur le moteur, appelée par
+> `basculer()`). La lecture fonctionne dans l'app iOS. Correctif **côté web** : aucun nouveau
+> build iOS n'a été nécessaire.
+>
+> ⚠️ Ne se teste **que sur appareil réel** — ni le simulateur ni le desktop n'ont cette
+> restriction, un test vert ailleurs ne prouve rien. Et **activer le son AVANT d'envoyer la
+> question** : l'amorce ne part qu'au clic. Activer en cours de réponse ne démarre la lecture
+> qu'à la phrase suivante — comportement documenté au § Sourdine, pas un bug.
 
 **Symptôme, sur l'app 1.1 (5) :** on active l'icône haut-parleur, **rien n'est lu**. Aucun message
 d'erreur. En quittant l'app pour une autre, on entend un **bref bruit** — le son qui aurait dû

@@ -195,7 +195,7 @@ de `app/app.vue` (comme `/carte`) : une conversation doit tenir dans la fenêtre
 
 `/chat/liste` reste une page normale du site — c'est une liste, pas une conversation.
 
-### LaTeX brut dans les réponses — corrigé le 04/08/2026
+### LaTeX brut dans les réponses — corrigé et vérifié en prod le 04/08/2026
 
 Le modèle produit du LaTeX pour les numéros d'actes, et le rendu markdown le laissait **tel quel** :
 
@@ -306,8 +306,8 @@ SSE.
 | 5 — adaptateur Gemini (`conversation_id`, sources, erreurs, quotas) | ✅ éprouvé contre l'API — sauf le 429, bloqué côté API |
 | 6 — finitions (traçabilité, états d'erreur, mise en page) | ✅ |
 | 6 bis — retrait de `/chatbot` et de `ChatBot.vue` | **bloqué par la brique 3** : `/chatbot` est aujourd'hui le seul chat Azure qui fonctionne |
-| 7 — vocal (dictée + lecture au fil du flux), derrière le flag `chat_voice` | **dictée ✅ web, Android et iOS** (débloquée dans l'app 1.1 (5), vérifiée sur appareil le 04/08/2026) — **lecture** : amorce d'activation corrigée le 04/08/2026, ⏳ **à re-tester sur iPhone**, voir [`voix.md`](./voix.md) §4 bis |
-| 8 — rendu du LaTeX dans les réponses | ✅ `normaliserLatex()` au rendu et avant lecture, 14 tests — voir § Mise en page |
+| 7 — vocal (dictée + lecture au fil du flux), derrière le flag `chat_voice` | ✅ **dictée ET lecture sur web, Android et iOS** — les deux vérifiées sur iPhone le 04/08/2026 (dictée débloquée par l'app 1.1 (5), lecture par l'amorce d'activation, cf. [`voix.md`](./voix.md) §4 et §4 bis) |
+| 8 — rendu du LaTeX dans les réponses | ✅ `normaliserLatex()` au rendu et avant lecture, 14 tests — vérifié en prod le 04/08/2026, voir § Mise en page |
 
 ## Recette
 
