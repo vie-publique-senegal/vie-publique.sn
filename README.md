@@ -51,6 +51,26 @@ Follow us on our social networks to stay updated:
 - [Nuxt 4](https://nuxt.com) (Vue 3, SSR & SEO) · [Nuxt UI](https://ui.nuxt.com) · [Tailwind CSS](https://tailwindcss.com) · [Pinia](https://pinia.vuejs.org)
 - Progressive Web App (PWA / TWA)
 
+#### Store apps — one codebase, three channels
+
+The Android and iOS apps are **thin wrappers around this very site** (TWA on Android, WKWebView
+on iOS, both generated with [PWABuilder](https://www.pwabuilder.com)). They load the live site,
+so **content, styling and SEO changes ship without resubmitting anything to the stores**. Each
+wrapper lives in its own repository:
+
+| Repository                                                                                         | Channel                                      |
+| -------------------------------------------------------------------------------------------------- | -------------------------------------------- |
+| [vie-publique-mobile-ios](https://github.com/vie-publique-senegal/vie-publique-mobile-ios)         | iOS — App Store, bundle `sn.viepublique.app` |
+| [vie-publique-mobile-android](https://github.com/vie-publique-senegal/vie-publique-mobile-android) | Android — Play Store (TWA)                   |
+
+⚠️ Because the apps consume this site live, a few things here are **load-bearing for already
+installed apps** — `assetlinks.json`, the PWA icons, the manifest, the `/sw.js` route, the
+domain. Breaking one breaks the shipped apps. Read
+[`docs/project/pwa-mobile.md`](docs/project/pwa-mobile.md) (§3 invariants, §4 when a rebuild is
+actually required) **before touching any of them**. Push notifications span both channels and
+share a single message format:
+[`docs/modules/notifications/push-notifications.md`](docs/modules/notifications/push-notifications.md).
+
 ### Backend & data
 
 - [Directus](https://directus.io) (headless CMS) · [PostgreSQL](https://www.postgresql.org) · [Redis](https://redis.io) (cache)

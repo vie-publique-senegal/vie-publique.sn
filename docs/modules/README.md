@@ -16,9 +16,11 @@
 | [`podcasts/`](./podcasts/) | [`podcasts.md`](./podcasts/podcasts.md) | `/podcasts` |
 | [`carte/`](./carte/) | [`map-system.md`](./carte/map-system.md) | `/carte` |
 | [`collectivites-territoriales/`](./collectivites-territoriales/) | [`collectivites-territoriales.md`](./collectivites-territoriales/collectivites-territoriales.md) | `/collectivites-territoriales`, `/collectivites-territoriales/departements`, `/collectivites-territoriales/carte` |
+| [`chat/`](./chat/) | [`banc-essai-chat.md`](./chat/banc-essai-chat.md) · [`voix.md`](./chat/voix.md) (dictée & lecture) | `/chat/**` (interne, noindex) |
 | [`dons/`](./dons/) | [`donation-system.md`](./dons/donation-system.md) | `/don` |
 | [`dashboard/`](./dashboard/) | [`dashboard-projets.md`](./dashboard/dashboard-projets.md) | `/observatoire/*` (chantier) |
 | [`a-propos/`](./a-propos/) | [`refonte-section-association.md`](./a-propos/refonte-section-association.md) | `/a-propos` |
 | [`actualites/`](./actualites/) | [`blog-directus.md`](./actualites/blog-directus.md) | `/actualites` |
 | [`analytics/`](./analytics/) | [`analytics-stack.md`](./analytics/analytics-stack.md) | — (transversal) |
+| [`notifications/`](./notifications/) | [`push-notifications.md`](./notifications/push-notifications.md) | — (web push + push natif iOS) |
 | [`newsletter/`](./newsletter/) | [`newsletter-dossier-constitution.html`](./newsletter/newsletter-dossier-constitution.html) (template) | `/newsletter` |
