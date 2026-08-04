@@ -156,6 +156,11 @@ dans `reportServerError`, elle ne fait jamais échouer l'annuaire.
 | `/collectivites-territoriales/communes/[slug]/[tab]` | `pages/…/communes/[slug]/[tab].vue` | Fiche, autres onglets |
 | `/collectivites-territoriales/carte` | `pages/…/carte.vue` | Carte plein écran (layout `fullscreen`), filtre région dans un panneau superposé |
 
+`/collectivites-territoriales/communes` (segment parent, sans page propre) est
+redirigé en **301 vers l'annuaire** par `routeRules` : un visiteur qui remonte
+l'URL à la main, ou un crawler qui la déduit des fiches, ne doit pas tomber sur
+un 404.
+
 `communes/[slug].vue` n'est pas une page concurrente de `[slug]/index.vue` :
 c'est la **route parente** qui porte le hero, les KPI et la barre d'onglets, et
 qui rend ses enfants dans un `<NuxtPage />`.
@@ -225,6 +230,12 @@ communes, département → ses communes et ses voisins de région, et retour dep
 chaque fiche via le **fil d'ariane** (« Collectivités territoriales › Département
 de Mbour › Ndiaganiao ») et le bandeau de repères, dont les mentions
 « Département de … » et « Région de … » sont des liens.
+
+Sur l'annuaire, l'entrée des hubs **est le repère chiffré** : « 14 régions » et
+« 46 départements » sont eux-mêmes les liens — le chiffre annonce ce qu'on va
+trouver, aucun libellé de navigation ne vient le doubler. Les deux autres repères
+ne sont pas cliquables : la page *est* la liste des 558 collectivités, et la
+population n'a pas de page.
 
 Le fil d'ariane ne descend **pas** région › département › commune : chaque hub
 est le parent de ses propres pages, et la région est atteinte par le bandeau de

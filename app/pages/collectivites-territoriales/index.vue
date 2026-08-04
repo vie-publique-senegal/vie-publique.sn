@@ -8,9 +8,10 @@ const route = useRoute();
 const router = useRouter();
 
 // ── Référentiel géo réel (Directus) - cf. server/utils/collectivites-geo.ts
-// `departements` (liste plate des 46) n'est pas utilisé ici : le sélecteur de
-// département est dérivé de la région choisie (drill-down, cf. plus bas).
-const { communes, regions, total } = useCommunesGeo();
+// `departements` (liste plate des 46) ne sert qu'au compteur du repère qui ouvre
+// le hub : le SÉLECTEUR de département, lui, est dérivé de la région choisie
+// (drill-down, cf. plus bas).
+const { communes, regions, departements, total } = useCommunesGeo();
 
 // ── État UI initialisé depuis route.query DE FAÇON SYNCHRONE (règle SSR CLAUDE.md)
 type ViewMode = 'cartes' | 'liste' | 'carte';
@@ -336,39 +337,32 @@ useHead({
 
     <!-- ─── Repères chiffrés ───────────────────────────────────────── -->
     <section class="mx-auto max-w-7xl px-4">
+      <!-- Les repères qui correspondent à un hub SONT l'entrée du hub : « 14
+           régions » et « 46 départements » sont des liens. Les deux autres
+           repères ne mènent nulle part — cette page EST la liste des 558
+           collectivités, et la population n'a pas de page. -->
       <div class="flex flex-wrap gap-6 border-b border-gray-100 py-4 text-sm dark:border-gray-700">
         <div>
           <span class="font-bold text-gray-900 dark:text-white">{{ formatNumber(total) }}</span>
           <span class="text-gray-500 dark:text-gray-400"> collectivités référencées</span>
         </div>
-        <div>
-          <span class="font-bold text-gray-900 dark:text-white">{{
-            formatNumber(regions.length)
-          }}</span>
-          <span class="text-gray-500 dark:text-gray-400"> régions couvertes</span>
-        </div>
+        <NuxtLink
+          to="/collectivites-territoriales/regions"
+          class="text-primary-600 dark:text-primary-400 hover:underline"
+        >
+          <span class="font-bold">{{ formatNumber(regions.length) }}</span> régions
+        </NuxtLink>
+        <NuxtLink
+          to="/collectivites-territoriales/departements"
+          class="text-primary-600 dark:text-primary-400 hover:underline"
+        >
+          <span class="font-bold">{{ formatNumber(departements.length) }}</span> départements
+        </NuxtLink>
         <div>
           <span class="font-bold text-gray-900 dark:text-white">{{
             formatNumber(totalPopulation)
           }}</span>
           <span class="text-gray-500 dark:text-gray-400"> habitants (RGPH 2023)</span>
-        </div>
-
-        <!-- Entrées des hubs : les filtres de cette page vivent en query params
-             (non indexables), les hubs offrent 14 + 46 URLs stables. -->
-        <div class="ml-auto flex gap-4">
-          <NuxtLink
-            to="/collectivites-territoriales/regions"
-            class="text-primary-600 dark:text-primary-400 font-medium underline-offset-2 hover:underline"
-          >
-            Parcourir par région
-          </NuxtLink>
-          <NuxtLink
-            to="/collectivites-territoriales/departements"
-            class="text-primary-600 dark:text-primary-400 font-medium underline-offset-2 hover:underline"
-          >
-            Parcourir par département
-          </NuxtLink>
         </div>
       </div>
     </section>

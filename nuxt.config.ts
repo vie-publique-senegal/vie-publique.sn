@@ -272,6 +272,16 @@ export default defineNuxtConfig({
       security: { headers: { permissionsPolicy: { microphone: ['self'] } } },
     },
     // Redirections SEO
+    // `/collectivites-territoriales/communes` est un segment parent sans page
+    // propre : il n'existe que pour porter les fiches. Un visiteur qui remonte
+    // l'URL à la main doit tomber sur l'annuaire, pas sur un 404 — et un crawler
+    // ne doit pas garder une erreur en mémoire pour un chemin qu'il déduira
+    // toujours des fiches. (Les segments `regions` et `departements`, eux, ont
+    // leur propre page de hub : aucune règle à écrire.)
+    '/collectivites-territoriales/communes': {
+      redirect: { to: '/collectivites-territoriales', statusCode: 301 },
+      prerender: true,
+    },
     '/budget': { redirect: { to: '/budget-senegal', statusCode: 301 }, prerender: true },
     '/budget/**': { redirect: { to: '/budget-senegal', statusCode: 301 }, prerender: true },
     '/publications': { redirect: { to: '/actualites', statusCode: 301 }, prerender: true },
