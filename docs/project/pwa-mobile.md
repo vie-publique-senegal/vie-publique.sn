@@ -23,9 +23,15 @@ Générateur d'icônes : <https://www.pwabuilder.com/imageGenerator>.
 | **Android** | [play.google.com/store/apps/details?id=sn.viepublique.app](https://play.google.com/store/apps/details?id=sn.viepublique.app) | `sn.viepublique.app` |
 
 **Le même identifiant sert sur les deux plateformes** — c'est voulu, et c'est ce qui rend
-l'`appID` de l'AASA (`SHJMC27623.sn.viepublique.app`) lisible. Côté iOS, la configuration **Dev**
-utilise `sn.viepublique.app.dev` pour pouvoir cohabiter avec la prod sur un même téléphone
-(`Dev.xcconfig` / `Prod.xcconfig`).
+l'`appID` de l'AASA (`SHJMC27623.sn.viepublique.app`) lisible.
+
+> ⚠️ **Correction (04/08/2026)** : ce § affirmait que la configuration iOS **Dev** utilise
+> `sn.viepublique.app.dev` « pour cohabiter avec la prod sur un même téléphone ». **C'est faux.**
+> `Dev.xcconfig` le déclare bien, mais `PRODUCT_BUNDLE_IDENTIFIER` est **codé en dur à
+> `sn.viepublique.app` dans les build settings de la cible pour les deux configurations**, et un
+> build setting de cible gagne toujours sur un xcconfig. **Le bundle `.dev` n'existe pas** :
+> installer un build Debug **remplace l'app de production** sur l'appareil. Vérifié via
+> `xcodebuild -showBuildSettings`. Non corrigé (ça touche à l'identité de l'app).
 
 **Où ces liens sont exposés sur le site** — page dédiée [`/app`](../../app/pages/app/index.vue),
 plus `HomeAppPromo.vue`, `AppMobileAppBanner.vue`, `a-propos/qui-sommes-nous.vue`,
@@ -161,15 +167,42 @@ L'app ne déclare que la seconde.
 Correctif : la clé de plist + ~8 lignes de Swift, puis **rebuild + re-soumission App Store**. Aucun
 changement côté web. Le TWA Android n'est pas concerné : la permission y appartient à Chrome.
 
+> ✅ **Corrigé et livré** dans **1.1 (5)**, en ligne sur TestFlight depuis le 04/08/2026
+> (`requestMediaCapturePermissionFor` dans `WebView.swift` + `NSSpeechRecognitionUsageDescription`
+> dans `Info.plist`). Le correctif avait été préparé pour le build 4, qui n'a jamais été archivé —
+> il part donc avec le lot push. **À re-tester sur appareil** en même temps que les notifications.
+
 > À garder en tête pour **toute** future fonctionnalité micro ou caméra dans l'app iOS — ce n'est
 > pas propre au vocal du chat.
 
 ## 4. Quand faut-il re-builder les apps stores ?
 
 Uniquement si l'un de ces éléments change : **nom de l'app, icône launcher, start_url,
-domaine, shortcuts** (Android), **push FCM / domaines autorisés** (iOS). Sinon : jamais —
-tout passe par le déploiement web. Procédure : PWABuilder → nouveau package → bump
-`appVersionCode` (Android) → stores.
+domaine, shortcuts** (Android), **push FCM / domaines autorisés / permissions système** (iOS).
+Sinon : jamais — tout passe par le déploiement web.
+
+**Android** : PWABuilder → nouveau package → bump `appVersionCode` → Play Console.
+
+**iOS** : la procédure complète (versions, archive, upload, checklist) vit dans le **dépôt iOS**,
+[`README.md`](https://github.com/vie-publique-senegal/vie-publique-mobile-ios) § « Procédure de
+déploiement ». Trois choses à savoir avant de s'y lancer :
+
+1. **Deux numéros, pas un.** Monter le build number (`CURRENT_PROJECT_VERSION`) ne suffit pas si
+   la version publique est déjà **approuvée** : son train est fermé, et l'upload est rejeté
+   *après* une archive réussie (`Invalid Pre-Release Train`). Il faut alors monter aussi
+   `MARKETING_VERSION`. Vécu le 04/08/2026 : `1 (5)` refusé → `1.1 (5)` accepté.
+2. **La configuration s'appelle `Release`, pas `Prod`** — c'est elle que `Product → Archive`
+   utilise, et elle pointe sur `Prod.xcconfig` (`www.vie-publique.sn`). `xcodebuild -configuration
+   Prod` ne renvoie **aucune erreur** et retombe sur le défaut : inutilisable comme vérification.
+   La bonne vérif est `xcodebuild -showBuildSettings -configuration Release | grep APP_DOMAIN`.
+3. **`src/Configuration/*.xcconfig` est un doublon mort** : le projet lit ceux de `src/`.
+
+## 4 bis. Déploiement web — rien de spécial à faire pour les apps
+
+Un déploiement du site **est** une mise à jour des apps : elles chargent le site live. Aucune
+action côté stores. Les seuls points de vigilance sont les **invariants du §3** — et le fait que
+`sw.js` doit rester servi en `no-cache`, faute de quoi les apps installées peuvent rester
+plusieurs heures sur une version périmée.
 
 ## 5. Vérifications rapides après une modif PWA
 
