@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { formatNumber } from '#shared/format';
 import { normalizeGeoName } from '#shared/geo-name';
+import { useCollectionPageSeo } from '~/composables/collectivites/useCollectionPageSeo';
 import { useCommunesGeo } from '~/composables/collectivites/useCommunesGeo';
 
-const { siteName, siteUrl, themeColor, keywords } = useSiteMetadata();
+const { siteUrl } = useSiteMetadata();
 const route = useRoute();
 const router = useRouter();
 
@@ -153,68 +154,47 @@ const totalPopulation = computed(() =>
   communes.value.reduce((sum, c) => sum + (c.population ?? 0), 0),
 );
 
-// ── SEO (en dernier - helpers et computeds déclarés avant) ─────────
-const pageTitle = 'Collectivités territoriales du Sénégal : annuaire des communes';
-const pageDescription =
-  'Recherchez une commune, un maire, une région. Fiches complètes des collectivités territoriales du Sénégal : gouvernance locale, conseil municipal, budgets et documents officiels.';
-const pageUrl = `${siteUrl}/collectivites-territoriales`;
+// Les repères qui correspondent à un hub SONT l'entrée du hub : « 14 régions »
+// et « 46 départements » sont des liens. Les deux autres ne mènent nulle part —
+// cette page EST la liste des 558 collectivités, et la population n'a pas de page.
+const reperes = computed(() => [
+  { key: 'total', value: total.value, label: 'collectivités référencées' },
+  {
+    key: 'regions',
+    value: regions.value.length,
+    label: 'régions',
+    to: '/collectivites-territoriales/regions',
+  },
+  {
+    key: 'departements',
+    value: departements.value.length,
+    label: 'départements',
+    to: '/collectivites-territoriales/departements',
+  },
+  { key: 'population', value: totalPopulation.value, label: 'habitants (RGPH 2023)' },
+]);
 
-useSeoMeta({
-  title: pageTitle,
-  ogTitle: pageTitle,
-  description: pageDescription,
-  ogDescription: pageDescription,
-  ogUrl: pageUrl,
-  ogType: 'website',
-  twitterCard: 'summary_large_image',
+// ── SEO (en dernier - helpers et computeds déclarés avant) ─────────
+useCollectionPageSeo({
+  key: 'ld-collectivites',
+  title: 'Collectivités territoriales du Sénégal : annuaire des communes',
+  description:
+    'Recherchez une commune, un maire, une région. Fiches complètes des collectivités territoriales du Sénégal : gouvernance locale, conseil municipal, budgets et documents officiels.',
+  url: `${siteUrl}/collectivites-territoriales`,
+  items: () =>
+    communes.value.map((c) => ({
+      name: c.nom,
+      url: `${siteUrl}/collectivites-territoriales/communes/${c.slug}`,
+    })),
+  // Échantillon : sérialiser les 558 collectivités alourdirait le HTML de ~40 Ko
+  // sans bénéfice (l'exhaustivité de l'indexation passe par le sitemap).
+  maxItems: 100,
   keywords: [
-    ...keywords,
     'collectivités territoriales Sénégal',
     'communes du Sénégal',
     'maires du Sénégal',
     'conseil municipal Sénégal',
     'mairie Sénégal',
-  ].join(', '),
-});
-
-const LD_ITEMS_MAX = 100;
-
-// Nœud d'entité propre à la page (le BreadcrumbList est émis par <AppBreadcrumb>).
-const collectionPageSchema = computed(() => ({
-  '@context': 'https://schema.org',
-  '@type': 'CollectionPage',
-  name: pageTitle,
-  description: pageDescription,
-  url: pageUrl,
-  inLanguage: 'fr-SN',
-  isPartOf: { '@type': 'WebSite', name: siteName, url: siteUrl },
-  mainEntity: {
-    '@type': 'ItemList',
-    numberOfItems: communes.value.length,
-    // Échantillon : lister les 558 collectivités alourdirait le HTML de ~40 Ko
-    // sans bénéfice (l'exhaustivité de l'indexation passe par le sitemap).
-    itemListElement: communes.value.slice(0, LD_ITEMS_MAX).map((c, i) => ({
-      '@type': 'ListItem',
-      position: i + 1,
-      name: c.nom,
-      url: `${siteUrl}/collectivites-territoriales/communes/${c.slug}`,
-    })),
-  },
-}));
-
-useHead({
-  htmlAttrs: { lang: 'fr-SN' },
-  link: [{ rel: 'canonical', href: pageUrl }],
-  meta: [
-    { name: 'robots', content: 'index, follow' },
-    { name: 'theme-color', content: themeColor },
-  ],
-  script: [
-    {
-      key: 'ld-collectivites',
-      type: 'application/ld+json',
-      innerHTML: computed(() => JSON.stringify(collectionPageSchema.value)),
-    },
   ],
 });
 </script>
@@ -243,37 +223,11 @@ useHead({
           territoriales, budget, projets et documents publics.
         </p>
 
-        <!-- Recherche -->
-        <div class="group relative mt-3">
-          <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5">
-            <UIcon
-              name="i-heroicons-magnifying-glass-20-solid"
-              class="h-5 w-5 text-gray-400 transition-colors group-focus-within:text-gray-500"
-            />
-          </div>
-          <input
-            type="search"
-            :value="q"
-            placeholder="Rechercher une commune, un maire, une région…"
-            class="block w-full rounded-xl border-0 bg-gray-100 py-3 pl-11 pr-10 text-sm text-gray-900 ring-1 ring-transparent transition-all placeholder:text-gray-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-gray-400 dark:bg-gray-800 dark:text-white dark:placeholder:text-gray-400 dark:focus:bg-gray-800/80 dark:focus:ring-gray-500 sm:py-2.5"
-            @input="q = ($event.target as HTMLInputElement).value"
-          />
-          <button
-            v-if="q"
-            type="button"
-            class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 transition-colors hover:text-gray-600 dark:hover:text-gray-300"
-            @click="q = ''"
-          >
-            <span
-              class="flex h-5 w-5 items-center justify-center rounded-full bg-gray-300 dark:bg-gray-600"
-            >
-              <UIcon
-                name="i-heroicons-x-mark-20-solid"
-                class="h-3.5 w-3.5 text-gray-600 dark:text-gray-300"
-              />
-            </span>
-          </button>
-        </div>
+        <CollectivitesSearchInput
+          v-model="q"
+          placeholder="Rechercher une commune, un maire, une région…"
+          class="mt-3"
+        />
 
         <!-- Filtres + bascule de vue, dans l'en-tête collant : on doit pouvoir
              filtrer et changer de vue à n'importe quel moment du défilement,
@@ -337,34 +291,7 @@ useHead({
 
     <!-- ─── Repères chiffrés ───────────────────────────────────────── -->
     <section class="mx-auto max-w-7xl px-4">
-      <!-- Les repères qui correspondent à un hub SONT l'entrée du hub : « 14
-           régions » et « 46 départements » sont des liens. Les deux autres
-           repères ne mènent nulle part — cette page EST la liste des 558
-           collectivités, et la population n'a pas de page. -->
-      <div class="flex flex-wrap gap-6 border-b border-gray-100 py-4 text-sm dark:border-gray-700">
-        <div>
-          <span class="font-bold text-gray-900 dark:text-white">{{ formatNumber(total) }}</span>
-          <span class="text-gray-500 dark:text-gray-400"> collectivités référencées</span>
-        </div>
-        <NuxtLink
-          to="/collectivites-territoriales/regions"
-          class="text-primary-600 dark:text-primary-400 hover:underline"
-        >
-          <span class="font-bold">{{ formatNumber(regions.length) }}</span> régions
-        </NuxtLink>
-        <NuxtLink
-          to="/collectivites-territoriales/departements"
-          class="text-primary-600 dark:text-primary-400 hover:underline"
-        >
-          <span class="font-bold">{{ formatNumber(departements.length) }}</span> départements
-        </NuxtLink>
-        <div>
-          <span class="font-bold text-gray-900 dark:text-white">{{
-            formatNumber(totalPopulation)
-          }}</span>
-          <span class="text-gray-500 dark:text-gray-400"> habitants (RGPH 2023)</span>
-        </div>
-      </div>
+      <CollectivitesStatStrip :items="reperes" />
     </section>
 
     <!-- ─── Résultats ──────────────────────────────────────────────── -->
