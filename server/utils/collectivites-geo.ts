@@ -256,19 +256,29 @@ export const getCommunesGeo = defineCachedFunction(
       target.set(appointment.municipality, appointment);
     }
 
-    /** Mandat courant → bloc d'affichage, ou `null` si la personne manque. */
-    const toOfficial = (appointment: AppointmentRow | undefined) =>
-      appointment?.person
-        ? {
-            id: appointment.person.id,
-            nom: appointment.person.full_name ?? '',
-            slug: appointment.person.slug ?? null,
-            photo: appointment.person.photo ?? null,
-            sexe: appointment.person.sexe ?? null,
-            fonction: appointment.position_title ?? null,
-            depuis: appointment.appointment_date ?? null,
-          }
-        : null;
+    /**
+     * Mandat courant → bloc d'affichage, ou `null` si la personne manque.
+     *
+     * Un mandat **sans nom de personne** (la fiche existe en base mais son
+     * `full_name` est vide) vaut `null`, pas un bloc anonyme : sans ça, la fiche
+     * affichait un avatar vide sous « Maire » et ouvrait un onglet « Le maire »
+     * qui n'avait rien à montrer. Un trou annoncé (« pas encore renseigné »)
+     * vaut mieux qu'un bloc qui fait semblant d'être rempli.
+     */
+    const toOfficial = (appointment: AppointmentRow | undefined) => {
+      const nom = appointment?.person?.full_name?.trim();
+      if (!appointment?.person || !nom) return null;
+
+      return {
+        id: appointment.person.id,
+        nom,
+        slug: appointment.person.slug ?? null,
+        photo: appointment.person.photo ?? null,
+        sexe: appointment.person.sexe ?? null,
+        fonction: appointment.position_title ?? null,
+        depuis: appointment.appointment_date ?? null,
+      };
+    };
 
     /** Ancêtres de l'entité, du plus proche au plus lointain. */
     const ancestorsOf = (entityId: number): EntityRow[] => {
@@ -341,7 +351,7 @@ export const getCommunesGeo = defineCachedFunction(
     // démarrages (cf. CLAUDE.md). L'ajout de `departementSlug` change la forme
     // du payload — sans bump, les pages départements liraient des lignes
     // périmées dépourvues du champ.
-    name: 'collectivites-communes-geo-v2',
+    name: 'collectivites-communes-geo-v3',
     maxAge: process.env.NODE_ENV === 'production' ? 30 * 60 : 0,
     getKey: () => 'all',
   },

@@ -124,6 +124,14 @@ ce qui permet à la page de filtrer, paginer et changer de vue sans aller-retour
 réseau. Les facettes sont dérivées côté serveur pour que la page n'ait pas à
 parcourir la liste pour peupler ses sélecteurs.
 
+**Un mandat sans nom de personne n'est pas un responsable.** `toOfficial` renvoie
+`null` quand le `full_name` de la personne rattachée est vide : le mandat existe
+en base, mais il n'y a rien à afficher. Sans cette règle, la fiche montrait un
+avatar vide sous « Maire » et ouvrait un onglet « Le maire » sans contenu (cas
+rencontré sur Mabo). Le `null` fait remonter toute la chaîne : pas d'onglet, un
+« pas encore renseigné » explicite sur l'aperçu, « - » dans les tableaux et le
+compteur `completude.avecMaire` qui dit la vérité.
+
 **Complétude assumée.** La réponse porte `completude.avecPopulation`,
 `avecMaire`, `avecContact` : des compteurs affichés tels quels à l'utilisateur,
 sans arrondir ni masquer les trous.
@@ -137,7 +145,7 @@ dans `reportServerError`, elle ne fait jamais échouer l'annuaire.
 | URL | Fichier | Contenu |
 | --- | --- | --- |
 | `/collectivites-territoriales` | `pages/…/index.vue` | Annuaire : recherche, filtres, vues Cartes / Liste / Carte. État syncé dans l'URL (`?q`, `?region`, `?departement`, `?type`, `?vue`, `?page`). |
-| `/collectivites-territoriales/departements` | `pages/…/departements/index.vue` | Hub : les 46 départements groupés par région |
+| `/collectivites-territoriales/departements` | `pages/…/departements/index.vue` | Hub : les 46 départements, recherche syncée dans l'URL (`?q`) |
 | `/collectivites-territoriales/departements/[slug]` | `pages/…/departements/[slug].vue` | Les collectivités d'un département (404 si le slug n'existe pas) |
 | `/collectivites-territoriales/communes/[slug]` | `pages/…/communes/[slug]/index.vue` | Fiche, onglet Aperçu |
 | `/collectivites-territoriales/communes/[slug]/[tab]` | `pages/…/communes/[slug]/[tab].vue` | Fiche, autres onglets |
@@ -160,7 +168,7 @@ les fiches.
 
 Le segment `departements/` est explicite plutôt qu'un paramètre à la racine du
 module (`/collectivites-territoriales/[departement]`) : ce dernier serait entré en
-concurrence avec `a-propos`, `carte`, `communes` et toute page future du module —
+concurrence avec `carte`, `communes` et toute page future du module —
 Nuxt donne aujourd'hui la priorité au statique, mais la collision serait à
 retardement. Il est aussi symétrique de `communes/[slug]`, et laisse la place à un
 niveau `regions/` si le besoin vient.

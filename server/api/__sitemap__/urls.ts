@@ -8,7 +8,7 @@ export default defineSitemapEventHandler(async () => {
   // 0. Collectivités territoriales — référentiel géo réel (558 collectivités).
   // Requête isolée : une panne du référentiel retire ces URLs du sitemap, elle
   // ne doit pas priver le sitemap de tout le reste.
-  // Les pages statiques du module (index, carte, a-propos) sont auto-découvertes.
+  // Les pages statiques du module (index, carte) sont auto-découvertes.
   try {
     for (const commune of await getCommunesGeo()) {
       urls.push({

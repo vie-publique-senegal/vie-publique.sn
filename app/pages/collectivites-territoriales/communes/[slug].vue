@@ -8,8 +8,7 @@ const { siteUrl } = useSiteMetadata();
 
 const slug = computed(() => route.params.slug as string);
 
-// Source unique : le référentiel géo (558 collectivités). Aucune donnée de
-// démonstration ne subsiste dans ce module.
+// Source unique : le référentiel géo (558 collectivités).
 const { commune } = await useCommuneGeo(slug);
 
 if (!commune.value) {
