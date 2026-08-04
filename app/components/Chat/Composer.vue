@@ -28,9 +28,16 @@ const disabled = computed(() => Boolean(props.cooldown && props.cooldown > 0));
 
 /**
  * Mention sur la transmission de l'audio, affichée UNE FOIS avant le premier
- * enregistrement. Point de gouvernance, pas de confort : l'ASR de Chrome et
- * d'Edge n'est pas local, l'audio part chez Google / Microsoft. Sur un service
- * public, l'utilisateur doit le savoir avant de parler, pas après.
+ * enregistrement. Point de gouvernance, pas de confort : la reconnaissance
+ * vocale n'est pas locale, l'audio part chez un tiers. Sur un service public,
+ * l'utilisateur doit le savoir avant de parler, pas après.
+ *
+ * ⚠️ **Le destinataire dépend de la plateforme, pas seulement du navigateur.**
+ * Mesuré le 2026-08-04 sur iPhone : Chrome iOS affiche « les données vocales
+ * seront envoyées à **Apple** » — c'est le service système, pas Google. Nommer
+ * un seul fournisseur rendrait la mention FAUSSE pour une partie des visiteurs,
+ * ce qui est pire que de ne rien dire sur un site de service public. D'où une
+ * formulation qui couvre les trois cas sans en garantir un.
  */
 const mentionVue = useLocalStorage('vp-chat-voix-mention-v1', false);
 const mentionAffichee = ref(false);
@@ -133,9 +140,10 @@ defineExpose({ focus, arreterDictee });
         class="mb-2 rounded-xl border border-gray-200 px-4 py-3 text-sm dark:border-gray-700"
       >
         <p class="text-gray-700 dark:text-gray-300">
-          Votre voix est transmise au service de reconnaissance vocale de votre navigateur (Google
-          pour Chrome, Microsoft pour Edge) afin d’être transcrite. Elle ne transite pas par nos
-          serveurs. Vous pouvez taper votre question à la place.
+          Votre voix est transmise au service de reconnaissance vocale de votre navigateur ou de
+          votre appareil — Apple, Google ou Microsoft selon le cas — afin d’être transcrite. Elle ne
+          transite pas par nos serveurs, et n’est pas conservée par Vie Publique. Vous pouvez taper
+          votre question à la place.
         </p>
         <div class="mt-3 flex flex-wrap gap-2">
           <UButton color="primary" size="xs" label="Autoriser et dicter" @click="accepterMention" />

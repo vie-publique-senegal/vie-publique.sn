@@ -56,9 +56,16 @@ curl -sI http://localhost:3000/               | grep -i permissions-policy   # m
 | --- | --- | --- |
 | Chrome, Edge (desktop & Android) | ✅ `webkitSpeechRecognition` | ✅ |
 | Safari macOS / iOS ≥ 14.5 | ✅ | ✅ |
+| **Chrome iOS** | ✅ **mesuré 04/08/2026** — double invite : reconnaissance vocale système (Apple), puis micro du site | ✅ |
 | **Firefox** | ❌ API absente (flag `media.webspeech.recognition.enable`, off) | ✅ |
 | **App Android (TWA)** | ✅ attendu — c'est Chrome | ✅ attendu |
-| **App iOS (WKWebView)** | ❌ **bloqué**, voir §4 | ✅ attendu |
+| **App iOS (WKWebView)** | ⚠️ **API PRÉSENTE, permission refusée** — mesuré 04/08/2026, voir §4 | ✅ **mesuré** (2 voix `fr-FR`) |
+
+> ⚠️ **Correction du 04/08/2026.** Cette doc affirmait d'abord que
+> `webkitSpeechRecognition` était *absent* de WKWebView. **C'est faux** : la sonde relevée dans
+> l'app iOS publiée affiche `dictée ✅ web-speech`. L'API est bien là ; c'est la **permission** qui
+> est refusée, et pour une raison réparable (§4). La leçon est celle du `CLAUDE.md` : ne pas
+> conclure sans mesurer sur la cible réelle.
 
 **Là où la dictée manque, le bouton micro n'est pas rendu du tout.** Jamais de bouton mort. C'est
 `moteurEcoute()` / `moteurLecture()` (`app/lib/voice/index.ts`) qui en décide, à l'exécution.
@@ -75,37 +82,59 @@ Voix   dictée ✅ web-speech · lecture ✅ · 4 voix fr-FR
 Ouvrir `/chat/gemini` dans l'app installée, déplier « Détails », relever la ligne. Pas de page de
 diagnostic à maintenir, et ça sert la vocation de traçabilité du banc.
 
-## 4. Pourquoi l'app iOS n'aura pas le micro sans un changement natif
+## 4. App iOS : l'API est là, la permission manque — et c'est réparable
 
-Constaté dans le wrapper (`~/Projects/VP/mobile/Vie Publique SN/src`, voir aussi
+**Mesuré le 04/08/2026 dans l'app publiée** (sonde du pied de conversation) :
+
+```
+Voix   dictée ✅ web-speech · lecture ✅ · 2 voix fr-FR
+```
+
+Puis, au clic sur le micro : « L'accès au micro a été refusé. Vous pouvez poser votre question au
+clavier. » La dégradation prévue fonctionne, mais la dictée est inutilisable.
+
+**Cause, trouvée dans le wrapper** (`~/Projects/VP/mobile/Vie Publique SN/src`, voir aussi
 [`../../project/pwa-mobile.md`](../../project/pwa-mobile.md)) :
 
-- `Info.plist` **contient déjà** `NSMicrophoneUsageDescription` (gabarit PWABuilder) ;
-- `WebView.swift` implémente `WKUIDelegate` **mais pas**
-  `webView(_:requestMediaCapturePermissionFor:initiatedByFrame:type:decisionHandler:)`.
+| Clé `Info.plist` | Présente ? |
+| --- | --- |
+| `NSMicrophoneUsageDescription` | ✅ (gabarit PWABuilder) |
+| `NSCameraUsageDescription` | ✅ |
+| **`NSSpeechRecognitionUsageDescription`** | ❌ **absente** |
 
-Sur iOS 15+, quand ce délégué est absent, **WKWebView refuse automatiquement toute capture audio** —
-sans prompt, sans erreur lisible.
+Sur iOS, la reconnaissance vocale exige **sa propre** clé d'usage, distincte de celle du micro. Sans
+elle, le système refuse. La preuve par comparaison, sur le même téléphone : dans **Chrome iOS**, le
+système demande d'abord « "Chrome" souhaite accéder à la reconnaissance vocale — les données
+vocales seront envoyées à Apple », **puis** « Autoriser www.vie-publique.sn à utiliser le micro ? ».
+Deux permissions distinctes ; l'app n'en déclare qu'une.
 
-Conséquence, et c'est elle qui a décidé du périmètre de cette livraison :
+S'y ajoute probablement le délégué
+`webView(_:requestMediaCapturePermissionFor:initiatedByFrame:type:decisionHandler:)`, **absent** de
+`WebView.swift` : sur iOS 15+, sans lui, WKWebView refuse automatiquement toute capture.
 
-> **Sur l'app iOS il n'y a pas de micro, quelle que soit la technique.** Ni Web Speech
-> (`webkitSpeechRecognition` n'existe pas dans WKWebView), ni `getUserMedia` + ASR serveur (bloqué
-> par le délégué manquant). **Les deux tapent le même mur, et ce mur est natif.**
+> **Le micro sur l'app iOS est un problème de CONFIGURATION NATIVE, pas d'API.** Aucun moteur
+> serveur n'est nécessaire : `webkitSpeechRecognition` fonctionne dans WKWebView, il n'a simplement
+> pas le droit de s'exécuter.
 
-Donc construire aujourd'hui un ASR serveur « pour rattraper iOS » livrerait **zéro utilisateur iOS
-de plus**. Le blocage ne se contourne pas en JavaScript.
+**Ce que ça coûte :**
 
-**Ce que coûterait le micro sur iOS — deux choses, pas une :**
+1. ajouter `NSSpeechRecognitionUsageDescription` à `Info.plist` (une chaîne, rédigée pour l'App
+   Store) ;
+2. ajouter le délégué de capture média à `WebView.swift` (~8 lignes) si le micro reste refusé après
+   le point 1 ;
+3. rebuild PWABuilder + **re-soumission App Store**.
 
-1. ~8 lignes de Swift dans `WebView.swift` (`requestMediaCapturePermissionFor` → `.grant`), puis
-   **rebuild + re-soumission App Store**. Le plist est déjà bon.
-2. **Et** un moteur d'ASR serveur : même le délégué posé, `webkitSpeechRecognition` reste absent de
-   WKWebView. Le micro s'ouvrirait, rien ne transcrirait.
+**Aucune ligne de code web à changer.** `peutEcouter()` répond déjà `true` : le jour où l'app est
+resoumise avec la permission, la dictée s'active seule.
 
 > ⚠️ Avant tout rebuild iOS, vérifier `Settings.swift` / `appDomain` : le repo a déjà pointé
 > `dev.vpsn.cloud` alors que l'app publiée vise la prod (cf. `pwa-mobile.md`). Builder le repo tel
 > quel enverrait les utilisateurs sur le site de test.
+
+**Comportement en attendant** : le bouton micro s'affiche (l'API existe), le premier appui échoue
+avec un message clair, puis le bouton devient inerte avec son infobulle. Ce n'est pas idéal — mais
+c'est honnête, ça n'empêche rien au clavier, et c'est **auto-réparateur**. Le masquer demanderait de
+détecter l'app iOS, donc de renifler le navigateur : précisément ce que ce module s'interdit.
 
 **L'app Android, elle, n'a rien à faire.** Le TWA affiche le site live et le vocal ne touche à aucun
 élément figé au build (nom, icône, `start_url`, domaine, shortcuts) : le vocal y arrive **au
@@ -113,15 +142,21 @@ prochain déploiement web, sans passer par le Play Store**.
 
 ## 5. Gouvernance — l'audio n'est pas traité localement
 
-**Chrome et Edge envoient l'audio du micro à leurs serveurs** (Google, Microsoft) pour le
-transcrire. Safari peut le faire sur l'appareil selon les réglages. Pour un service public, avec la
-CDP en face, ce n'est pas un détail d'implémentation.
+**La reconnaissance vocale n'est pas locale : l'audio part chez un tiers.** Pour un service public,
+avec la CDP en face, ce n'est pas un détail d'implémentation.
+
+⚠️ **Le destinataire dépend de la PLATEFORME, pas seulement du navigateur.** Mesuré le 04/08/2026
+sur iPhone : Chrome iOS annonce que « les données vocales seront envoyées à **Apple** » — c'est le
+service système iOS, pas Google. Chrome et Edge sur desktop/Android passent, eux, par Google et
+Microsoft. **Une mention qui nommerait un seul fournisseur serait donc FAUSSE pour une partie des
+visiteurs** — pire que de rester général, sur un site de service public. La formulation en place
+couvre les trois cas sans en garantir un.
 
 Ce qui est en place :
 
-- une **mention affichée une fois, AVANT le premier enregistrement** (`ChatComposer`), qui dit d'où
-  vient la transcription et rappelle que le clavier reste disponible. On informe, on ne barre pas la
-  route ; l'état est mémorisé (`vp-chat-voix-mention-v1`) ;
+- une **mention affichée une fois, AVANT le premier enregistrement** (`ChatComposer`), qui dit que
+  la transcription est faite par un tiers et rappelle que le clavier reste disponible. On informe,
+  on ne barre pas la route ; l'état est mémorisé (`vp-chat-voix-mention-v1`) ;
 - **rien n'est enregistré ni stocké** côté Vie Publique : l'audio ne transite pas par nos serveurs,
   et seul le **texte** transcrit part vers `/ask` — exactement comme une question tapée.
 
@@ -293,15 +328,15 @@ Le flag est hors production par défaut : la recette se fait en `dev`/`test`, ou
 | Rechargement de page | la sourdine a gardé son état |
 | Pied « Détails » | ligne `Voix` cohérente avec le navigateur |
 | **App Android installée** | relever la ligne `Voix` — attendu dictée ✅ |
-| **App iOS installée** | relever la ligne `Voix` — attendu dictée ❌, lecture ✅ (§4) |
+| **App iOS installée** | ✅ **relevé 04/08/2026** : `dictée ✅ web-speech · lecture ✅ · 2 voix fr-FR`, micro refusé au clic (§4) |
 
 ## 12. Après Web Speech
 
 | Déclencheur | Réponse | Portée |
 | --- | --- | --- |
 | **Wolof** | moteur serveur : Web Speech ne le connaît pas et ne le connaîtra pas | autre chantier |
-| **Envoi de l'audio chez Google refusé** | ASR auto-hébergé (Whisper) | autre chantier |
-| **Micro sur l'app iOS** | délégué Swift **+** ASR serveur (§4) | autre chantier, 2 lots |
+| **Envoi de l'audio chez un tiers refusé** | ASR auto-hébergé (Whisper) | autre chantier |
+| **Micro sur l'app iOS** | **config native** : clé `Info.plist` + délégué, puis re-soumission (§4) | **pas de code web**, pas de moteur serveur |
 
 Les trois passent par le **même point d'extension** : une entrée dans `MOTEURS`
 (`app/lib/voice/index.ts`). Les états du bouton, le barge-in, le découpage en phrases et le

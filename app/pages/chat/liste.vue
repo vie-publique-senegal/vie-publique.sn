@@ -23,10 +23,7 @@ useHead({
       L’assistant de Vie Publique Sénégal. Il recherche dans les lois, rapports, décrets, budgets et
       autres documents publics pour vous fournir une réponse sourcée.
     </p>
-    <p class="mt-4 text-sm text-gray-500 dark:text-gray-400">
-      Plusieurs moteurs sont à l’essai sous la même interface. L’URL identifie le moteur : citez-la
-      dans vos retours et vos captures d’écran.
-    </p>
+    
 
     <ul class="mt-10 space-y-3">
       <li v-for="variant in CHAT_VARIANTS" :key="variant.id">
@@ -79,8 +76,9 @@ useHead({
     </ul>
 
     <p class="mt-10 text-xs text-gray-400 dark:text-gray-500">
-      Pages internes, ni indexées ni liées depuis le site. Elles restent accessibles à qui connaît
-      l’URL : le <code>noindex</code> empêche le référencement, pas l’accès.
+      Plusieurs moteurs sont à l’essai sous la même interface. L’URL identifie le moteur : citez-la
+      dans vos retours et vos captures d’écran.
+    </p>
     </p>
   </div>
 </template>

@@ -67,20 +67,28 @@ Tout le reste (manifest, SW, precache, contenu, styles) est lu **live** → modi
    (`WKAppBoundDomains`). Un changement de domaine = re-build + re-soumission des 2 apps.
 6. **`public/.well-known/apple-app-site-association`** : équivalent iOS (universal links).
 
-## 3 bis. Capture micro/caméra : le wrapper iOS la refuse (constaté 04/08/2026)
+## 3 bis. Permissions micro / reconnaissance vocale : le wrapper iOS refuse (mesuré 04/08/2026)
 
-`Info.plist` contient bien `NSMicrophoneUsageDescription` et `NSCameraUsageDescription`, mais
-**`WebView.swift` n'implémente pas
-`webView(_:requestMediaCapturePermissionFor:initiatedByFrame:type:decisionHandler:)`**. Sur iOS 15+,
-quand ce délégué est absent, **WKWebView refuse automatiquement toute capture** — sans prompt et
-sans erreur lisible côté web.
+Constaté sur l'**app publiée**, à l'occasion de la dictée vocale du chat
+([`../modules/chat/voix.md`](../modules/chat/voix.md) §4) : l'API `webkitSpeechRecognition` est bien
+**présente** dans la WKWebView, mais la permission est **refusée**.
 
-Conséquence : **aucune fonctionnalité micro ou caméra ne peut marcher dans l'app iOS**, quelle que
-soit la technique côté site (`getUserMedia` comme Web Speech). Le correctif est ~8 lignes de Swift,
-mais il impose un **rebuild + une re-soumission App Store**. Le TWA Android n'est pas concerné : la
-permission y appartient à Chrome.
+Deux manques dans le wrapper, à corriger ensemble :
 
-Premier cas rencontré : la dictée vocale du chat — [`../modules/chat/voix.md`](../modules/chat/voix.md) §4.
+| Manque | Effet |
+| --- | --- |
+| **`NSSpeechRecognitionUsageDescription` absente d'`Info.plist`** | iOS refuse la reconnaissance vocale. C'est une clé **distincte** de `NSMicrophoneUsageDescription` (présente, elle) — le micro et la reconnaissance sont deux permissions séparées. |
+| **`requestMediaCapturePermissionFor` absent de `WebView.swift`** | Sur iOS 15+, sans ce délégué `WKUIDelegate`, WKWebView refuse automatiquement toute capture (`getUserMedia`), sans prompt ni erreur lisible. |
+
+Preuve par comparaison, sur le même téléphone : **Chrome iOS** demande d'abord la reconnaissance
+vocale système (« les données vocales seront envoyées à Apple »), **puis** le micro pour le site.
+L'app ne déclare que la seconde.
+
+Correctif : la clé de plist + ~8 lignes de Swift, puis **rebuild + re-soumission App Store**. Aucun
+changement côté web. Le TWA Android n'est pas concerné : la permission y appartient à Chrome.
+
+> À garder en tête pour **toute** future fonctionnalité micro ou caméra dans l'app iOS — ce n'est
+> pas propre au vocal du chat.
 
 ## 4. Quand faut-il re-builder les apps stores ?
 
