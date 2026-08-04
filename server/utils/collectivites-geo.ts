@@ -26,7 +26,7 @@
  */
 import { readItems } from '@directus/sdk';
 import { slugifyGeoName } from '#shared/geo-name';
-import type { CommuneGeo, DepartementGeo } from '~/types/collectivite';
+import type { CommuneGeo, DepartementGeo, RegionGeo } from '~~/types/collectivite';
 
 /** Niveaux du référentiel qui constituent une collectivité de base. */
 const COLLECTIVITE_LEVELS = ['commune', 'ville'] as const;
@@ -98,6 +98,13 @@ const buildPublicSlugs = (rows: { nom: string; departement: string }[]): string[
     return occurrences.get(base) === 1 ? base : `${base}-${slugifyGeoName(row.departement)}`;
   });
 };
+
+/**
+ * Slug public d'une région — le nom suffit : les 14 régions sont uniques et
+ * stables. L'homonymie avec une commune ou un département du même nom (Thiès,
+ * Kaolack…) est sans conséquence, les trois vivent sous des segments distincts.
+ */
+const regionSlugOf = (region: string): string => (region ? slugifyGeoName(region) : '');
 
 /** Clé d'identité d'un département : le nom seul ne suffit pas, la région fait partie de l'identité. */
 const departementKey = (row: { region: string; departement: string }): string =>
@@ -324,6 +331,7 @@ export const getCommunesGeo = defineCachedFunction(
         nom: base.nom,
         type: base.entity.level === 'ville' ? 'Ville' : 'Commune',
         region: base.region,
+        regionSlug: regionSlugOf(base.region),
         departement: base.departement,
         departementSlug: base.departement ? (departementSlugs.get(departementKey(base)) ?? '') : '',
         arrondissement: base.arrondissement,
@@ -351,7 +359,7 @@ export const getCommunesGeo = defineCachedFunction(
     // démarrages (cf. CLAUDE.md). L'ajout de `departementSlug` change la forme
     // du payload — sans bump, les pages départements liraient des lignes
     // périmées dépourvues du champ.
-    name: 'collectivites-communes-geo-v3',
+    name: 'collectivites-communes-geo-v4',
     maxAge: process.env.NODE_ENV === 'production' ? 30 * 60 : 0,
     getKey: () => 'all',
   },
@@ -381,6 +389,7 @@ export const getDepartementsGeo = async (): Promise<DepartementGeo[]> => {
         slug: commune.departementSlug,
         nom: commune.departement,
         region: commune.region,
+        regionSlug: commune.regionSlug,
         nbCollectivites: 0,
         population: null,
         populationAnnee: null,
@@ -409,6 +418,58 @@ export const getDepartementsGeo = async (): Promise<DepartementGeo[]> => {
     .map((departement) => ({
       ...departement,
       populationAnnee: departement.populationAnnee || null,
+    }))
+    .sort((a, b) => a.nom.localeCompare(b.nom, 'fr'));
+};
+
+/**
+ * Les 14 régions, agrégées depuis les collectivités de base — même statut que
+ * `getDepartementsGeo` : dérivé, jamais lu tel quel, et sans cache propre
+ * (`getCommunesGeo` en a déjà un).
+ *
+ * `nbDepartements` se compte sur les départements réellement rattachés aux
+ * collectivités publiées, pas sur le référentiel entier : c'est ce que la page
+ * énumère juste en dessous.
+ */
+export const getRegionsGeo = async (): Promise<RegionGeo[]> => {
+  const communes = await getCommunesGeo();
+  const parSlug = new Map<string, RegionGeo & { departements: Set<string> }>();
+
+  for (const commune of communes) {
+    if (!commune.regionSlug) continue;
+
+    let region = parSlug.get(commune.regionSlug);
+    if (!region) {
+      region = {
+        slug: commune.regionSlug,
+        nom: commune.region,
+        nbDepartements: 0,
+        nbCollectivites: 0,
+        population: null,
+        populationAnnee: null,
+        avecPopulation: 0,
+        avecMaire: 0,
+        departements: new Set<string>(),
+      };
+      parSlug.set(commune.regionSlug, region);
+    }
+
+    region.nbCollectivites += 1;
+    if (commune.departementSlug) region.departements.add(commune.departementSlug);
+    if (commune.maire) region.avecMaire += 1;
+
+    if (commune.population !== null) {
+      region.population = (region.population ?? 0) + commune.population;
+      region.avecPopulation += 1;
+      region.populationAnnee = Math.max(region.populationAnnee ?? 0, commune.populationAnnee ?? 0);
+    }
+  }
+
+  return [...parSlug.values()]
+    .map(({ departements, ...region }) => ({
+      ...region,
+      nbDepartements: departements.size,
+      populationAnnee: region.populationAnnee || null,
     }))
     .sort((a, b) => a.nom.localeCompare(b.nom, 'fr'));
 };

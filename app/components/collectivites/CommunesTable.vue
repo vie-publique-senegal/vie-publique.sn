@@ -19,7 +19,7 @@ import { getResponsableLien } from '~/composables/collectivites/responsable';
 import { formatNumber } from '#shared/format';
 
 /** Colonnes disponibles à droite du nom de la commune. */
-type CommuneColumn = 'region' | 'arrondissement' | 'maire' | 'population';
+type CommuneColumn = 'region' | 'departement' | 'arrondissement' | 'maire' | 'population';
 
 interface Props {
   communes: CommuneGeo[];
@@ -37,6 +37,13 @@ const props = withDefaults(defineProps<Props>(), {
 
 const DEFINITIONS: Record<CommuneColumn, DataTableColumn<CommuneGeo>> = {
   region: { key: 'region', label: 'Région', value: (c) => c.region },
+  departement: {
+    key: 'departement',
+    label: 'Département',
+    value: (c) => c.departement,
+    to: (c) =>
+      c.departementSlug ? `/collectivites-territoriales/departements/${c.departementSlug}` : null,
+  },
   arrondissement: {
     key: 'arrondissement',
     label: 'Arrondissement',

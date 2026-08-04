@@ -33,6 +33,8 @@ export interface CommuneGeo {
   nom: string;
   type: 'Commune' | 'Ville';
   region: string;
+  /** Slug public de la région — clé de `/collectivites-territoriales/regions/<slug>`. */
+  regionSlug: string;
   departement: string;
   /**
    * Slug public du département de rattachement — la clé de l'URL hub
@@ -69,6 +71,7 @@ export interface DepartementGeo {
   slug: string;
   nom: string;
   region: string;
+  regionSlug: string;
   /** Collectivités de base rattachées (communes + villes). */
   nbCollectivites: number;
   /** Somme des populations connues ; `null` si aucune commune n'est renseignée. */
@@ -76,6 +79,28 @@ export interface DepartementGeo {
   /** Année de recensement la plus récente parmi les populations agrégées. */
   populationAnnee: number | null;
   /** Dénominateur du cumul : combien de collectivités ont une population. */
+  avecPopulation: number;
+  avecMaire: number;
+}
+
+/**
+ * Région telle qu'exposée par le hub `/collectivites-territoriales/regions`.
+ *
+ * Même statut que `DepartementGeo` : un agrégat des collectivités de base, pas
+ * une entité lue telle quelle. Les compteurs disent leur dénominateur plutôt que
+ * d'afficher un total qui aurait l'air complet.
+ */
+export interface RegionGeo {
+  slug: string;
+  nom: string;
+  /** Départements rattachés (3 à 5 selon la région). */
+  nbDepartements: number;
+  /** Collectivités de base rattachées (communes + villes). */
+  nbCollectivites: number;
+  /** Somme des populations connues ; `null` si aucune commune n'est renseignée. */
+  population: number | null;
+  /** Année de recensement la plus récente parmi les populations agrégées. */
+  populationAnnee: number | null;
   avecPopulation: number;
   avecMaire: number;
 }

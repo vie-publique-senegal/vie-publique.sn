@@ -35,7 +35,14 @@
 
       <div v-if="commune.region">
         <span class="text-gray-500 dark:text-gray-400">Région de </span>
-        <span class="font-bold text-gray-900 dark:text-white">{{ commune.region }}</span>
+        <NuxtLink
+          v-if="commune.regionSlug"
+          :to="`/collectivites-territoriales/regions/${commune.regionSlug}`"
+          class="text-primary-600 dark:text-primary-400 font-bold hover:underline"
+        >
+          {{ commune.region }}
+        </NuxtLink>
+        <span v-else class="font-bold text-gray-900 dark:text-white">{{ commune.region }}</span>
       </div>
 
       <div v-if="commune.chefLieu">

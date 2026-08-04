@@ -102,6 +102,8 @@ Les pages et les endpoints ne parlent jamais à Directus directement.
 | --- | --- |
 | `GET /api/collectivites/communes` | annuaire complet (558 lignes, sans pagination) + facettes régions/départements + repères de complétude |
 | `GET /api/collectivites/communes/[slug]` | fiche d'une collectivité (404 si le slug n'existe pas) |
+| `GET /api/collectivites/regions` | les 14 régions agrégées |
+| `GET /api/collectivites/regions/[slug]` | une région, ses départements, ses collectivités et les autres régions (404 si le slug n'existe pas) |
 | `GET /api/collectivites/departements` | les 46 départements agrégés + la liste des régions |
 | `GET /api/collectivites/departements/[slug]` | un département, ses collectivités et ses voisins de région (404 si le slug n'existe pas) |
 
@@ -111,9 +113,10 @@ Les pages et les endpoints ne parlent jamais à Directus directement.
 supplémentaire par fiche. Les deux endpoints sont eux-mêmes des
 `defineCachedEventHandler`.
 
-**Les départements sont dérivés, pas lus.** `getDepartementsGeo` agrège les
-collectivités de base par `departementSlug` : nombre de collectivités, population
-cumulée, maires renseignés. Le référentiel porte bien des entités de niveau
+**Régions et départements sont dérivés, pas lus.** `getDepartementsGeo` et
+`getRegionsGeo` agrègent les collectivités de base par `departementSlug` /
+`regionSlug` : nombre de collectivités (et de départements pour une région),
+population cumulée, maires renseignés. Le référentiel porte bien des entités de niveau
 `departement`, mais elles ne servent qu'à reconstituer le rattachement — les
 chiffres affichés sont donc ceux des communes réellement publiées, ce qui est
 exactement ce que la page montre en dessous. Aucun cache propre : `getCommunesGeo`
@@ -145,6 +148,8 @@ dans `reportServerError`, elle ne fait jamais échouer l'annuaire.
 | URL | Fichier | Contenu |
 | --- | --- | --- |
 | `/collectivites-territoriales` | `pages/…/index.vue` | Annuaire : recherche, filtres, vues Cartes / Liste / Carte. État syncé dans l'URL (`?q`, `?region`, `?departement`, `?type`, `?vue`, `?page`). |
+| `/collectivites-territoriales/regions` | `pages/…/regions/index.vue` | Hub : les 14 régions |
+| `/collectivites-territoriales/regions/[slug]` | `pages/…/regions/[slug].vue` | Départements et collectivités d'une région, recherche syncée dans l'URL (`?q`) — 404 si le slug n'existe pas |
 | `/collectivites-territoriales/departements` | `pages/…/departements/index.vue` | Hub : les 46 départements, recherche syncée dans l'URL (`?q`) |
 | `/collectivites-territoriales/departements/[slug]` | `pages/…/departements/[slug].vue` | Les collectivités d'un département (404 si le slug n'existe pas) |
 | `/collectivites-territoriales/communes/[slug]` | `pages/…/communes/[slug]/index.vue` | Fiche, onglet Aperçu |
@@ -157,21 +162,34 @@ qui rend ses enfants dans un `<NuxtPage />`.
 
 Les onglets sont des **routes à part entière et indexables**, pas un `?tab=`.
 
-### Le hub par département
+### Les hubs région et département
 
-L'annuaire filtre en **query params** (`?departement=Mbour`) : pratique à l'usage,
-invisible à l'indexation — un filtre n'est pas une page. Le hub donne la même
-lecture sous **47 URLs stables** (1 pivot + 46 départements), chacune portant une
-quinzaine de liens vers des fiches. C'est le même rôle que
-`documents/[category]/index.vue` : une page intermédiaire réelle entre l'index et
-les fiches.
+L'annuaire filtre en **query params** (`?region=Thiès`, `?departement=Mbour`) :
+pratique à l'usage, invisible à l'indexation — un filtre n'est pas une page. Les
+hubs donnent la même lecture sous **62 URLs stables** (2 pivots + 14 régions +
+46 départements), chacune portant de quinze à cinquante liens vers des fiches.
+C'est le même rôle que `documents/[category]/index.vue` : des pages
+intermédiaires réelles entre l'index et les fiches, qui reconstituent la chaîne
+région → département → commune.
 
-Le segment `departements/` est explicite plutôt qu'un paramètre à la racine du
-module (`/collectivites-territoriales/[departement]`) : ce dernier serait entré en
-concurrence avec `carte`, `communes` et toute page future du module —
-Nuxt donne aujourd'hui la priorité au statique, mais la collision serait à
-retardement. Il est aussi symétrique de `communes/[slug]`, et laisse la place à un
-niveau `regions/` si le besoin vient.
+Les segments `regions/` et `departements/` sont explicites plutôt qu'un paramètre
+à la racine du module (`/collectivites-territoriales/[departement]`) : ce dernier
+serait entré en concurrence avec `carte`, `communes` et toute page future du
+module — Nuxt donne aujourd'hui la priorité au statique, mais la collision serait
+à retardement. Ils sont aussi symétriques de `communes/[slug]`.
+
+**Pourquoi pas d'arrondissement.** Le niveau existe au référentiel (127
+arrondissements, 4 communes en moyenne) mais ne mérite pas de page : ce n'est pas
+une maille de recherche (on cherche une commune, un département, une région), 97
+des 127 portent le **nom d'une commune** — `/arrondissements/fissel` cannibalise
+`/communes/fissel` —, le référentiel n'en porte ni population ni élu (la page
+n'aurait que 4 liens), et **61 communes** (dont tout Dakar) n'y sont pas
+rattachées. L'arrondissement reste donc une **colonne** de la page département.
+
+**Une région, un département et une commune peuvent porter le même nom** (Thiès,
+Kaolack…). Les trois pages coexistent sans ambiguïté : segments d'URL distincts,
+et titres qui disent le niveau (« Région de Thiès… », « Communes du département
+de Thiès… », « Thiès - Commune du Sénégal »).
 
 **Recherche du hub** — sur les 46 départements, mais aussi sur leurs **communes
 et leurs maires** : c'est ainsi qu'on retrouve le département d'une commune sans
@@ -187,11 +205,30 @@ rend déjà filtré côté serveur. Une vue filtrée est un résultat de recherc
 elle, reste pleinement indexable. Le JSON-LD décrit ce qui est réellement
 affiché — les 46 départements sans recherche, les résultats sinon.
 
+Le **hub des régions** n'a pas de recherche : 14 lignes se parcourent d'un coup
+d'œil. La **page d'une région**, elle, en a une (`?q=`, même règle SSR et même
+`noindex, follow` en vue filtrée) : elle liste ses départements **et** toutes ses
+communes — c'est ce que cherche « communes de la région de Thiès » —, et jusqu'à
+57 lignes se filtrent plus vite qu'elles ne se parcourent. Un terme filtre les
+**deux tables à la fois** : un département reste affiché s'il porte le terme ou
+si l'une de ses communes y répond.
+
+**Normalisation de la recherche.** Les trois recherches du module passent par
+`normalizeGeoName` (`#shared/geo-name`), pas par un repli d'accents maison : il
+replie aussi les tirets et les **espaces multiples** des deux côtés de la
+comparaison. Le référentiel contient des noms à double espace — « Ousmane  SARR »
+n'était pas trouvé en tapant « Ousmane SARR ».
+
 **Maillage** (ce qui fait le travail SEO, plus que les pages elles-mêmes) :
-annuaire → hub, hub → 46 départements, département → ses communes et ses voisins
-de région, et retour depuis chaque fiche via le **fil d'ariane** (« Collectivités
-territoriales › Département de Mbour › Ndiaganiao ») et la ligne « Département »
-de l'onglet Aperçu.
+annuaire → les deux hubs, hub → ses pages, région → ses départements et ses
+communes, département → ses communes et ses voisins de région, et retour depuis
+chaque fiche via le **fil d'ariane** (« Collectivités territoriales › Département
+de Mbour › Ndiaganiao ») et le bandeau de repères, dont les mentions
+« Département de … » et « Région de … » sont des liens.
+
+Le fil d'ariane ne descend **pas** région › département › commune : chaque hub
+est le parent de ses propres pages, et la région est atteinte par le bandeau de
+repères. Un fil à cinq niveaux n'aiderait ni le lecteur ni le crawl.
 
 **Slug de département** — même règle que les communes (`buildDepartementSlugs`) :
 le nom seul quand il est unique, suffixé de la région sinon. Un département est
@@ -201,6 +238,10 @@ commune (`departementSlug`), ce qui garantit que le lien d'une fiche et l'URL du
 hub ne peuvent pas diverger. Une commune dont la chaîne `parent` ne remonte à
 aucun département a un `departementSlug` vide : le lien est alors **omis**, pas
 pointé vers une page absente.
+
+**Slug de région** — le nom suffit (`regionSlugOf`) : les 14 régions sont uniques
+et stables. Même principe de propagation : `regionSlug` est porté par chaque
+commune et par chaque département, personne ne le recalcule.
 
 Les pages du hub n'affichent **pas de carte**. `CommunesMap` sans `focusSlug`
 rend la vue nationale des 46 départements et n'en colorerait qu'un seul : la
@@ -247,7 +288,7 @@ payload du rendu serveur : aucune requête client n'est émise et le contenu ne
 `app/components/collectivites/` (préfixe d'auto-import `Collectivites…`) :
 
 - annuaire : `CommuneCard`, `CommunesTable`, `CommunesMap`, `CommuneKpiStrip`, `InfoRow` ;
-- listes : `DataTable` (le tableau du module, cf. plus bas) ;
+- listes : `DataTable` (le tableau du module, cf. plus bas), `DepartementsTable` ;
 - personnes : `ResponsableAvatar`, `ResponsableCard`, `ResponsableProfile` ;
 - onglets : `tabs/Apercu`, `tabs/Maire`, `tabs/Secretariat`, `tabs/Contacts`.
 
@@ -262,16 +303,21 @@ au prochain usage. La **première** colonne est la colonne d'identité : elle po
 le lien et le `hint` (seconde ligne de contexte), les suivantes sont des
 attributs. Une valeur `null` s'affiche « - ».
 
-Deux jeux de colonnes l'utilisent aujourd'hui :
+Les jeux de colonnes qui l'utilisent :
 
 | Appelant | Colonnes |
 | --- | --- |
 | `CommunesTable` (vue « Liste » de l'annuaire) | Commune (+ département en `hint`), Région, Arrondissement, Maire, Population |
 | `CommunesTable` sur une page département | Commune, Maire, Arrondissement, Population — ni « Région » ni le `hint` département (déjà dans le titre de la page), et « Maire » disparaît si aucune commune du département n'en a un |
-| Hub des départements | Département (+ communes trouvées en `hint`), Région, Collectivités, Population |
+| `CommunesTable` sur une page région | Commune, Département, Maire, Population |
+| `DepartementsTable` sur le hub | Département (+ communes trouvées en `hint`), Région, Collectivités, Population |
+| `DepartementsTable` sur une page région | Département, Collectivités, Population |
+| Hub des régions | Région, Départements, Collectivités, Population |
 
-`CommunesTable` n'est plus qu'un jeu de colonnes posé sur `DataTable` : sa prop
-`columns` choisit celles affichées à droite du nom, dans l'ordre donné.
+`CommunesTable` et `DepartementsTable` ne sont que des jeux de colonnes posés sur
+`DataTable` : leur prop `columns` choisit celles affichées à droite du nom, dans
+l'ordre donné. Le `hint` du hub des départements est **calculé par la page** et
+passé en prop, pour que la table n'ait pas à connaître l'état de la recherche.
 
 Une colonne peut être **cliquable** au-delà de la première (`col.to`) — c'est
 ainsi que le nom du maire ouvre sa fiche personne. Conséquence de structure : le
@@ -403,9 +449,9 @@ prématuré serait perdu.
 
 ## SEO
 
-- Hub départements : JSON-LD `CollectionPage` + `ItemList` — les 46 items en
-  entier (contrairement à l'annuaire), et sur une page département la liste
-  complète de ses collectivités.
+- Hubs région et département : JSON-LD `CollectionPage` + `ItemList` — les 14 et
+  46 items en entier (contrairement à l'annuaire) ; sur une page région ou
+  département, la liste complète de ses collectivités.
 - Annuaire : JSON-LD `CollectionPage` + `ItemList` (échantillon de 100 items —
   lister les 558 alourdirait le HTML sans bénéfice, l'exhaustivité de
   l'indexation passe par le sitemap).
@@ -414,8 +460,8 @@ prématuré serait perdu.
   `GovernmentOrganization` (« Mairie de X »). Les champs absents du référentiel
   sont omis du JSON-LD, jamais remplis d'une valeur par défaut.
 - `BreadcrumbList` émis uniquement par `<AppBreadcrumb>`, jamais dupliqué en page.
-- Sitemap : les fiches et les 46 pages département sont poussées par
-  `server/api/__sitemap__/urls.ts`.
+- Sitemap : les fiches, les 14 pages région et les 46 pages département sont
+  poussées par `server/api/__sitemap__/urls.ts`.
 
 ## Points d'intégration
 

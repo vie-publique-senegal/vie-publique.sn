@@ -42,7 +42,7 @@ export default defineCachedEventHandler(
     };
   },
   {
-    name: 'collectivites-departements-v2',
+    name: 'collectivites-departements-v3',
     maxAge: process.env.NODE_ENV === 'production' ? 30 * 60 : 0,
     getKey: () => 'all',
   },

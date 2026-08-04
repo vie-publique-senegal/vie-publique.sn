@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import type { DepartementAvecCommunes } from '~~/types/collectivite';
-import type { DataTableColumn } from '~/composables/collectivites/dataTable';
+import type { DepartementAvecCommunes, DepartementGeo } from '~~/types/collectivite';
 import { formatNumber } from '#shared/format';
+import { normalizeGeoName } from '#shared/geo-name';
 import { useDepartementsGeo } from '~/composables/collectivites/useDepartementsGeo';
 
 // Hub des départements : page pivot entre l'annuaire (558 collectivités, filtres
@@ -14,9 +14,10 @@ const router = useRouter();
 
 const { departements, total, totalCollectivites } = useDepartementsGeo();
 
-// Recherche insensible aux accents (« thies » doit trouver « Thiès »), même
-// règle que l'annuaire.
-const normalize = (s: string) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+// Recherche insensible aux accents (« thies » doit trouver « Thiès »).
+// `normalizeGeoName` replie aussi tirets et espaces multiples des deux côtés de
+// la comparaison — le référentiel contient des noms à double espace.
+const normalize = (value: string) => normalizeGeoName(value);
 
 // État lu depuis `route.query` DE FAÇON SYNCHRONE : le rendu serveur d'un
 // `?q=…` partagé doit déjà être filtré (règle « listes filtrées & SSR »).
@@ -49,35 +50,25 @@ const filtered = computed(() => {
 
 const HINT_MAX = 4;
 
-const columns = computed<DataTableColumn<DepartementAvecCommunes>[]>(() => [
-  {
-    key: 'nom',
-    label: 'Département',
-    value: (d) => d.nom,
-    // Quand la recherche a matché par commune, on dit laquelle : sans ça, une
-    // ligne « Mbour » en réponse à « Ndiaganiao » paraîtrait arbitraire.
-    hint: (d) => {
-      const trouvees = communesTrouvees(d);
-      if (trouvees.length === 0) return null;
-      const noms = trouvees.slice(0, HINT_MAX).map((c) => c.nom);
-      const reste = trouvees.length - noms.length;
-      return `${noms.join(', ')}${reste > 0 ? ` et ${reste} autre${reste > 1 ? 's' : ''}` : ''}`;
-    },
-  },
-  { key: 'region', label: 'Région', value: (d) => d.region },
-  {
-    key: 'collectivites',
-    label: 'Collectivités',
-    align: 'right',
-    value: (d) => formatNumber(d.nbCollectivites),
-  },
-  {
-    key: 'population',
-    label: 'Population',
-    align: 'right',
-    value: (d) => (d.population === null ? null : formatNumber(d.population)),
-  },
-]);
+// Quand la recherche a matché par commune, la ligne dit laquelle : sans ça, un
+// « Mbour » en réponse à « Ndiaganiao » paraîtrait arbitraire. Indexé par slug
+// pour que la table n'ait pas à connaître le type enrichi du hub.
+const hints = computed(() => {
+  const parSlug = new Map<string, string>();
+  if (!query.value) return parSlug;
+
+  for (const departement of filtered.value) {
+    const trouvees = communesTrouvees(departement);
+    if (trouvees.length === 0) continue;
+    const noms = trouvees.slice(0, HINT_MAX).map((c) => c.nom);
+    const reste = trouvees.length - noms.length;
+    parSlug.set(
+      departement.slug,
+      `${noms.join(', ')}${reste > 0 ? ` et ${reste} autre${reste > 1 ? 's' : ''}` : ''}`,
+    );
+  }
+  return parSlug;
+});
 
 const populationTotale = computed(() =>
   departements.value.reduce((sum, d) => sum + (d.population ?? 0), 0),
@@ -229,11 +220,9 @@ useHead({
     </header>
 
     <section class="mx-auto mt-6 max-w-7xl px-4">
-      <CollectivitesDataTable
-        :rows="filtered"
-        :columns="columns"
-        :row-key="(d: DepartementAvecCommunes) => d.slug"
-        :to="(d: DepartementAvecCommunes) => `/collectivites-territoriales/departements/${d.slug}`"
+      <CollectivitesDepartementsTable
+        :departements="filtered"
+        :hint="(d: DepartementGeo) => hints.get(d.slug) ?? null"
       />
 
       <p

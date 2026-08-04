@@ -30,7 +30,7 @@ export default defineCachedEventHandler(
     };
   },
   {
-    name: 'collectivites-departement-v2',
+    name: 'collectivites-departement-v3',
     maxAge: process.env.NODE_ENV === 'production' ? 30 * 60 : 0,
     getKey: (event) => getRouterParam(event, 'slug') || 'unknown',
   },

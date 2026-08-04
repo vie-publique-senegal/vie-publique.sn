@@ -32,7 +32,7 @@ export default defineCachedEventHandler(
     };
   },
   {
-    name: 'collectivites-communes-v3',
+    name: 'collectivites-communes-v4',
     maxAge: process.env.NODE_ENV === 'production' ? 30 * 60 : 0,
     getKey: () => 'all',
   },

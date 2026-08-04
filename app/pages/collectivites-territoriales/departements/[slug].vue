@@ -148,6 +148,20 @@ useHead({
           <span class="font-bold text-gray-900 dark:text-white">{{ repere.valeur }}</span>
           <span class="text-gray-500 dark:text-gray-400">{{ repere.libelle }}</span>
         </div>
+
+        <div v-if="departement.region">
+          <span class="text-gray-500 dark:text-gray-400">Région de </span>
+          <NuxtLink
+            v-if="departement.regionSlug"
+            :to="`/collectivites-territoriales/regions/${departement.regionSlug}`"
+            class="text-primary-600 dark:text-primary-400 font-bold hover:underline"
+          >
+            {{ departement.region }}
+          </NuxtLink>
+          <span v-else class="font-bold text-gray-900 dark:text-white">
+            {{ departement.region }}
+          </span>
+        </div>
       </div>
     </section>
 

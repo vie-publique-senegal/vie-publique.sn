@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { formatNumber } from '#shared/format';
+import { normalizeGeoName } from '#shared/geo-name';
 import { useCommunesGeo } from '~/composables/collectivites/useCommunesGeo';
 
 const { siteName, siteUrl, themeColor, keywords } = useSiteMetadata();
@@ -46,8 +47,11 @@ watch([view, q, region, departement, type, page], () => {
   });
 });
 
-// Recherche insensible aux accents (« thies » doit trouver « Thiès »)
-const normalize = (s: string) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+// Recherche insensible aux accents (« thies » doit trouver « Thiès »).
+// `normalizeGeoName` replie aussi tirets et espaces multiples des deux côtés de
+// la comparaison : le référentiel contient des noms à double espace, qu'une
+// simple suppression d'accents ne rattrapait pas (« Ousmane  SARR »).
+const normalize = (value: string) => normalizeGeoName(value);
 
 const filtered = computed(() => {
   const query = normalize(q.value.trim());
@@ -350,14 +354,22 @@ useHead({
           <span class="text-gray-500 dark:text-gray-400"> habitants (RGPH 2023)</span>
         </div>
 
-        <!-- Entrée du hub départements : les filtres de cette page vivent en
-             query params (non indexables), le hub offre les 46 URLs stables. -->
-        <NuxtLink
-          to="/collectivites-territoriales/departements"
-          class="text-primary-600 dark:text-primary-400 ml-auto font-medium underline-offset-2 hover:underline"
-        >
-          Parcourir par département
-        </NuxtLink>
+        <!-- Entrées des hubs : les filtres de cette page vivent en query params
+             (non indexables), les hubs offrent 14 + 46 URLs stables. -->
+        <div class="ml-auto flex gap-4">
+          <NuxtLink
+            to="/collectivites-territoriales/regions"
+            class="text-primary-600 dark:text-primary-400 font-medium underline-offset-2 hover:underline"
+          >
+            Parcourir par région
+          </NuxtLink>
+          <NuxtLink
+            to="/collectivites-territoriales/departements"
+            class="text-primary-600 dark:text-primary-400 font-medium underline-offset-2 hover:underline"
+          >
+            Parcourir par département
+          </NuxtLink>
+        </div>
       </div>
     </section>
 

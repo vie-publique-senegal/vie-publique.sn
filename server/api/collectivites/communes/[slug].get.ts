@@ -20,7 +20,7 @@ export default defineCachedEventHandler(
     return { commune };
   },
   {
-    name: 'collectivites-commune-v3',
+    name: 'collectivites-commune-v4',
     maxAge: process.env.NODE_ENV === 'production' ? 30 * 60 : 0,
     getKey: (event) => getRouterParam(event, 'slug') || 'unknown',
   },
