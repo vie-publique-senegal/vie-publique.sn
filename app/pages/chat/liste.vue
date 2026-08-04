@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { NuxtLink } from '#components';
 import { CHAT_ASSISTANT_NAME, CHAT_STATUS_LABELS, CHAT_VARIANTS } from '~/config/chat-variants';
 
 /**
@@ -23,15 +24,21 @@ useHead({
       L’assistant de Vie Publique Sénégal. Il recherche dans les lois, rapports, décrets, budgets et
       autres documents publics pour vous fournir une réponse sourcée.
     </p>
-    
 
     <ul class="mt-10 space-y-3">
       <li v-for="variant in CHAT_VARIANTS" :key="variant.id">
         <!-- Une variante sans backend n'est pas cliquable : faire tester un faux
              chat produirait de faux retours. Elle reste listée pour montrer ce
-             qui est prévu. -->
+             qui est prévu.
+
+             ⚠️ `NuxtLink` est passé en IDENTIFIANT (importé de `#components`),
+             jamais en chaîne `'NuxtLink'`. Les auto-imports de Nuxt sont résolus
+             à la COMPILATION : une chaîne n'y donne pas accès, Vue la prend pour
+             un élément natif inconnu et rend un `<NuxtLink>` littéral — sans
+             `href`, donc sans rien de cliquable, et SANS erreur en console.
+             C'est la convention du reste du projet (cf. etat-senegal/*). -->
         <component
-          :is="variant.available ? 'NuxtLink' : 'div'"
+          :is="variant.available ? NuxtLink : 'div'"
           :to="variant.available ? `/chat/${variant.id}` : undefined"
           class="group flex items-start gap-4 rounded-2xl p-4 ring-1 transition-colors"
           :class="
@@ -78,7 +85,6 @@ useHead({
     <p class="mt-10 text-xs text-gray-400 dark:text-gray-500">
       Plusieurs moteurs sont à l’essai sous la même interface. L’URL identifie le moteur : citez-la
       dans vos retours et vos captures d’écran.
-    </p>
     </p>
   </div>
 </template>
