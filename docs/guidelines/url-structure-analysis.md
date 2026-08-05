@@ -261,11 +261,9 @@ Ce document recense **toutes les URLs** du projet, leur type, leur fonction et l
 
 | URL | Type | SEO | Description |
 |-----|------|-----|-------------|
-| `/chatbot` | Interactif | ⭐⭐ | Chatbot |
-| `/chat-bot` | Interactif | ⭐⭐ | Chatbot (doublon ?) |
-| `/chat-bot/[id]` | Détail | ⭐ | Session chatbot |
+| `/chatbot` | Interactif | ⭐⭐ | Chatbot (noindex, flag `menu_chatbot` off en prod) |
 
-**⚠️ Problème** : Doublon `/chatbot` vs `/chat-bot`
+✅ Doublon résolu (2026-08) : la maquette statique `/chat-bot` (+ `/chat-bot/[id]`) a été supprimée. `/chatbot` est la seule route chatbot.
 
 ---
 
@@ -592,7 +590,7 @@ export function generateSlugFromName(name: string): string {
 | Problème | URLs | Recommandation |
 |----------|------|----------------|
 | Budget | `/budget` vs `/budget-senegal` | **Garder** `/budget-senegal` uniquement |
-| Chatbot | `/chatbot` vs `/chat-bot` | **Unifier** en `/chatbot` |
+| ~~Chatbot~~ | ~~`/chatbot` vs `/chat-bot`~~ | ✅ Fait (2026-08) : `/chat-bot` supprimé |
 | About | `/a-propos` vs `/about` | **Supprimer** `/about` |
 
 ### 5.3 URLs génériques (peu SEO)
@@ -632,7 +630,7 @@ export function generateSlugFromName(name: string): string {
 
 ```
 ❌ /budget → ✅ Rediriger vers /budget-senegal
-❌ /chatbot ET /chat-bot → ✅ Unifier en /chatbot
+✅ /chat-bot supprimé → /chatbot seule route (fait 2026-08)
 ```
 
 #### 3. Ajouter des slugs SEO
@@ -710,7 +708,7 @@ export function generateSlugFromName(name: string): string {
 
 2. **Supprimer doublons**
    - [ ] Rediriger `/budget` → `/budget-senegal`
-   - [ ] Unifier `/chat-bot` → `/chatbot`
+   - [x] Unifier `/chat-bot` → `/chatbot` (maquette supprimée, 2026-08)
 
 ### Phase 2 : Optimisations SEO (2-4 semaines)
 

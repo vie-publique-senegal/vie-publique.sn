@@ -233,6 +233,11 @@ export const useNotifications = () => {
 
   const recoverSubscription = async (): Promise<void> => {
     if (isIOSSafari.value) return;
+    // Même raison que shouldShowConsentModal : dans l'app iOS, le push est natif.
+    // Cette récupération est automatique (pas de clic utilisateur) — sans cette
+    // garde, elle enregistrerait un token web mort le jour où WebKit activera
+    // le web push en WKWebView.
+    if (detectNativeIOSApp()) return;
 
     log('Recovering subscription (permission granted but no local data)...');
 
@@ -403,6 +408,16 @@ export const useNotifications = () => {
 
   const shouldShowConsentModal = computed(() => {
     if (typeof window === 'undefined') return false;
+    // Dans l'app iOS de l'App Store, c'est le NATIF qui gère les notifications
+    // (APNs/FCM). Une WKWebView ne reçoit pas de web push : proposer le push web
+    // ici ferait accepter une permission qui ne délivrera jamais rien, et
+    // produirait DEUX notifications le jour où WebKit activera le web push en
+    // WKWebView. Le canal natif demande la permission lui-même, à son moment.
+    // Détail : docs/modules/notifications/push-notifications.md
+    if (detectNativeIOSApp()) {
+      log('shouldShowConsentModal: false — app iOS native, le push natif prend le relais');
+      return false;
+    }
     if (!isSupported.value) {
       log('shouldShowConsentModal: false — not supported', {
         notificationInWindow: 'Notification' in window,

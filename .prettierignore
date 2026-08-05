@@ -10,3 +10,11 @@ scripts
 .idea
 .DS_Store
 
+# Assets servis tels quels : Prettier « déplie » les fichiers minifiés
+# (un seul .geojson passe de 1 à 25 000 lignes). Voir docs/guidelines/formatage-prettier.md
+public
+*.geojson
+*.min.*
+
+# Contenu vendored (skills Claude Code) : pas notre code, pas à reformater
+.agents

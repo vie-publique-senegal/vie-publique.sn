@@ -26,6 +26,10 @@ export default defineConfig({
     alias: {
       '~': fileURLToPath(new URL('./', import.meta.url)),
       '@': fileURLToPath(new URL('./', import.meta.url)),
+      // Alias Nuxt 4 du dossier partagé app/serveur. Sans lui, tout module testé
+      // qui importe `#shared/...` (ex. app/lib/voice/texte-parle.ts) échoue à la
+      // résolution, alors qu'il compile parfaitement dans l'application.
+      '#shared': fileURLToPath(new URL('./shared/', import.meta.url)),
     },
   },
 });
