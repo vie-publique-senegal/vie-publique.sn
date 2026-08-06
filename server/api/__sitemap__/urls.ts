@@ -107,6 +107,23 @@ export default defineSitemapEventHandler(async () => {
         .replace(/--+/g, '-');
     };
 
+    // Nombre de questions publiées par député : sert à n'inscrire la sous-page
+    // « questions » que pour les députés qui en ont au moins une (sinon ~165
+    // pages vides indexées = thin content). On réutilise l'index de recherche,
+    // déjà en cache : aucune requête CMS supplémentaire.
+    // Dégradation propre : en cas d'échec, on omet les sous-pages, le reste du
+    // sitemap est servi normalement.
+    const questionsByDeputy = new Map<string, number>();
+    try {
+      for (const entry of await getQuestionsSearchIndex()) {
+        if (entry.deputyId === null || entry.deputyId === undefined) continue;
+        const key = String(entry.deputyId);
+        questionsByDeputy.set(key, (questionsByDeputy.get(key) || 0) + 1);
+      }
+    } catch (error) {
+      reportServerError(error, 'sitemap/deputy-questions-count');
+    }
+
     for (const deputy of deputies) {
       const fullName = `${deputy.first_name} ${deputy.last_name}`;
       const slug = slugify(fullName);
@@ -117,6 +134,16 @@ export default defineSitemapEventHandler(async () => {
         changefreq: 'monthly',
         priority: 0.6,
       });
+
+      // Sous-page dédiée aux questions écrites du député
+      if (questionsByDeputy.get(String(deputy.id))) {
+        urls.push({
+          loc: `/assemblee-nationale/deputes/${deputy.id}/${slug}/questions`,
+          ...(lastmod && { lastmod }),
+          changefreq: 'monthly',
+          priority: 0.5,
+        });
+      }
     }
 
     // 3b. Dossiers thématiques
