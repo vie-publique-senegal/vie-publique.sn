@@ -1,7 +1,7 @@
 // Types du module Collectivités territoriales.
 //
 // Tout vient du référentiel Directus (`geo_entities` et ses satellites, les
-// mandats de `public_person_appointments`, le profil `public_entity_profiles`) :
+// mandats de `public_person_appointments`) :
 // ce qui n'est pas encore en base vaut `null` et n'est JAMAIS inventé.
 // Les noms de champs restent en français côté front ; la convention snake_case
 // anglais ne s'applique qu'aux collections CMS.

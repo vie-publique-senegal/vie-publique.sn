@@ -3,15 +3,17 @@
  *
  * Assemble, depuis le référentiel générique Directus, la liste des 558
  * collectivités de base (553 communes + 5 villes) :
- *   - `geo_entities`                    identité stable (id, slug, niveau)
+ *   - `geo_entities`                    identité stable (id, slug, niveau) et
+ *                                       contact institutionnel + visuels
  *   - `geo_entity_versions`             état EN VIGUEUR (`valid_to IS NULL`) :
  *                                       nom courant, rattachement, chef-lieu
  *   - `geo_demographic_observations`    population (RGPH 2023)
- *   - `public_entity_profiles`          contact institutionnel + visuels
  *   - `public_person_appointments`      maire en fonction (`municipality`)
  *
- * `geo_entities` est une collection GÉNÉRIQUE : aucun champ propre aux
- * collectivités n'y est lu ni attendu. Le rattachement département/région est
+ * Le contact institutionnel vivait dans une collection dédiée
+ * `public_entity_profiles`, reliée par un m2o unique. Il est désormais porté par
+ * `geo_entities` elle-même (`contact_*`, `logo`, `cover_image`) : une requête de
+ * moins, et plus de jointure à tenir. Le rattachement département/région reste
  * reconstitué en remontant la chaîne `parent` des versions en vigueur
  * (commune → arrondissement → département → région), une commune pouvant être
  * rattachée directement à son département.
@@ -22,7 +24,7 @@
  * d'elle-même dès que la donnée est saisie.
  *
  * Dégradation : chaque requête est isolée. Une panne sur la population ou les
- * profils omet la donnée, elle ne fait jamais échouer l'annuaire (cf. CLAUDE.md).
+ * mandats omet la donnée, elle ne fait jamais échouer l'annuaire (cf. CLAUDE.md).
  */
 import { readItems } from '@directus/sdk';
 import { slugifyGeoName } from '#shared/geo-name';
@@ -39,6 +41,12 @@ interface EntityRow {
   slug: string | null;
   level: string;
   name_current: string | null;
+  contact_address: string | null;
+  contact_phone: string | null;
+  contact_email: string | null;
+  contact_website: string | null;
+  logo: string | null;
+  cover_image: string | null;
 }
 interface VersionRow {
   entity: number;
@@ -50,15 +58,6 @@ interface ObservationRow {
   entity: number;
   population: number | null;
   year: number | null;
-}
-interface ProfileRow {
-  entity: number | null;
-  address: string | null;
-  phone: string | null;
-  email: string | null;
-  website: string | null;
-  logo: string | null;
-  cover_image: string | null;
 }
 interface AppointmentRow {
   municipality: number | null;
@@ -154,13 +153,24 @@ export const getCommunesGeo = defineCachedFunction(
       }
     };
 
-    const [entities, versions, observations, profiles, appointments] = await Promise.all([
+    const [entities, versions, observations, appointments] = await Promise.all([
       safeRequest<EntityRow[]>(
         'entities',
         () =>
           directus.request(
             readItems('geo_entities', {
-              fields: ['id', 'slug', 'level', 'name_current'],
+              fields: [
+                'id',
+                'slug',
+                'level',
+                'name_current',
+                'contact_address',
+                'contact_phone',
+                'contact_email',
+                'contact_website',
+                'logo',
+                'cover_image',
+              ],
               filter: { status: { _eq: 'published' } },
               limit: -1,
             }),
@@ -190,18 +200,6 @@ export const getCommunesGeo = defineCachedFunction(
               limit: -1,
             }),
           ) as Promise<ObservationRow[]>,
-        [],
-      ),
-      safeRequest<ProfileRow[]>(
-        'profiles',
-        () =>
-          directus.request(
-            readItems('public_entity_profiles', {
-              fields: ['entity', 'address', 'phone', 'email', 'website', 'logo', 'cover_image'],
-              filter: { status: { _eq: 'published' }, entity: { _nnull: true } },
-              limit: -1,
-            }),
-          ) as Promise<ProfileRow[]>,
         [],
       ),
       safeRequest<AppointmentRow[]>(
@@ -248,11 +246,6 @@ export const getCommunesGeo = defineCachedFunction(
     const observationByEntity = new Map<number, ObservationRow>();
     for (const observation of observations)
       observationByEntity.set(observation.entity, observation);
-
-    const profileByEntity = new Map<number, ProfileRow>();
-    for (const profile of profiles) {
-      if (profile.entity) profileByEntity.set(profile.entity, profile);
-    }
 
     const mayorByEntity = new Map<number, AppointmentRow>();
     const clerkByEntity = new Map<number, AppointmentRow>();
@@ -323,7 +316,7 @@ export const getCommunesGeo = defineCachedFunction(
 
     return bases.map((base, index) => {
       const observation = observationByEntity.get(base.entity.id);
-      const profile = profileByEntity.get(base.entity.id);
+      const entity = base.entity;
 
       return {
         id: base.entity.id,
@@ -341,25 +334,29 @@ export const getCommunesGeo = defineCachedFunction(
         maire: toOfficial(mayorByEntity.get(base.entity.id)),
         secretaireMunicipal: toOfficial(clerkByEntity.get(base.entity.id)),
         contact:
-          profile && (profile.address || profile.phone || profile.email || profile.website)
+          entity.contact_address ||
+          entity.contact_phone ||
+          entity.contact_email ||
+          entity.contact_website
             ? {
-                adresse: profile.address ?? null,
-                telephone: profile.phone ?? null,
-                email: profile.email ?? null,
-                siteWeb: profile.website ?? null,
+                adresse: entity.contact_address ?? null,
+                telephone: entity.contact_phone ?? null,
+                email: entity.contact_email ?? null,
+                siteWeb: entity.contact_website ?? null,
               }
             : null,
-        logo: profile?.logo ?? null,
-        photoCouverture: profile?.cover_image ?? null,
+        logo: entity.logo ?? null,
+        photoCouverture: entity.cover_image ?? null,
       } satisfies CommuneGeo;
     });
   },
   {
     // Suffixe de version : le cache SWR persiste sur disque entre deux
-    // démarrages (cf. CLAUDE.md). L'ajout de `departementSlug` change la forme
-    // du payload — sans bump, les pages départements liraient des lignes
-    // périmées dépourvues du champ.
-    name: 'collectivites-communes-geo-v4',
+    // démarrages (cf. CLAUDE.md). La forme du payload n'a pas changé avec la
+    // reprise du contact sur `geo_entities`, mais sa SOURCE si : sans bump, une
+    // instance déjà chaude continuerait de servir les valeurs lues dans
+    // `public_entity_profiles`, collection désormais supprimée.
+    name: 'collectivites-communes-geo-v5',
     maxAge: process.env.NODE_ENV === 'production' ? 30 * 60 : 0,
     getKey: () => 'all',
   },

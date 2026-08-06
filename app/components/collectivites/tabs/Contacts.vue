@@ -1,6 +1,6 @@
 <!--
-  Onglet « Contacts » : contact INSTITUTIONNEL de la mairie, issu du profil
-  d'entité (`public_entity_profiles`). Rendu seulement si au moins un canal
+  Onglet « Contacts » : contact INSTITUTIONNEL de la mairie, porté par
+  `geo_entities` (champs `contact_*`). Rendu seulement si au moins un canal
   existe (cf. communeTabs). Les coordonnées personnelles des élus, elles, ne
   sont jamais publiées ici.
 -->

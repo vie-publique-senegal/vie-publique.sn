@@ -36,18 +36,19 @@ ne contient aucune géométrie.
 
 | Collection Directus | Ce que le module y lit |
 | --- | --- |
-| `geo_entities` | identité stable : `id`, `slug`, `level`, `name_current` |
+| `geo_entities` | identité stable (`id`, `slug`, `level`, `name_current`) et contact institutionnel (`contact_address`, `contact_phone`, `contact_email`, `contact_website`, `logo`, `cover_image`) |
 | `geo_entity_versions` | état **en vigueur** (`valid_to IS NULL`) : nom courant, `parent`, `chef_lieu` |
 | `geo_demographic_observations` | population et année (RGPH 2023) |
-| `public_entity_profiles` | contact institutionnel (adresse, téléphone, e-mail, site), logo, photo de couverture |
 | `public_person_appointments` | maire et secrétaire municipal en fonction (`is_current`, champ `municipality`) |
 
 Trois règles structurantes, à ne pas contourner :
 
-**`geo_entities` est générique.** Elle sert à d'autres modules : on ne lui ajoute
-aucun champ propre aux collectivités. Tout besoin spécifique passe par une
-collection reliée — c'est la raison d'être de `public_entity_profiles`, qui porte
-le contact et les visuels de la mairie sans toucher au référentiel.
+**Le contact institutionnel est porté par `geo_entities`.** Il vivait dans une
+collection dédiée `public_entity_profiles`, reliée par un m2o unique ; celle-ci a
+été supprimée et ses valeurs reprises dans les champs `contact_*` de l'entité.
+Conséquence à connaître : `geo_entities` n'est plus une collection strictement
+générique — elle porte des champs qui ne concernent que les 558 collectivités de
+base, nuls sur les 187 autres entités.
 
 **Le référentiel est temporel.** Le nom et le rattachement d'une entité vivent
 dans `geo_entity_versions`, pas sur `geo_entities`. Toute lecture de l'état
