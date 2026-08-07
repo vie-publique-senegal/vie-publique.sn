@@ -20,11 +20,24 @@ export interface CommuneResponsable {
   depuis: string | null;
 }
 
+/**
+ * Compte officiel d'une collectivité sur un réseau social.
+ * `plateforme` est l'identifiant stable du repeater `geo_entities.social_networks`
+ * (`facebook`, `twitter`, `linkedin`, `tiktok`, `youtube`, `instagram`) — une
+ * plateforme inconnue s'affiche quand même, avec son identifiant en guise de nom.
+ */
+export interface CommuneReseauSocial {
+  plateforme: string;
+  url: string;
+}
+
 export interface CommuneContact {
   adresse: string | null;
   telephone: string | null;
   email: string | null;
   siteWeb: string | null;
+  /** Vide quand aucun compte n'est renseigné — jamais `null`. */
+  reseauxSociaux: CommuneReseauSocial[];
 }
 
 export interface CommuneGeo {

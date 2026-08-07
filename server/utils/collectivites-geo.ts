@@ -47,6 +47,8 @@ interface EntityRow {
   contact_website: string | null;
   logo: string | null;
   cover_image: string | null;
+  /** Repeater Directus : json libre en base, à assainir avant usage. */
+  social_networks: { platform?: string | null; url?: string | null }[] | null;
 }
 interface VersionRow {
   entity: number;
@@ -170,6 +172,7 @@ export const getCommunesGeo = defineCachedFunction(
                 'contact_website',
                 'logo',
                 'cover_image',
+                'social_networks',
               ],
               filter: { status: { _eq: 'published' } },
               limit: -1,
@@ -314,9 +317,24 @@ export const getCommunesGeo = defineCachedFunction(
     const slugs = buildPublicSlugs(bases);
     const departementSlugs = buildDepartementSlugs(bases);
 
+    /**
+     * Repeater json → liste propre. Le champ est du json libre côté Directus :
+     * on ne garde que les lignes portant plateforme ET url http(s), on n'invente
+     * rien. Une plateforme hors menu (`platform` inconnu) passe telle quelle —
+     * c'est au rendu de savoir l'afficher sans icône.
+     */
+    const toReseauxSociaux = (entity: EntityRow) =>
+      (Array.isArray(entity.social_networks) ? entity.social_networks : [])
+        .map((row) => ({
+          plateforme: row?.platform?.trim().toLowerCase() ?? '',
+          url: row?.url?.trim() ?? '',
+        }))
+        .filter((row) => row.plateforme && /^https?:\/\//i.test(row.url));
+
     return bases.map((base, index) => {
       const observation = observationByEntity.get(base.entity.id);
       const entity = base.entity;
+      const reseauxSociaux = toReseauxSociaux(entity);
 
       return {
         id: base.entity.id,
@@ -337,12 +355,14 @@ export const getCommunesGeo = defineCachedFunction(
           entity.contact_address ||
           entity.contact_phone ||
           entity.contact_email ||
-          entity.contact_website
+          entity.contact_website ||
+          reseauxSociaux.length
             ? {
                 adresse: entity.contact_address ?? null,
                 telephone: entity.contact_phone ?? null,
                 email: entity.contact_email ?? null,
                 siteWeb: entity.contact_website ?? null,
+                reseauxSociaux,
               }
             : null,
         logo: entity.logo ?? null,
@@ -352,11 +372,10 @@ export const getCommunesGeo = defineCachedFunction(
   },
   {
     // Suffixe de version : le cache SWR persiste sur disque entre deux
-    // démarrages (cf. CLAUDE.md). La forme du payload n'a pas changé avec la
-    // reprise du contact sur `geo_entities`, mais sa SOURCE si : sans bump, une
-    // instance déjà chaude continuerait de servir les valeurs lues dans
-    // `public_entity_profiles`, collection désormais supprimée.
-    name: 'collectivites-communes-geo-v5',
+    // démarrages (cf. CLAUDE.md). v6 : `contact.reseauxSociaux` s'ajoute au
+    // payload — sans bump, une instance chaude servirait des contacts sans le
+    // champ et l'onglet ne saurait pas l'afficher.
+    name: 'collectivites-communes-geo-v6',
     maxAge: process.env.NODE_ENV === 'production' ? 30 * 60 : 0,
     getKey: () => 'all',
   },
