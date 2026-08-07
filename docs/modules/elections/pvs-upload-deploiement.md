@@ -27,23 +27,17 @@ Champs minimums à vérifier :
 
 ### Structure de la collection `election_pvs`
 
-La structure complète (métadonnées, champs, relations, conditions) est maintenue dans le dépôt dédié Directus :
+La structure complète (métadonnées, champs, relations, conditions) est versionnée dans [`elections/schemas/election_pvs.json`](https://github.com/vie-publique-senegal/vpsn-scripts/tree/main/elections/schemas), exporté du dev, et se pose **par script** avec les autres collections du module — séquence complète dans le [RUNBOOK](https://github.com/vie-publique-senegal/vpsn-scripts/blob/main/elections/RUNBOOK.md).
 
-- https://github.com/vie-publique-senegal/vpsn-directus-collections/blob/main/election_pvs_schema.json
-
-Procédure recommandée :
-
-1. Télécharger le JSON de schéma depuis le lien ci-dessus.
-2. Ouvrir Directus avec l'extension `Schema Management Module`.
-3. Importer le fichier JSON dans le module.
-4. Appliquer le schéma puis vérifier les permissions du rôle `Observateur electoral`.
-
-Cette approche évite les écarts de configuration manuelle entre dev, staging et prod.
+> L'ancienne procédure — télécharger le JSON depuis `vpsn-directus-collections` et l'importer à la main via l'extension `Schema Management Module` — est abandonnée : c'est elle qui laissait diverger dev, staging et prod. L'extension n'est plus un prérequis.
 
 ### Permissions du rôle `Observateur electoral`
 
-Le rôle `Observateur electoral` doit être associé à la permission/policy `Upload PVs`.
-Ce sont les droits configurés dans `Upload PVs` qui doivent porter les permissions sur les collections ci-dessous.
+Le rôle, la policy `Upload PV` et ses permissions se posent **par script** — c'était la dernière étape manuelle du module, et une permission oubliée ne se voit pas : les 403 de Directus sont avalés par les handlers du front, la cascade de filtres se vide sans message d'erreur.
+
+Le script vit dans [`elections/`](https://github.com/vie-publique-senegal/vpsn-scripts/tree/main/elections) — voir le [RUNBOOK](https://github.com/vie-publique-senegal/vpsn-scripts/blob/main/elections/RUNBOOK.md).
+
+La matrice ci-dessous est la déclaration versionnée du script (`elections/schema-acces-pv.mjs`) : elle fait foi, et ce tableau la documente.
 
 - `elections` : lecture
 - `geo_entities`, `geo_entity_versions`, `geo_demographic_observations`, `election_constituencies`, `election_polling_stations` : lecture (source des filtres géographiques National — région/département/commune)

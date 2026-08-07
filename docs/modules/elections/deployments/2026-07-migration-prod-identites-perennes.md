@@ -7,7 +7,9 @@
 
 La refonte du modèle de données électoral sépare l'identité pérenne de la donnée par scrutin : une **personne** (`election_persons`) porte l'identité d'un candidat à travers les élections, une **entité politique** (`election_political_entities`) porte celle d'une coalition/d'un parti - la candidature (`election_candidates`) et la coalition (`election_coalition`) deviennent des **participations** à un scrutin. Le code applicatif lit l'identité via ces collections pérennes. Ce document décrit la mise à niveau de la prod, en 5 phases ordonnées : chaque phase est un prérequis de la suivante.
 
-**Convention schéma** : les nouvelles collections se créent par **import de schéma JSON** avec le module **Schema Management Module** (marketplace Directus). Les champs à ajouter aux collections existantes suivent une **procédure manuelle pas-à-pas** (section 3).
+**Convention schéma** : le schéma est **scripté** et versionné dans le repo [vpsn-scripts](https://github.com/vie-publique-senegal/vpsn-scripts) — `elections/schemas/` pour les collections, `elections/schema-patches/` pour les champs ajoutés aux collections existantes. La séquence exécutable est le [RUNBOOK](https://github.com/vie-publique-senegal/vpsn-scripts/blob/main/elections/RUNBOOK.md) ; la section 3 ci-dessous en documente le *contenu* et le *pourquoi*.
+
+> Ce document a été rédigé quand les collections s'importaient à la main via le *Schema Management Module* et que les champs se créaient au clavier dans l'admin. Ce n'est plus la procédure : les définitions sont exportées du dev et posées par script, précisément parce que la saisie manuelle avait fait diverger dev, staging et prod. Les descriptions de champs de la section 3 restent valables comme **spécification** — elles décrivent ce que le correctif versionné contient.
 
 ### État de la prod constaté (audit du 2026-07-06)
 
@@ -23,15 +25,15 @@ La refonte du modèle de données électoral sépare l'identité pérenne de la 
 
 ## 3. Phase 1 - Schéma
 
-### 3.1 Import des nouvelles collections (Schema Management Module)
+### 3.1 Import des nouvelles collections
 
-Importer, dans cet ordre, les schémas JSON (fichiers maintenus dans un repo dédié) :
+Les collections se posent par script, depuis [`elections/`](https://github.com/vie-publique-senegal/vpsn-scripts/tree/main/elections) du repo vpsn-scripts — commandes et attendus dans le [RUNBOOK](https://github.com/vie-publique-senegal/vpsn-scripts/blob/main/elections/RUNBOOK.md).
 
-| Ordre | Collection | Fichier JSON |
-|-------|------------|--------------|
-| 1 | `election_persons` | [election_persons.json](https://github.com/vie-publique-senegal/vpsn-directus-collections/blob/main/election_persons.json) |
-| 2 | `election_political_entities` | [election_political_entities.json](https://github.com/vie-publique-senegal/vpsn-directus-collections/blob/main/election_political_entities.json) |
-| 3 | `election_programs` | [election_programs.json](https://github.com/vie-publique-senegal/vpsn-directus-collections/blob/main/election_programs.json) |
+Les collections concernées ici sont `election_persons`, `election_political_entities` et
+`election_programs` (le même dossier porte aussi celles du volet 2 — l'import est commun,
+il crée ce qui manque et rien d'autre). **Aucun ordre à respecter** : le script crée toutes
+les collections d'abord, puis toutes les relations, ce qui supprime la contrainte d'ordre
+des clés étrangères qui gouvernait l'import manuel.
 
 Notes :
 
@@ -39,9 +41,16 @@ Notes :
 - l'alias O2M `participations` sur `election_political_entities` n'apparaîtra qu'après la création du champ `political_entity` (3.2) - c'est normal ;
 - il n'existe pas d'alias `programs` sur l'entité : les programmes sont rattachés à la **participation** (`election_coalition`).
 
-### 3.2 Champs à créer manuellement sur les collections existantes
+### 3.2 Champs ajoutés aux collections existantes
 
-Dans l'admin prod : Settings → Data Model → collection → « Create Field ». **Avant chaque création**, vérifier que le champ n'existe pas déjà
+Les champs sont posés par script à partir du correctif versionné dans [`elections/schema-patches/`](https://github.com/vie-publique-senegal/vpsn-scripts/tree/main/elections/schema-patches) — voir le [RUNBOOK](https://github.com/vie-publique-senegal/vpsn-scripts/blob/main/elections/RUNBOOK.md).
+
+Le correctif est **recopié du dev** : les réglages ci-dessous décrivent ce qu'il contient,
+ils n'ont plus à être saisis. Un champ déjà présent est signalé et laissé en place. Le
+script refuse de tourner si la collection cible n'existe pas — un correctif complète, il
+ne crée pas.
+
+Ce que le correctif pose :
 
 **`election_candidates.person`** (créer en premier, après 3.1) :
 
@@ -121,7 +130,17 @@ Manuellement dans l'admin prod.
 
 **Coalitions** - même traitement : `name`, `acronym`, `type`, `description` en **lecture seule** (l'identité s'édite sur l'entité politique) ; `political_entity` en **Required** ; `logo` et `color` restent éditables (overrides d'affichage propres à la participation, prioritaires sur ceux de l'entité).
 
-## 7. Phase 5 - Suppression des champs legacy (manuelle, après déploiement et rodage)
+## 7. Phase 5 - Suppression des champs legacy (scriptée, après déploiement et rodage)
+
+> **Cette phase fait partie de la migration** : tant qu'elle n'est pas faite, l'environnement n'est pas migré. Elle est scriptée depuis le 07/08/2026 :
+>
+> Le script et la procédure sont dans [`elections/`](https://github.com/vie-publique-senegal/vpsn-scripts/tree/main/elections) — voir la section « nettoyage legacy » du [RUNBOOK](https://github.com/vie-publique-senegal/vpsn-scripts/blob/main/elections/RUNBOOK.md), suivie du contrôle de conformité qui doit annoncer 0 écart.
+>
+> La liste des champs n'est pas écrite dans le script : elle est **calculée** en comparant l'environnement au **dev**, qui fait référence — le schéma valide est celui du dev. Le script exige un périmètre explicite et affiche chaque colonne avant d'y toucher.
+>
+> ⚠️ **L'ordre n'est pas négociable** : les backfills lisent ces champs (`biography` alimente `short_bio` de la person, `region`/`parent` la hiérarchie des circonscriptions) et le code déployé doit avoir cessé de les lire. Les supprimer avant, c'est perdre l'identité des candidats et des coalitions sans destination de repli.
+>
+> Joué sur staging le 07/08/2026 : 18 champs retirés, conformité au dev vérifiée à 0 écart.
 
 **Préconditions** : phases 1 à 4 faites, code déployé et rodé - l'ancien code lit encore ces champs, ne rien supprimer avant le déploiement. Sauvegarde de la base immédiatement avant : cette phase est la **seule non réversible**. Suppression via l'admin (Settings → Data Model), un champ à la fois :
 

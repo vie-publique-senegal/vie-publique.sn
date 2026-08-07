@@ -71,9 +71,18 @@ Ordre strict A → B → C → D → E → F. Chaque phase est validée avant la
 
 ## 6. Phase A — Schéma
 
-### 6.1 Import des 7 collections (Schema Management Module)
+### 6.1 Import des 7 collections
 
-Importer les schémas JSON, **dans cet ordre** (dépendances de FK) :
+Le référentiel géographique arrive par sa chaîne dédiée (`ref-geo`), les collections électorales par [`elections/schemas/`](https://github.com/vie-publique-senegal/vpsn-scripts/tree/main/elections/schemas) — commandes et attendus dans le [RUNBOOK](https://github.com/vie-publique-senegal/vpsn-scripts/blob/main/elections/RUNBOOK.md).
+
+> **Plus d'ordre à respecter.** Le script crée toutes les collections d'abord, puis toutes
+> les relations : la contrainte de dépendance des clés étrangères qui gouvernait l'import
+> manuel un-fichier-à-la-fois n'existe plus. Le tableau ci-dessous reste utile comme
+> **inventaire de ce que chaque collection porte**, plus comme séquence à suivre.
+>
+> L'import JSON via le *Schema Management Module* depuis `vpsn-directus-collections` est
+> abandonné : les définitions sont exportées du dev et versionnées dans
+> [vpsn-scripts](https://github.com/vie-publique-senegal/vpsn-scripts).
 
 | Ordre | Collection | Fichier JSON | Points notables |
 |-------|------------|--------------|-----------------|
@@ -92,9 +101,16 @@ Notes :
 
 Vérifications après import : toutes les collections existent et sont vides ; chaque FK a un `schema` non nul (contrainte SQL réelle, pas une simple meta) ; le front prod est inchangé.
 
-### 6.2 Champs manuels sur les collections existantes
+### 6.2 Champs ajoutés aux collections existantes
 
-Sur `elections` (Settings → Data Model) :
+Les champs viennent du correctif versionné dans [`elections/schema-patches/`](https://github.com/vie-publique-senegal/vpsn-scripts/tree/main/elections/schema-patches) — voir le [RUNBOOK](https://github.com/vie-publique-senegal/vpsn-scripts/blob/main/elections/RUNBOOK.md).
+
+Le correctif est recopié du dev ; les réglages ci-dessous décrivent ce qu'il contient.
+**Le piège de `geo_entity` est réglé d'origine** : la relation est créée en une fois avec
+son bloc de schéma complet, donc avec `on delete RESTRICT` — c'est la modification
+*partielle* d'une relation existante qui supprimait la contrainte, pas sa création.
+
+Sur `elections` :
 
 - `electoral_file_national` : M2O nullable → `election_electoral_files`, on delete SET NULL ;
 - `electoral_file_diaspora` : idem.
@@ -106,9 +122,16 @@ Sur `election_constituencies` :
 
 ### 6.3 Levée de la contrainte d'unicité sur `election_constituencies.name`
 
+La levée se fait par script — voir [`elections/`](https://github.com/vie-publique-senegal/vpsn-scripts/tree/main/elections) et le [RUNBOOK](https://github.com/vie-publique-senegal/vpsn-scripts/blob/main/elections/RUNBOOK.md).
+
+Le script contrôle après coup que le champ n'est plus marqué unique et s'arrête sinon.
+
+
 La prod porte une contrainte SQL d'unicité sur `name`. Les 553 communes comportent des homonymes inter-départements (Mlomp, Médina Gounass, Dinguiraye, Missirah, Vélingara…) : **la phase B échouerait**. Vérifier ensuite que le champ n'est plus marqué unique et que l'admin accepte toujours l'édition d'un nom. L'unicité de l'identité publique est désormais portée par `slug` (unique, posé en phase B).
 
 ### 6.4 Permissions
+
+Les droits de lecture du frontend se posent par script — liste des collections et commande dans le [RUNBOOK](https://github.com/vie-publique-senegal/vpsn-scripts/blob/main/elections/RUNBOOK.md).
 
 Donner au rôle public (celui qui sert les API du site) la **lecture** sur les nouvelles collections — dont `geo_entities`, `geo_entity_versions` et `geo_demographic_observations`, les trois que l'instantané serveur interroge ; `geo_entity_names`, `geo_events` et `geo_event_entities` ne sont lues par aucun endpoint, à l'identique des permissions d'`election_constituencies`. Sans cela, les endpoints renverront des réponses vides sans erreur visible après la bascule (les erreurs 403 de Directus sont avalées par les handlers). Vérification : un GET anonyme sur chaque collection répond 200.
 
@@ -248,7 +271,10 @@ Après une période d'observation de la phase E sans régression :
 
 1. Export de sauvegarde des 608 lignes `election_constituencies` (avec `region` et `parent`).
 2. Vérifier qu'aucun code déployé ne lit plus `region` ni `parent` (le code de la branche ne les référence plus).
-3. Supprimer les 2 champs `region` et `parent` de `election_constituencies` (admin Directus, Settings → Data Model).
+3. Supprimer les champs legacy **par script** — `region` et `parent` sont retirés en même temps que ceux du volet 1, la suppression étant pilotée par la comparaison au dev. Procédure dans [`elections/`](https://github.com/vie-publique-senegal/vpsn-scripts/tree/main/elections), section « nettoyage legacy » du [RUNBOOK](https://github.com/vie-publique-senegal/vpsn-scripts/blob/main/elections/RUNBOOK.md).
+4. **Contrôle de fin de migration** : la comparaison au dev doit annoncer **0 écart** — le schéma valide est celui du dev.
+
+> Les deux volets partagent donc une seule phase de nettoyage, à jouer une fois les deux terminés et le code rodé. Voir la phase 5 du [plan identités pérennes](./2026-07-migration-prod-identites-perennes.md#7-phase-5---suppression-des-champs-legacy-scriptée-après-déploiement-et-rodage).
 
 Le décommissionnement des collections `carte`, `election_map_national` et `election_map_diaspora` n'est **pas** couvert par ce plan : il fera l'objet d'une procédure dédiée (vérification zéro lecture résiduelle par grep et logs, sauvegarde complète, puis suppression), après une période d'observation plus longue.
 
