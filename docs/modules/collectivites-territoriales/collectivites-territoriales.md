@@ -84,14 +84,25 @@ d'un build à l'autre.
 
 ## D'où viennent les données
 
-Le peuplement de Directus se fait hors de ce dépôt : le référentiel géographique
-(entités, versions, rattachements, populations RGPH) et le répertoire national
-des maires et secrétaires municipaux sont préparés, rapprochés du référentiel par
-`entity_id`, puis chargés en base sous forme de personnes et de mandats.
+Le peuplement de Directus se fait hors de ce dépôt, dans
+[**vpsn-scripts**](https://github.com/vie-publique-senegal/vpsn-scripts) — c'est
+là que vivent le schéma des collections, les scripts d'import et les décisions
+d'arbitrage :
+
+| Où | Quoi |
+| --- | --- |
+| [`ref-geo/`](https://github.com/vie-publique-senegal/vpsn-scripts/tree/main/ref-geo) | le référentiel géographique : extraction des décrets, entités, versions, rattachements, populations RGPH-5. Son [RUNBOOK](https://github.com/vie-publique-senegal/vpsn-scripts/blob/main/ref-geo/RUNBOOK.md) charge un environnement de zéro |
+| [`collectivites/`](https://github.com/vie-publique-senegal/vpsn-scripts/tree/main/collectivites) | le répertoire national des maires et secrétaires municipaux, nettoyé et rapproché du référentiel par `entity_id` ; les arbitrages de graphie ; le [RUNBOOK](https://github.com/vie-publique-senegal/vpsn-scripts/blob/main/collectivites/RUNBOOK.md) du module |
+| [`tools/directus-schema/`](https://github.com/vie-publique-senegal/vpsn-scripts/tree/main/tools/directus-schema) | le schéma Directus lui-même, exporté du dev et appliqué par script vers staging et prod — aucune manipulation dans l'interface |
+
+Les personnes et les mandats ne sont pas créés par ces scripts : `vpsn-scripts`
+s'arrête à la production du lot, que le workflow n8n de traitement des
+personnalités publiques ingère avec son propre dédoublonnage.
 
 Le module, lui, n'ingère rien : **il lit.** Une correction de donnée se fait dans
 Directus (ou par un nouveau chargement) et se voit sur le site à l'expiration du
-cache.
+cache. Un champ qui manque au modèle, en revanche, se règle dans `vpsn-scripts` :
+le schéma n'est jamais modifié depuis ce dépôt.
 
 ## Couche serveur
 
@@ -141,7 +152,7 @@ compteur `completude.avecMaire` qui dit la vérité.
 sans arrondir ni masquer les trous.
 
 **Dégradation.** Chaque requête Directus est isolée dans un `safeRequest` : une
-panne sur la population ou sur les profils omet la donnée concernée et remonte
+panne sur la population ou sur les mandats omet la donnée concernée et remonte
 dans `reportServerError`, elle ne fait jamais échouer l'annuaire.
 
 ## Plan d'URLs
@@ -486,8 +497,18 @@ prématuré serait perdu.
 
 **Ajouter une donnée à la fiche** — une requête Directus de plus dans le
 `Promise.all` de `collectivites-geo.ts` (dans un `safeRequest`, comme les
-autres), un champ sur `CommuneGeo`, puis l'affichage. Ne jamais ajouter le champ
-sur `geo_entities` : passer par une collection reliée.
+autres), un champ sur `CommuneGeo`, puis l'affichage. Le champ lui-même se pose
+dans [vpsn-scripts](https://github.com/vie-publique-senegal/vpsn-scripts), jamais
+depuis ce dépôt.
+
+Où le poser demande un arbitrage. `geo_entities` porte déjà le contact
+institutionnel, donc la règle n'est plus « jamais sur `geo_entities` » — mais
+elle reste partagée avec les autres modules, et tout champ qu'on y ajoute est nul
+sur les 187 entités qui ne sont ni commune ni ville. Une donnée propre aux
+collectivités et volumineuse (budget, conseil municipal) appelle une collection
+reliée ; une poignée de champs que l'éditeur saisit dans la même fiche peut vivre
+sur l'entité. Dans les deux cas, la décision se documente dans
+[`ref-geo/docs/modele-de-donnees.md`](https://github.com/vie-publique-senegal/vpsn-scripts/blob/main/ref-geo/docs/modele-de-donnees.md).
 
 **Ajouter un onglet** (budget, conseil municipal, projets, documents…) — quatre
 étapes, détaillées en tête de `communeTabs.ts` : exposer la donnée côté serveur,
