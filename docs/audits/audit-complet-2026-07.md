@@ -353,7 +353,7 @@ Routes dynamiques absentes de `server/api/__sitemap__/urls.ts` :
 ### SEO-4 — Pages sans meta + fichier avec espace
 
 17 pages sans `useSeoMeta` ni `useHead`, dont indexables : `assemblee-nationale/bureau.vue`, `groupes/index.vue`, `groupes/[id]/[name].vue`, 7 pages `elections/legislatives/*`, `menu.vue`.
-⚠️ **`app/pages/chat-bot/ [id].vue` — nom de fichier avec une ESPACE en tête** (bug de route probable, à renommer).
+~~⚠️ `app/pages/chat-bot/ [id].vue` — nom de fichier avec une ESPACE en tête~~ → ✅ **réglé (2026-08)** : la maquette statique `/chat-bot` a été supprimée entièrement (pages, composants `AiChat/`, layout `chat`).
 
 ### SEO-5 — Restes du TODO SEO
 
@@ -557,7 +557,9 @@ Aussi : `rate-limit.ts:29` se fie au premier élément de `x-forwarded-for` (spo
 
 ### PERF-9 — Shiki surdimensionné
 
-`nuxt.config.ts:805-831` : 18 langages de highlight pour le chatbot → chunk shiki 225 KB + WASM oniguruma inliné en base64 dans un chunk de 607 KB. **Fix** : réduire à 4-5 langages (ts, js, json, bash, html).
+~~`nuxt.config.ts:805-831` : 18 langages de highlight pour le chatbot → chunk shiki 225 KB + WASM oniguruma inliné en base64 dans un chunk de 607 KB.~~
+
+✅ **Réglé (2026-08)** : le seul consommateur de `@nuxtjs/mdc` était `AiChat/MessageBubble.vue` (maquette statique). Maquette supprimée → module `@nuxtjs/mdc` désinstallé et bloc `mdc` retiré de `nuxt.config.ts`. Plus de Shiki ni de WASM oniguruma dans le bundle.
 
 ### PERF-10 — Endpoints non cachés/non bornés
 
@@ -571,7 +573,7 @@ Aussi : `rate-limit.ts:29` se fie au premier élément de `x-forwarded-for` (spo
 
 ### DOC-6 — Dépendances à nettoyer
 
-- `@ai-sdk/vue` : **aucun import** dans le projet → supprimer.
+- ~~`@ai-sdk/vue` : **aucun import** dans le projet → supprimer.~~ ✅ Supprimé (2026-08), avec `@nuxtjs/mdc`.
 - `@types/marked@5` : obsolète (marked v15 embarque ses types) → supprimer.
 - `@nuxt/eslint` : → devDependencies.
 - `execa` (devDeps) : orphelin depuis la suppression de `scripts/`.

@@ -5,15 +5,27 @@ import { useNotifications } from './composables/useNotifications';
 // Push Notifications
 const { initState, setupForegroundHandler, validateAndRefreshToken } = useNotifications();
 
-const isChatPage = ref(useRoute().path === '/chatbot');
-const isFullscreenPage = ref(
-  useRoute().path.startsWith('/carte/') || useRoute().path.startsWith('/dashboard/'),
-);
+// Le chat historique garde la mise en page du site, mais sans la nav mobile fixe,
+// qui mangerait la zone de saisie.
+const isChatRoute = (path: string) => path === '/chatbot';
+
+// Le banc d'essai /chat/** est en PLEIN ÉCRAN (comme /carte et /dashboard) : une
+// conversation doit tenir dans la fenêtre, saisie comprise. Dans le conteneur du
+// site, la bannière appli et le pied de page repoussaient le champ hors de l'écran
+// sur mobile.
+// (/chat/liste reste une page normale du site : c'est une liste, pas une conversation.)
+const isFullscreenRoute = (path: string) =>
+  path.startsWith('/carte/') ||
+  path.startsWith('/dashboard/') ||
+  (path.startsWith('/chat/') && path !== '/chat/liste');
+
+const isChatPage = ref(isChatRoute(useRoute().path));
+const isFullscreenPage = ref(isFullscreenRoute(useRoute().path));
 watch(
   () => useRoute().path,
   (newPath) => {
-    isChatPage.value = newPath === '/chatbot';
-    isFullscreenPage.value = newPath.startsWith('/carte/') || newPath.startsWith('/dashboard/');
+    isChatPage.value = isChatRoute(newPath);
+    isFullscreenPage.value = isFullscreenRoute(newPath);
   },
 );
 const links = [

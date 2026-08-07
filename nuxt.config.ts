@@ -9,6 +9,21 @@ const buildTime = new Date().toISOString();
 const gitCommit =
   process.env.VERCEL_GIT_COMMIT_SHA || process.env.GITHUB_SHA || process.env.GIT_COMMIT || null; // null au lieu de 'unknown' pour les conditions
 
+// Origine de l'API RAG (banc d'essai chat) : le navigateur l'appelle EN DIRECT,
+// il faut donc l'autoriser dans `connect-src`. Sur *.vie-publique.sn elle est déjà
+// couverte par l'entrée générique ; cet ajout explicite couvre le cas d'une URL
+// hors domaine, pour qu'un changement d'hôte ne casse pas la CSP en silence.
+// ⚠️ La CSP est figée AU BUILD : changer cette URL en production exige un REBUILD,
+// pas seulement une variable d'environnement.
+let ragApiOrigin: string | null = null;
+try {
+  if (process.env.NUXT_PUBLIC_RAG_API_URL) {
+    ragApiOrigin = new URL(process.env.NUXT_PUBLIC_RAG_API_URL).origin;
+  }
+} catch {
+  console.warn('[config] NUXT_PUBLIC_RAG_API_URL invalide — ignorée dans la CSP');
+}
+
 const securityConfig =
   process.env.NODE_ENV === 'production'
     ? {
@@ -54,6 +69,8 @@ const securityConfig =
               'https://*.ingest.de.sentry.io',
               // Cloudflare Web Analytics (beacon injecté par le proxy Cloudflare)
               'https://cloudflareinsights.com',
+              // API RAG appelée en direct par le navigateur (banc d'essai chat)
+              ...(ragApiOrigin ? [ragApiOrigin] : []),
             ],
             'script-src': [
               "'self'",
@@ -124,6 +141,21 @@ const securityConfig =
           strictTransportSecurity: {
             maxAge: 31536000,
             includeSubdomains: true,
+          },
+          // Rendu EXPLICITE plutôt que laissé au défaut de nuxt-security : sans
+          // cette ligne sous les yeux, on ne devine pas que le site interdit le
+          // micro sur TOUTES ses pages (`microphone=()`). Le vocal du chat est
+          // ré-autorisé pour `/chat/**` SEULEMENT, via `routeRules` — voir
+          // docs/modules/chat/voix.md § Permissions-Policy.
+          // ⚠️ En dev, `headers: false` : cet en-tête n'existe pas. Un micro qui
+          // marche en local ne prouve donc RIEN pour la production ; la seule
+          // vérification valable est `npm run build && npm run preview`.
+          permissionsPolicy: {
+            camera: [],
+            'display-capture': [],
+            fullscreen: [],
+            geolocation: [],
+            microphone: [],
           },
         },
         rateLimiter: {
@@ -223,6 +255,22 @@ export default defineNuxtConfig({
     },
     // Pages carte : désactiver SSR (WebGL client-only)
     '/carte/**': { ssr: false },
+    // Banc d'essai chat : /chat pointe sur la variante par défaut.
+    // ⚠️ 302 et NON 301 : la variante par défaut changera au fil des POC, et un
+    // 301 resterait caché indéfiniment dans le navigateur des testeurs. Le jour
+    // du lancement public, /chat deviendra une page à part entière.
+    // Cible dupliquée de CHAT_DEFAULT_VARIANT (app/config/chat-variants.ts) :
+    // nuxt.config ne peut pas importer de module applicatif.
+    '/chat': { redirect: { to: '/chat/gemini', statusCode: 302 } },
+    // Micro ré-autorisé sur les seules pages de conversation. Le reste du site
+    // conserve `microphone=()`. Sans cette exception, le bouton micro
+    // fonctionnerait en dev (où les en-têtes sont désactivés) et serait mort en
+    // production — le pire des scénarios, parce qu'il ne se voit qu'après coup.
+    // `(self)` n'accorde rien : il rend seulement la demande de permission
+    // POSSIBLE. L'utilisateur doit toujours l'accorder dans son navigateur.
+    '/chat/**': {
+      security: { headers: { permissionsPolicy: { microphone: ['self'] } } },
+    },
     // Redirections SEO
     '/budget': { redirect: { to: '/budget-senegal', statusCode: 301 }, prerender: true },
     '/budget/**': { redirect: { to: '/budget-senegal', statusCode: 301 }, prerender: true },
@@ -469,7 +517,6 @@ export default defineNuxtConfig({
     },
     '@vite-pwa/nuxt',
     '@vueuse/nuxt',
-    '@nuxtjs/mdc',
     'nuxt-security',
     '@sentry/nuxt/module',
   ],
@@ -515,6 +562,16 @@ export default defineNuxtConfig({
       firebaseAppId: process.env.NUXT_PUBLIC_FIREBASE_APP_ID,
       firebaseMeasurementId: process.env.NUXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
       firebaseVapidKey: process.env.NUXT_PUBLIC_FIREBASE_VAPID_KEY,
+      // Banc d'essai chat — chaque URL de backend est une variable de config.
+      // Appelée EN DIRECT par le navigateur (pas de proxy Nitro) : le tenant est
+      // résolu depuis l'Origin et le quota est par IP. Voir docs/modules/chat/.
+      ragApiUrl: process.env.NUXT_PUBLIC_RAG_API_URL || 'https://rag.vie-publique.sn',
+      // Langue du vocal (dictée + lecture). JAMAIS codée en dur : le wolof est
+      // la cible d'une version suivante, et une variante pourra surcharger cette
+      // valeur via `voiceLang` dans app/config/chat-variants.ts.
+      // Contrairement à `ragApiUrl` (figée au build par la CSP), celle-ci est lue
+      // au runtime : la changer ne demande PAS de rebuild.
+      voiceLang: process.env.NUXT_PUBLIC_VOICE_LANG || 'fr-FR',
       // Sentry (monitoring d'erreurs) — DSN vide = désactivé (voir docs/infra/sentry.md)
       sentry: {
         dsn: process.env.NUXT_PUBLIC_SENTRY_DSN || '',
@@ -669,7 +726,9 @@ export default defineNuxtConfig({
   sitemap: {
     sources: ['/api/__sitemap__/urls'],
     // La recherche interne est noindex (règle SEO §10 CLAUDE.md) → hors sitemap
-    exclude: ['/recherche'],
+    // Le banc d'essai chat est interne : noindex + hors sitemap, mais PAS de
+    // Disallow robots.txt (fichier public → publierait l'inventaire des POC).
+    exclude: ['/recherche', '/chat', '/chat/**'],
   },
 
   // Robots.txt
@@ -695,7 +754,6 @@ export default defineNuxtConfig({
       '/publications/recrutement',
       '/quiz',
       '/chatbot',
-      '/chat-bot',
       '/a-propos/barometre-politique',
       '/a-propos/charte-dons',
       '/don/bictorys',
@@ -928,32 +986,4 @@ export default defineNuxtConfig({
     },
   },
   compatibilityDate: '2025-07-15',
-  // Used by the AI Chat to highlight code
-  mdc: {
-    headings: {
-      anchorLinks: false,
-    },
-    highlight: {
-      langs: [
-        'ts',
-        'js',
-        'html',
-        'css',
-        'json',
-        'md',
-        'yaml',
-        'bash',
-        'css',
-        'py',
-        'tsx',
-        'jsx',
-        'go',
-        'rust',
-        'java',
-        'kotlin',
-        'swift',
-        'csharp',
-      ],
-    },
-  },
 });

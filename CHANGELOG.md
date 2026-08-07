@@ -6,6 +6,13 @@ l'historique git (`git log --grep="^feat"`, Conventional Commits).
 
 ## 2026
 
+### Août 2026
+
+- **Notifications sur l'app iOS** : l'application App Store reçoit désormais les notifications
+  (canal natif), ce qu'une app web embarquée ne permettait pas. Un appui sur la notification ouvre
+  directement l'article concerné. La demande d'autorisation n'intervient plus au tout premier
+  lancement, et l'app ne propose plus qu'une seule fois d'activer les notifications.
+
 ### Juillet 2026
 
 - **Documents similaires** : suggestions de documents pertinents à consulter sur chaque fiche document
