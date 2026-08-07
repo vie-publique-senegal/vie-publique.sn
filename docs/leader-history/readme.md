@@ -51,6 +51,15 @@ Conséquences :
 - Ajouter ou corriger un gouvernement dans Directus met automatiquement à jour les mandats.
 - Les périodes sans PM (présidence directe) sont calculées automatiquement (`prime_minister` null
   → `PrimeMinisterGap`).
+- **Ces pages n'ont donc pas de source de données propre** : elles valent exactement ce que vaut
+  `governments`. Cette collection est alimentée par
+  **[vpsn-scripts](https://github.com/vie-publique-senegal/vpsn-scripts)**, module
+  `historique-gouvernements/` (46 gouvernements de 1960 à 2026, 20 dirigeants). Une frise fausse
+  ou un mandat manquant se corrige **là-bas**, dans `data/governments.source.json`, puis se
+  rejoue — pas au clavier dans l'admin, sinon la correction ne suivra pas sur les autres
+  environnements.
+- Les champs `religion`, `ethnic` et `political_entity` de `public_persons`, affichés sur les
+  fiches de présidents, sont eux aussi posés et remplis par ce module.
 
 ---
 

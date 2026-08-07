@@ -1,8 +1,27 @@
 # Historique des gouvernements — Modèle de données Directus
 
 > Ce document décrit les collections Directus utilisées par la feature « Historique des
-> gouvernements ». Le frontend (`server/api/government/*`, `types/government.ts`) est aligné
-> sur ce schéma : **respectez les noms de champs et de collections à la lettre.**
+> gouvernements », **du point de vue du frontend** : ce que les pages lisent, et sous quels
+> noms. Le frontend (`server/api/government/*`, `types/government.ts`) est aligné sur ce
+> schéma : **respectez les noms de champs et de collections à la lettre.**
+
+> ⚠️ **Ce document ne sert pas à créer le schéma.** Les collections, les champs et les
+> données des gouvernements sont posés **par script**, depuis le dépôt
+> **[vpsn-scripts](https://github.com/vie-publique-senegal/vpsn-scripts)**, module
+> `historique-gouvernements/` — jamais à la main dans l'admin Directus. C'est ce qui
+> garantit que dev, staging et prod portent le même modèle.
+>
+> | Besoin | Où aller dans vpsn-scripts |
+> | --- | --- |
+> | Poser le schéma + les données sur un environnement | `historique-gouvernements/RUNBOOK.md` |
+> | Comprendre le modèle, ses arbitrages et ses pièges | `historique-gouvernements/README.md` |
+> | Définition exécutable de `governments` | `historique-gouvernements/schemas/` |
+> | Champs ajoutés aux collections partagées | `historique-gouvernements/schema-patches/` |
+>
+> Si un champ manque sur un environnement, **ne pas le créer dans l'admin** : le poser sur
+> le dev, le capturer dans vpsn-scripts, puis le rejouer sur les autres environnements. Un
+> champ créé à la main est un écart entre environnements qui ne se voit qu'au premier bug
+> en prod.
 
 ---
 
@@ -224,6 +243,15 @@ agrégé sur `public_person_appointments`, puis fusionnées dans `GovernmentWith
 ---
 
 ## 7. Workflow rédacteur
+
+> **Où créer un nouveau gouvernement ?** Les 46 gouvernements de 1960 à 2026 ont été chargés
+> depuis `data/governments.source.json` de
+> [vpsn-scripts](https://github.com/vie-publique-senegal/vpsn-scripts), qui reste la
+> référence historique et alimente le contrôle `05-verifier.mjs`. Créer un gouvernement
+> directement dans l'admin **fonctionne** (l'import ne touche jamais un slug qu'il ne
+> connaît pas), mais il sortira du périmètre vérifié : il ne sera contrôlé par aucun script
+> et n'existera pas sur les autres environnements. Pour un nouveau gouvernement destiné à
+> durer, **l'ajouter d'abord à `governments.source.json`** puis rejouer l'import.
 
 1. Créer un gouvernement (`status = draft`) : saisir nom, slug, dates, président, PM, décrets.
 2. Relier les nominations (`public_person_appointments`) à ce gouvernement via le champ `government`.

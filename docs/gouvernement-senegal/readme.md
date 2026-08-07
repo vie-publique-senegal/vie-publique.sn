@@ -20,6 +20,12 @@ sur la liste historique.
   champs, relations). À lire en premier.
 - [`seo.md`](./seo.md) — checklist SEO (canonical, OG, JSON-LD, sitemap, indexation).
 
+> **D'où viennent le schéma et les données ?** De
+> **[vpsn-scripts](https://github.com/vie-publique-senegal/vpsn-scripts)**, module
+> `historique-gouvernements/` : schéma versionné, import scripté, contrôle post-import,
+> **aucune manipulation dans l'admin Directus**. Les **membres** de gouvernement, eux,
+> viennent du workflow n8n des personnalités publiques. Ce dépôt-ci ne fait que **lire**.
+
 ---
 
 ## Architecture (frontend Nuxt)

@@ -25,6 +25,7 @@
 | --- | --- | --- |
 | **Règles projet (source de vérité)** | [`/CLAUDE.md`](../CLAUDE.md) | conventions Directus, SEO, UI, cache, pièges |
 | **Architecture d'accès aux données** | [`guidelines/guideline-api.md`](./guidelines/guideline-api.md) | pattern 3 couches, SSR, cache, ajout de collection |
+| **Schéma & données Directus (provisioning)** | dépôt [vpsn-scripts](https://github.com/vie-publique-senegal/vpsn-scripts) — **hors de ce dépôt** | collections, champs et imports posés **par script** (dev → staging → prod), jamais à la main dans l'admin. Modules : `ref-geo`, `historique-gouvernements`, `collectivites`, `elections`, `organisation-etat`. Ce dépôt-ci ne fait que **lire** |
 | **Sécurité — applicatif** | [`audits/audit-complet-2026-07.md`](./audits/audit-complet-2026-07.md) | findings SEC-1..10 |
 | **Sécurité — scan automatisé (Claude Security)** | [`guidelines/claude-security-scan.md`](./guidelines/claude-security-scan.md) (outil, pièges Windows) | campagnes datées dans [`audits/`](./audits/) |
 | **Sécurité — infra** | [`infra/plan-remediation.md`](./infra/plan-remediation.md) | [`infra/securite-infra-2026-07.md`](./infra/securite-infra-2026-07.md) (INFRA-1..13), [`infra/README.md`](./infra/README.md) (archi) |
