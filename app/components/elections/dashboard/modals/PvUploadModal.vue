@@ -632,42 +632,6 @@ const resetForm = () => {
   if (fileInput.value) fileInput.value.value = "";
 };
 
-// Messages d'erreur user-friendly
-const getFriendlyErrorMessage = (error: any): string => {
-  // Erreur réseau
-  if (!error?.data && error?.message?.includes('fetch')) {
-    return "Impossible de se connecter au serveur. Vérifiez votre connexion internet.";
-  }
-
-  // Erreur serveur
-  if (error?.statusCode === 500) {
-    return "Une erreur est survenue sur le serveur. Veuillez réessayer.";
-  }
-
-  // Erreur d'authentification
-  if (error?.statusCode === 401) {
-    return "Votre session a expiré. Veuillez vous reconnecter.";
-  }
-
-  // Erreur d'accès
-  if (error?.statusCode === 403) {
-    return "Vous n'avez pas l'autorisation d'effectuer cette action.";
-  }
-
-  // Erreur de validation
-  if (error?.statusCode === 400) {
-    return error?.data?.message || "Vérifiez les informations saisies.";
-  }
-
-  // Message spécifique de l'API
-  if (error?.data?.message) {
-    return error.data.message;
-  }
-
-  // Par défaut
-  return "Une erreur inattendue est survenue. Veuillez réessayer.";
-};
-
 const handleUpload = async () => {
   if (!isFormValid.value) return;
 

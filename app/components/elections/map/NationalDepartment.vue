@@ -160,12 +160,14 @@ watch(search, () => {
     </div>
 
     <!-- Message d'erreur -->
-    <UAlert v-else-if="error" color="red" variant="solid" :title="error.message">
-      <template #description>
-        Une erreur est survenue lors du chargement des données.
-        <UButton variant="link" color="white" @click="handleRefresh"> Réessayer </UButton>
-      </template>
-    </UAlert>
+    <AppErrorState
+      v-else-if="error"
+      :error="error"
+      title="Carte électorale indisponible"
+      message="Les statistiques par département n'ont pas pu être chargées."
+      retryable
+      @retry="handleRefresh"
+    />
 
     <!-- Tableau -->
     <template v-else>

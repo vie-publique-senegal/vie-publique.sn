@@ -69,7 +69,8 @@ export const useNotifications = () => {
 
   const isStandalonePWA = computed(() => {
     if (typeof window === 'undefined') return false;
-    const iosStandalone = (window.navigator as Navigator & { standalone?: boolean }).standalone === true;
+    const iosStandalone =
+      (window.navigator as Navigator & { standalone?: boolean }).standalone === true;
     const displayModeStandalone = window.matchMedia('(display-mode: standalone)').matches;
     const displayModeFullscreen = window.matchMedia('(display-mode: fullscreen)').matches;
     return iosStandalone || displayModeStandalone || displayModeFullscreen;
@@ -282,7 +283,8 @@ export const useNotifications = () => {
         return true;
       } else if (permission === 'denied') {
         setConsent('denied');
-        state.value.error = 'Notifications refusées. Vous pouvez les réactiver dans les paramètres du navigateur.';
+        state.value.error =
+          'Notifications refusées. Vous pouvez les réactiver dans les paramètres du navigateur.';
         return false;
       }
 
@@ -313,8 +315,8 @@ export const useNotifications = () => {
         const swRegs = await navigator.serviceWorker?.getRegistrations();
         log('subscribe: token is null — SW registrations:', swRegs?.length ?? 0);
         state.value.error = swRegs?.length
-          ? 'Impossible d\'obtenir le token de notification. Réessayez.'
-          : 'Le service worker n\'est pas disponible. Rechargez la page et réessayez.';
+          ? "Impossible d'obtenir le token de notification. Réessayez."
+          : "Le service worker n'est pas disponible. Rechargez la page et réessayez.";
         return false;
       }
 
@@ -337,11 +339,14 @@ export const useNotifications = () => {
           });
           return true;
         } else {
-          throw new Error(response.error || 'Erreur lors de l\'abonnement');
+          throw new Error(response.error || "Erreur lors de l'abonnement");
         }
       } catch (fetchError) {
         // Network error: save for retry on next init (P9 fix)
-        if (fetchError instanceof TypeError || (fetchError instanceof Error && fetchError.message.includes('fetch'))) {
+        if (
+          fetchError instanceof TypeError ||
+          (fetchError instanceof Error && fetchError.message.includes('fetch'))
+        ) {
           localStorage.setItem(PENDING_SUBSCRIBE_KEY, JSON.stringify({ token, topic: 'news' }));
           // Permission was granted, mark as subscribed optimistically
           state.value.isSubscribed = true;
@@ -355,7 +360,10 @@ export const useNotifications = () => {
         throw fetchError;
       }
     } catch (error) {
-      state.value.error = error instanceof Error ? error.message : 'Erreur lors de l\'abonnement';
+      state.value.error = getFriendlyErrorMessage(
+        error,
+        "L'activation des notifications a échoué. Merci de réessayer.",
+      );
       toast.error('Erreur', { description: state.value.error });
       return false;
     } finally {
@@ -393,7 +401,10 @@ export const useNotifications = () => {
         throw new Error(response.error || 'Erreur lors du désabonnement');
       }
     } catch (error) {
-      state.value.error = error instanceof Error ? error.message : 'Erreur lors du désabonnement';
+      state.value.error = getFriendlyErrorMessage(
+        error,
+        'La désactivation des notifications a échoué. Merci de réessayer.',
+      );
       return false;
     } finally {
       state.value.loading = false;
@@ -445,7 +456,9 @@ export const useNotifications = () => {
     if (typeof window === 'undefined') return;
 
     await $firebase.onForegroundMessage?.((payload: unknown) => {
-      const isValidPayload = (p: unknown): p is {
+      const isValidPayload = (
+        p: unknown,
+      ): p is {
         notification?: { title?: string; body?: string };
         data?: { url?: string; openUrl?: string };
       } => {
@@ -460,9 +473,7 @@ export const useNotifications = () => {
 
       toast.info(title, {
         description: body,
-        action: url
-          ? { label: 'Voir', onClick: () => navigateTo(url) }
-          : undefined,
+        action: url ? { label: 'Voir', onClick: () => navigateTo(url) } : undefined,
       });
     });
   };

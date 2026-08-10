@@ -341,12 +341,14 @@ useHead({
     </div>
 
     <!-- Message d'erreur -->
-    <UAlert v-else-if="error" color="red" variant="solid" :title="error.message">
-      <template #description>
-        Une erreur est survenue lors du chargement des données.
-        <UButton variant="link" color="white" @click="handleRefresh"> Réessayer </UButton>
-      </template>
-    </UAlert>
+    <AppErrorState
+      v-else-if="error"
+      :error="error"
+      title="Données du département indisponibles"
+      message="Les lieux et bureaux de vote de ce département n'ont pas pu être chargés."
+      retryable
+      @retry="handleRefresh"
+    />
 
     <!-- Tableau des données -->
     <template v-else>

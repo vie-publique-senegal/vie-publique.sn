@@ -195,6 +195,28 @@ ce qui a une valeur de traçabilité.
 3. **SEO Optimization**: Use `useSeoMeta()` and `useHead()` in pages
 4. **Error Handling**: Wrap API calls in try-catch, use `showError()` for user feedback
 
+### Messages d'erreur utilisateur (IMPORTANT — règle valable sur TOUT le site)
+
+> Détail complet : `docs/guidelines/messages-erreur.md`.
+
+**Aucun message technique ne doit atteindre l'écran** — ni sur `/elections-senegal/**`,
+ni ailleurs. Le `message` d'une erreur `ofetch` est construit par la lib et contient
+l'URL d'API et le code HTTP (`[GET] "/api/elections/map/national?…": 500 …`) : c'est
+illisible pour un citoyen et ça expose la structure interne (même esprit que SEC-9,
+qui interdit déjà `error.message` dans une réponse HTTP).
+
+- **Bloc d'erreur d'une page/liste** → composant `<AppErrorState>`
+  (`app/components/AppErrorState.vue`) : `:error` (erreur **brute**, jamais affichée
+  telle quelle), `title` métier, `message` de repli, `retryable` + `@retry="refresh"`.
+- **Toast / formulaire** → `getFriendlyErrorMessage(err, fallback)`
+  (`shared/friendly-error.ts`, auto-importé via `useErrorHandler`) ou `showErrorToast(err)`.
+- **Interdits en template** : `{{ error }}`, `:title="error.message"`,
+  `{{ error.statusMessage }}`, `err?.data?.statusMessage || err?.message`.
+- La traduction se fait **sur le code HTTP** : sur une **5xx**, le message de l'API
+  est ignoré (il décrit une panne interne) ; sur une **4xx**, `error.data.message`
+  n'est réutilisé que s'il passe `isUserFriendlyMessage()` (message de validation).
+- Ne PAS réimplémenter un helper local de mapping d'erreur : étendre le fichier partagé.
+
 ### SEO & Open Graph — règles de diagnostic (IMPORTANT)
 
 > Référence complète : `docs/seo/seo-pages-detail-audit.md` (§0 Méthodologie), `docs/seo/seo-indexation-rapide.md`, `docs/seo/seo-audit.md`. **Lire ces docs avant tout audit/modif SEO.**
