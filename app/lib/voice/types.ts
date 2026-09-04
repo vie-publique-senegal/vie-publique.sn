@@ -49,7 +49,21 @@ export interface OptionsEcoute {
    * rester lisible sans, et se contenter d'un état « transcription en cours ».
    */
   onPartiel?: (texte: string) => void;
+  /** Annulation : on jette ce qui a été capté. Démontage, barge-in, sourdine. */
   signal: AbortSignal;
+  /**
+   * « J'ai fini de parler » — arrête la CAPTURE et rend ce qui a été dit.
+   *
+   * Distinct de `signal`, et il a fallu l'ajouter : avec Web Speech, le moteur
+   * s'arrête seul en fin d'énoncé et l'utilisateur n'a presque jamais besoin de
+   * le lui dire. Un moteur serveur enregistre jusqu'à ce qu'on l'arrête — sans
+   * ce signal, le seul contrôle disponible était l'annulation, qui jette
+   * l'enregistrement au moment précis où l'on voulait le transcrire.
+   *
+   * Optionnel : un appelant qui ne le fournit pas laisse le moteur décider de sa
+   * fin (silence, plafond de durée).
+   */
+  signalFin?: AbortSignal;
 }
 
 export interface OptionsLecture {
@@ -64,8 +78,15 @@ export interface MoteurVocal {
   /**
    * Détection de FONCTIONNALITÉ, jamais de navigateur. Ces deux méthodes sont
    * la seule chose qui décide si un bouton s'affiche : pas de bouton mort.
+   *
+   * `lang` est passée à `peutEcouter` parce qu'un moteur peut savoir écouter
+   * sans savoir écouter CETTE langue — c'est le cas de Web Speech pour le
+   * wolof. Sans elle, le premier moteur de la liste se déclarerait capable et
+   * la dictée wolof partirait chez un service qui ne la connaît pas. Absente =
+   * « sais-tu écouter, quelle que soit la langue ». Toujours un paramètre,
+   * jamais une valeur portée par l'interface.
    */
-  peutEcouter(): boolean;
+  peutEcouter(lang?: string): boolean;
   peutParler(): boolean;
 
   /**

@@ -43,6 +43,17 @@ interface EvenementResultat {
   results: ArrayLike<ArrayLike<{ transcript: string }> & { isFinal: boolean }>;
 }
 
+/**
+ * Langues qu'AUCUN service Web Speech ne transcrit — mesuré, pas supposé.
+ *
+ * Une liste de refus et non une liste d'autorisation : les langues servies
+ * dépendent de la plateforme et ne s'énumèrent pas depuis le navigateur.
+ * Prétendre les lister serait inventer ; nommer celles dont on sait qu'elles
+ * manquent est vérifiable. Le wolof y figure depuis l'étape 12 du RAG — c'est
+ * précisément la raison d'être du moteur serveur.
+ */
+const LANGUES_NON_SERVIES = ['wo'];
+
 /** Silence toléré avant arrêt automatique de l'écoute. */
 const DELAI_SILENCE_MS = 8_000;
 /** Plafond dur : un micro ne reste pas ouvert indéfiniment. */
@@ -106,7 +117,11 @@ export function creerMoteurWebSpeech(): MoteurVocal {
   return {
     id: 'web-speech',
 
-    peutEcouter: () => constructeurReconnaissance() !== null,
+    peutEcouter(lang) {
+      if (constructeurReconnaissance() === null) return false;
+      const racine = (lang ?? '').toLowerCase().split('-')[0]!;
+      return !LANGUES_NON_SERVIES.includes(racine);
+    },
 
     peutParler: () => synthese() !== null,
 
@@ -116,7 +131,7 @@ export function creerMoteurWebSpeech(): MoteurVocal {
         .length;
     },
 
-    ecouter({ lang, onPartiel, signal }: OptionsEcoute) {
+    ecouter({ lang, onPartiel, signal, signalFin }: OptionsEcoute) {
       return new Promise<string>((resoudre, rejeter) => {
         const Constructeur = constructeurReconnaissance();
         if (!Constructeur) {
@@ -137,12 +152,15 @@ export function creerMoteurWebSpeech(): MoteurVocal {
         let minuteurSilence: ReturnType<typeof setTimeout> | null = null;
         let minuteurPlafond: ReturnType<typeof setTimeout> | null = null;
         let minuteurGrace: ReturnType<typeof setTimeout> | null = null;
+        /** Renseigné plus bas : `nettoyer` doit pouvoir retirer cet écouteur. */
+        let retirerSignalFin: (() => void) | null = null;
 
         const nettoyer = () => {
           if (minuteurSilence) clearTimeout(minuteurSilence);
           if (minuteurPlafond) clearTimeout(minuteurPlafond);
           if (minuteurGrace) clearTimeout(minuteurGrace);
           signal.removeEventListener('abort', surAbandon);
+          retirerSignalFin?.();
           reconnaissance.onresult = null;
           reconnaissance.onerror = null;
           reconnaissance.onend = null;
@@ -216,6 +234,14 @@ export function creerMoteurWebSpeech(): MoteurVocal {
         reconnaissance.onend = () => regler(() => resoudre(texteFinal.trim()));
 
         signal.addEventListener('abort', surAbandon);
+        // « J'ai fini de parler » : on garde ce qui a été dit — c'est exactement
+        // ce que fait déjà l'arrêt sur silence, qui appelle `stop()` et non
+        // `abort()`. Jusqu'ici l'appui sur le bouton JETAIT la dictée, alors que
+        // son étiquette annonçait un simple arrêt.
+        if (signalFin) {
+          signalFin.addEventListener('abort', arreterPuisForcer);
+          retirerSignalFin = () => signalFin.removeEventListener('abort', arreterPuisForcer);
+        }
         minuteurPlafond = setTimeout(arreterPuisForcer, DUREE_MAX_MS);
         armerSilence();
 
