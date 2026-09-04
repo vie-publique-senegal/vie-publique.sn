@@ -1,5 +1,6 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createGeminiAdapter } from '../../../app/lib/chat/adapters/gemini';
+import { reinitialiserJetonsPartages } from '../../../app/lib/chat/session-token';
 
 /**
  * Tests de l'adaptateur avec un `fetch` bouchonné : ils vérifient la traduction
@@ -60,6 +61,11 @@ function installerFetch(routeur: (url: string, init?: RequestInit) => Response) 
 afterEach(() => vi.unstubAllGlobals());
 
 describe('createGeminiAdapter', () => {
+  // Le gestionnaire de jeton est partagé par origine et vit au niveau du module
+  // (il l'est avec la dictée serveur, pour ne pas consommer deux `/session`).
+  // Sans cette remise à zéro, un jeton obtenu par un test survivrait au suivant.
+  beforeEach(reinitialiserJetonsPartages);
+
   it('traduit token, sources et done vers le contrat client', async () => {
     installerFetch((url) =>
       url.endsWith('/session')
