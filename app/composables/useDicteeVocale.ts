@@ -41,14 +41,28 @@ export function useDicteeVocale(options: OptionsDictee) {
   /** Refus explicite : on cesse de proposer une action qui échouera à coup sûr. */
   const permissionRefusee = ref(false);
 
+  // Deux contrôleurs, parce que « j'annule » et « j'ai fini » ne veulent pas
+  // dire la même chose à un moteur qui enregistre avant de transcrire : le
+  // premier jette l'enregistrement, le second le fait transcrire.
   let abandon: AbortController | null = null;
+  let fin: AbortController | null = null;
 
   // `moteurEcoute()` touche `window` : jamais au rendu serveur. `onMounted`
   // convient ici (contrairement à un état d'URL, rien n'a besoin d'être rendu
   // côté serveur — le bouton n'apparaît qu'une fois les capacités connues).
   onMounted(() => {
-    moteur.value = moteurEcoute();
+    moteur.value = moteurEcoute(options.lang.value);
   });
+
+  // La langue peut changer (variante wolof) : le moteur capable n'est alors plus
+  // le même. Sans ce suivi, la dictée resterait confiée à un moteur qui ne
+  // connaît pas la langue demandée.
+  watch(
+    () => options.lang.value,
+    (langue) => {
+      if (moteur.value) moteur.value = moteurEcoute(langue);
+    },
+  );
 
   const disponible = computed(() => moteur.value !== null && !permissionRefusee.value);
   const enEcoute = computed(() => etat.value !== 'repos');
@@ -62,11 +76,26 @@ export function useDicteeVocale(options: OptionsDictee) {
     echec: 'La dictée n’a pas abouti. Vous pouvez taper votre question.',
   };
 
+  /** Annulation : ce qui a été capté est jeté. */
   function arreter() {
     abandon?.abort();
     abandon = null;
+    fin = null;
     etat.value = 'repos';
     textePartiel.value = '';
+  }
+
+  /**
+   * « J'ai fini de parler » : on arrête de capter et on attend le texte.
+   *
+   * L'état passe à `transcription` — avec un moteur serveur, c'est ici que
+   * commence l'attente réelle, et le bouton doit le dire.
+   */
+  function terminer() {
+    if (!fin) return;
+    fin.abort();
+    fin = null;
+    etat.value = 'transcription';
   }
 
   async function demarrer() {
@@ -76,11 +105,13 @@ export function useDicteeVocale(options: OptionsDictee) {
     textePartiel.value = '';
     etat.value = 'ecoute';
     abandon = new AbortController();
+    fin = new AbortController();
 
     try {
       const texte = await moteur.value.ecouter({
         lang: options.lang.value,
         signal: abandon.signal,
+        signalFin: fin.signal,
         onPartiel: (partiel) => {
           textePartiel.value = partiel;
           if (partiel) etat.value = 'transcription';
@@ -94,14 +125,21 @@ export function useDicteeVocale(options: OptionsDictee) {
       if (code === 'permission-refusee') permissionRefusee.value = true;
     } finally {
       abandon = null;
+      fin = null;
       etat.value = 'repos';
       textePartiel.value = '';
     }
   }
 
-  /** Un seul bouton : démarre, ou arrête si l'écoute est en cours. */
+  /**
+   * Un seul bouton : démarre, ou **termine** si l'écoute est en cours.
+   *
+   * Terminer et non annuler : l'étiquette annonce un arrêt, et jeter ce qui vient
+   * d'être dicté n'est ce que personne attend d'un bouton nommé « arrêter ».
+   * L'annulation reste accessible — démontage, envoi du formulaire, barge-in.
+   */
   function basculer() {
-    if (enEcoute.value) arreter();
+    if (enEcoute.value) terminer();
     else void demarrer();
   }
 
@@ -120,7 +158,10 @@ export function useDicteeVocale(options: OptionsDictee) {
     textePartiel: readonly(textePartiel),
     erreur: readonly(erreur),
     basculer,
+    terminer,
     arreter,
+    /** Identifiant du moteur retenu — la mention de gouvernance en dépend. */
+    moteurId: computed(() => moteur.value?.id ?? null),
     effacerErreur: () => {
       erreur.value = null;
     },
