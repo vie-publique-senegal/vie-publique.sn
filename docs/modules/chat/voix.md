@@ -6,20 +6,35 @@
 > **Le vocal est ADDITIF** : tout reste utilisable au clavier sans lui. Un moteur absent ne dégrade
 > rien — il retire un bouton.
 
-## 1. Contrainte fondatrice : l'API RAG n'a pas bougé
+## 1. Deux chemins depuis le 2026-09-04 — et le second passe par nos serveurs
 
-Toute la chaîne est dans le navigateur :
+Le chemin d'origine, **inchangé**, tout dans le navigateur :
 
 ```
-micro → ASR → texte → POST /ask (SSE, INCHANGÉ) → texte → TTS
+micro → ASR du navigateur → texte → POST /ask (SSE) → texte → TTS
 ```
 
-`POST /session` et `POST /ask` reçoivent et renvoient exactement ce qu'ils recevaient et renvoyaient
-avant. Aucun octet de plus, aucun champ de plus. Aucune entrée `connect-src` non plus : Web Speech
-ne passe pas par `fetch`, il parle à son service hors bande.
+Le chemin **serveur**, ajouté pour le wolof :
 
-Corollaire : **le jour où le vocal demandera du serveur** (moteur wolof, ASR auto-hébergé), ce sera
-un **autre chantier** avec son propre chiffrage — pas une extension discrète de celui-ci.
+```
+micro → MediaRecorder → POST /transcribe → texte → POST /ask (SSE) → texte → TTS
+```
+
+> Ce document affirmait : « le jour où le vocal demandera du serveur, ce sera un **autre chantier**
+> avec son propre chiffrage — pas une extension discrète de celui-ci ». **Ce jour est arrivé**, et
+> le chantier a bien eu lieu côté API (étape 12 de `rag-platform`). Côté web, l'ajout est resté
+> contenu parce que le moteur était isolé (§6) : un fichier de moteur, la sélection par langue, et
+> la mention de gouvernance. Ce qui a changé au-delà du moteur est listé ici même, pas dissimulé.
+
+Ce que ce second chemin change, et qu'il faut lire avant d'y toucher :
+
+- **`POST /ask` ne bouge toujours pas** : il reçoit du texte, comme une question tapée ;
+- **`POST /transcribe` est un endpoint de plus**, sur la même origine que `/ask` — donc **aucune
+  entrée `connect-src` nouvelle**, l'origine de l'API y est déjà (`nuxt.config.ts`) ;
+- **le jeton de session est partagé** avec le chat (`gestionnaireJetonPartage`) : deux jetons pour
+  un même visiteur, ce serait deux `/session` sur un quota de 20/min partagé par tout un bureau ;
+- **l'audio transite par nos serveurs**, ce qui rend fausse la mention affichée jusqu'ici — voir
+  §5, c'est le point le plus important de cette évolution.
 
 ## 2. ⚠️ `Permissions-Policy` — le piège qui ne se voit qu'en production
 
@@ -235,15 +250,25 @@ couvre les trois cas sans en garantir un.
 
 Ce qui est en place :
 
-- une **mention affichée une fois, AVANT le premier enregistrement** (`ChatComposer`), qui dit que
-  la transcription est faite par un tiers et rappelle que le clavier reste disponible. On informe,
-  on ne barre pas la route ; l'état est mémorisé (`vp-chat-voix-mention-v1`) ;
-- **rien n'est enregistré ni stocké** côté Vie Publique : l'audio ne transite pas par nos serveurs,
-  et seul le **texte** transcrit part vers `/ask` — exactement comme une question tapée.
+- une **mention affichée une fois, AVANT le premier enregistrement** (`ChatComposer`), qui dit où va
+  la voix et rappelle que le clavier reste disponible. On informe, on ne barre pas la route ;
+  l'état est mémorisé (`vp-chat-voix-mention-v2`) ;
+- **deux formulations, une par chemin** — et c'est le point de fond :
 
-**Si l'envoi de l'audio chez Google est refusé** : l'alternative est un ASR côté serveur (Whisper),
-**autre chantier**. C'est précisément pour que ce remplacement ne touche à rien d'autre que le
-moteur est isolé (§6).
+| Chemin | Ce que dit la mention |
+| --- | --- |
+| Web Speech (navigateur) | la voix part chez Apple, Google ou Microsoft selon le cas ; elle **ne transite pas** par nos serveurs |
+| Moteur serveur (`rag-serveur`) | la voix est **enregistrée puis transmise à notre service**, qui la fait transcrire par un prestataire ; l'enregistrement **n'est pas conservé**, seul le texte reste — dans le champ de saisie, corrigeable |
+
+> ⚠️ **La clé de consentement est passée en `v2` le 2026-09-04.** Ceux qui avaient accepté la
+> formulation « elle ne transite pas par nos serveurs » n'ont pas accepté celle-ci : leur
+> re-demander est le minimum. Une phrase unique qui couvrirait les deux chemins serait vague là où
+> la précédente était précise — c'est pourquoi il y en a deux, choisies sur l'identifiant du moteur
+> réellement retenu, jamais sur une supposition de navigateur.
+
+Côté API, ce que le chemin serveur garantit (`rag-platform`, étape 12) : l'enregistrement n'est ni
+stocké ni journalisé, et **il n'entre pas dans les traces d'observabilité** — celles-ci ne portent
+que le conteneur, le poids du fichier et le texte transcrit.
 
 *Écarté : Whisper WASM dans le navigateur.* Tout local, gouvernance réglée — mais 40 à 75 Mo de
 modèle à télécharger, sur des forfaits data comptés et des téléphones modestes, pour dicter une
@@ -254,8 +279,9 @@ phrase. Et ça ne débloque toujours pas iOS (même mur `getUserMedia`).
 | Chemin | Rôle | Dépend d'un moteur ? |
 | --- | --- | --- |
 | `app/lib/voice/types.ts` | Contrat `MoteurVocal` + `ErreurVocale` | — (c'est le contrat) |
-| `app/lib/voice/engines/web-speech.ts` | **Unique** implémentation à ce jour | oui |
-| `app/lib/voice/index.ts` | Sélection du moteur à l'exécution | — |
+| `app/lib/voice/engines/web-speech.ts` | ASR/TTS du navigateur — prioritaire en français | oui |
+| `app/lib/voice/engines/rag-serveur.ts` | Dictée par `POST /transcribe` — wolof, et repli sans Web Speech | oui |
+| `app/lib/voice/index.ts` | Sélection du moteur à l'exécution, **par langue** | — |
 | `app/lib/voice/phrases.ts` | Découpage du flux en phrases — **pur, testé** | **non** |
 | `app/lib/voice/texte-parle.ts` | Nettoyage avant lecture — **pur, testé** | **non** |
 | `app/composables/useDicteeVocale.ts` | États du bouton, permission, silence | **non** |
@@ -284,6 +310,27 @@ Deux détails de conception qui n'ont l'air de rien :
 
 > Le canal **WhatsApp** ne réutilisera rien de ce code : il est côté serveur, sans navigateur ni
 > streaming. Rien ici n'a été conçu en prévision de lui.
+
+### Sélection par langue, et « j'ai fini de parler » (2026-09-04)
+
+Deux points du contrat ont dû bouger pour accueillir le moteur serveur. Aucun n'est cosmétique.
+
+**`peutEcouter(lang?)` au lieu de `peutEcouter()`.** La sélection rendait le premier moteur capable
+d'écouter, sans savoir de quelle langue il s'agissait : Web Speech se serait déclaré capable pour
+le wolof, qu'aucun de ses services ne transcrit, et la dictée serait partie chez lui pour revenir
+vide ou fausse. Web Speech porte donc une **liste de refus** (`LANGUES_NON_SERVIES = ['wo']`) — une
+liste de refus et non d'autorisation, parce que les langues servies dépendent de la plateforme et
+ne s'énumèrent pas depuis le navigateur : prétendre les lister serait inventer, nommer celles dont
+on sait qu'elles manquent est vérifiable.
+
+**`OptionsEcoute.signalFin`, distinct de `signal`.** Le seul contrôle était l'annulation, qui jette
+ce qui a été capté. Avec Web Speech ça ne se voyait pas — le moteur s'arrête seul en fin d'énoncé.
+Un moteur serveur enregistre jusqu'à ce qu'on l'arrête : sans ce second signal, le bouton « arrêter »
+aurait jeté l'enregistrement à l'instant précis où l'on voulait le transcrire.
+
+> Effet de bord bienvenu, sur le chemin Web Speech cette fois : l'appui sur le bouton pendant la
+> dictée **jetait** ce qui venait d'être dit, alors que son étiquette annonçait un simple arrêt. Il
+> termine désormais, comme le fait déjà l'arrêt sur silence.
 
 ## 7. Lecture AU FIL du flux — le cœur du sujet
 
@@ -332,7 +379,7 @@ garde le libellé des liens en jetant l'URL, et on rend les tableaux en énumér
 | État | Rendu |
 | --- | --- |
 | Repos | icône micro discrète, **à gauche** du champ (la dictée remplace la frappe, pas l'envoi) |
-| Écoute | bouton rouge pulsé + pastille et transcription en direct **sous** le champ |
+| Écoute | bouton rouge pulsé + pastille et transcription en direct **sous** le champ (le moteur serveur ne produit **aucun** partiel : la zone reste vide, l'étiquette dit « appuyez quand vous avez fini ») |
 | Transcription | même zone, le texte partiel s'affiche au fil de la parole |
 | Erreur | message clair au-dessus du champ, retour au clavier, **jamais de blocage** |
 | Permission refusée | bouton conservé mais inerte, infobulle explicative (plutôt qu'évaporé) |
@@ -344,7 +391,10 @@ garde le libellé des liens en jetant l'URL, et on rend les tableaux en énumér
 - **Barge-in** : appuyer sur le micro coupe la lecture **avant** de demander le micro, pour que
   l'assistant ne se parle pas par-dessus lui-même.
 - **Silence** : arrêt automatique à 8 s sans résultat (`stop()`, pas `abort()` — on garde ce qui a
-  été dit), plafond dur à 30 s.
+  été dit), plafond dur à 30 s. Le moteur serveur, lui, n'a pas de détection de silence : il
+  enregistre jusqu'à l'appui de l'utilisateur, avec un plafond dur à 90 s (l'API en refuse 120).
+- **L'appui pendant la dictée TERMINE, il n'annule pas.** L'annulation existe toujours — démontage,
+  envoi de la question, barge-in — mais elle n'est plus ce que déclenche le bouton.
 - **Sourdine** dans l'en-tête, **silence par défaut**, état mémorisé
   (`vp-chat-voix-lecture-v1`). Décision, pas un oubli : un service public ne se met pas à parler
   seul, et le clic d'activation fournit au passage l'**activation utilisateur** que Safari exige
@@ -366,7 +416,8 @@ pas au début — en sourdine, les tokens ne sont même pas bufferisés.
 | Flag Directus `chat_voice` (`vp_feature_flags`) | Coupe le vocal **sans redéploiement** (cache 5 min). |
 | `DEFAULT_FEATURES.chat_voice` | Fallback si Directus est injoignable. `dev`/`test` seulement. |
 | `NUXT_PUBLIC_VOICE_LANG` (défaut `fr-FR`) | Langue du vocal, lue **au runtime** — pas de rebuild. |
-| `ChatVariant.voiceLang` | Surcharge par variante. **C'est ici que se branchera le wolof.** |
+| `ChatVariant.voiceLang` | Surcharge par variante. **C'est ici que se branche le wolof** : `wo-SN` suffit à router la dictée vers le moteur serveur, la sélection étant faite par langue. |
+| `NUXT_PUBLIC_RAG_API_URL` | Origine de l'API RAG — déjà utilisée par le chat, et désormais par la dictée serveur (`POST /transcribe`). Une origine absente rend le moteur serveur incapable, donc invisible. |
 
 **La langue n'est jamais codée en dur**, ni dans le moteur, ni dans la coquille, ni dans les
 libellés d'interface (« Dicter la question », « Lire les réponses » — jamais « en français »).
