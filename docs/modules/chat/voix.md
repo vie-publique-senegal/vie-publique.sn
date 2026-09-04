@@ -20,6 +20,28 @@ Le chemin **serveur**, ajouté pour le wolof :
 micro → MediaRecorder → POST /transcribe → texte → POST /ask (SSE) → texte → TTS
 ```
 
+```mermaid
+graph LR
+    MIC["micro"] --> SEL{"langue<br/>de la dictée ?"}
+    SEL -->|"fr, en…"| WS["Web Speech<br/>du navigateur"]
+    SEL -->|"wo"| REC["MediaRecorder"]
+    WS -->|"partiel + final"| TXT["champ de saisie<br/>corrigeable"]
+    REC -->|"multipart"| TR["rag-api<br/>POST /transcribe"]
+    TR --> GEM["Gemini"]
+    TR -->|"texte + langue"| TXT
+    TXT --> ASK["rag-api<br/>POST /ask"]
+    ASK --> LEC["Web Speech<br/>lecture"]
+
+    classDef serveur fill:#eef,stroke:#66a
+    class TR,ASK,GEM serveur
+```
+
+**Ce que la sélection décide, et rien d'autre** : quel moteur reçoit le micro.
+Tout le reste — états du bouton, barge-in, découpage en phrases, nettoyage avant
+lecture — est commun aux deux chemins. Et la **lecture** reste Web Speech dans
+les deux cas : il n'existe aucune voix wolof côté navigateur, et le TTS wolof
+mesuré (Kiriku) n'est branché nulle part — c'est l'étape 13 du RAG.
+
 > Ce document affirmait : « le jour où le vocal demandera du serveur, ce sera un **autre chantier**
 > avec son propre chiffrage — pas une extension discrète de celui-ci ». **Ce jour est arrivé**, et
 > le chantier a bien eu lieu côté API (étape 12 de `rag-platform`). Côté web, l'ajout est resté
