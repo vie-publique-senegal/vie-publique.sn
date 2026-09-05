@@ -436,6 +436,19 @@ pas au début — en sourdine, les tokens ne sont même pas bufferisés.
 | Élément | Rôle |
 | --- | --- |
 | Flag Directus `chat_voice` (`vp_feature_flags`) | Coupe le vocal **sans redéploiement** (cache 5 min). |
+
+> ⚠️ **Le vocal est INVISIBLE en développement, et ce n'est pas une panne.** Le flag Directus
+> `chat_voice` déclare `environments: ['production']` ; le défaut du code dit `['dev','test']`, mais
+> **le flag Directus prime**. En `npm run dev`, ni bouton micro ni bouton son — quelle que soit la
+> langue, quel que soit le navigateur. Pour une recette locale :
+>
+> ```bash
+> NUXT_PUBLIC_APP_ENV=production npm run dev
+> ```
+>
+> Cherché une demi-heure le 2026-09-05, dans du code qui fonctionnait. Le symptôme est trompeur :
+> l'absence des **deux** boutons dit que le verrou est le flag, pas le moteur — un moteur
+> indisponible ne retirerait que le micro.
 | `DEFAULT_FEATURES.chat_voice` | Fallback si Directus est injoignable. `dev`/`test` seulement. |
 | `NUXT_PUBLIC_VOICE_LANG` (défaut `fr-FR`) | Langue du vocal, lue **au runtime** — pas de rebuild. |
 | `ChatVariant.voiceLang` | Surcharge par variante. **C'est ici que se branche le wolof** : `wo-SN` suffit à router la dictée vers le moteur serveur, la sélection étant faite par langue. |
