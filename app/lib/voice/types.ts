@@ -49,6 +49,14 @@ export interface OptionsEcoute {
    * rester lisible sans, et se contenter d'un état « transcription en cours ».
    */
   onPartiel?: (texte: string) => void;
+  /**
+   * La langue RÉELLEMENT entendue, quand le moteur sait la reconnaître.
+   *
+   * Un moteur serveur la reçoit de sa transcription ; Web Speech ne la rend pas
+   * (on lui a imposé une langue, il n'en détecte aucune). C'est cette
+   * information qui évite de redeviner en aval la langue de la réponse.
+   */
+  onLangue?: (lang: string) => void;
   /** Annulation : on jette ce qui a été capté. Démontage, barge-in, sourdine. */
   signal: AbortSignal;
   /**

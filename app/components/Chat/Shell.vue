@@ -41,11 +41,39 @@ const composer = ref<{ focus: () => void; arreterDictee: () => void } | null>(nu
 const { isFeatureEnabled } = useFeatureFlags();
 const vocalAutorise = computed(() => isFeatureEnabled('chat_voice'));
 
-// La langue n'est JAMAIS codée en dur : variante > config runtime. C'est ici que
-// se branchera le wolof (voir docs/modules/chat/voix.md).
-const langueVocale = computed(
+// La langue n'est JAMAIS codée en dur : variante > config runtime.
+const langueParDefaut = computed(
   () => props.variant.voiceLang ?? String(publicConfig.voiceLang ?? 'fr-FR'),
 );
+
+/**
+ * Langue de l'ÉCHANGE — `null` tant que rien ne l'a déclarée.
+ *
+ * Elle est **constatée, pas devinée** : soit l'utilisateur la choisit, soit la
+ * dictée la rapporte telle qu'elle a été entendue. Elle descend ensuite dans
+ * toute la chaîne — elle est envoyée à `/ask`, qui répond dans cette langue, et
+ * elle désigne le moteur de lecture.
+ *
+ * ⚠️ `null` n'est pas un oubli, c'est le défaut historique qu'on préserve :
+ * sans langue déclarée, l'API répond dans la langue de la question, ce qu'elle
+ * sait faire. Envoyer une langue par défaut ferait répondre en français à
+ * quelqu'un qui écrit dans une autre langue — une régression pour les
+ * visiteurs actuels.
+ */
+const langueEchange = ref<string | null>(null);
+
+/** Langue employée par les moteurs vocaux : celle de l'échange, sinon le défaut. */
+const langueVocale = computed(() => langueEchange.value ?? langueParDefaut.value);
+
+/**
+ * Langues proposées au choix. Deux, parce que ce sont les deux que la chaîne
+ * sait servir de bout en bout — et « Automatique » reste le défaut.
+ */
+const LANGUES = [
+  { valeur: '', libelle: 'Langue : auto' },
+  { valeur: 'fr-FR', libelle: 'Français' },
+  { valeur: 'wo-SN', libelle: 'Wolof' },
+];
 
 const lecture = useLectureVocale({ lang: langueVocale });
 
@@ -150,6 +178,9 @@ async function envoyer(question: string) {
 
     for await (const evenement of client.send(question, {
       conversationId: conversationId.value ?? undefined,
+      // Omise tant que rien ne l'a déclarée : l'API répond alors dans la langue
+      // de la question.
+      lang: langueEchange.value ?? undefined,
       signal: abandon.signal,
     })) {
       switch (evenement.type) {
@@ -329,6 +360,18 @@ onBeforeUnmount(() => {
           />
         </UTooltip>
 
+        <!-- Langue de l'échange. Native plutôt qu'un composant : deux options,
+             aucune dépendance, et le sélecteur du système sur mobile. -->
+        <select
+          v-if="vocalAutorise"
+          :value="langueEchange ?? ''"
+          aria-label="Langue de la conversation"
+          class="rounded-md border border-gray-300 bg-transparent px-2 py-1 text-sm dark:border-gray-600"
+          @change="langueEchange = ($event.target as HTMLSelectElement).value || null"
+        >
+          <option v-for="l in LANGUES" :key="l.valeur" :value="l.valeur">{{ l.libelle }}</option>
+        </select>
+
         <!-- Icône seule sur mobile, icône + libellé dès qu'il y a de la place. -->
         <UButton
           color="gray"
@@ -397,6 +440,7 @@ onBeforeUnmount(() => {
       :voix="vocalAutorise"
       :voix-lang="langueVocale"
       @send="envoyer"
+      @langue="langueEchange = $event"
       @stop="arreter"
       @dictee-demarre="lecture.arreter()"
     />

@@ -126,6 +126,40 @@ describe('moteur de dictée serveur', () => {
     expect(corps.get('file')).toBeInstanceOf(Blob);
   });
 
+  it('rapporte la langue entendue — c’est elle qui commande toute la suite', async () => {
+    vi.stubGlobal('fetch', reponses({ corps: { text: 'Naka nga def', lang: 'wo' } }));
+    const fin = new AbortController();
+    bientot(fin);
+    const langues: string[] = [];
+
+    await moteur().ecouter({
+      lang: 'wo-SN',
+      signal: new AbortController().signal,
+      signalFin: fin.signal,
+      onLangue: (l) => langues.push(l),
+    });
+
+    expect(langues).toEqual(['wo']);
+  });
+
+  it('ne rapporte aucune langue quand le service n’en déclare pas', async () => {
+    vi.stubGlobal('fetch', reponses({ corps: { text: 'Naka nga def', lang: null } }));
+    const fin = new AbortController();
+    bientot(fin);
+    const langues: string[] = [];
+
+    await moteur().ecouter({
+      lang: 'wo-SN',
+      signal: new AbortController().signal,
+      signalFin: fin.signal,
+      onLangue: (l) => langues.push(l),
+    });
+
+    // Mieux vaut aucune langue qu'une langue inventée : l'échange reste en
+    // « auto », et l'API répond dans la langue de la question.
+    expect(langues).toEqual([]);
+  });
+
   it('libère le micro même quand la transcription échoue', async () => {
     vi.stubGlobal('fetch', reponses({ ok: false, status: 503 }));
     const fin = new AbortController();

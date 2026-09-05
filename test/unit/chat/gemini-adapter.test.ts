@@ -150,6 +150,27 @@ describe('createGeminiAdapter', () => {
     expect(evenements.map((e) => (e as { type: string }).type)).toEqual(['token', 'done']);
   });
 
+  it('transmet la langue de l’échange quand elle est connue, et rien sinon', async () => {
+    let corpsAsk = '';
+    installerFetch((url, init) => {
+      if (url.endsWith('/session')) return reponseSession();
+      corpsAsk = String(init?.body ?? '');
+      return reponseSse('event: done\ndata: {"conversation_id":"c"}\n\n');
+    });
+
+    const adaptateur = createGeminiAdapter(CONFIG);
+
+    await collecter(
+      adaptateur.send('Naka nga def ?', { lang: 'wo-SN', signal: new AbortController().signal }),
+    );
+    expect(JSON.parse(corpsAsk)).toMatchObject({ lang: 'wo-SN' });
+
+    // Sans langue déclarée, le champ est ABSENT : l'API répond alors dans la
+    // langue de la question, ce qui reste le meilleur défaut.
+    await collecter(adaptateur.send('Question', { signal: new AbortController().signal }));
+    expect(JSON.parse(corpsAsk)).not.toHaveProperty('lang');
+  });
+
   it('repasse le conversation_id au tour suivant, et jamais d’historique', async () => {
     let corpsAsk = '';
     installerFetch((url, init) => {

@@ -16,7 +16,11 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  (e: 'send', question: string): void;
+  /**
+   * `send` porte la question, `langue` la langue réellement entendue par la
+   * dictée — celle qui devient la langue de l'échange.
+   */
+  (e: 'send' | 'langue', valeur: string): void;
   /** `dictee-demarre` : l'appelant coupe la lecture en cours (barge-in). */
   (e: 'stop' | 'dictee-demarre'): void;
 }>();
@@ -67,6 +71,7 @@ const {
   effacerErreur,
 } = useDicteeVocale({
   lang: langue,
+  onLangue: (lang) => emit('langue', lang),
   onTexte: (texte) => {
     // On COMPLÈTE, on n'écrase pas : l'utilisateur a pu commencer à taper.
     // Et surtout on n'envoie PAS — le texte reste visible et modifiable.

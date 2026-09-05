@@ -131,7 +131,7 @@ export function creerMoteurRagServeur(deps: DependancesMoteurRag = {}): MoteurVo
       }
     },
 
-    async ecouter({ lang, signal, signalFin }: OptionsEcoute) {
+    async ecouter({ lang, signal, signalFin, onLangue }: OptionsEcoute) {
       const type = typeSupporte();
       if (!type) throw new ErreurVocale('non-supporte');
 
@@ -153,7 +153,17 @@ export function creerMoteurRagServeur(deps: DependancesMoteurRag = {}): MoteurVo
         // Un enregistrement vide, c'est un micro ouvert sur rien : cas banal,
         // pas une panne — et surtout pas un appel facturé pour du silence.
         if (audio.size === 0) throw new ErreurVocale('aucun-son');
-        return await transcrire(audio, { base: base(), lang, jetons: jetons(), signal });
+        const { texte, langue } = await transcrire(audio, {
+          base: base(),
+          lang,
+          jetons: jetons(),
+          signal,
+        });
+        // La langue vient du moteur qui a ENTENDU l'audio : c'est la meilleure
+        // source qui existe, et elle commande ensuite la langue de la réponse
+        // comme le choix du moteur de lecture.
+        if (langue) onLangue?.(langue);
+        return texte;
       } finally {
         // Le voyant du micro reste allumé tant que les pistes vivent.
         flux.getTracks().forEach((piste) => piste.stop());
@@ -218,7 +228,7 @@ async function transcrire(
     jetons: ReturnType<typeof creerGestionnaireJeton>;
     signal: AbortSignal;
   },
-): Promise<string> {
+): Promise<{ texte: string; langue: string | null }> {
   const corps = new FormData();
   // Le nom du fichier ne sert qu'aux journaux : l'API décide du format sur le
   // type déclaré ET sur les octets de tête, jamais sur l'extension.
@@ -251,11 +261,11 @@ async function transcrire(
     throw new ErreurVocale(codeDepuisStatut(reponse.status), `transcribe ${reponse.status}`);
   }
 
-  const charge = (await reponse.json()) as { text?: string };
+  const charge = (await reponse.json()) as { text?: string; lang?: string | null };
   const texte = (charge.text ?? '').trim();
   // Rien entendu : même verdict qu'un enregistrement vide.
   if (!texte) throw new ErreurVocale('aucun-son');
-  return texte;
+  return { texte, langue: charge.lang?.trim() || null };
 }
 
 /** Demande la synthèse d'une phrase et rend l'audio brut. */

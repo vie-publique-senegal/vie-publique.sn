@@ -70,6 +70,38 @@ Ce que ce second chemin change, et qu'il faut lire avant d'y toucher :
 - **l'audio transite par nos serveurs**, ce qui rend fausse la mention affichée jusqu'ici — voir
   §5, c'est le point le plus important de cette évolution.
 
+## 1 bis. Langue de l'échange — constatée, jamais redevinée (2026-09-05)
+
+Avec deux moteurs de lecture, il a fallu **choisir** — et le choix se faisait sur
+un réglage de session (`voiceLang`), pas sur le contenu à lire. Une variante en
+`wo-SN` faisait lire une réponse **française** par le modèle wolof ; l'inverse
+donnait du charabia.
+
+La langue est donc devenue un **attribut de l'échange**, porté d'un bout à
+l'autre :
+
+```
+dictée → POST /transcribe rend {text, lang}   ← ENTENDUE par le moteur
+   ↓
+langueEchange (Shell.vue)  ← ou choix explicite dans le sélecteur
+   ↓
+POST /ask reçoit lang  →  la réponse est dans cette langue
+   ↓
+moteurLecture(lang)    →  web-speech en fr, rag-serveur en wo
+```
+
+- **`null` par défaut, et ce n'est pas un oubli.** Sans langue déclarée, le champ
+  n'est **pas envoyé** et l'API répond dans la langue de la question — le
+  comportement historique. Envoyer un défaut ferait répondre en français à un
+  visiteur qui écrit autrement.
+- **Le sélecteur affiche `Auto / Français / Wolof`** et la dictée le préremplit
+  avec ce qu'elle a entendu.
+- **Aucune détection dans le navigateur.** Redétecter la langue d'un texte que
+  l'on vient de produire, c'est jeter une information qu'on possédait — et se
+  tromper sur le cas central de ce corpus : du wolof truffé de termes
+  administratifs français. Raisonnement complet et alternatives écartées :
+  [ADR](../../../../rag-platform/docs/decisions/2026-09-05-langue-de-lechange.md).
+
 ## 2. ⚠️ `Permissions-Policy` — le piège qui ne se voit qu'en production
 
 `nuxt-security` pose par défaut `permissionsPolicy: { microphone: [] }`, sérialisé en

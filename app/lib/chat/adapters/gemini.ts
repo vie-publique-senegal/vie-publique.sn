@@ -164,6 +164,9 @@ export const createGeminiAdapter: ChatAdapterFactory = (config) => {
           body: JSON.stringify({
             question,
             ...(ctx.conversationId ? { conversation_id: ctx.conversationId } : {}),
+            // Omise quand la langue n'est pas connue : l'API répond alors dans
+            // la langue de la question, ce qui reste le meilleur défaut.
+            ...(ctx.lang ? { lang: ctx.lang } : {}),
           }),
         });
 

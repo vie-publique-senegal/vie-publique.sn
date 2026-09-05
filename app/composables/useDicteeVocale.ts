@@ -31,6 +31,14 @@ export interface OptionsDictee {
   lang: Ref<string> | ComputedRef<string>;
   /** Reçoit le texte final. À l'appelant de l'insérer dans le champ. */
   onTexte: (texte: string) => void;
+  /**
+   * Reçoit la langue réellement entendue, quand le moteur la reconnaît.
+   *
+   * C'est ce qui rend la langue de l'échange **constatée** plutôt que devinée :
+   * l'utilisateur parle wolof, la transcription le dit, la réponse suit et la
+   * lecture choisit le bon moteur. Aucune détection en aval.
+   */
+  onLangue?: (lang: string) => void;
 }
 
 export function useDicteeVocale(options: OptionsDictee) {
@@ -112,6 +120,7 @@ export function useDicteeVocale(options: OptionsDictee) {
         lang: options.lang.value,
         signal: abandon.signal,
         signalFin: fin.signal,
+        onLangue: options.onLangue,
         onPartiel: (partiel) => {
           textePartiel.value = partiel;
           if (partiel) etat.value = 'transcription';
