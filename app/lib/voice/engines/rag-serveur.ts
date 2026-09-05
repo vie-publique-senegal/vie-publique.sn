@@ -44,6 +44,17 @@ const TYPES_CANDIDATS = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'a
  */
 const DUREE_MAX_MS = 90_000;
 
+/**
+ * WAV vide de 44 octets, joué DANS le geste utilisateur pour débloquer l'audio.
+ *
+ * iOS n'autorise la lecture que si le premier `play()` d'un élément part d'une
+ * interaction. Le nôtre part après l'appel réseau à `/speak` — trop tard. On
+ * déverrouille donc un élément au clic, et on le RÉUTILISE ensuite : une fois
+ * autorisé, il le reste.
+ */
+const SILENCE =
+  'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAgD4AAAB9AAACABAAZGF0YQAAAAA=';
+
 /** Messages d'erreur de l'API qu'il vaut la peine de distinguer pour l'utilisateur. */
 function codeDepuisStatut(statut: number) {
   if (statut === 401 || statut === 403) return 'echec' as const;
@@ -77,6 +88,8 @@ export interface DependancesMoteurRag {
 
 export function creerMoteurRagServeur(deps: DependancesMoteurRag = {}): MoteurVocal {
   const base = deps.base ?? baseApi;
+  /** Élément déverrouillé par `amorcer()`, réutilisé par toutes les phrases. */
+  let lecteur: HTMLAudioElement | null = null;
 
   const jetons = () =>
     gestionnaireJetonPartage(base(), () =>
@@ -110,6 +123,17 @@ export function creerMoteurRagServeur(deps: DependancesMoteurRag = {}): MoteurVo
       return typeof window !== 'undefined' && typeof Audio !== 'undefined' && base() !== '';
     },
 
+    amorcer() {
+      // DOIT être appelée synchroniquement depuis le clic : c'est le seul
+      // instant où le navigateur accorde le droit de jouer du son.
+      if (typeof Audio === 'undefined') return;
+      lecteur ??= new Audio();
+      lecteur.src = SILENCE;
+      // L'échec est sans conséquence — sur les plateformes qui n'exigent rien,
+      // ce `play()` n'a simplement aucun effet visible.
+      void lecteur.play().catch(() => {});
+    },
+
     async parler(texte: string, { lang, signal }: OptionsLecture) {
       if (signal.aborted) return;
 
@@ -119,7 +143,12 @@ export function creerMoteurRagServeur(deps: DependancesMoteurRag = {}): MoteurVo
       // Un objet URL plutôt qu'une data-URL : le WAV pèse plusieurs centaines
       // de kilooctets par phrase, et l'encodage base64 en ajouterait un tiers.
       const url = URL.createObjectURL(audio);
-      const lecteur = new Audio(url);
+      // ⚠️ On REJOUE l'élément amorcé plutôt que d'en créer un neuf : un
+      // élément créé ici n'a jamais reçu l'autorisation de l'utilisateur, et
+      // iOS refuse son `play()` — c'est ce qui rendait la lecture muette sur
+      // iPhone le 2026-09-05, alors qu'elle marchait partout ailleurs.
+      lecteur ??= new Audio();
+      lecteur.src = url;
       lecteur.lang = lang;
 
       try {

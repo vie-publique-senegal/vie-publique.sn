@@ -102,6 +102,47 @@ describe('moteur de dictée serveur', () => {
     expect(moteur().peutParler('wo-SN')).toBe(true);
   });
 
+  it('amorce un élément audio, et le RÉUTILISE pour lire', async () => {
+    // Le cœur du correctif iOS : un élément créé après l'appel réseau n'a
+    // jamais reçu l'autorisation de l'utilisateur, et son play() est refusé.
+    const instances: FauxAudio[] = [];
+    class FauxAudio {
+      src = '';
+      lang = '';
+      onended: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+      pause = vi.fn();
+      play = vi.fn(async () => {
+        // La lecture se termine aussitôt : on teste le câblage, pas le son.
+        queueMicrotask(() => this.onended?.());
+      });
+      constructor() {
+        instances.push(this);
+      }
+    }
+    vi.stubGlobal('Audio', FauxAudio);
+    vi.stubGlobal('URL', { createObjectURL: () => 'blob:x', revokeObjectURL: () => {} });
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) =>
+        String(url).endsWith('/session')
+          ? ({ ok: true, json: async () => ({ token: 'j', expires_in: 900 }) } as Response)
+          : ({ ok: true, status: 200, blob: async () => new Blob(['son']) } as Response),
+      ),
+    );
+
+    const m = moteur();
+    m.amorcer!();
+    expect(instances).toHaveLength(1);
+    expect(instances[0].src).toContain('data:audio/wav');
+
+    await m.parler('Naka nga def.', { lang: 'wo-SN', signal: new AbortController().signal });
+
+    // Toujours UN seul élément : celui que le clic a déverrouillé.
+    expect(instances).toHaveLength(1);
+    expect(instances[0].src).toBe('blob:x');
+  });
+
   it('ne se déclare pas capable de lire sans API configurée', () => {
     vi.stubGlobal('Audio', function Audio() {});
     expect(creerMoteurRagServeur({ base: () => '' }).peutParler('wo-SN')).toBe(false);

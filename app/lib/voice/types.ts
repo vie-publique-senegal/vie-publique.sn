@@ -126,7 +126,13 @@ export interface MoteurVocal {
    * énoncés suivants — qui partent d'une continuation asynchrone du flux SSE —
    * sont ignorés **en silence**, sans erreur ni événement.
    *
-   * Optionnelle : un moteur serveur n'aura pas cette contrainte.
+   * ⚠️ **« Un moteur serveur n'aura pas cette contrainte » — c'est ce qui était
+   * écrit ici, et c'est FAUX.** Mesuré sur iPhone le 2026-09-05 : un moteur qui
+   * joue un `<audio>` après un appel réseau se heurte au même mur, et pour la
+   * même raison — le `play()` ne part plus du geste. La parade est la même :
+   * débloquer un élément DANS le clic, puis le réutiliser.
+   *
+   * Optionnelle au sens du contrat : un moteur qui n'en a pas besoin l'omet.
    */
   amorcer?(): void;
 

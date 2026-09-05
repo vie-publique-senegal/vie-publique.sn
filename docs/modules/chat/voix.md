@@ -302,6 +302,25 @@ détecter l'app iOS, donc de renifler le navigateur : précisément ce que ce mo
 élément figé au build (nom, icône, `start_url`, domaine, shortcuts) : le vocal y arrive **au
 prochain déploiement web, sans passer par le Play Store**.
 
+## 4 ter. Le moteur SERVEUR se heurte au même mur iOS (2026-09-05)
+
+Le contrat disait, à propos de `amorcer()` : « un moteur serveur n'aura pas cette contrainte ».
+**C'est faux, et un iPhone l'a montré le jour du déploiement.**
+
+La raison est la même qu'au § 4 bis, la mécanique diffère à peine : le `play()` du moteur serveur
+part **après** l'appel réseau à `POST /speak`, donc **hors du geste utilisateur**. iOS le refuse.
+Le symptôme, lui, n'est plus le silence total d'août — le message « La lecture à voix haute n'a pas
+abouti » s'affiche, parce que les échecs de lecture ne sont plus avalés.
+
+**Correctif** : `amorcer()` est implémentée aussi par `rag-serveur`. Elle joue un WAV vide de
+44 octets **dans le clic**, ce qui déverrouille un élément `<audio>` — et toutes les phrases
+suivantes **réutilisent ce même élément** au lieu d'en créer un neuf. Un élément créé après coup
+n'a jamais reçu d'autorisation.
+
+> ⚠️ **Ne se vérifie que sur un appareil réel.** Ni le simulateur, ni un navigateur de bureau
+> n'appliquent cette restriction : un test vert ailleurs ne prouve rien. Même piège qu'en août, et
+> c'est la troisième fois que ce module le rencontre.
+
 ## 5. Gouvernance — l'audio n'est pas traité localement
 
 **La reconnaissance vocale n'est pas locale : l'audio part chez un tiers.** Pour un service public,
