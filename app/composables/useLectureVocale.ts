@@ -39,6 +39,15 @@ export function useLectureVocale(options: OptionsLectureVocale) {
   const actif = useLocalStorage(CLE_ACTIF, false);
 
   const enLecture = ref(false);
+  /**
+   * Dernier échec de lecture, destiné à l'utilisateur.
+   *
+   * ⚠️ Avant le 2026-09-05, un énoncé qui échouait ne laissait qu'un
+   * `console.warn` : le bouton semblait ne rien faire, et il a fallu lire le
+   * réseau pour comprendre que le service de synthèse rechargeait son modèle.
+   * Un silence n'est pas un message.
+   */
+  const erreur = ref<string | null>(null);
 
   let tampon: TamponPhrases = creerTamponPhrases();
   let file: string[] = [];
@@ -85,11 +94,12 @@ export function useLectureVocale(options: OptionsLectureVocale) {
         enLecture.value = true;
         try {
           await moteurCourant.parler(phrase, { lang: options.lang.value, signal });
-        } catch (erreur) {
+        } catch (echec) {
           // Un énoncé qui échoue ne doit pas tuer la lecture : on passe au
-          // suivant. La dégradation reste silencieuse pour l'utilisateur, qui a
-          // le texte sous les yeux de toute façon.
-          console.warn('[voix] énoncé non lu', erreur);
+          // suivant. Mais on le DIT — l'utilisateur a le texte sous les yeux,
+          // il n'a aucune raison de deviner pourquoi rien ne sort.
+          console.warn('[voix] énoncé non lu', echec);
+          erreur.value = 'La lecture à voix haute n’a pas abouti. Le texte reste affiché.';
         }
       }
     } finally {
@@ -129,8 +139,9 @@ export function useLectureVocale(options: OptionsLectureVocale) {
    * ⚠️ **Appeler DIRECTEMENT depuis le gestionnaire de clic**, jamais après un
    * `await` : l'amorce ci-dessous n'a de valeur que dans le geste utilisateur.
    */
-  function basculer() {
+  function basculer(texteAReprendre?: string) {
     const activation = !actif.value;
+    erreur.value = null;
 
     if (activation) {
       // iOS n'autorise la synthèse que si le PREMIER `speak()` part d'un geste
@@ -144,7 +155,20 @@ export function useLectureVocale(options: OptionsLectureVocale) {
 
     actif.value = activation;
     // Couper le son doit couper MAINTENANT, pas à la fin de la phrase en cours.
-    if (!activation) arreter();
+    if (!activation) {
+      arreter();
+      return;
+    }
+
+    // Reprendre la dernière réponse depuis le début, plutôt que d'attendre la
+    // suivante. Sans ça, activer le son après avoir lu une réponse ne produit
+    // RIEN — le tampon ne bufferise pas en sourdine —, ce qui se vit comme un
+    // bouton cassé. Constaté en démo le 2026-09-05.
+    if (texteAReprendre?.trim()) {
+      tampon = creerTamponPhrases();
+      mettreEnFile(tampon.pousser(texteAReprendre));
+      mettreEnFile(tampon.vider());
+    }
   }
 
   // La synthèse est un service GLOBAL du navigateur : elle survit au composant
@@ -157,6 +181,8 @@ export function useLectureVocale(options: OptionsLectureVocale) {
     /** Son activé. Persisté entre les sessions. */
     actif,
     enLecture: readonly(enLecture),
+    /** Dernier échec de lecture, à afficher. `null` quand tout va bien. */
+    erreur: readonly(erreur),
     pousser,
     terminer,
     /** Barge-in et interruptions. Idempotent. */

@@ -13,6 +13,12 @@ const props = defineProps<{
   voix?: boolean;
   /** Langue du vocal (BCP-47). Jamais de valeur par défaut ici. */
   voixLang?: string;
+  /**
+   * Échec de la LECTURE, remonté par la coquille. Affiché au même endroit que
+   * celui de la dictée : l'utilisateur n'a pas à savoir laquelle des deux
+   * moitiés du vocal a échoué, il a besoin de savoir que le texte reste là.
+   */
+  erreurVoix?: string | null;
 }>();
 
 const emit = defineEmits<{
@@ -178,11 +184,11 @@ defineExpose({ focus, arreterDictee });
 
       <!-- Échec de la dictée : message clair, retour au clavier, jamais de blocage. -->
       <p
-        v-if="erreurDictee"
+        v-if="erreurDictee || erreurVoix"
         class="mb-2 text-center text-sm text-amber-700 dark:text-amber-400"
         role="status"
       >
-        {{ erreurDictee }}
+        {{ erreurDictee || erreurVoix }}
       </p>
 
       <form class="relative flex w-full flex-col" @submit.prevent="submit">

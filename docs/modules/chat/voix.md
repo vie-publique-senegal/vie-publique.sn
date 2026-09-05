@@ -472,8 +472,16 @@ garde le libellé des liens en jetant l'URL, et on rend les tableaux en énumér
   question suivante. La synthèse est un **service global du navigateur** : elle survit au composant
   et continuerait de parler sur la page suivante si personne ne l'annulait.
 
-*Limite assumée* : activer le son **pendant** une réponse démarre la lecture à la phrase suivante,
-pas au début — en sourdine, les tokens ne sont même pas bufferisés.
+*~~Limite assumée~~ — corrigée le 2026-09-05* : activer le son **reprend la dernière réponse depuis
+le début**. Avant, il ne se passait **rien** du tout quand on l'activait après coup — le tampon ne
+bufferise pas en sourdine, donc la lecture n'aurait démarré qu'à la réponse suivante. Un bouton qui
+ne fait rien passe pour cassé, et c'est ce qui est arrivé à la première démonstration en
+production.
+
+⚠️ **Et l'échec de lecture n'est plus silencieux.** Un énoncé qui échoue laissait un simple
+`console.warn` : il a fallu lire le trafic réseau pour comprendre qu'un service de synthèse en
+cours de rechargement était la cause. Le message part maintenant dans la même zone que ceux de la
+dictée — « La lecture à voix haute n'a pas abouti. Le texte reste affiché. »
 
 ## 9. Configuration
 

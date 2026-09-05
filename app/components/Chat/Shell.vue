@@ -78,6 +78,18 @@ const LANGUES = [
 const lecture = useLectureVocale({ lang: langueVocale });
 
 /**
+ * Dernière réponse affichée — celle que l'activation du son doit reprendre.
+ *
+ * Sans elle, activer le haut-parleur après une réponse ne lit rien : le tampon
+ * ne bufferise pas en sourdine, et la lecture n'aurait démarré qu'à la réponse
+ * suivante. Un bouton qui ne fait rien passe pour cassé, et c'est ce qui est
+ * arrivé en démo.
+ */
+const derniereReponse = computed(
+  () => [...messages.value].reverse().find((m) => m.role === 'assistant' && m.text)?.text ?? '',
+);
+
+/**
  * Sonde de compatibilité, affichée dans le pied de conversation.
  *
  * Sa raison d'être : je ne peux pas tester les apps des stores depuis un poste de
@@ -356,7 +368,7 @@ onBeforeUnmount(() => {
               lecture.actif.value ? 'Couper la lecture' : 'Lire les réponses à voix haute'
             "
             :aria-pressed="lecture.actif.value"
-            @click="lecture.basculer()"
+            @click="lecture.basculer(derniereReponse)"
           />
         </UTooltip>
 
@@ -439,6 +451,7 @@ onBeforeUnmount(() => {
       :cooldown="cooldown"
       :voix="vocalAutorise"
       :voix-lang="langueVocale"
+      :erreur-voix="lecture.erreur.value"
       @send="envoyer"
       @langue="langueEchange = $event"
       @stop="arreter"
