@@ -136,6 +136,17 @@ const securityConfig =
             'object-src': ["'none'"],
             'child-src': ["'self'", 'blob:'],
             'worker-src': ["'self'", 'blob:'],
+            // ⚠️ SANS cette directive, la lecture vocale wolof est BLOQUÉE par
+            // le navigateur. `media-src` n'était pas déclarée, la CSP retombait
+            // donc sur `default-src 'self'`, qui refuse `blob:` et `data:` — or
+            // l'audio rendu par POST /speak arrive en blob, et l'amorce iOS est
+            // une data-URL. Aucune requête réseau n'échouait : les trois appels
+            // /speak revenaient en 200, et c'est le chargement du média qui
+            // était refusé. Diagnostiqué le 2026-09-05 sur la production.
+            //
+            // Invisible en développement : `security.headers` y vaut false. Même
+            // piège que `Permissions-Policy: microphone` (docs/modules/chat/voix.md § 2).
+            'media-src': ["'self'", 'blob:', 'data:'],
             'report-uri': ['/api/csp-report'],
           },
           strictTransportSecurity: {

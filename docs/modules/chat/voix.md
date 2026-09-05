@@ -102,7 +102,38 @@ moteurLecture(lang)    →  web-speech en fr, rag-serveur en wo
   administratifs français. Raisonnement complet et alternatives écartées :
   [ADR](../../../../rag-platform/docs/decisions/2026-09-05-langue-de-lechange.md).
 
-## 2. ⚠️ `Permissions-Policy` — le piège qui ne se voit qu'en production
+## 2. ⚠️ Deux en-têtes qui ne se voient qu'en production
+
+**En développement, `security.headers` vaut `false`** : ni `Permissions-Policy` ni la CSP
+n'existent. Tout ce qui les concerne marche en local et échoue en ligne. Ce module s'est fait
+prendre **deux fois**, sur deux directives différentes.
+
+### 2 bis. `media-src` — la lecture wolof bloquée par la CSP (2026-09-05)
+
+Symptôme : les trois appels `POST /speak` reviennent en **200**, l'audio arrive, et **rien ne se
+lit**. Console :
+
+```
+Loading media from 'blob:https://www.vie-publique.sn/…' violates the Content Security
+Policy directive: "default-src 'self'". Note that 'media-src' was not explicitly set,
+so 'default-src' is used as a fallback.
+```
+
+`media-src` n'était pas déclarée : la CSP retombait sur `default-src 'self'`, qui refuse `blob:` et
+`data:`. Or l'audio de `/speak` arrive en **blob** et l'amorce iOS est une **data-URL**. Le réseau
+était irréprochable, le navigateur refusait le média.
+
+Correctif dans `nuxt.config.ts` :
+
+```ts
+'media-src': ["'self'", 'blob:', 'data:'],
+```
+
+> ⚠️ **Vérifier sur le BUILD, pas en dev** : `npm run build && npm run preview`, puis
+> `curl -sI http://localhost:3000/chat/gemini | grep -i content-security-policy`. C'est la seule
+> façon de voir cet en-tête avant la mise en ligne.
+
+## 2 ter. `Permissions-Policy` — le piège qui ne se voit qu'en production
 
 `nuxt-security` pose par défaut `permissionsPolicy: { microphone: [] }`, sérialisé en
 **`Permissions-Policy: microphone=()`** : le micro est interdit sur **tout le site**.
