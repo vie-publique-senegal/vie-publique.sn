@@ -54,6 +54,14 @@ interface EvenementResultat {
  */
 const LANGUES_NON_SERVIES = ['wo'];
 
+/**
+ * Langues qu'aucune voix de synthèse installée ne parle — même principe, autre
+ * capacité. Le wolof y figure : `speechSynthesis` lirait le texte avec une voix
+ * française, ce qui produit du charabia. Mieux vaut pas de bouton qu'un bouton
+ * qui déçoit.
+ */
+const LANGUES_NON_LUES = ['wo'];
+
 /** Silence toléré avant arrêt automatique de l'écoute. */
 const DELAI_SILENCE_MS = 8_000;
 /** Plafond dur : un micro ne reste pas ouvert indéfiniment. */
@@ -123,7 +131,11 @@ export function creerMoteurWebSpeech(): MoteurVocal {
       return !LANGUES_NON_SERVIES.includes(racine);
     },
 
-    peutParler: () => synthese() !== null,
+    peutParler(lang) {
+      if (synthese() === null) return false;
+      const racine = (lang ?? '').toLowerCase().split('-')[0]!;
+      return !LANGUES_NON_LUES.includes(racine);
+    },
 
     voixDisponibles(lang) {
       const racine = lang.toLowerCase().split('-')[0]!;

@@ -22,7 +22,10 @@ import type { MoteurVocal, OptionsEcoute, OptionsLecture } from '../types';
  *    premier enregistrement le dit (`ChatComposer`), et
  *    `docs/modules/chat/voix.md` § Gouvernance le documente.
  *
- * Il ne sait pas parler : la synthèse wolof est un autre chantier (étape 13).
+ * **Il sait aussi lire** depuis le 2026-09-05 : `POST /speak` rend l'audio d'une
+ * phrase, synthétisé par un modèle wolof auto-hébergé. Un appel par phrase —
+ * c'est le tampon de phrases existant qui découpe, et la promesse de `parler()`
+ * qui les sérialise, exactement comme avec Web Speech.
  */
 
 /**
@@ -100,11 +103,32 @@ export function creerMoteurRagServeur(deps: DependancesMoteurRag = {}): MoteurVo
       );
     },
 
-    /** La synthèse wolof est un autre chantier. Web Speech garde la lecture. */
-    peutParler: () => false,
+    peutParler() {
+      // Comme pour l'écoute : aucune restriction de langue ici, c'est le
+      // service qui décide de ce qu'il sait dire. Web Speech reste prioritaire
+      // là où il a une voix — il est gratuit et n'appelle personne.
+      return typeof window !== 'undefined' && typeof Audio !== 'undefined' && base() !== '';
+    },
 
-    parler(_texte: string, _options: OptionsLecture) {
-      return Promise.reject(new ErreurVocale('non-supporte'));
+    async parler(texte: string, { lang, signal }: OptionsLecture) {
+      if (signal.aborted) return;
+
+      const audio = await demander(`${base()}/speak`, { texte, lang, jetons: jetons(), signal });
+      if (signal.aborted) return;
+
+      // Un objet URL plutôt qu'une data-URL : le WAV pèse plusieurs centaines
+      // de kilooctets par phrase, et l'encodage base64 en ajouterait un tiers.
+      const url = URL.createObjectURL(audio);
+      const lecteur = new Audio(url);
+      lecteur.lang = lang;
+
+      try {
+        await jouer(lecteur, signal);
+      } finally {
+        // Sans révocation, chaque phrase lue laisse son audio en mémoire pour
+        // la durée de la page.
+        URL.revokeObjectURL(url);
+      }
     },
 
     async ecouter({ lang, signal, signalFin }: OptionsEcoute) {
@@ -232,4 +256,84 @@ async function transcrire(
   // Rien entendu : même verdict qu'un enregistrement vide.
   if (!texte) throw new ErreurVocale('aucun-son');
   return texte;
+}
+
+/** Demande la synthèse d'une phrase et rend l'audio brut. */
+async function demander(
+  url: string,
+  contexte: {
+    texte: string;
+    lang: string;
+    jetons: ReturnType<typeof creerGestionnaireJeton>;
+    signal: AbortSignal;
+  },
+): Promise<Blob> {
+  let jeton: string;
+  try {
+    jeton = await contexte.jetons.obtenir(contexte.signal);
+  } catch {
+    throw new ErreurVocale('reseau', 'session indisponible');
+  }
+
+  let reponse: Response;
+  try {
+    reponse = await fetch(url, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${jeton}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: contexte.texte, lang: contexte.lang || undefined }),
+      signal: contexte.signal,
+    });
+  } catch (erreur) {
+    if (contexte.signal.aborted) throw new ErreurVocale('annule');
+    throw new ErreurVocale('reseau', String(erreur));
+  }
+
+  if (!reponse.ok) {
+    if (reponse.status === 401) contexte.jetons.invalider();
+    // 503 est le cas ORDINAIRE au démarrage du service : son modèle met une
+    // minute à se charger. C'est une indisponibilité, pas une panne du client.
+    throw new ErreurVocale(codeDepuisStatut(reponse.status), `speak ${reponse.status}`);
+  }
+
+  return reponse.blob();
+}
+
+/**
+ * Joue l'audio et résout quand l'énoncé est TERMINÉ.
+ *
+ * C'est cette promesse qui sérialise la file de phrases : sans elle, les
+ * phrases se chevaucheraient. Une annulation résout — elle n'est pas un échec,
+ * même contrat que Web Speech.
+ */
+function jouer(lecteur: HTMLAudioElement, signal: AbortSignal): Promise<void> {
+  return new Promise<void>((resoudre, rejeter) => {
+    const nettoyer = () => {
+      signal.removeEventListener('abort', arreter);
+      lecteur.onended = null;
+      lecteur.onerror = null;
+    };
+    function arreter() {
+      lecteur.pause();
+      nettoyer();
+      resoudre();
+    }
+
+    lecteur.onended = () => {
+      nettoyer();
+      resoudre();
+    };
+    lecteur.onerror = () => {
+      nettoyer();
+      rejeter(new ErreurVocale('echec', 'lecture audio impossible'));
+    };
+    signal.addEventListener('abort', arreter);
+
+    // `play()` peut être refusée si aucun geste utilisateur n'a eu lieu — c'est
+    // la même restriction qui impose `amorcer()` à Web Speech sur iOS. Ici, la
+    // lecture part toujours d'un clic sur le bouton son.
+    lecteur.play().catch((erreur) => {
+      nettoyer();
+      rejeter(new ErreurVocale('echec', String(erreur)));
+    });
+  });
 }

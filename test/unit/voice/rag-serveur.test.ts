@@ -97,8 +97,14 @@ describe('moteur de dictée serveur', () => {
     expect(creerMoteurRagServeur({ base: () => '' }).peutEcouter('wo-SN')).toBe(false);
   });
 
-  it('ne sait pas parler : la lecture reste à Web Speech', () => {
-    expect(moteur().peutParler()).toBe(false);
+  it('sait lire depuis que /speak existe', () => {
+    vi.stubGlobal('Audio', function Audio() {});
+    expect(moteur().peutParler('wo-SN')).toBe(true);
+  });
+
+  it('ne se déclare pas capable de lire sans API configurée', () => {
+    vi.stubGlobal('Audio', function Audio() {});
+    expect(creerMoteurRagServeur({ base: () => '' }).peutParler('wo-SN')).toBe(false);
   });
 
   it('transcrit ce qui a été enregistré quand l’utilisateur dit avoir fini', async () => {

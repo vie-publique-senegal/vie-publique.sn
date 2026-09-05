@@ -46,8 +46,17 @@ export function useLectureVocale(options: OptionsLectureVocale) {
   let abandon: AbortController | null = null;
 
   onMounted(() => {
-    moteur.value = moteurLecture();
+    moteur.value = moteurLecture(options.lang.value);
   });
+
+  // La langue peut changer (variante wolof) : le moteur capable n'est alors plus
+  // le même — Web Speech n'a aucune voix wolof, c'est le moteur serveur qui lit.
+  watch(
+    () => options.lang.value,
+    (langue) => {
+      if (moteur.value) moteur.value = moteurLecture(langue);
+    },
+  );
 
   const disponible = computed(() => moteur.value !== null);
 

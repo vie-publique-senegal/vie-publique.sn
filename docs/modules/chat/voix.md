@@ -14,10 +14,10 @@ Le chemin d'origine, **inchangé**, tout dans le navigateur :
 micro → ASR du navigateur → texte → POST /ask (SSE) → texte → TTS
 ```
 
-Le chemin **serveur**, ajouté pour le wolof :
+Le chemin **serveur**, ajouté pour le wolof — dictée **et**, depuis le 2026-09-05, lecture :
 
 ```
-micro → MediaRecorder → POST /transcribe → texte → POST /ask (SSE) → texte → TTS
+micro → MediaRecorder → POST /transcribe → texte → POST /ask (SSE) → texte → POST /speak → audio
 ```
 
 ```mermaid
@@ -30,17 +30,29 @@ graph LR
     TR --> GEM["Gemini"]
     TR -->|"texte + langue"| TXT
     TXT --> ASK["rag-api<br/>POST /ask"]
-    ASK --> LEC["Web Speech<br/>lecture"]
+    ASK --> SEL2{"langue<br/>de la lecture ?"}
+    SEL2 -->|"fr"| LEC["Web Speech<br/>lecture"]
+    SEL2 -->|"wo"| SPK["rag-api<br/>POST /speak"]
+    SPK --> KIR["modèle wolof<br/>auto-hébergé"]
 
     classDef serveur fill:#eef,stroke:#66a
-    class TR,ASK,GEM serveur
+    class TR,ASK,GEM,SPK,KIR serveur
 ```
 
-**Ce que la sélection décide, et rien d'autre** : quel moteur reçoit le micro.
-Tout le reste — états du bouton, barge-in, découpage en phrases, nettoyage avant
-lecture — est commun aux deux chemins. Et la **lecture** reste Web Speech dans
-les deux cas : il n'existe aucune voix wolof côté navigateur, et le TTS wolof
-mesuré (Kiriku) n'est branché nulle part — c'est l'étape 13 du RAG.
+**Ce que la sélection décide, et rien d'autre** : quel moteur reçoit le micro,
+et quel moteur lit. Tout le reste — états du bouton, barge-in, découpage en
+phrases, nettoyage avant lecture — est commun aux deux chemins.
+
+**La lecture suit la même règle que la dictée** : Web Speech en français, où il
+est gratuit et instantané ; le moteur serveur en wolof, où **aucune voix
+n'existe côté navigateur**. Sans cette sélection par langue, `speechSynthesis`
+lirait une réponse wolof avec une voix française — du charabia, là où l'absence
+de bouton aurait été honnête.
+
+⚠️ Une phrase par appel à `/speak`, et la promesse de `parler()` les sérialise :
+c'est le tampon de phrases existant qui découpe, rien n'a changé de ce côté.
+Compter ~0,6 s de synthèse par phrase sur le serveur, avant qu'elle ne commence
+à se jouer.
 
 > Ce document affirmait : « le jour où le vocal demandera du serveur, ce sera un **autre chantier**
 > avec son propre chiffrage — pas une extension discrète de celui-ci ». **Ce jour est arrivé**, et
@@ -302,7 +314,7 @@ phrase. Et ça ne débloque toujours pas iOS (même mur `getUserMedia`).
 | --- | --- | --- |
 | `app/lib/voice/types.ts` | Contrat `MoteurVocal` + `ErreurVocale` | — (c'est le contrat) |
 | `app/lib/voice/engines/web-speech.ts` | ASR/TTS du navigateur — prioritaire en français | oui |
-| `app/lib/voice/engines/rag-serveur.ts` | Dictée par `POST /transcribe` — wolof, et repli sans Web Speech | oui |
+| `app/lib/voice/engines/rag-serveur.ts` | Dictée par `POST /transcribe` **et lecture par `POST /speak`** — wolof, et repli sans Web Speech | oui |
 | `app/lib/voice/index.ts` | Sélection du moteur à l'exécution, **par langue** | — |
 | `app/lib/voice/phrases.ts` | Découpage du flux en phrases — **pur, testé** | **non** |
 | `app/lib/voice/texte-parle.ts` | Nettoyage avant lecture — **pur, testé** | **non** |

@@ -87,7 +87,13 @@ export interface MoteurVocal {
    * jamais une valeur portée par l'interface.
    */
   peutEcouter(lang?: string): boolean;
-  peutParler(): boolean;
+  /**
+   * `lang` pour la même raison que `peutEcouter` : Web Speech sait parler, mais
+   * aucune voix wolof n'existe côté navigateur. Sans ce paramètre, il se
+   * déclarerait capable et lirait une réponse wolof avec une voix française —
+   * du charabia, là où l'absence de bouton aurait été honnête.
+   */
+  peutParler(lang?: string): boolean;
 
   /**
    * Rend le texte final dicté. Rejette une `ErreurVocale`.

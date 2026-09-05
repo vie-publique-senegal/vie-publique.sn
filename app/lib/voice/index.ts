@@ -44,8 +44,11 @@ export function moteurEcoute(lang?: string): MoteurVocal | null {
   return moteurs().find((moteur) => moteur.peutEcouter(lang)) ?? null;
 }
 
-/** Premier moteur capable de lire, ou `null` → le bouton son ne s'affiche pas. */
-export function moteurLecture(): MoteurVocal | null {
+/**
+ * Premier moteur capable de lire DANS CETTE LANGUE, ou `null` → le bouton son
+ * ne s'affiche pas.
+ */
+export function moteurLecture(lang?: string): MoteurVocal | null {
   if (import.meta.server) return null;
-  return moteurs().find((moteur) => moteur.peutParler()) ?? null;
+  return moteurs().find((moteur) => moteur.peutParler(lang)) ?? null;
 }
