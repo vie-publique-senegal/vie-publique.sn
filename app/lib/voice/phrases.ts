@@ -28,9 +28,9 @@ const FERMANTS = new Set(['"', '»', '’', "'", ')', ']', '}', '*', '_', '`']);
 /**
  * Abréviations après lesquelles un point n'est PAS une fin de phrase.
  *
- * Liste volontairement courte et calée sur le corpus réellement indexé (lois de
- * finances, rapports de la Cour des comptes, conseils des ministres) : chaque
- * entrée superflue retarde la première phrase lue, puisqu'elle empêche une coupe.
+ * Liste volontairement courte et calée sur le corpus réellement indexé (textes
+ * législatifs, budgets, rapports d'audit, statistiques) : chaque entrée
+ * superflue retarde la première phrase lue, puisqu'elle empêche une coupe.
  */
 const ABREVIATIONS = new Set([
   'm',

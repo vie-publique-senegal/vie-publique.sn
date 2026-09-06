@@ -1,4 +1,4 @@
-import { creerGestionnaireJeton } from '../session-token';
+import { creerGestionnaireJeton, gestionnaireJetonPartage } from '../session-token';
 import { lireFluxSse } from '../sse';
 import type { ChatAdapterFactory, ChatEvent, ChatSource } from '~~/types/chat';
 
@@ -103,19 +103,23 @@ function versSourceClient(source: SourceApi): ChatSource {
 export const createGeminiAdapter: ChatAdapterFactory = (config) => {
   const base = String(config.ragApiUrl ?? '').replace(/\/+$/, '');
 
-  const jetons = creerGestionnaireJeton({
-    async recupererJeton(signal) {
-      const reponse = await fetch(`${base}/session`, { method: 'POST', signal });
-      if (!reponse.ok) {
-        throw new ErreurApiRag(
-          reponse.status,
-          codeDepuisStatut(reponse.status),
-          lireEntier(reponse.headers.get('Retry-After')),
-        );
-      }
-      return reponse.json();
-    },
-  });
+  // Partagé avec la dictée serveur : deux jetons pour un même visiteur, ce
+  // serait deux `/session` sur un quota de 20/min partagé par tout un bureau.
+  const jetons = gestionnaireJetonPartage(base, () =>
+    creerGestionnaireJeton({
+      async recupererJeton(signal) {
+        const reponse = await fetch(`${base}/session`, { method: 'POST', signal });
+        if (!reponse.ok) {
+          throw new ErreurApiRag(
+            reponse.status,
+            codeDepuisStatut(reponse.status),
+            lireEntier(reponse.headers.get('Retry-After')),
+          );
+        }
+        return reponse.json();
+      },
+    }),
+  );
 
   /**
    * Freinage préventif. `X-RateLimit-Remaining` accompagne toutes les réponses
@@ -160,6 +164,9 @@ export const createGeminiAdapter: ChatAdapterFactory = (config) => {
           body: JSON.stringify({
             question,
             ...(ctx.conversationId ? { conversation_id: ctx.conversationId } : {}),
+            // Omise quand la langue n'est pas connue : l'API répond alors dans
+            // la langue de la question, ce qui reste le meilleur défaut.
+            ...(ctx.lang ? { lang: ctx.lang } : {}),
           }),
         });
 
