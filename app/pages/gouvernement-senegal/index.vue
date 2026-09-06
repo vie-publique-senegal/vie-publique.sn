@@ -1,12 +1,11 @@
 <script setup lang="ts">
-import type { GovernmentMember } from '~/types/government-member';
+import type { GovernmentMember } from '~~/types/government-member';
 
 const { siteName, siteUrl, keywords, themeColor } = useSiteMetadata();
 
-const title =
-  'Gouvernement du Sénégal — Composition actuelle sous Bassirou Diomaye Faye | Vie Publique Sénégal';
+const title = 'Gouvernement du Sénégal - Bassirou Diomaye Faye';
 const description =
-  "Composition actuelle du gouvernement du Sénégal sous la présidence de Bassirou Diomaye Faye. Premier Ministre, liste complète des ministres et secrétaires d'État nommés avec photos, fonctions et fiches détaillées.";
+  "Découvrez la composition du gouvernement du Sénégal actuel : Premier Ministre, ministres, secrétaires d'État, fiches et photos.";
 const url = `${siteUrl}/gouvernement-senegal`;
 const image = `${siteUrl}/nomination-3.png`;
 
@@ -432,8 +431,17 @@ const getDuration = (nominationDate: string): string => {
           </div>
         </section>
 
-        <!-- Lien vers l'annuaire -->
-        <div class="border-t border-gray-200 pt-6 dark:border-gray-800">
+        <!-- Liens complémentaires -->
+        <div
+          class="flex flex-col gap-3 border-t border-gray-200 pt-6 dark:border-gray-700 sm:flex-row sm:items-center sm:justify-between"
+        >
+          <NuxtLink
+            to="/gouvernement-senegal/historique"
+            class="inline-flex items-center gap-2 text-sm font-medium text-sky-600 hover:text-sky-700 dark:text-sky-400"
+          >
+            <UIcon name="i-heroicons-clock-20-solid" class="h-4 w-4" />
+            Voir l'historique des gouvernements depuis 1960
+          </NuxtLink>
           <NuxtLink
             to="/personnalites-senegal"
             class="text-primary-600 hover:text-primary-700 dark:text-primary-400 inline-flex items-center gap-2 text-sm font-medium"
