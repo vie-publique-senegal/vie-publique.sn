@@ -1,5 +1,6 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createGeminiAdapter } from '../../../app/lib/chat/adapters/gemini';
+import { reinitialiserJetonsPartages } from '../../../app/lib/chat/session-token';
 
 /**
  * Tests de l'adaptateur avec un `fetch` bouchonné : ils vérifient la traduction
@@ -60,6 +61,11 @@ function installerFetch(routeur: (url: string, init?: RequestInit) => Response) 
 afterEach(() => vi.unstubAllGlobals());
 
 describe('createGeminiAdapter', () => {
+  // Le gestionnaire de jeton est partagé par origine et vit au niveau du module
+  // (il l'est avec la dictée serveur, pour ne pas consommer deux `/session`).
+  // Sans cette remise à zéro, un jeton obtenu par un test survivrait au suivant.
+  beforeEach(reinitialiserJetonsPartages);
+
   it('traduit token, sources et done vers le contrat client', async () => {
     installerFetch((url) =>
       url.endsWith('/session')
@@ -142,6 +148,27 @@ describe('createGeminiAdapter', () => {
     );
 
     expect(evenements.map((e) => (e as { type: string }).type)).toEqual(['token', 'done']);
+  });
+
+  it('transmet la langue de l’échange quand elle est connue, et rien sinon', async () => {
+    let corpsAsk = '';
+    installerFetch((url, init) => {
+      if (url.endsWith('/session')) return reponseSession();
+      corpsAsk = String(init?.body ?? '');
+      return reponseSse('event: done\ndata: {"conversation_id":"c"}\n\n');
+    });
+
+    const adaptateur = createGeminiAdapter(CONFIG);
+
+    await collecter(
+      adaptateur.send('Naka nga def ?', { lang: 'wo-SN', signal: new AbortController().signal }),
+    );
+    expect(JSON.parse(corpsAsk)).toMatchObject({ lang: 'wo-SN' });
+
+    // Sans langue déclarée, le champ est ABSENT : l'API répond alors dans la
+    // langue de la question, ce qui reste le meilleur défaut.
+    await collecter(adaptateur.send('Question', { signal: new AbortController().signal }));
+    expect(JSON.parse(corpsAsk)).not.toHaveProperty('lang');
   });
 
   it('repasse le conversation_id au tour suivant, et jamais d’historique', async () => {

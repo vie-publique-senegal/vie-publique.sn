@@ -13,10 +13,20 @@ const props = defineProps<{
   voix?: boolean;
   /** Langue du vocal (BCP-47). Jamais de valeur par défaut ici. */
   voixLang?: string;
+  /**
+   * Échec de la LECTURE, remonté par la coquille. Affiché au même endroit que
+   * celui de la dictée : l'utilisateur n'a pas à savoir laquelle des deux
+   * moitiés du vocal a échoué, il a besoin de savoir que le texte reste là.
+   */
+  erreurVoix?: string | null;
 }>();
 
 const emit = defineEmits<{
-  (e: 'send', question: string): void;
+  /**
+   * `send` porte la question, `langue` la langue réellement entendue par la
+   * dictée — celle qui devient la langue de l'échange.
+   */
+  (e: 'send' | 'langue', valeur: string): void;
   /** `dictee-demarre` : l'appelant coupe la lecture en cours (barge-in). */
   (e: 'stop' | 'dictee-demarre'): void;
 }>();
@@ -38,8 +48,15 @@ const disabled = computed(() => Boolean(props.cooldown && props.cooldown > 0));
  * un seul fournisseur rendrait la mention FAUSSE pour une partie des visiteurs,
  * ce qui est pire que de ne rien dire sur un site de service public. D'où une
  * formulation qui couvre les trois cas sans en garantir un.
+ *
+ * ⚠️ **Depuis le moteur serveur (2026-09-04), il y a DEUX chemins et donc deux
+ * mentions.** Celle du navigateur reste vraie mot pour mot ; elle devient fausse
+ * dès que la dictée passe par notre API, puisque l'audio transite alors bien par
+ * nos serveurs. Une phrase unique qui couvrirait les deux cas serait vague là où
+ * la précédente était précise. Clé de consentement en `v2` : ceux qui ont
+ * accepté l'ancienne formulation n'ont pas accepté celle-ci.
  */
-const mentionVue = useLocalStorage('vp-chat-voix-mention-v1', false);
+const mentionVue = useLocalStorage('vp-chat-voix-mention-v2', false);
 const mentionAffichee = ref(false);
 
 const langue = computed(() => props.voixLang ?? '');
@@ -56,9 +73,11 @@ const {
   erreur: erreurDictee,
   basculer: basculerDictee,
   arreter: arreterDictee,
+  moteurId: moteurDictee,
   effacerErreur,
 } = useDicteeVocale({
   lang: langue,
+  onLangue: (lang) => emit('langue', lang),
   onTexte: (texte) => {
     // On COMPLÈTE, on n'écrase pas : l'utilisateur a pu commencer à taper.
     // Et surtout on n'envoie PAS — le texte reste visible et modifiable.
@@ -66,6 +85,15 @@ const {
     focus();
   },
 });
+
+/** La dictée passe-t-elle par nos serveurs ? La mention en dépend, pas l'UI. */
+const dicteeParNosServeurs = computed(() => moteurDictee.value === 'rag-serveur');
+
+const texteMention = computed(() =>
+  dicteeParNosServeurs.value
+    ? 'Votre voix est enregistrée puis transmise à notre service, qui la fait transcrire par un prestataire. L’enregistrement n’est pas conservé : seul le texte transcrit reste, dans le champ de saisie, où vous pouvez le corriger. Vous pouvez taper votre question à la place.'
+    : 'Votre voix est transmise au service de reconnaissance vocale de votre navigateur ou de votre appareil — Apple, Google ou Microsoft selon le cas — afin d’être transcrite. Elle ne transite pas par nos serveurs, et n’est pas conservée par Vie Publique. Vous pouvez taper votre question à la place.',
+);
 
 const micDisponible = computed(() => Boolean(props.voix) && dicteeDisponible.value);
 /** Refus de permission : bouton conservé mais inerte et expliqué, plutôt qu'évaporé. */
@@ -75,7 +103,7 @@ const micRefuse = computed(
 
 const etiquetteMic = computed(() => {
   if (etatDictee.value === 'transcription') return 'Transcription en cours';
-  if (etatDictee.value === 'ecoute') return 'Écoute… appuyez pour arrêter';
+  if (etatDictee.value === 'ecoute') return 'Écoute… appuyez quand vous avez fini';
   return 'Dicter la question';
 });
 
@@ -89,7 +117,9 @@ function lancerDictee() {
 
 function surClicMic() {
   if (enEcoute.value) {
-    arreterDictee();
+    // Terminer, pas annuler : le bouton dit « appuyez pour arrêter », et avec un
+    // moteur serveur c'est CE geste qui déclenche la transcription.
+    basculerDictee();
     return;
   }
   if (!mentionVue.value) {
@@ -139,12 +169,7 @@ defineExpose({ focus, arreterDictee });
         v-if="mentionAffichee"
         class="mb-2 rounded-xl border border-gray-200 px-4 py-3 text-sm dark:border-gray-700"
       >
-        <p class="text-gray-700 dark:text-gray-300">
-          Votre voix est transmise au service de reconnaissance vocale de votre navigateur ou de
-          votre appareil — Apple, Google ou Microsoft selon le cas — afin d’être transcrite. Elle ne
-          transite pas par nos serveurs, et n’est pas conservée par Vie Publique. Vous pouvez taper
-          votre question à la place.
-        </p>
+        <p class="text-gray-700 dark:text-gray-300">{{ texteMention }}</p>
         <div class="mt-3 flex flex-wrap gap-2">
           <UButton color="primary" size="xs" label="Autoriser et dicter" @click="accepterMention" />
           <UButton
@@ -159,11 +184,11 @@ defineExpose({ focus, arreterDictee });
 
       <!-- Échec de la dictée : message clair, retour au clavier, jamais de blocage. -->
       <p
-        v-if="erreurDictee"
+        v-if="erreurDictee || erreurVoix"
         class="mb-2 text-center text-sm text-amber-700 dark:text-amber-400"
         role="status"
       >
-        {{ erreurDictee }}
+        {{ erreurDictee || erreurVoix }}
       </p>
 
       <form class="relative flex w-full flex-col" @submit.prevent="submit">

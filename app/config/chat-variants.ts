@@ -30,10 +30,13 @@ export const CHAT_VARIANTS: ChatVariant[] = [
     status: 'active',
     icon: 'i-simple-icons-googlegemini',
     available: true,
-    // Le corpus indexé est volontairement étroit : une question hors périmètre
+    // Le corpus indexé ne couvre pas tout le site : une question hors périmètre
     // reçoit « je ne sais pas ». C'est le comportement attendu, pas une panne.
+    // Le périmètre vient de la réconciliation d'ingestion (fichiers < 5 Mo,
+    // législation depuis 2023) ; le décompte est arrondi car il bouge à chaque
+    // passage — relevé sur `GET /documents` de rag.vie-publique.sn.
     warning:
-      'Corpus limité à 136 documents (conseils des ministres, lois de finances, Cour des comptes, statistiques ANSD).',
+      'Corpus partiel : environ 5 400 des 12 600 documents publiés sont indexés (fichiers de moins de 5 Mo, textes législatifs depuis 2023).',
     starterQuestions: [
       'Quels départements sont touchés par l’insécurité alimentaire sévère ?',
       'Quel déficit budgétaire le projet de loi de finances 2026 prévoit-il ?',

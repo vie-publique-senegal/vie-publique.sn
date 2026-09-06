@@ -72,3 +72,41 @@ export function creerGestionnaireJeton(options: OptionsJetonSession): Gestionnai
     },
   };
 }
+
+/**
+ * Gestionnaires partagés, un par origine d'API.
+ *
+ * La dictée serveur (`app/lib/voice/engines/rag-serveur.ts`) a besoin du même
+ * jeton que le chat. Lui en faire créer un second consommerait deux `/session`
+ * là où un seul suffit — exactement ce que la règle 2 de ce fichier interdit,
+ * le quota de 20/min étant partagé par tout un bureau.
+ *
+ * Le PREMIER appelant fournit la fabrique et gagne : en pratique l'adaptateur de
+ * chat, créé au chargement de la page bien avant qu'on parle. Les deux fabriques
+ * font la même chose — un POST /session qui lève en cas d'échec — et ne
+ * diffèrent que par la richesse de l'erreur levée, que le gestionnaire propage
+ * telle quelle à son appelant.
+ */
+const partages = new Map<string, GestionnaireJeton>();
+
+export function gestionnaireJetonPartage(
+  base: string,
+  fabrique: () => GestionnaireJeton,
+): GestionnaireJeton {
+  const existant = partages.get(base);
+  if (existant) return existant;
+  const nouveau = fabrique();
+  partages.set(base, nouveau);
+  return nouveau;
+}
+
+/**
+ * Vide le cache des gestionnaires partagés — pour les tests, exclusivement.
+ *
+ * Sans elle, un jeton obtenu par un test survit au suivant et le fait passer
+ * pour de mauvaises raisons : c'est exactement ce qui est arrivé en introduisant
+ * le partage, un test de refus sur `/session` ne voyant plus aucun appel partir.
+ */
+export function reinitialiserJetonsPartages(): void {
+  partages.clear();
+}

@@ -53,6 +53,16 @@ export type ChatEvent =
 export interface ChatSendContext {
   /** Identifiant du fil, quand le backend en gère un. */
   conversationId?: string;
+  /**
+   * Langue de l'échange (BCP-47), quand elle est CONNUE — choisie par
+   * l'utilisateur, ou entendue par la transcription. Absente = le backend
+   * répond dans la langue de la question, ce qu'il sait faire.
+   *
+   * Elle existe parce que la langue de la réponse commande le choix du moteur
+   * de lecture : sans elle, il faudrait redeviner en aval une information qu'on
+   * possédait en amont. Cf. docs/modules/chat/voix.md § Langue de l'échange.
+   */
+  lang?: string;
   signal: AbortSignal;
 }
 
