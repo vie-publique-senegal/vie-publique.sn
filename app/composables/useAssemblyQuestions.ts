@@ -26,6 +26,9 @@ export interface AssemblyQuestionsOptions {
 
   /** Nombre de députés à retourner dans le top */
   topDeputiesLimit?: number;
+
+  /** Restreindre la liste aux questions d'un député (id CMS) */
+  deputyId?: string | Ref<string>;
 }
 
 /**
@@ -105,6 +108,12 @@ export const useAssemblyQuestions = (options: AssemblyQuestionsOptions = {}) => 
     // Filtre par statut
     if (filterStatus.value && filterStatus.value !== 'all') {
       filters.filterStatus = filterStatus.value;
+    }
+
+    // Filtre par député (questions d'un député donné)
+    const deputy = unref(options.deputyId);
+    if (deputy) {
+      filters.deputyId = deputy;
     }
 
     return filters;
