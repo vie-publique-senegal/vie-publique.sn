@@ -75,6 +75,16 @@ export function useLectureVocale(options: OptionsLectureVocale) {
     file = [];
     tampon = creerTamponPhrases();
     enLecture.value = false;
+    // ⚠️ Le message décrit L'ÉPISODE de lecture qu'on vient d'interrompre, pas
+    // un état durable. Sans cette ligne il survivait indéfiniment : `basculer()`
+    // était le seul à l'effacer, donc une phrase ratée laissait « la lecture
+    // n'a pas abouti » affiché sous toutes les réponses SUIVANTES, lues
+    // correctement — constaté le 2026-09-06, et un vestige pareil fausse tout
+    // diagnostic. La frontière est ici parce que `Shell.vue` appelle `arreter()`
+    // au départ de chaque nouvelle question. Surtout PAS à chaque phrase : le
+    // message doit survivre à la fin de la réponse en cours, sinon la phrase
+    // suivante l'efface avant que personne ne l'ait lu.
+    erreur.value = null;
   }
 
   async function traiterFile() {
