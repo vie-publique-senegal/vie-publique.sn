@@ -15,6 +15,40 @@ const isOpen = computed({
   get: () => props.modelValue,
   set: (value) => emit('update:modelValue', value)
 });
+
+const decodeHtmlEntities = (text: string) =>
+  text
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&eacute;/g, 'é')
+    .replace(/&egrave;/g, 'è')
+    .replace(/&ecirc;/g, 'ê')
+    .replace(/&agrave;/g, 'à')
+    .replace(/&ocirc;/g, 'ô')
+    .replace(/&ccedil;/g, 'ç')
+    .replace(/&rsquo;/g, "'")
+    .replace(/&ldquo;|&rdquo;/g, '"');
+
+const candidateBio = computed(() => {
+  if (!props.candidate) return '';
+  const longBio = typeof (props.candidate as any).long_bio === 'string' ? (props.candidate as any).long_bio.trim() : '';
+  const shortBio = typeof (props.candidate as any).short_bio === 'string' ? (props.candidate as any).short_bio.trim() : '';
+  const legacyBio = typeof (props.candidate as any).biography === 'string' ? (props.candidate as any).biography.trim() : '';
+  return longBio || shortBio || legacyBio || '';
+});
+
+const candidateBioText = computed(() => {
+  if (!candidateBio.value) return '';
+
+  return decodeHtmlEntities(candidateBio.value)
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+});
 </script>
 
 <template>
@@ -67,9 +101,9 @@ const isOpen = computed({
             {{ candidate.gender === 'M' ? 'Masculin' : 'Féminin' }}
           </p>
         </div>
-        <div v-if="candidate.biography" class="mt-3">
+        <div v-if="candidateBioText" class="mt-3">
           <p class="text-sm text-gray-600 dark:text-gray-400">
-            {{ candidate.biography }}
+            {{ candidateBioText }}
           </p>
         </div>
       </div>

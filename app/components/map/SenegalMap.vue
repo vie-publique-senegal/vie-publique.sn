@@ -105,7 +105,10 @@ function buildDeckLayers(configs: any[]): any[] {
       const LayerClass = DeckLayers[typeMap[cfg._type]];
       if (!LayerClass) return null;
       try {
-        const { _type, _dsId, clusterRadius, clusterMaxZoom, ...rest } = cfg;
+        // `_dsId` est conservé dans les props deck.gl : il permet de retrouver le
+        // dataset d'origine même pour les sous-couches dont l'id porte un suffixe
+        // (points sans contour, labels…), là où `id.replace('layer-', '')` échoue.
+        const { _type, clusterRadius, clusterMaxZoom, ...rest } = cfg;
         return new LayerClass(rest);
       } catch (err) {
         console.warn(`[SenegalMap] Layer "${cfg._type}" creation failed:`, err);
@@ -186,7 +189,7 @@ function handleMapClick(info: any) {
 
   handlePickInfo(info);
 
-  const layerId = info.layer?.id?.replace('layer-', '') ?? '';
+  const layerId = info.layer?.props?._dsId ?? info.layer?.id?.replace('layer-', '') ?? '';
   const ds = props.config.datasets.find((d) => d.id === layerId);
 
   if (ds?.type === 'choropleth' && info.object?.properties) {
@@ -219,22 +222,34 @@ onMounted(async () => {
   window.addEventListener('resize', checkMobile);
   store.initFromConfig(props.config);
 
-  // Charger deck.gl + GeoJSON en parallèle
+  // Charger deck.gl + GeoJSON en parallèle (sources surchargées par config.geoSources)
+  const sources = props.config.geoSources ?? {};
+  const geoUrl = (key: 'regions' | 'departements' | 'communes', fallback: string) =>
+    sources[key] === null ? null : (sources[key] ?? fallback);
+  const fetchGeo = (url: string | null) =>
+    url
+      ? fetch(url)
+          .then((r) => (r.ok ? r.json() : null))
+          .catch(() => null)
+      : Promise.resolve(null);
+
   const [, regions, departements, communes] = await Promise.all([
     loadDeckModules().catch(() => null),
-    fetch('/geo/senegal-regions.geojson')
-      .then((r) => (r.ok ? r.json() : null))
-      .catch(() => null),
-    fetch('/geo/senegal-departements.geojson')
-      .then((r) => (r.ok ? r.json() : null))
-      .catch(() => null),
-    fetch('/geo/senegal-communes.geojson')
-      .then((r) => (r.ok ? r.json() : null))
-      .catch(() => null),
+    fetchGeo(geoUrl('regions', '/geo/senegal-regions.geojson')),
+    fetchGeo(geoUrl('departements', '/geo/senegal-departements.geojson')),
+    // Par défaut, les communes ne servent que de calque de LIBELLÉS (zoom ≥ 9) :
+    // le fichier de points d'étiquetage couvre les 553 communes du référentiel.
+    // Les cartes qui dessinent les communes surchargent `geoSources.communes`.
+    fetchGeo(geoUrl('communes', '/geo/senegal-communes-labels.geojson')),
   ]);
   geoJsonRegions.value = regions;
   geoJsonDepartements.value = departements;
   geoJsonCommunes.value = communes;
+
+  // Le composant a pu être démonté pendant les chargements ci-dessus (navigation
+  // client, ou remontage par `:key` au drill-down) : sans ce contrôle, MapLibre reçoit
+  // un container null et lève « Invalid type: 'container' must be a String or HTMLElement ».
+  if (!mapContainer.value) return;
 
   await engine.initMap(mapContainer.value, {
     center: props.config.center ?? [-14.4524, 14.4974],
@@ -263,7 +278,7 @@ onUnmounted(() => window.removeEventListener('resize', checkMobile));
 <template>
   <div
     class="senegal-map relative w-full"
-    style="height: calc(100vh - 64px); height: calc(100dvh - 64px)"
+    :style="{ height: config.height ?? 'calc(100dvh - 64px)' }"
   >
     <!--
       Inline styles obligatoires : MapLibre injecte .maplibregl-map { position: relative }
@@ -387,9 +402,12 @@ onUnmounted(() => window.removeEventListener('resize', checkMobile));
   outline: none;
 }
 
-/* On fournit nos propres contrôles */
-.senegal-map :deep(.maplibregl-ctrl-top-right),
-.senegal-map :deep(.maplibregl-ctrl-top-left) {
+/* On fournit nos propres contrôles — ne cacher que les contrôles MapLibre
+   (.maplibregl-ctrl), jamais les conteneurs de coin : en mode non-interleaved
+   (mobile), le canvas deck.gl vit dans .maplibregl-ctrl-top-left et un
+   display:none sur le conteneur le rendrait 0×0 (couches invisibles). */
+.senegal-map :deep(.maplibregl-ctrl-top-right .maplibregl-ctrl),
+.senegal-map :deep(.maplibregl-ctrl-top-left .maplibregl-ctrl) {
   display: none;
 }
 

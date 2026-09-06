@@ -22,18 +22,19 @@ export default defineCachedEventHandler(
         readItem("election_coalition", id, {
           fields: [
             "id",
-            "name",
             "logo",
             "list_order",
             "bulletin",
             "videos.date",
             "videos.url_youtube",
+            ...ENTITY_IDENTITY_FIELDS.map((f) => `political_entity.${f}`),
           ],
         })
       );
 
+      // Identité de la coalition via son entité politique (fallback legacy)
       return {
-        data: coalition,
+        data: mergeEntityIdentity(coalition as Record<string, unknown>),
       };
     } catch (error) {
       console.error(`Error fetching coalition ${id}:`, error);

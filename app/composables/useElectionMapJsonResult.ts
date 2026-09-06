@@ -1,5 +1,6 @@
 // composables/useElectionMapDataResult.ts
 import type { DepartmentStats } from "~~/types/election-map-national";
+import type { ConstituencyContour } from "./useConstituencyContours";
 
 interface GeoData {
   id: number;
@@ -7,9 +8,13 @@ interface GeoData {
     name: string;
     color: string;
     logo: string;
+    head_of_list?: { id: number | null; slug: string | null; first_name: string | null; last_name: string | null } | null;
   };
   constituencie?: {
     name: string;
+    slug?: string | null;
+    /** Slug du référentiel géographique — clé de jointure des contours */
+    geo_slug?: string | null;
     region: string;
     type: string;
     nationale_type: string;
@@ -28,7 +33,7 @@ interface GeoData {
     }[];
   };
   voters?: number;
-  // Position is at the root of the 'carte' collection item
+  // Position n'est plus servie que par la réponse fallback legacy (collection carte)
   Position?: {
     type: string;
     coordinates: number[][][];
@@ -64,8 +69,6 @@ export interface TableResultItem {
 }
 
 export function useElectionMapDataResult() {
-  const config = useRuntimeConfig();
-
   // État global pour le cache des données
   const geoData = useState<GeoData[]>("geo-data-result", () => []);
   const loading = useState<boolean>("geo-data-result-loading", () => false);
@@ -74,27 +77,35 @@ export function useElectionMapDataResult() {
     () => false,
   );
 
+  // Promise partagée pour éviter les fetch concurrents
+  let loadingPromise: Promise<GeoData[]> | null = null;
+
   // Charger les données géographiques depuis l'API serveur Nuxt
-  const loadGeoDataWithWinner = async () => {
+  const loadGeoDataWithWinner = async (): Promise<GeoData[]> => {
     if (isGeoDataLoaded.value) return geoData.value;
-    if (loading.value) return []; // Avoid concurrent fetches
+    // Si un fetch est déjà en cours, attendre qu'il se termine plutôt que de retourner []
+    if (loadingPromise) return loadingPromise;
 
     loading.value = true;
-    try {
-      const response = await $fetch<{ data: GeoData[] }>('/api/carte/result');
-      const data = (response?.data || response) as GeoData[];
-      geoData.value = Array.isArray(data) ? data : [];
-      isGeoDataLoaded.value = true;
-      return geoData.value;
-    } catch (error) {
-      console.error(
-        "Erreur lors du chargement des données de résultats:",
-        error,
-      );
-      return [];
-    } finally {
-      loading.value = false;
-    }
+    loadingPromise = (async () => {
+      try {
+        const response = await $fetch<{ data: GeoData[] }>('/api/carte/result');
+        const data = (response?.data || response) as GeoData[];
+        geoData.value = Array.isArray(data) ? data : [];
+        isGeoDataLoaded.value = true;
+        return geoData.value;
+      } catch (error) {
+        console.error(
+          "Erreur lors du chargement des données de résultats:",
+          error,
+        );
+        return [];
+      } finally {
+        loading.value = false;
+        loadingPromise = null;
+      }
+    })();
+    return loadingPromise;
   };
 
   // Obtenir les données géographiques
@@ -125,26 +136,48 @@ export function useElectionMapDataResult() {
       });
   }
 
+  const { loadContours } = useConstituencyContours();
+
+  const formatPersonName = (person?: { first_name?: string | null; last_name?: string | null } | null): string =>
+    person ? `${person.first_name ?? ''} ${person.last_name ?? ''}`.trim() : '';
+
+  /**
+   * Tête de liste : locale (communes) lit winning_list.candidates (plusieurs
+   * listes d'une même coalition peuvent concourir dans une commune) ; les
+   * autres scrutins (législatives, présidentielle) lisent
+   * coalition_gagnante.head_of_list (M2O direct sur la coalition).
+   */
+  const resolveHeadOfList = (item: GeoData, electionType: string): string => {
+    if (electionType === 'locale') {
+      if (item.winning_list && !item.winning_list.is_substitute && item.winning_list.candidates) {
+        const head = item.winning_list.candidates.find((c) => c.position === 1);
+        if (head) return `${head.first_name} ${head.last_name}`;
+      }
+      return "";
+    }
+    return formatPersonName(item.coalition_gagnante?.head_of_list);
+  };
+
   // Transformer les coordonnées pour Leaflet
-  const transformCoordinates = (geoData: GeoData[], electionType: string, electionYear: number): TransformedRegion[] => {
+  const transformCoordinates = (
+    geoData: GeoData[],
+    electionType: string,
+    electionYear: number,
+    contours?: Map<string, ConstituencyContour>,
+  ): TransformedRegion[] => {
     return getFilteredData(geoData, electionType, electionYear)
       .map((item) => {
         const constData = item.constituencie!;
 
-        // Handle GeoJSON structure
-        const coordsRaw = item.Position?.coordinates?.[0] || [];
+        // Contours statiques joints par le slug du référentiel géographique ;
+        // Position en secours (réponse fallback legacy)
+        const contourRing = constData.geo_slug ? contours?.get(constData.geo_slug)?.ring : undefined;
+        const coordsRaw = contourRing?.length ? contourRing : item.Position?.coordinates?.[0] || [];
         const coordinates: [number, number][] = Array.isArray(coordsRaw)
-            ? coordsRaw.map((coord: any) => [coord[1], coord[0]]) // Flip to [lat, lng]
+            ? coordsRaw.map((coord: number[]) => [coord[1], coord[0]] as [number, number]) // Flip to [lat, lng]
             : [];
 
-        // Find Head of List
-        let headOfList = "";
-        if (item.winning_list && !item.winning_list.is_substitute && item.winning_list.candidates) {
-            const head = item.winning_list.candidates.find(c => c.position === 1);
-            if (head) {
-                headOfList = `${head.first_name} ${head.last_name}`;
-            }
-        }
+        const headOfList = resolveHeadOfList(item, electionType);
 
         return {
           id: item.id,
@@ -168,14 +201,7 @@ export function useElectionMapDataResult() {
         .map((item) => {
             const constData = item.constituencie;
 
-            // Find Head of List
-            let headOfList = "Non défini";
-            if (item.winning_list && !item.winning_list.is_substitute && item.winning_list.candidates) {
-                const head = item.winning_list.candidates.find(c => c.position === 1);
-                if (head) {
-                    headOfList = `${head.first_name} ${head.last_name}`;
-                }
-            }
+            const headOfList = resolveHeadOfList(item, electionType) || "Non défini";
 
             return {
                 id: item.id,
@@ -192,8 +218,9 @@ export function useElectionMapDataResult() {
 
   // Obtenir les données complètes de la carte
   const getMapDataResult = async (electionType: string = 'legislative', electionYear: number) => {
-    await getGeoData();
-    return transformCoordinates(geoData.value, electionType, electionYear);
+    const contourLevel = electionType === 'locale' ? 'communes' : 'departements';
+    const [, contours] = await Promise.all([getGeoData(), loadContours(contourLevel)]);
+    return transformCoordinates(geoData.value, electionType, electionYear, contours);
   };
 
   // Get Table Data

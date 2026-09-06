@@ -25,6 +25,9 @@ const adjustedPosition = ref({ left: '0px', top: '0px' })
 
 const title = computed(() => resolvePopupTitle(props.config, props.data))
 const width = computed(() => `${props.config.width ?? 280}px`)
+const visibleFields = computed(() =>
+  props.config.fields.filter((field) => !field.showIf || field.showIf(props.data)),
+)
 
 function calculatePosition() {
   if (props.isMobile || !popupRef.value) return
@@ -99,7 +102,7 @@ onUnmounted(() => document.removeEventListener('keydown', handleKeydown))
       <!-- Fields -->
       <div class="px-4 py-3 space-y-2">
         <div
-          v-for="field in config.fields"
+          v-for="field in visibleFields"
           :key="field.key"
           class="flex items-center justify-between text-sm"
         >
@@ -186,7 +189,7 @@ onUnmounted(() => document.removeEventListener('keydown', handleKeydown))
       <div class="flex justify-center pt-2 pb-1">
         <div class="w-10 h-1 rounded-full bg-gray-600" />
       </div>
-      <div class="px-4 pb-5">
+      <div class="px-4 pb-24">
         <div class="flex items-center justify-between mb-3">
           <h4 class="font-semibold text-base">{{ title }}</h4>
           <button
@@ -200,7 +203,7 @@ onUnmounted(() => document.removeEventListener('keydown', handleKeydown))
 
         <div class="space-y-2.5">
           <div
-            v-for="field in config.fields"
+            v-for="field in visibleFields"
             :key="field.key"
             class="flex items-center justify-between text-sm"
           >

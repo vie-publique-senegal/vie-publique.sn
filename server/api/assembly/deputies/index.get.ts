@@ -59,7 +59,7 @@ export default defineCachedEventHandler(
                 "name",
                 "type",
                 {
-                  coalition: ["name", "color"],
+                  coalition: ["color", { political_entity: ENTITY_IDENTITY_FIELDS }] as any,
                   constituency: ["name"],
                 },
               ],
@@ -74,6 +74,13 @@ export default defineCachedEventHandler(
           sort: ["last_name", "first_name"],
         })
       );
+
+      for (const deputy of deputiesData as Record<string, unknown>[]) {
+        const electoralList = deputy.electoral_list as Record<string, unknown> | null;
+        if (electoralList?.coalition) {
+          electoralList.coalition = mergeEntityIdentity(electoralList.coalition as Record<string, unknown>);
+        }
+      }
 
       // Récupération du total
       const [totalCount] = await directus.request(

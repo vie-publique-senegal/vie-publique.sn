@@ -59,6 +59,13 @@ export function useMapEngine() {
       renderWorldCopies: false,
       attributionControl: false,
       preserveDrawingBuffer: true,
+      // MapLibre n'émet pas de 'click' si le pointeur a bougé de plus de
+      // clickTolerance (défaut 3px) entre touchstart et touchend. Au tactile,
+      // le micro-mouvement naturel du doigt dépasse presque toujours 3px : le
+      // premier tap est alors silencieusement ignoré (pas de 'click' → pas de
+      // picking deck.gl → pas de popup) et seul un second tap, par hasard sous
+      // le seuil, aboutit. On élargit la tolérance sur tactile.
+      clickTolerance: options.isMobile ? 12 : 3,
       ...(isFlat ? { maxPitch: 0, dragRotate: false, touchPitch: false } : {}),
     } as any)
 
@@ -87,7 +94,11 @@ export function useMapEngine() {
     try {
       const { MapboxOverlay } = await import('@deck.gl/mapbox')
       const overlay = new MapboxOverlay({
-        interleaved: true,
+        // Sur tactile, le rendu interleaved partage le picking buffer avec MapLibre :
+        // le premier tap est souvent consommé par la reconnaissance de geste (pan/zoom)
+        // avant que deck.gl ait pu "picker" — un second tap est alors nécessaire pour le
+        // clic. Un canvas dédié (non interleaved) lève cette dépendance sur tactile.
+        interleaved: !options.isMobile,
         layers: [],
         pickingRadius: options.isMobile ? 20 : 10,
         onClick: (info: any) => _onClickCallback?.(info),
@@ -99,7 +110,16 @@ export function useMapEngine() {
           : undefined,
         onError: (err: Error) => console.warn('[deck.gl]', err.message),
       } as any)
-      map.addControl(overlay as any)
+      // Position explicite 'top-left' : en mode non-interleaved (tactile), le canvas
+      // de deck.gl est un div `position:absolute; left:0; top:0` de la taille de la
+      // carte, enfant réel du conteneur de contrôle MapLibre. Seul le conteneur
+      // 'top-left' est ancré en (0,0) de la carte : dans tout autre coin, le canvas
+      // est décalé de la largeur/hauteur de la carte et rendu hors de la zone
+      // visible (couches invisibles sur mobile, alors que le picking marche car les
+      // événements transitent par la carte). Le CSS du composant ne doit cacher que
+      // les `.maplibregl-ctrl` enfants de ce conteneur, jamais le conteneur entier
+      // (sinon canvas 0×0).
+      map.addControl(overlay as any, 'top-left')
       deckOverlay.value = overlay
     } catch (err) {
       console.error('[useMapEngine] deck.gl init failed:', err)

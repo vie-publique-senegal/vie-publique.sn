@@ -72,6 +72,8 @@ export interface MapDatasetConfig<T = any> {
   joinField?: string;
   /** Champ dans le GeoJSON pour le join */
   geoJoinField?: string;
+  /** Fond de jointure de la choroplèthe (défaut : 'regions') */
+  geoLevel?: 'regions' | 'departements' | 'communes';
   /** Fonction qui extrait la valeur numérique pour colorier */
   getValue?: (d: T) => number;
   /** Fonction qui extrait le label textuel */
@@ -127,6 +129,8 @@ export interface PopupFieldConfig<T = any> {
   prefix?: string;
   /** Fonction de formatage custom */
   formatter?: (value: any, item: T) => string;
+  /** N'afficher ce champ que si cette condition est vraie (ex. donnée de second tour absente) */
+  showIf?: (d: T) => boolean;
 }
 
 export interface PopupConfig<T = any> {
@@ -288,6 +292,17 @@ export interface SenegalMapConfig {
   center?: [number, number];
   /** Zoom initial */
   zoom?: number;
+  /** Hauteur CSS du conteneur (défaut : plein écran moins le header) */
+  height?: string;
+  /**
+   * Sources GeoJSON par niveau (défaut : /geo/senegal-*.geojson).
+   * `null` désactive le chargement du niveau.
+   */
+  geoSources?: {
+    regions?: string | null;
+    departements?: string | null;
+    communes?: string | null;
+  };
   /** Mode d'interaction : 'flat' (2D only) ou '3d' (pitch/rotation) */
   interactionMode?: 'flat' | '3d';
   /** Presets de navigation */

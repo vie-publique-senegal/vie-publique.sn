@@ -323,6 +323,13 @@ export default defineNuxtConfig({
     },
     '/budget-etat-senegal': { redirect: { to: '/budget-senegal', statusCode: 301 } },
     '/budget-etat-senegal/**': { redirect: { to: '/budget-senegal/**', statusCode: 301 } },
+    // Législation électorale : page supprimée, consolidation vers /documents/elections
+    '/elections-senegal/legislation': {
+      redirect: { to: '/documents/elections', statusCode: 301 },
+    },
+    '/elections-senegal/legislation/**': {
+      redirect: { to: '/documents/elections', statusCode: 301 },
+    },
     '/nomination-senegal/conseil-des-ministres-07-aout': {
       redirect: { to: '/nomination-senegal', statusCode: 301 },
     },
@@ -372,25 +379,32 @@ export default defineNuxtConfig({
     },
     '/elections/legislatives/resultats': {
       redirect: {
-        to: '/elections-senegal/dashboard/legislative/2024?tab=resultats',
+        to: '/elections-senegal/legislatives-2024/resultats',
         statusCode: 301,
       },
     },
     '/elections/legislatives/resultats/**': {
       redirect: {
-        to: '/elections-senegal/dashboard/legislative/2024?tab=resultats',
+        to: '/elections-senegal/legislatives-2024/resultats',
         statusCode: 301,
       },
     },
     '/elections/legislatives/statistiques': {
       redirect: {
-        to: '/elections-senegal/dashboard/legislative/2024?tab=statistiques',
+        to: '/elections-senegal/legislatives-2024/statistiques',
         statusCode: 301,
       },
     },
     // Catch-all (dont /elections/legislatives et /elections/legislatives/[id])
     '/elections/**': {
-      redirect: { to: '/elections-senegal/dashboard/legislative/2024', statusCode: 301 },
+      redirect: { to: '/elections-senegal/legislatives-2024', statusCode: 301 },
+    },
+    // Ancien dashboard /elections-senegal/dashboard/[type]/[year] → pages par slug
+    '/elections-senegal/dashboard/legislative/2024': {
+      redirect: { to: '/elections-senegal/legislatives-2024', statusCode: 301 },
+    },
+    '/elections-senegal/dashboard/**': {
+      redirect: { to: '/elections-senegal/scrutins', statusCode: 301 },
     },
     // Ancien annuaire Système A (state_entity) supprimé 2026-07 → Système B
     // (docs/modules/etat/todo-supprimer-systeme-a.md). Le splat /annuaire/<slug>

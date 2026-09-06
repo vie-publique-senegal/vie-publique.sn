@@ -24,14 +24,11 @@ export default defineCachedEventHandler(
             "name",
             "type",
             "is_substitute",
-            "candidates.first_name",
-            "candidates.last_name",
+            // L'identité vient de la person ; seuls les champs propres à la candidature restent
             "candidates.profession",
-            "candidates.gender",
             "candidates.position",
-            "candidates.photo",
-            "candidates.biography",
             "candidates.voter_number",
+            ...PERSON_IDENTITY_FIELDS.map((f) => `candidates.person.${f}`),
             "constituency.name",
           ],
           filter: {
@@ -41,8 +38,17 @@ export default defineCachedEventHandler(
         })
       );
 
+      // Identité des candidats via leur person ; `biography` reste servie (compat)
       return {
-        data: lists,
+        data: (lists as any[]).map((list: any) => ({
+          ...list,
+          candidates: Array.isArray(list?.candidates)
+            ? list.candidates.map((c: Record<string, unknown>) => {
+                const merged = mergePersonIdentity(c);
+                return { ...merged, biography: merged.short_bio ?? null };
+              })
+            : list?.candidates,
+        })),
       };
     } catch (error) {
       console.error(`Error fetching electoral lists for coalition ${coalitionId}:`, error);

@@ -5,10 +5,11 @@ export default defineCachedEventHandler(
     const directus = getCmsClient() as any;
 
     try {
-      const electionsData = (await directus.request(
+      const electionsPromise = directus.request(
         (readItems as any)("elections", {
           fields: [
             "id",
+            "slug",
             "year",
             "type",
             "name",
@@ -26,6 +27,7 @@ export default defineCachedEventHandler(
             "valid_votes",
             "absolute_majority",
             "national_quotient",
+            "pv_upload_active",
             "documents.documents_id.id",
             "documents.documents_id.slug",
             "documents.documents_id.title",
@@ -37,8 +39,68 @@ export default defineCachedEventHandler(
             "documents.documents_id.status"
           ],
           sort: ["-year", "-election_date", "-id"],
+          filter: {
+            status: { _nin: ["draft", "archived"] }
+          },
         })
-      )) as any[];
+      ) as Promise<any[]>;
+
+      // Fichiers électoraux des élections (additif, best-effort : requête séparée
+      // pour ne pas faire échouer la config quand le schéma n'existe pas encore en prod).
+      // Lancée en parallèle de la requête principale (aucune dépendance entre les deux)
+      // pour éviter d'attendre deux allers-retours CMS séquentiels.
+      const electoralFileFields = (scope: string) => [
+        `electoral_file_${scope}.id`,
+        `electoral_file_${scope}.name`,
+        `electoral_file_${scope}.scope`,
+        `electoral_file_${scope}.year`,
+        `electoral_file_${scope}.document.id`,
+        `electoral_file_${scope}.document.slug`,
+        `electoral_file_${scope}.document.title`,
+        `electoral_file_${scope}.document.type`,
+        `electoral_file_${scope}.document.file`,
+        `electoral_file_${scope}.document.status`,
+      ];
+
+      interface ElectoralFileRow {
+        id: number;
+        name: string;
+        year: number | null;
+        document?: {
+          id: number;
+          slug: string | null;
+          title: string | null;
+          type: string | null;
+          file: string | null;
+          status: string;
+        } | null;
+      }
+
+      interface CleanElectoralFile {
+        id: number;
+        name: string;
+        year: number | null;
+        document: Omit<NonNullable<ElectoralFileRow["document"]>, "status"> | null;
+      }
+
+      const filesPromise = directus
+        .request(
+          (readItems as any)("elections", {
+            fields: ["id", ...electoralFileFields("national"), ...electoralFileFields("diaspora")],
+            filter: { status: { _nin: ["draft", "archived"] } },
+            limit: -1,
+          })
+        )
+        .catch(() => null) as Promise<
+        | {
+            id: number;
+            electoral_file_national?: ElectoralFileRow | null;
+            electoral_file_diaspora?: ElectoralFileRow | null;
+          }[]
+        | null
+      >;
+
+      const [electionsData, fileRowsResult] = await Promise.all([electionsPromise, filesPromise]);
 
       if (!electionsData || electionsData.length === 0) {
           return {
@@ -57,7 +119,9 @@ export default defineCachedEventHandler(
 
       electionsData.forEach((e: any) => {
         if (e.year) yearsSet.add(e.year);
-        if (e.type) typesSet.add(e.type);
+        // Un type n'apparaît dans le sélecteur que s'il a au moins une élection avec un slug
+        // (sinon aucune fiche /elections-senegal/[slug] n'existe pour ce type.
+        if (e.type && e.slug) typesSet.add(e.type);
       });
 
       const years = Array.from(yearsSet)
@@ -74,6 +138,45 @@ export default defineCachedEventHandler(
         label: typesMap[t] || t.charAt(0).toUpperCase() + t.slice(1),
         value: t,
       }));
+
+      const electoralFilesByElection = new Map<
+        number,
+        { national: CleanElectoralFile | null; diaspora: CleanElectoralFile | null }
+      >();
+      if (fileRowsResult) {
+        const fileRows = fileRowsResult as {
+          id: number;
+          electoral_file_national?: ElectoralFileRow | null;
+          electoral_file_diaspora?: ElectoralFileRow | null;
+        }[];
+
+        const cleanFile = (file: ElectoralFileRow | null | undefined): CleanElectoralFile | null => {
+          if (!file?.id) return null;
+          const document =
+            file.document?.id && file.document.status === "published"
+              ? {
+                  id: file.document.id,
+                  slug: file.document.slug,
+                  title: file.document.title,
+                  type: file.document.type,
+                  file: file.document.file,
+                }
+              : null;
+          return {
+            id: file.id,
+            name: file.name,
+            year: file.year,
+            document,
+          };
+        };
+
+        for (const row of fileRows) {
+          electoralFilesByElection.set(row.id, {
+            national: cleanFile(row.electoral_file_national),
+            diaspora: cleanFile(row.electoral_file_diaspora),
+          });
+        }
+      }
 
       // Traiter les données des élections pour nettoyer et filtrer les documents
       const processedElections = electionsData.map((election: any) => {
@@ -92,7 +195,8 @@ export default defineCachedEventHandler(
 
         return {
           ...election,
-          documents
+          documents,
+          electoral_files: electoralFilesByElection.get(election.id) || null,
         };
       });
 
@@ -117,8 +221,8 @@ export default defineCachedEventHandler(
     }
   },
   {
-    maxAge: 60 * 60,
-    name: "elections-dashboard-config",
+    maxAge: 5 * 60,
+    name: "elections-dashboard-config-v3",
     getKey: () => "elections-dashboard-config",
   }
 );

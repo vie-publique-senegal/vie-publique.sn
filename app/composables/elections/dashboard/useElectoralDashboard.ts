@@ -5,132 +5,204 @@ export interface ElectionConfig {
   election_ids_with_documents: number[];
 }
 
-export const useElectoralDashboard = () => {
-  const selectedYear = useState<number>('election-selected-year');
-  const selectedType = useState<string>('election-selected-type');
-  const activeTab = useState<string>('election-active-tab', () => 'candidats');
-  const selectedConstituencyId = useState<number | null>('election-selected-constituency-id', () => null);
-  const selectedCoalitionId = useState<number | null>('election-selected-coalition-id', () => null);
-  const selectedFilterConstituencyId = useState<number | null>('election-selected-filter-constituency-id', () => null);
-  const searchQuery = useState<string>('election-search-query', () => '');
-  const legislativeViewType = useState<string>('election-legislative-view-type', () => 'list');
+const STATIC_ELECTION_PATHS = [
+  'guide-electoral',
+  'legislation',
+  'carte-electorale',
+  'dashboard',
+  'scrutins',
+];
+const VALID_TABS = new Set([
+  'candidats',
+  'carte',
+  'resultats',
+  'pvs',
+  'documents',
+  'statistiques',
+  'guide',
+]);
 
-  const { data: config, pending: loadingConfig, error: configError } = useFetch<ElectionConfig>('/api/elections/dashboard/config', {
-      key: 'election-dashboard-config',
-      server: true
+export const useElectoralDashboard = () => {
+  const route = useRoute();
+
+  const isElectionSlugPage = computed(() => {
+    const segments = route.path.split('/').filter(Boolean);
+    return (
+      segments[0] === 'elections-senegal' &&
+      segments.length >= 2 &&
+      !STATIC_ELECTION_PATHS.includes(segments[1])
+    );
   });
 
-  // Initialiser avec la dernière élection "completed" par défaut SEULEMENT si pas déjà défini
-  watch(config, (newConfig) => {
-    if (newConfig && newConfig.elections && newConfig.elections.length > 0) {
-      // Si pas encore de sélection, prendre la dernière élection "completed"
-      if (!selectedYear.value || !selectedType.value) {
-        const completedElections = newConfig.elections.filter(e => e.status === 'completed');
-        const defaultElection = completedElections.length > 0
-          ? completedElections[0] // Déjà trié par année desc dans config.get.ts
-          : newConfig.elections[0];
+  const isCandidateProfilePage = computed(() =>
+    /^\/elections-senegal\/[^/]+\/candidats\/[^/]+$/.test(route.path),
+  );
 
-        if (defaultElection) {
-          selectedYear.value = defaultElection.year;
-          selectedType.value = defaultElection.type;
+  const getActiveTabFromRoute = () => {
+    // segments[0]=elections-senegal, [1]=slug d'élection, [2]=onglet : toujours
+    // vrai quelle que soit la profondeur ensuite (ex. candidats/coalition/[slug]).
+    const segments = route.path.split('/').filter(Boolean);
+    const tab = segments[2];
+    if (tab && VALID_TABS.has(tab)) return tab;
+    return 'candidats';
+  };
+
+  const VALID_LEGISLATIVE_VIEWS = new Set(['list', 'head', 'ballot']);
+
+  const selectedYear = useState<number>('election-selected-year', () => 0);
+  const selectedType = useState<string>('election-selected-type', () => '');
+  const activeTab = useState<string>('election-active-tab', getActiveTabFromRoute);
+  // Les états pilotés par l'URL sont initialisés depuis la query dès le premier rendu (serveur compris) :
+  // le SSR doit produire la même vue que le client, sinon mismatch d'hydratation au refresh (ex. ?view=head).
+  // Coalition/circonscription ne sont plus pilotées par query (?coalition=/?constituency=) mais par
+  // des routes dédiées (candidats/coalition/[slug], candidats/circonscription/[slug]) : chaque page
+  // résout elle-même son id depuis le slug, sans état partagé ici.
+  const searchQuery = useState<string>('election-search-query', () =>
+    route.query.q ? String(route.query.q) : '',
+  );
+  const legislativeViewType = useState<string>('election-legislative-view-type', () =>
+    VALID_LEGISLATIVE_VIEWS.has(String(route.query.view)) ? String(route.query.view) : 'list',
+  );
+
+  const {
+    data: config,
+    pending: loadingConfig,
+    error: configError,
+  } = useFetch<ElectionConfig>('/api/elections/dashboard/config', {
+    key: 'election-dashboard-config',
+    server: true,
+  });
+
+  // Initialiser avec la dernière élection "completed" par défaut
+  // SEULEMENT si pas déjà défini ET si on n'est PAS sur une page élection par slug
+  // (sur les pages [slug], l'élection est définie depuis le slug lui-même)
+  watch(
+    config,
+    (newConfig) => {
+      if (newConfig && newConfig.elections && newConfig.elections.length > 0) {
+        // Ne pas définir de valeur par défaut si on est sur une page élection avec slug
+        // Ces pages gèrent leur propre sync depuis le slug
+        if (isElectionSlugPage.value) return;
+
+        if (!selectedYear.value || !selectedType.value) {
+          const completedElections = newConfig.elections.filter((e) => e.status === 'completed');
+          const defaultElection =
+            completedElections.length > 0 ? completedElections[0] : newConfig.elections[0];
+
+          if (defaultElection) {
+            selectedYear.value = defaultElection.year;
+            selectedType.value = defaultElection.type;
+          }
         }
       }
-    }
-  }, { immediate: true });
-
-  const selectConstituency = (id: number) => {
-    selectedConstituencyId.value = id;
-    // Clear search when selecting a constituency
-    searchQuery.value = '';
-  };
-
-  const clearConstituency = () => {
-    selectedConstituencyId.value = null;
-    selectedCoalitionId.value = null;
-    selectedFilterConstituencyId.value = null;
-  };
-
-  const selectCoalition = (id: number) => {
-    selectedCoalitionId.value = id;
-    // Clear search when selecting a coalition
-    searchQuery.value = '';
-  };
-
-  const clearCoalition = () => {
-    selectedCoalitionId.value = null;
-  };
+    },
+    { immediate: true },
+  );
 
   const currentElection = computed(() => {
     if (!config.value?.elections) return null;
-    return config.value.elections.find(e => e.year === selectedYear.value && e.type === selectedType.value) || null;
+    return (
+      config.value.elections.find(
+        (e) => e.year === selectedYear.value && e.type === selectedType.value,
+      ) || null
+    );
   });
 
-  // Documents de l'élection actuelle
   const currentElectionDocuments = computed(() => {
     return currentElection.value?.documents || [];
   });
 
-  // Sync avec les query params (uniquement sur la page dashboard)
-  if (process.client) {
-    const route = useRoute();
+  if (import.meta.client) {
     const router = useRouter();
-    const isDashboardPage = computed(() => route.path.includes('/elections-senegal/dashboard'));
 
-    // Initialiser depuis les query params si on est sur le dashboard
-    // Note: year and type are in the route path, not query params
-    watch(isDashboardPage, (isDashboard) => {
-      if (isDashboard) {
-        if (route.query.tab) activeTab.value = route.query.tab as string;
-        if (route.query.coalition) {
-          const coalitionId = parseInt(route.query.coalition as string);
-          if (!isNaN(coalitionId)) selectedCoalitionId.value = coalitionId;
-        }
-        if (route.query.constituency) {
-          const constituencyId = parseInt(route.query.constituency as string);
-          if (!isNaN(constituencyId)) selectedConstituencyId.value = constituencyId;
-        }
-        if (route.query.q) searchQuery.value = route.query.q as string;
-        if (route.query.view) legislativeViewType.value = route.query.view as string;
+    let isSyncingFromRoute = false;
+
+    const syncFromRoute = () => {
+      if (!isElectionSlugPage.value) return;
+
+      isSyncingFromRoute = true;
+
+      if (isCandidateProfilePage.value) {
+        activeTab.value = 'candidats';
+      } else {
+        const tabFromRoute = getActiveTabFromRoute();
+        if (tabFromRoute) activeTab.value = tabFromRoute;
       }
-    }, { immediate: true });
 
-    // Mettre à jour l'URL quand les filtres changent (uniquement sur le dashboard)
-    // Note: year et type sont dans le path, pas dans les query params
-    watch([activeTab, searchQuery, selectedCoalitionId, selectedConstituencyId, legislativeViewType], ([tab, search, coal, consti, view]) => {
-      if (!isDashboardPage.value) return;
+      searchQuery.value = route.query.q ? String(route.query.q) : '';
 
-      const currentQuery = route.query;
-      const query: any = { ...currentQuery };
+      if (route.query.view && VALID_LEGISLATIVE_VIEWS.has(String(route.query.view))) {
+        legislativeViewType.value = String(route.query.view);
+      }
 
-      // Update logic
-      if (tab) query.tab = tab;
+      nextTick(() => {
+        isSyncingFromRoute = false;
+      });
+    };
 
-      if (view && selectedType.value === 'legislative') query.view = view;
+    watch(() => route.fullPath, syncFromRoute, { immediate: true });
+
+    // Coalition/circonscription/commune ne sont plus des query params ici (routes
+    // dédiées) ; seuls la recherche (q) et le mode d'affichage législatives (view)
+    // restent en query.
+    const buildDashboardQuery = (tab: string, search: string, view: string) => {
+      const query: any = { ...route.query };
+      const isStatistiquesTab = tab === 'statistiques';
+
+      delete query.tab;
+      delete query.coalition;
+      delete query.constituency;
+      delete query.commune_id;
+
+      const isLegislativeMainListView = selectedType.value === 'legislative' && tab === 'candidats';
+      if (view && isLegislativeMainListView) query.view = view;
       else delete query.view;
 
-      if (coal !== null && coal !== undefined) query.coalition = String(coal);
-      else delete query.coalition;
-
-      if (consti !== null && consti !== undefined) query.constituency = String(consti);
-      else delete query.constituency;
-
-      if (search) {
-        query.q = search;
-      } else {
-        delete query.q;
+      if (!isStatistiquesTab) {
+        delete query.stats_type;
       }
 
-      // Ensure we don't trigger redundant navigation
-      const isDifferent = JSON.stringify(currentQuery) !== JSON.stringify(query);
+      if (search) query.q = search;
+      else delete query.q;
 
-      const targetPath = `/elections-senegal/dashboard/${selectedType.value}/${selectedYear.value}`;
+      return query;
+    };
+
+    watch(activeTab, (tab) => {
+      if (isSyncingFromRoute) return;
+      if (!isElectionSlugPage.value) return;
+      if (isCandidateProfilePage.value) return;
+      if (!currentElection.value?.slug) return;
+
+      const electionSlug = currentElection.value.slug;
+      const currentTab = tab || 'candidats';
+      const query = buildDashboardQuery(
+        currentTab,
+        searchQuery.value || '',
+        legislativeViewType.value || '',
+      );
+
+      const targetPath = `/elections-senegal/${electionSlug}/${currentTab}`;
       const pathChanged = route.path !== targetPath;
+      const isDifferent = JSON.stringify(route.query) !== JSON.stringify(query);
 
       if (isDifferent || pathChanged) {
-          router.replace({
-              path: targetPath,
-              query
-          });
+        router.replace({ path: targetPath, query });
+      }
+    });
+
+    watch([searchQuery, legislativeViewType], ([search, view]) => {
+      if (isSyncingFromRoute) return;
+      if (!isElectionSlugPage.value) return;
+      if (isCandidateProfilePage.value) return;
+      if (!currentElection.value?.slug) return;
+
+      const currentTab = activeTab.value || 'candidats';
+      const query = buildDashboardQuery(currentTab, search || '', view || '');
+      const isDifferent = JSON.stringify(route.query) !== JSON.stringify(query);
+
+      if (isDifferent) {
+        router.replace({ query });
       }
     });
   }
@@ -139,9 +211,6 @@ export const useElectoralDashboard = () => {
     selectedYear,
     selectedType,
     activeTab,
-    selectedConstituencyId,
-    selectedCoalitionId,
-    selectedFilterConstituencyId,
     searchQuery,
     legislativeViewType,
     config,
@@ -149,9 +218,5 @@ export const useElectoralDashboard = () => {
     currentElectionDocuments,
     loadingConfig,
     configError,
-    selectConstituency,
-    clearConstituency,
-    selectCoalition,
-    clearCoalition
   };
 };

@@ -1,0 +1,128 @@
+import { readItems } from '@directus/sdk';
+
+/**
+ * Résolution élection → fichier électoral (election_electoral_files).
+ *
+ * Les endpoints bureaux de vote lisent election_polling_stations via le fichier
+ * électoral rattaché à l'élection (FK elections.electoral_file_national/diaspora).
+ * Retourne null quand la résolution échoue (élection sans FK, schéma absent) :
+ * l'endpoint appelant retombe alors sur les collections legacy
+ * election_map_national / election_map_diaspora (prod non migrée).
+ */
+
+export type ElectoralFileScope = 'national' | 'diaspora';
+
+interface LatestFileCacheEntry {
+  id: number | null;
+  expiresAt: number;
+}
+
+// La table des fichiers électoraux est minuscule : cache in-process court
+const latestFileCache = new Map<ElectoralFileScope, LatestFileCacheEntry>();
+const LATEST_FILE_CACHE_TTL = 5 * 60 * 1000;
+
+export async function resolveElectoralFileId(
+  electionId: number | null | undefined,
+  scope: ElectoralFileScope,
+): Promise<number | null> {
+  const cmsClient = getCmsClient();
+
+  if (electionId) {
+    const fkField = scope === 'national' ? 'electoral_file_national' : 'electoral_file_diaspora';
+    const rows = (await cmsClient
+      .request(
+        readItems('elections', {
+          fields: ['id', fkField],
+          filter: { id: { _eq: electionId } },
+          limit: 1,
+        }),
+      )
+      .catch(() => [])) as Record<string, unknown>[];
+
+    const fileId = rows?.[0]?.[fkField];
+    return typeof fileId === 'number' ? fileId : null;
+  }
+
+  // Sans élection : le fichier électoral publié le plus récent du scope
+  // (iso-fonctionnel avec le legacy où « tout » = la dernière carte électorale connue)
+  const cached = latestFileCache.get(scope);
+  if (cached && cached.expiresAt > Date.now()) return cached.id;
+
+  const files = (await cmsClient
+    .request(
+      readItems('election_electoral_files', {
+        fields: ['id'],
+        filter: { scope: { _eq: scope }, status: { _eq: 'published' } },
+        sort: ['-year', '-id'],
+        limit: 1,
+      }),
+    )
+    .catch(() => [])) as { id: number }[];
+
+  const id = files?.[0]?.id ?? null;
+  latestFileCache.set(scope, { id, expiresAt: Date.now() + LATEST_FILE_CACHE_TTL });
+  return id;
+}
+
+/** Identité exposée d'une circonscription dans les payloads de carte agrégés. */
+export interface ConstituencyIdentity {
+  name: string;
+  /**
+   * Graphie des fichiers électoraux (`election_constituencies.name`, MAJUSCULES sans accents).
+   * `name` porte la graphie du référentiel, destinée à l'AFFICHAGE ; celle-ci est la clé
+   * d'URL historique de `/carte-electorale/nationale/<departement>`, la seule indexée —
+   * elle ne se déduit pas de `name` quand l'orthographe a changé (« MALEM HODAR » /
+   * « Malem Hoddar », « NIORO DU RIP » / « Nioro »).
+   */
+  electoral_name: string;
+  /** Slug de la circonscription (URLs publiques) — jamais celui du référentiel */
+  slug: string | null;
+  /** Slug du référentiel géographique, pour la jointure des contours ; null hors référentiel */
+  geo_slug: string | null;
+  population: number | null;
+  region: string | null;
+}
+
+/** Noms, slugs et populations des circonscriptions par id (mapping des agrégats groupés). */
+export async function getConstituencyNamesById(
+  ids: (number | string | null | undefined)[],
+): Promise<Map<number, ConstituencyIdentity>> {
+  const uniqueIds = [...new Set(ids.map((id) => Number(id)).filter((id) => !isNaN(id) && id > 0))];
+  const namesById = new Map<number, ConstituencyIdentity>();
+  if (uniqueIds.length === 0) return namesById;
+
+  const cmsClient = getCmsClient();
+  const [rows, geoSnapshot] = await Promise.all([
+    cmsClient
+      .request(
+        readItems('election_constituencies', {
+          fields: ['id', 'name', 'slug', ...GEO_UNIT_FIELDS],
+          filter: { id: { _in: uniqueIds } },
+          limit: -1,
+          sort: ['id'],
+        }),
+      )
+      .catch(() => []) as Promise<
+      ({ id: number; name: string; slug: string | null } & Record<string, unknown>)[]
+    >,
+    getGeoSnapshot(),
+  ]);
+
+  for (const row of rows) {
+    const geo = resolveGeoUnit(row, geoSnapshot);
+    namesById.set(row.id, {
+      name: geo?.name || row.name,
+      electoral_name: row.name,
+      slug: row.slug ?? null,
+      geo_slug: geoSlugOf(geo),
+      population: geo?.population ?? null,
+      region: geo?.region?.name ?? null,
+    });
+  }
+  return namesById;
+}
+
+/** Journalise un repli sur les collections legacy (à surveiller avant décommissionnement). */
+export function warnElectoralLegacyFallback(endpoint: string, detail?: string) {
+  console.warn(`[elections] lecture legacy sur ${endpoint}${detail ? ` (${detail})` : ''}`);
+}
