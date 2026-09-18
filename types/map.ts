@@ -21,6 +21,21 @@ export type LayerType =
 
 export type RGBAColor = [number, number, number, number];
 
+// ─── Fonds géographiques ──────────────────────────────────────────
+
+/**
+ * Fichiers de `public/geo/` que la carte sait charger.
+ *
+ * `communes` porte les 553 POLYGONES de commune (1 Mo), `communeLabels` les 553
+ * centroïdes correspondants (111 Ko) : deux fichiers distincts, deux usages
+ * distincts. Une carte qui ne fait qu'étiqueter les communes ne doit charger que
+ * `communeLabels`.
+ */
+export type GeoSourceKey = 'regions' | 'departements' | 'communes' | 'communeLabels';
+
+/** Fond d'un choroplèthe (les libellés ne sont pas un fond de remplissage). */
+export type ChoroplethGeoSource = Exclude<GeoSourceKey, 'communeLabels'>;
+
 export interface ColorStop {
   /** Seuil numérique (ex. 0, 25, 50, 75, 100) */
   value: number;
@@ -72,6 +87,17 @@ export interface MapDatasetConfig<T = any> {
   joinField?: string;
   /** Champ dans le GeoJSON pour le join */
   geoJoinField?: string;
+  /**
+   * Fond géométrique du choroplèthe. Défaut `'regions'` — c'est le seul niveau
+   * qui existait avant l'ajout des polygones de commune, toutes les cartes
+   * historiques s'appuient dessus sans rien déclarer.
+   */
+  geoSource?: ChoroplethGeoSource;
+  /**
+   * Restreint les features du fond avant coloriage. Sert au drill-down : n'afficher
+   * que les communes du département ouvert plutôt que les 553 d'un coup.
+   */
+  geoFilter?: (feature: Feature) => boolean;
   /** Fonction qui extrait la valeur numérique pour colorier */
   getValue?: (d: T) => number;
   /** Fonction qui extrait le label textuel */
@@ -282,6 +308,12 @@ export interface SenegalMapConfig {
   title: string;
   /** Description courte */
   description?: string;
+  /**
+   * Affiche le bandeau titre en surimpression (défaut : true). À passer à `false`
+   * quand la page porte déjà son propre en-tête au même endroit — le titre reste
+   * utilisé pour l'export PNG.
+   */
+  showTitle?: boolean;
   /** Thème par défaut */
   theme?: 'dark' | 'light';
   /** Centre initial [lng, lat] */
@@ -292,6 +324,13 @@ export interface SenegalMapConfig {
   interactionMode?: 'flat' | '3d';
   /** Presets de navigation */
   presets?: MapRegionPreset[];
+  /**
+   * Fonds géo à télécharger au montage. Défaut : régions + départements +
+   * libellés de communes, soit ce que chargeaient toutes les cartes avant que le
+   * fichier des polygones de commune (1 Mo) n'existe — à ne demander que si une
+   * couche l'exploite vraiment.
+   */
+  geoSources?: GeoSourceKey[];
   /** Datasets / couches à afficher */
   datasets: MapDatasetConfig[];
   /** Sidebar */

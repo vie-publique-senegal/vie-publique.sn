@@ -5,6 +5,45 @@ import { AUDIT_INSTITUTION_PAGES } from '~~/types/document';
 export default defineSitemapEventHandler(async () => {
   const urls: any[] = [];
 
+  // 0. Collectivités territoriales — référentiel géo réel (558 collectivités).
+  // Requête isolée : une panne du référentiel retire ces URLs du sitemap, elle
+  // ne doit pas priver le sitemap de tout le reste.
+  // Les pages statiques du module (index, carte) sont auto-découvertes.
+  try {
+    for (const commune of await getCommunesGeo()) {
+      urls.push({
+        loc: `/collectivites-territoriales/communes/${commune.slug}`,
+        changefreq: 'monthly',
+        priority: 0.6,
+      });
+    }
+
+    // Hubs région et département : les pages pivot + leurs enfants. Les pivots
+    // sont des pages statiques (donc déjà auto-découvertes) mais on les pousse
+    // explicitement — le module dédoublonne les entrées par URL, et une page
+    // pivot absente du sitemap coûterait plus qu'une ligne redondante.
+    urls.push(
+      { loc: '/collectivites-territoriales/regions', changefreq: 'monthly', priority: 0.7 },
+      { loc: '/collectivites-territoriales/departements', changefreq: 'monthly', priority: 0.7 },
+    );
+    for (const region of await getRegionsGeo()) {
+      urls.push({
+        loc: `/collectivites-territoriales/regions/${region.slug}`,
+        changefreq: 'monthly',
+        priority: 0.7,
+      });
+    }
+    for (const departement of await getDepartementsGeo()) {
+      urls.push({
+        loc: `/collectivites-territoriales/departements/${departement.slug}`,
+        changefreq: 'monthly',
+        priority: 0.7,
+      });
+    }
+  } catch (error) {
+    reportServerError(error, 'sitemap/collectivites');
+  }
+
   const toISODate = (date: string | null | undefined): string | undefined => {
     if (!date) return undefined;
     const parsed = new Date(date);

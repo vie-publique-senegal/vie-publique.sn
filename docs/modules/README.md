@@ -15,6 +15,7 @@
 | [`rss/`](./rss/) | [`flux-rss.md`](./rss/flux-rss.md) | `/rss.xml` + 4 flux |
 | [`podcasts/`](./podcasts/) | [`podcasts.md`](./podcasts/podcasts.md) | `/podcasts` |
 | [`carte/`](./carte/) | [`map-system.md`](./carte/map-system.md) | `/carte` |
+| [`collectivites-territoriales/`](./collectivites-territoriales/) | [`collectivites-territoriales.md`](./collectivites-territoriales/collectivites-territoriales.md) | `/collectivites-territoriales`, `/collectivites-territoriales/regions`, `/collectivites-territoriales/departements`, `/collectivites-territoriales/carte` |
 | [`chat/`](./chat/) | [`banc-essai-chat.md`](./chat/banc-essai-chat.md) · [`voix.md`](./chat/voix.md) (dictée & lecture) | `/chat/**` (interne, noindex) |
 | [`dons/`](./dons/) | [`donation-system.md`](./dons/donation-system.md) | `/don` |
 | [`dashboard/`](./dashboard/) | [`dashboard-projets.md`](./dashboard/dashboard-projets.md) | `/observatoire/*` (chantier) |
