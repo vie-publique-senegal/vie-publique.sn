@@ -51,6 +51,11 @@ flowchart LR
 - **Kuma tourne sur une VM séparée de la prod** — c'est voulu (il voit la prod tomber).
   Mais tant qu'aucune **notification** (e-mail/Telegram) n'y est configurée, un site down
   ne prévient personne : le dashboard n'alerte que si on le regarde.
+- **Aucune surveillance de l'expiration des certificats d'origine** (⏳ à ajouter dans Kuma :
+  sonde HTTP(s) avec alerte « Certificate Expiry » à 14 j, sur chaque hôte public **et** sur les
+  outils internes). En 09/2026, **6 certificats expirés ou cassés** ont été découverts par hasard
+  en diagnostiquant une 526 sur n8n — dont 3 sous-domaines déjà inaccessibles depuis des semaines.
+  Contexte et causes : [`cloudfare.md`](./cloudfare.md) § « Certificats d'ORIGINE ».
 - La stack **Prometheus/Grafana** ([`supervision-infra.md`](./supervision-infra.md)) reste une
   piste d'évolution non déployée — utile seulement si on veut des métriques (CPU/RAM, taux de
   5xx, latence) en plus du up/down de Kuma.

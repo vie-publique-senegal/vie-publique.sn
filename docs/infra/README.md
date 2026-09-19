@@ -9,8 +9,15 @@
 
 ## Vue d'ensemble
 
-Hébergement : **VPS Hostinger** (KVM, AlmaLinux). DNS chez **OVH**. Orchestration par
-**Coolify** (Docker) sur chaque VPS. **Pas d'API gateway, pas de CDN/WAF (Cloudflare) devant.**
+Hébergement : **VPS Hostinger** (KVM, AlmaLinux). DNS + CDN/WAF chez **Cloudflare** depuis le
+09/07/2026 (migration OVH → Cloudflare ; zone en Full (strict), certains sous-domaines internes
+protégés par **Cloudflare Access**) — configuration : [`cloudfare.md`](./cloudfare.md).
+Orchestration par **Coolify** (Docker) sur les VPS PROD et TEST ; le VPS n8n utilise son propre
+`docker-compose` + Traefik (template Hostinger), **pas Coolify**. Pas d'API gateway.
+
+> ⚠️ Les certificats **d'origine** (Traefik/Let's Encrypt) restent à la charge de chaque VPS et
+> leur renouvellement peut échouer silencieusement derrière Cloudflare : voir
+> [`cloudfare.md`](./cloudfare.md) § « Certificats d'ORIGINE » (incident 09/2026).
 
 | VPS | Rôle | Contenu |
 | --- | --- | --- |
