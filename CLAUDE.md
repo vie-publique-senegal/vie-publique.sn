@@ -140,7 +140,10 @@ pour les rédacteurs (pas de JSON brut à saisir).
 
 1. **Branch Strategy**: Work on `develop` branch, create PRs to `develop`
 2. **Commit Convention**: Use Conventional Commits (feat:, fix:, docs:, etc.)
-3. **Before Committing**: Always run `npm run lint:fix` and `npm run format`
+3. **Before Committing** : `npm run lint:fix`, puis Prettier **sur les seuls fichiers touchés**
+   (`npx prettier --write <fichiers>`). ⚠️ **NE PAS lancer `npm run format`** : il formate tout le
+   dépôt, dont 312 fichiers non conformes historiques → le diff devient illisible. Le passage
+   global est un chantier planifié avec l'équipe : `docs/guidelines/formatage-prettier.md`.
 4. **Type Safety**: Ensure all new code has proper TypeScript types
 5. **Changelog** : toute nouvelle fonctionnalité **structurante et visible utilisateur** (nouveau
    module, nouvelle page publique, nouveau canal type RSS/notifications) → ajouter une puce dans

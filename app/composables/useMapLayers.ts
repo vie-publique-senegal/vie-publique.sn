@@ -16,13 +16,24 @@ interface UseMapLayersOptions {
   datasets: Ref<MapDatasetConfig[]>;
   geoJsonRegions: Ref<FeatureCollection | null>;
   geoJsonDepartements?: Ref<FeatureCollection | null>;
+  /** Polygones des 553 communes. */
   geoJsonCommunes?: Ref<FeatureCollection | null>;
+  /** Centroïdes des 553 communes — c'est CE fichier qui sert aux étiquettes. */
+  geoJsonCommuneLabels?: Ref<FeatureCollection | null>;
   theme: Ref<'dark' | 'light'>;
   activeFilters: Ref<Record<string, any>>;
   filterConfigs: Ref<FilterConfig[]>;
   viewport: Ref<MapViewport>;
   layerVisibility: Ref<Record<string, boolean>>;
 }
+
+/**
+ * TextLayer ne pré-génère son atlas de glyphes que pour l'ASCII imprimable : sans
+ * ce réglage, tout caractère accentué est rendu comme un blanc (« Kébémer » →
+ * « K b mer »). `'auto'` fait construire l'atlas à partir des textes réellement
+ * affichés — indispensable pour les toponymes sénégalais.
+ */
+const TEXT_CHARACTER_SET = 'auto';
 
 // ─── Utilitaires couleur ─────────────────────────────────────────
 
@@ -107,6 +118,7 @@ export function useMapLayers(options: UseMapLayersOptions) {
     geoJsonRegions,
     geoJsonDepartements,
     geoJsonCommunes,
+    geoJsonCommuneLabels,
     theme,
     activeFilters,
     filterConfigs,
@@ -183,7 +195,14 @@ export function useMapLayers(options: UseMapLayersOptions) {
   // ─── Choroplèthe (GeoJsonLayer) ────────────────────────────────
 
   function buildChoroplethConfig(ds: MapDatasetConfig, data: any[]) {
-    const geoJson = geoJsonRegions.value;
+    // Le fond par défaut reste les régions : les cartes écrites avant l'arrivée
+    // des polygones de commune ne déclarent pas de `geoSource`.
+    const geoSource = ds.geoSource ?? 'regions';
+    const geoJson = {
+      regions: geoJsonRegions.value,
+      departements: geoJsonDepartements?.value ?? null,
+      communes: geoJsonCommunes?.value ?? null,
+    }[geoSource];
     if (!geoJson) return null;
 
     // Construire un Map pour le join rapide
@@ -195,9 +214,12 @@ export function useMapLayers(options: UseMapLayersOptions) {
     }
 
     const geoJoinField = ds.geoJoinField ?? 'code';
+    const sourceFeatures = ds.geoFilter
+      ? geoJson.features.filter((feature) => ds.geoFilter!(feature))
+      : geoJson.features;
 
     // Créer une copie enrichie des features GeoJSON
-    const enrichedFeatures: any[] = geoJson.features.map((feature) => {
+    const enrichedFeatures: any[] = sourceFeatures.map((feature) => {
       const code = feature.properties?.[geoJoinField];
       const itemData = code ? dataMap.get(code) : null;
       return {
@@ -267,6 +289,7 @@ export function useMapLayers(options: UseMapLayersOptions) {
       getTextAnchor: 'middle',
       getAlignmentBaseline: 'center',
       fontFamily: 'Inter, system-ui, sans-serif',
+      characterSet: TEXT_CHARACTER_SET,
       fontWeight: 700,
       outlineWidth: 3,
       outlineColor: theme.value === 'dark' ? [0, 0, 0, 220] : [255, 255, 255, 220],
@@ -278,8 +301,15 @@ export function useMapLayers(options: UseMapLayersOptions) {
       },
     });
 
+    // ─── Repères de contexte ────────────────────────────────────
+    // Uniquement sous un choroplèthe de régions : superposer les contours de
+    // département à un choroplèthe DE départements les dédoublerait, et étiqueter
+    // les 553 communes au-dessus d'un choroplèthe de communes ferait double emploi
+    // avec ses propres libellés.
+    const withContextLayers = geoSource === 'regions';
+
     // ─── Départements : bordures + labels (zoom ≥ 7) ────────────
-    const deptGeojson = geoJsonDepartements?.value;
+    const deptGeojson = withContextLayers ? geoJsonDepartements?.value : null;
     if (deptGeojson && currentZoom >= 7) {
       // Bordures départements
       layers.push({
@@ -320,6 +350,7 @@ export function useMapLayers(options: UseMapLayersOptions) {
         getTextAnchor: 'middle',
         getAlignmentBaseline: 'center',
         fontFamily: 'Inter, system-ui, sans-serif',
+        characterSet: TEXT_CHARACTER_SET,
         fontWeight: 500,
         outlineWidth: 2,
         outlineColor: theme.value === 'dark' ? [0, 0, 0, 180] : [255, 255, 255, 180],
@@ -333,14 +364,18 @@ export function useMapLayers(options: UseMapLayersOptions) {
     }
 
     // ─── Labels des communes (zoom ≥ 9) ─────────────────────────
-    const communeGeojson = geoJsonCommunes?.value;
+    // Source = les CENTROÏDES, pas les polygones : ce bloc lit `coordinates[0]`
+    // et `[1]` comme un couple lng/lat, ce qu'un Polygon ne fournit pas.
+    const communeGeojson = withContextLayers ? geoJsonCommuneLabels?.value : null;
     if (communeGeojson && currentZoom >= 9) {
       const communeLabelData = communeGeojson.features
         .map((feature) => {
-          const coords = feature.geometry?.coordinates;
+          const geometry = feature.geometry;
           const name = feature.properties?.name ?? '';
-          if (!coords || !name) return null;
-          return { position: [coords[0], coords[1]], name };
+          // Garde stricte sur le type : un polygone servi par erreur donnerait
+          // un anneau de coordonnées là où on attend un couple lng/lat.
+          if (geometry?.type !== 'Point' || !name) return null;
+          return { position: geometry.coordinates, name };
         })
         .filter(Boolean);
 
@@ -357,6 +392,7 @@ export function useMapLayers(options: UseMapLayersOptions) {
         getTextAnchor: 'middle',
         getAlignmentBaseline: 'center',
         fontFamily: 'Inter, system-ui, sans-serif',
+        characterSet: TEXT_CHARACTER_SET,
         fontWeight: 400,
         fontStyle: 'italic',
         outlineWidth: 2,
@@ -484,6 +520,7 @@ export function useMapLayers(options: UseMapLayersOptions) {
       getTextAnchor: 'middle',
       getAlignmentBaseline: 'center',
       fontFamily: 'Inter, system-ui, sans-serif',
+      characterSet: TEXT_CHARACTER_SET,
       fontWeight: 600,
       outlineWidth: 2,
       outlineColor: theme.value === 'dark' ? [0, 0, 0, 200] : [255, 255, 255, 200],

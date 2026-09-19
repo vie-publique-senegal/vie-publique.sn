@@ -35,6 +35,7 @@
 | **Mesure perf / Web Vitals** | [`infra/mesure-performance.md`](./infra/mesure-performance.md) (protocole + journal des relevés) | baseline [`audits/audit-web-vitals-2026-07.md`](./audits/audit-web-vitals-2026-07.md), pistes = items PERF de [`audits/audit-complet-2026-07.md`](./audits/audit-complet-2026-07.md) |
 | **Cache (HTML SWR + API)** | [`guidelines/cache-strategy.md`](./guidelines/cache-strategy.md) (valeurs actuelles + précos P1-P7) | [`guidelines/todo-cache-optimization.md`](./guidelines/todo-cache-optimization.md) (chantier dev/prod) |
 | **PWA / apps mobiles (stores)** | [`project/pwa-mobile.md`](./project/pwa-mobile.md) (invariants TWA/assetlinks, quand re-builder) | repos [android](https://github.com/vie-publique-senegal/vie-publique-mobile-android) · [ios](https://github.com/vie-publique-senegal/vie-publique-mobile-ios) |
+| **Notifications push (web + iOS natif)** | [`modules/notifications/push-notifications.md`](./modules/notifications/push-notifications.md) (recette d'envoi, lien profond) | `docs/push-notifications.md` du **dépôt iOS** (code Swift, tests appareil), [`project/pwa-mobile.md`](./project/pwa-mobile.md) §2 ter |
 | **Audience GA4 + Search Console (baseline KPI)** | [`audits/audit-analytics-2026-07.md`](./audits/audit-analytics-2026-07.md) | KPI edge/CDN : [`infra/cloudfare.md`](./infra/cloudfare.md) (§ KPI) |
 | **CI/CD** | [`infra/ci-cd-github.md`](./infra/ci-cd-github.md) | — |
 | **Déploiement / Docker** | [`infra/deployment.md`](./infra/deployment.md) | [`infra/docker.md`](./infra/docker.md) |
@@ -47,6 +48,7 @@
 | **Proxy images CMS** | [`guidelines/proxy-images.md`](./guidelines/proxy-images.md) | [`guidelines/proxy-images-migration.md`](./guidelines/proxy-images-migration.md) |
 | **Serveurs MCP (Claude Code)** | [`guidelines/mcp-servers.md`](./guidelines/mcp-servers.md) | [`infra/sentry.md`](./infra/sentry.md) (§5 MCP Sentry) |
 | **Skills Claude Code (quand utiliser lequel)** | [`guidelines/claude-skills.md`](./guidelines/claude-skills.md) | catalogue : [skills.sh](https://skills.sh/) |
+| **Formatage du code (Prettier)** | [`guidelines/formatage-prettier.md`](./guidelines/formatage-prettier.md) (⚠️ ne pas lancer `npm run format` global pour l'instant) | — |
 | **Versioning** | [`guidelines/versioning.md`](./guidelines/versioning.md) | — |
 | **Global settings** | [`guidelines/global-settings.md`](./guidelines/global-settings.md) | — |
 | **Modules du site** | [`modules/README.md`](./modules/README.md) | 1 dossier par feature |
@@ -61,6 +63,7 @@
 - [`modules/dashboard/`](./modules/dashboard/) — dashboards RAC et projets publics
 - [`audits/audit-recherche-2026-07.md`](./audits/audit-recherche-2026-07.md) — checklist recherche Typesense
 - [`infra/todo-migration-minio-r2.md`](./infra/todo-migration-minio-r2.md) — migration stockage assets MinIO → Cloudflare R2 (INFRA-9/INFRA-2)
+- [`guidelines/formatage-prettier.md`](./guidelines/formatage-prettier.md#chantier--passer-tout-le-dépôt-au-format-à-faire-avec-léquipe) — passage de tout le dépôt à Prettier + garde-fous (à faire avec l'équipe, après merge des branches en cours)
 
 ## 📌 Statut des docs
 

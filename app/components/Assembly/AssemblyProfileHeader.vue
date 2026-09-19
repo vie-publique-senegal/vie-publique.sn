@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Deputy } from "@/types/deputy";
+import type { Deputy } from '@/types/deputy';
 
 interface ProfileHeaderProps {
   deputy: Deputy;
@@ -9,7 +9,10 @@ defineProps<ProfileHeaderProps>();
 </script>
 
 <template>
-  <div v-if="deputy" class="rounded-2xl bg-white p-4 ring-1 ring-gray-100 dark:bg-gray-800 dark:ring-gray-700">
+  <div
+    v-if="deputy"
+    class="rounded-2xl bg-white p-4 ring-1 ring-gray-100 dark:bg-gray-800 dark:ring-gray-700"
+  >
     <div class="flex flex-col items-center text-center">
       <CmsImage
         v-if="deputy.photo"
@@ -36,19 +39,16 @@ defineProps<ProfileHeaderProps>();
         </span>
       </h1>
       <div class="mb-2 flex flex-col items-center space-y-2 text-gray-600 dark:text-gray-400">
-        <div
-          v-if="deputy.birthplace"
-          class="flex items-center justify-center gap-2"
-        >
-          <font-awesome-icon icon="fa-solid fa-location-dot" />
-          {{ deputy.gender === "M" ? "Né" : "Née" }} à {{ deputy.birthplace }}
+        <div v-if="deputy.birthplace" class="flex items-center justify-center gap-2">
+          <UIcon name="i-heroicons-map-pin" class="h-4 w-4 shrink-0" />
+          {{ deputy.gender === 'M' ? 'Né' : 'Née' }} à {{ deputy.birthplace }}
         </div>
-        <div v-if="deputy.birthdate">
-          <font-awesome-icon :icon="['fas', 'cake-candles']" />
+        <div v-if="deputy.birthdate" class="flex items-center justify-center gap-2">
+          <UIcon name="i-heroicons-cake" class="h-4 w-4 shrink-0" />
           {{ $getAgeFromBirthdate(deputy.birthdate) }} ans
         </div>
-        <div v-if="deputy.profession" class="capitalize">
-          <font-awesome-icon :icon="['fas', 'briefcase']" />
+        <div v-if="deputy.profession" class="flex items-center justify-center gap-2 capitalize">
+          <UIcon name="i-heroicons-briefcase" class="h-4 w-4 shrink-0" />
           {{ deputy.profession.toLowerCase() }}
         </div>
       </div>

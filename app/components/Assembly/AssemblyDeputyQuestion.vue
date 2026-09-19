@@ -13,7 +13,7 @@
       </h2>
       <NuxtLink
         v-if="questions.length > 0"
-        to="/assemblee-nationale/questions"
+        :to="allQuestionsLink"
         class="text-xs text-blue-600 hover:underline dark:text-blue-400"
       >
         Voir tout
@@ -128,6 +128,24 @@ const props = defineProps<{
 }>();
 
 const isModalOpen = ref(false);
+
+// « Voir tout » → page dédiée aux questions de ce député.
+// Slug dérivé des DONNÉES avec la même normalisation que le canonical de la
+// fiche député (NFD + retrait des diacritiques), pour que le lien pointe
+// exactement sur l'URL canonique.
+const deputySlug = computed(() =>
+  `${props.deputy.first_name || ''}-${props.deputy.last_name || ''}`
+    .toLowerCase()
+    .trim()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, ''),
+);
+
+const allQuestionsLink = computed(
+  () => `/assemblee-nationale/deputes/${props.deputy.id}/${deputySlug.value}/questions`,
+);
 
 // ✅ Utilisation de la nouvelle architecture SSR
 const { data, pending: loadingQuestions } = await useFetch<{

@@ -88,6 +88,17 @@ export const DEFAULT_FEATURES: Record<string, FeatureFlag> = {
     environments: ['dev', 'test'],
     description: 'Menu Chatbot (beta)',
   },
+  // Vocal du banc d'essai (dictée + lecture). Ce défaut sert de FALLBACK quand
+  // Directus est injoignable ; le flag `chat_voice` de `vp_feature_flags` prime
+  // et permet de couper en production sans redéploiement (cache 5 min).
+  // Hors production tant que la recette sur appareils réels n'est pas faite —
+  // voir docs/modules/chat/voix.md § Recette.
+  chat_voice: {
+    key: 'chat_voice',
+    enabled: true,
+    environments: ['dev', 'test'],
+    description: 'Chat — dictée vocale et lecture des réponses (docs/modules/chat/voix.md)',
+  },
   menu_recherche: {
     key: 'menu_recherche',
     enabled: true,
