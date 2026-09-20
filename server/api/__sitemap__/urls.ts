@@ -5,6 +5,45 @@ import { AUDIT_INSTITUTION_PAGES } from '~~/types/document';
 export default defineSitemapEventHandler(async () => {
   const urls: any[] = [];
 
+  // 0. Collectivités territoriales — référentiel géo réel (558 collectivités).
+  // Requête isolée : une panne du référentiel retire ces URLs du sitemap, elle
+  // ne doit pas priver le sitemap de tout le reste.
+  // Les pages statiques du module (index, carte) sont auto-découvertes.
+  try {
+    for (const commune of await getCommunesGeo()) {
+      urls.push({
+        loc: `/collectivites-territoriales/communes/${commune.slug}`,
+        changefreq: 'monthly',
+        priority: 0.6,
+      });
+    }
+
+    // Hubs région et département : les pages pivot + leurs enfants. Les pivots
+    // sont des pages statiques (donc déjà auto-découvertes) mais on les pousse
+    // explicitement — le module dédoublonne les entrées par URL, et une page
+    // pivot absente du sitemap coûterait plus qu'une ligne redondante.
+    urls.push(
+      { loc: '/collectivites-territoriales/regions', changefreq: 'monthly', priority: 0.7 },
+      { loc: '/collectivites-territoriales/departements', changefreq: 'monthly', priority: 0.7 },
+    );
+    for (const region of await getRegionsGeo()) {
+      urls.push({
+        loc: `/collectivites-territoriales/regions/${region.slug}`,
+        changefreq: 'monthly',
+        priority: 0.7,
+      });
+    }
+    for (const departement of await getDepartementsGeo()) {
+      urls.push({
+        loc: `/collectivites-territoriales/departements/${departement.slug}`,
+        changefreq: 'monthly',
+        priority: 0.7,
+      });
+    }
+  } catch (error) {
+    reportServerError(error, 'sitemap/collectivites');
+  }
+
   const toISODate = (date: string | null | undefined): string | undefined => {
     if (!date) return undefined;
     const parsed = new Date(date);
@@ -107,6 +146,23 @@ export default defineSitemapEventHandler(async () => {
         .replace(/--+/g, '-');
     };
 
+    // Nombre de questions publiées par député : sert à n'inscrire la sous-page
+    // « questions » que pour les députés qui en ont au moins une (sinon ~165
+    // pages vides indexées = thin content). On réutilise l'index de recherche,
+    // déjà en cache : aucune requête CMS supplémentaire.
+    // Dégradation propre : en cas d'échec, on omet les sous-pages, le reste du
+    // sitemap est servi normalement.
+    const questionsByDeputy = new Map<string, number>();
+    try {
+      for (const entry of await getQuestionsSearchIndex()) {
+        if (entry.deputyId === null || entry.deputyId === undefined) continue;
+        const key = String(entry.deputyId);
+        questionsByDeputy.set(key, (questionsByDeputy.get(key) || 0) + 1);
+      }
+    } catch (error) {
+      reportServerError(error, 'sitemap/deputy-questions-count');
+    }
+
     for (const deputy of deputies) {
       const fullName = `${deputy.first_name} ${deputy.last_name}`;
       const slug = slugify(fullName);
@@ -117,6 +173,16 @@ export default defineSitemapEventHandler(async () => {
         changefreq: 'monthly',
         priority: 0.6,
       });
+
+      // Sous-page dédiée aux questions écrites du député
+      if (questionsByDeputy.get(String(deputy.id))) {
+        urls.push({
+          loc: `/assemblee-nationale/deputes/${deputy.id}/${slug}/questions`,
+          ...(lastmod && { lastmod }),
+          changefreq: 'monthly',
+          priority: 0.5,
+        });
+      }
     }
 
     // 3b. Dossiers thématiques

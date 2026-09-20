@@ -90,6 +90,22 @@ export const cleanCmsText = (html?: string | null): string =>
     .trim();
 
 /**
+ * Repli d'une chaîne pour la COMPARAISON (recherche plein texte) :
+ * strip HTML/entités, NFKC, puis décomposition NFD + retrait des diacritiques
+ * et passage en minuscules.
+ *
+ * Raison : Directus/Postgres `_icontains` (ILIKE) est **sensible aux accents**
+ * — `defici` ne matche pas « déficit ». On ne peut pas activer l'extension
+ * `unaccent` depuis l'API Directus, donc le repli se fait de notre côté sur un
+ * index en mémoire (cf. `server/utils/assembly-questions-search.ts`).
+ */
+export const foldForSearch = (input?: string | null): string =>
+  cleanCmsText(input)
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+
+/**
  * Troncature SÛRE au niveau des code points (jamais au milieu d'une paire de
  * surrogates), avec ellipsis. Défense supplémentaire pour les valeurs longues.
  */

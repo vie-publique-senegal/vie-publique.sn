@@ -8,6 +8,8 @@ l'historique git (`git log --grep="^feat"`, Conventional Commits).
 
 ### Août 2026
 
+- **Collectivités territoriales : navigation par région et par département** — une page par région (`/collectivites-territoriales/regions`) et par département (`/collectivites-territoriales/departements`), listant leurs communes, atteignables depuis l'annuaire, le fil d'ariane et les repères de chaque fiche : 62 pages de plus, stables et partageables, là où ces filtres n'existaient qu'en paramètre d'URL.
+- **Collectivités territoriales : données officielles** — le module passe des données de démonstration au référentiel administratif réel : 558 collectivités (553 communes et 5 villes), rattachement région/département/arrondissement, population du recensement 2023, maires et secrétaires municipaux en fonction. Chaque fiche n'affiche que les sections réellement renseignées.
 - **Notifications sur l'app iOS** : l'application App Store reçoit désormais les notifications
   (canal natif), ce qu'une app web embarquée ne permettait pas. Un appui sur la notification ouvre
   directement l'article concerné. La demande d'autorisation n'intervient plus au tout premier
@@ -15,6 +17,7 @@ l'historique git (`git log --grep="^feat"`, Conventional Commits).
 
 ### Juillet 2026
 
+- **Collectivités territoriales** (`/collectivites-territoriales`) : annuaire des communes du Sénégal — fiches maires, conseils municipaux, budgets locaux, projets et carte interactive (données de démonstration en attendant les données officielles)
 - **Documents similaires** : suggestions de documents pertinents à consulter sur chaque fiche document
 - **Flux RSS** : 5 flux RSS 2.0 (global, actualités, conseil des ministres, documents, Journal officiel)
 - **Refonte de la recherche** (Typesense v2) : index multi-types, synonymes, facettes documents, meilleure pertinence
