@@ -30,6 +30,10 @@ watchEffect(() => {
 
 const { formatPeriod, formatDuration, year, isSafeUrl, documentUrl } = useLeaderFormat();
 
+/** Périodes d'exercice (plusieurs si le PM est revenu après une interruption). */
+const formatTermPeriods = (periods: { start_date: string; end_date: string | null }[]): string =>
+  periods.map((p) => formatPeriod(p.start_date, p.end_date)).join(', puis ');
+
 const presUrl = (p: LeaderBrief) => `/etat-senegal/presidents/${p.slug}`;
 const govUrl = (g: GovernmentBrief) => `/gouvernement-senegal/${g.slug}`;
 
@@ -62,7 +66,7 @@ const description = computed(() => {
   if (!t) return '';
   const bio = profile.value?.short_bio;
   if (bio) return bio.length > 160 ? `${bio.slice(0, 157)}…` : bio;
-  return `${t.prime_minister.full_name} a été Premier ministre du Sénégal, ${formatPeriod(t.start_date, t.end_date)}, sous ${t.presidents.map((p) => p.full_name).join(' et ')}. ${t.stats.governments_count} gouvernements dirigés.`;
+  return `${t.prime_minister.full_name} a été Premier ministre du Sénégal, ${formatTermPeriods(t.periods)}, sous ${t.presidents.map((p) => p.full_name).join(' et ')}. ${t.stats.governments_count} gouvernements dirigés.`;
 });
 
 const url = computed(() => `${siteUrl}/etat-senegal/premiers-ministres/${slug.value}`);
@@ -148,7 +152,7 @@ useHead({
           :name="profile.full_name"
           :photo="profile.photo"
           role-label="Premier ministre"
-          :period="formatPeriod(term.start_date, term.end_date)"
+          :period="formatTermPeriods(term.periods)"
           :duration="formatDuration(term.stats.duration_days)"
           :is-current="term.end_date === null"
           :name-to="personUrl"
@@ -162,9 +166,7 @@ useHead({
               >({{ term.governments.length }})</span
             >
           </h2>
-          <ol
-            class="relative ml-3 space-y-4 border-l-2 border-gray-300 pt-2 dark:border-gray-600"
-          >
+          <ol class="relative ml-3 space-y-4 border-l-2 border-gray-300 pt-2 dark:border-gray-600">
             <li
               v-for="(g, index) in [...term.governments].reverse()"
               :key="g.id"

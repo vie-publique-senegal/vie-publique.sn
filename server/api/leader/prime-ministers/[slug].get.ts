@@ -41,7 +41,7 @@ export default defineCachedEventHandler(
   },
   {
     maxAge: process.env.NODE_ENV === 'production' ? 60 * 60 : 0,
-    name: 'leader-pm-detail',
+    name: 'leader-pm-detail-v2',
     getKey: (event) => `pm-${getRouterParam(event, 'slug')}`,
   },
 );

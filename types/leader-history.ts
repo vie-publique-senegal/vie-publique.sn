@@ -28,11 +28,15 @@ export type GovernmentBrief = {
   formation_decree: LeaderDecreeRef;
 };
 
+/** Passage continu à une fonction (fusion des gouvernements contigus). */
+export type LeaderPeriod = { start_date: string; end_date: string | null };
+
 export type PresidentialTerm = {
   president: LeaderBrief;
   start_date: string; // date du premier gouvernement sous ce président
   end_date: string | null; // null = mandat en cours
   governments: GovernmentBrief[];
+  periods: LeaderPeriod[]; // passages distincts (généralement un seul)
   prime_ministers: LeaderBrief[]; // liste dédupliquée des PMs nommés
   stats: {
     governments_count: number;
@@ -45,13 +49,15 @@ export type PresidentialTerm = {
 export type PrimeMinisterialTerm = {
   prime_minister: LeaderBrief;
   president: LeaderBrief; // premier président sous qui il a servi
-  start_date: string;
-  end_date: string | null;
+  start_date: string; // début du premier passage
+  end_date: string | null; // fin du dernier passage (null = en cours)
   governments: GovernmentBrief[];
+  /** Passages distincts : un PM peut revenir après une interruption (ex. Niasse 1983 puis 2000-2001). */
+  periods: LeaderPeriod[];
   presidents: LeaderBrief[]; // dédupliqué (si plusieurs présidents)
   stats: {
     governments_count: number;
-    duration_days: number;
+    duration_days: number; // somme des passages, pas l'écart première → dernière date
   };
 };
 

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { LeaderBrief, PrimeMinisterialTerm } from '~~/types/leader-history';
+import type { LeaderBrief, PrimeMinisterGap, PrimeMinisterialTerm } from '~~/types/leader-history';
 
 const { siteName, siteUrl, themeColor, keywords } = useSiteMetadata();
 
@@ -34,6 +34,16 @@ const formatMonthYear = (dateStr: string | null): string => {
   if (Number.isNaN(d.getTime())) return '';
   return `${MONTHS_SHORT[d.getMonth()]} ${d.getFullYear()}`;
 };
+
+/** Périodes d'exercice : « avr. 1983 · avr. 2000 - mars 2001 » si plusieurs passages. */
+const formatTermPeriods = (t: PrimeMinisterialTerm): string =>
+  t.periods
+    .map((p) => {
+      const start = formatMonthYear(p.start_date);
+      const end = formatMonthYear(p.end_date);
+      return start === end ? start : `${start} - ${end}`;
+    })
+    .join(' · ');
 
 const formatDuration = (days: number): string => {
   if (days < 31) return `${days} jour${days > 1 ? 's' : ''}`;
@@ -71,6 +81,18 @@ const orderedTerms = computed<PrimeMinisterialTerm[]>(() => {
   }
   return list.reverse();
 });
+
+// Périodes de présidence directe, restreintes au président filtré
+const visibleGaps = computed<PrimeMinisterGap[]>(() =>
+  presidentFilter.value
+    ? gaps.value.filter((g) => g.president.slug === presidentFilter.value)
+    : gaps.value,
+);
+
+// Nombre de PM affichés : total, ou nombre de PM ayant servi sous le président filtré
+const displayedCount = computed(() =>
+  presidentFilter.value ? orderedTerms.value.length : total.value,
+);
 
 const setPresident = (slug: string) => {
   const q = { ...route.query };
@@ -150,7 +172,12 @@ useHead({
 <template>
   <div class="min-h-screen pb-20 dark:bg-gray-900/95">
     <div class="container mx-auto px-4 pt-2">
-      <AppBreadcrumb :items="[{ label: 'État du Sénégal', to: '/etat-senegal' }, { label: 'Premiers ministres' }]" />
+      <AppBreadcrumb
+        :items="[
+          { label: 'État du Sénégal', to: '/etat-senegal' },
+          { label: 'Premiers ministres' },
+        ]"
+      />
     </div>
 
     <header
@@ -166,7 +193,7 @@ useHead({
         <span
           class="inline-flex items-center rounded-full bg-sky-50 px-2.5 py-1 text-xs font-medium text-sky-700 dark:bg-sky-900/30 dark:text-sky-300"
         >
-          {{ total }} PM
+          {{ displayedCount }} PM
         </span>
       </div>
     </header>
@@ -254,8 +281,7 @@ useHead({
                 >
               </div>
               <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
-                {{ formatMonthYear(t.start_date) }} - {{ formatMonthYear(t.end_date) }} ·
-                {{ formatDuration(t.stats.duration_days) }}
+                {{ formatTermPeriods(t) }} · {{ formatDuration(t.stats.duration_days) }}
               </p>
               <p class="mt-1 truncate text-xs text-gray-600 dark:text-gray-300">
                 Sous : {{ t.presidents.map((p) => p.full_name).join(', ') }}
@@ -265,7 +291,7 @@ useHead({
         </li>
 
         <!-- Périodes sans PM -->
-        <li v-for="(gap, i) in gaps" :key="`gap-${i}`" class="relative pl-8">
+        <li v-for="(gap, i) in visibleGaps" :key="`gap-${i}`" class="relative pl-8">
           <span
             class="absolute left-0 top-1/2 h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-gray-300 dark:border-gray-900 dark:bg-gray-600"
             aria-hidden="true"

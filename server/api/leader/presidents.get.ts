@@ -22,7 +22,7 @@ export default defineCachedEventHandler(
   },
   {
     maxAge: process.env.NODE_ENV === 'production' ? 60 * 60 * 2 : 0,
-    name: 'leader-presidents',
+    name: 'leader-presidents-v2',
     getKey: () => 'leader-presidents',
   },
 );

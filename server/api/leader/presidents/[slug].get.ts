@@ -39,7 +39,7 @@ export default defineCachedEventHandler(
   },
   {
     maxAge: process.env.NODE_ENV === 'production' ? 60 * 60 : 0,
-    name: 'leader-president-detail',
+    name: 'leader-president-detail-v2',
     getKey: (event) => `president-${getRouterParam(event, 'slug')}`,
   },
 );

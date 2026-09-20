@@ -9,15 +9,9 @@ import type {
   PrimeMinisterialTerm,
 } from '~~/types/leader-history';
 
-const DAY_MS = 86_400_000;
+import { durationDays, mergePeriods, totalDurationDays } from '#shared/leader-periods';
 
-/** Durée en jours entre deux dates (end null = aujourd'hui). */
-export const durationDays = (start: string, end: string | null): number => {
-  const s = Date.parse(start);
-  const e = end ? Date.parse(end) : Date.now();
-  if (Number.isNaN(s) || Number.isNaN(e)) return 0;
-  return Math.max(0, Math.floor((e - s) / DAY_MS));
-};
+export { durationDays };
 
 const toLeader = (p: any): LeaderBrief | null =>
   p
@@ -123,6 +117,7 @@ export function buildPresidentialTerms(govs: GovernmentBrief[]): PresidentialTer
         start_date: g.start_date,
         end_date: g.end_date,
         governments: [],
+        periods: [],
         prime_ministers: [],
         stats: { governments_count: 0, duration_days: 0, pm_count: 0, periods_without_pm: 0 },
       };
@@ -135,9 +130,10 @@ export function buildPresidentialTerms(govs: GovernmentBrief[]): PresidentialTer
     }
   }
   for (const term of byPresident.values()) {
+    term.periods = mergePeriods(term.governments);
     term.stats = {
       governments_count: term.governments.length,
-      duration_days: durationDays(term.start_date, term.end_date),
+      duration_days: totalDurationDays(term.governments),
       pm_count: term.prime_ministers.length,
       periods_without_pm: term.governments.filter((g) => !g.prime_minister).length,
     };
@@ -173,6 +169,7 @@ export function buildPrimeMinisterialTerms(govs: GovernmentBrief[]): {
         start_date: g.start_date,
         end_date: g.end_date,
         governments: [],
+        periods: [],
         presidents: [],
         stats: { governments_count: 0, duration_days: 0 },
       };
@@ -185,9 +182,12 @@ export function buildPrimeMinisterialTerms(govs: GovernmentBrief[]): {
     }
   }
   for (const term of byPm.values()) {
+    // Passages distincts (un PM peut revenir après une interruption) : la
+    // durée est la somme des passages, pas l'écart première → dernière date.
+    term.periods = mergePeriods(term.governments);
     term.stats = {
       governments_count: term.governments.length,
-      duration_days: durationDays(term.start_date, term.end_date),
+      duration_days: totalDurationDays(term.governments),
     };
   }
   return { terms: Array.from(byPm.values()), gaps };
