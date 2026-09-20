@@ -199,35 +199,41 @@ useHead({
     </header>
 
     <main class="container mx-auto max-w-3xl px-4 pt-6">
-      <!-- Filtre président -->
-      <div v-if="!pending && presidentOptions.length" class="mb-6 flex flex-wrap gap-2">
-        <button
-          type="button"
-          class="rounded-full px-3 py-1 text-xs font-medium transition-colors"
-          :class="
-            !presidentFilter
-              ? 'bg-sky-600 text-white dark:bg-sky-500'
-              : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'
-          "
-          @click="setPresident('')"
-        >
-          Tous
-        </button>
-        <button
-          v-for="p in presidentOptions"
-          :key="p.slug"
-          type="button"
-          class="rounded-full px-3 py-1 text-xs font-medium transition-colors"
-          :class="
-            presidentFilter === p.slug
-              ? 'bg-sky-600 text-white dark:bg-sky-500'
-              : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'
-          "
-          @click="setPresident(p.slug)"
-        >
-          {{ p.name }}
-        </button>
-      </div>
+      <!-- Filtre président : liste scrollable horizontale (mobile + desktop) -->
+      <nav
+        v-if="!pending && presidentOptions.length"
+        class="scrollbar-hide -mx-4 mb-6 overflow-x-auto px-4 pb-1"
+        aria-label="Filtrer par président"
+      >
+        <div class="flex gap-1.5 py-0.5">
+          <button
+            type="button"
+            class="shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium transition-all active:scale-95"
+            :class="
+              !presidentFilter
+                ? 'bg-primary-600 text-white shadow-sm'
+                : 'bg-white text-gray-700 ring-1 ring-gray-200 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:ring-gray-700 dark:hover:bg-gray-700'
+            "
+            @click="setPresident('')"
+          >
+            Tous
+          </button>
+          <button
+            v-for="p in presidentOptions"
+            :key="p.slug"
+            type="button"
+            class="shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium transition-all active:scale-95"
+            :class="
+              presidentFilter === p.slug
+                ? 'bg-primary-600 text-white shadow-sm'
+                : 'bg-white text-gray-700 ring-1 ring-gray-200 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:ring-gray-700 dark:hover:bg-gray-700'
+            "
+            @click="setPresident(presidentFilter === p.slug ? '' : p.slug)"
+          >
+            {{ p.name }}
+          </button>
+        </div>
+      </nav>
 
       <div v-if="pending" class="space-y-4">
         <USkeleton v-for="n in 5" :key="n" class="h-24 w-full rounded-xl" />
@@ -312,3 +318,13 @@ useHead({
     </main>
   </div>
 </template>
+
+<style scoped>
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+</style>
