@@ -3,6 +3,14 @@ import { getCommuneTabPath, getVisibleCommuneTabs } from '~/composables/collecti
 import { useCommuneGeo } from '~/composables/collectivites/useCommunesGeo';
 import type { CommuneTab } from '~/composables/collectivites/communeTabs';
 
+// Garde feature flag : 404 si la feature est désactivée
+const { isFeatureEnabled, loading: flagsLoading } = useFeatureFlags();
+watchEffect(() => {
+  if (!flagsLoading.value && !isFeatureEnabled('menu_collectivites_territoriales')) {
+    throw createError({ statusCode: 404, statusMessage: 'Page non trouvée' });
+  }
+});
+
 const route = useRoute();
 const { siteUrl } = useSiteMetadata();
 

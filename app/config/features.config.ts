@@ -82,6 +82,12 @@ export const DEFAULT_FEATURES: Record<string, FeatureFlag> = {
     environments: ['dev', 'test', 'production'],
     description: 'Menu Élections',
   },
+  menu_collectivites_territoriales: {
+    key: 'menu_collectivites_territoriales',
+    enabled: true,
+    environments: ['dev', 'test'],
+    description: 'Menu Collectivités territoriales (communes, départements, régions, carte)',
+  },
   menu_chatbot: {
     key: 'menu_chatbot',
     enabled: true,

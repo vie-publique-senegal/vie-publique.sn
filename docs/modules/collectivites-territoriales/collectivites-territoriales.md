@@ -490,8 +490,11 @@ prématuré serait perdu.
 
 - `app/app.vue` : `/collectivites-territoriales/carte` est dans le gate
   `isFullscreenPage` (masque header et footer).
-- `app/pages/menu.vue` : carte de section (sans `featureKey` tant que le flag
-  `menu_collectivites_territoriales` n'existe pas dans `vp_feature_flags`).
+- Feature flag `menu_collectivites_territoriales` (défaut dans
+  `app/config/features.config.ts`, surchargeable dans `vp_feature_flags`) :
+  conditionne la carte de section de `app/pages/menu.vue` et renvoie une 404 sur
+  toutes les pages du module quand il est désactivé (garde en tête de chaque
+  page ; celle de `communes/[slug].vue` couvre aussi ses onglets).
 
 ## Faire évoluer le module
 
