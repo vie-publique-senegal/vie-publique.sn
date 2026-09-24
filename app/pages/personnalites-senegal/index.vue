@@ -19,6 +19,7 @@ const {
   totalPages,
   totalsByCategory,
   totalsByGender,
+  totalPersons,
   hasActiveFilters,
   resetFilters,
   setCurrentPage,
@@ -147,10 +148,8 @@ const getDetailUrl = (person: any) => {
   };
 };
 
-// Total
-const totalCount = computed(
-  () => totalsByGender.value.maleCount + totalsByGender.value.femaleCount,
-);
+// Total : pas la somme hommes + femmes (les personnes sans `sexe`, ex. maires, en seraient exclues)
+const totalCount = totalPersons;
 
 // Reset page sur changement de recherche/filtres
 watch(searchQuery, () => {
