@@ -6,14 +6,16 @@ import type { GovernmentDetailResponse, GovernmentRoleGroup } from '~~/types/gov
  * (`q`, `role`) → résultats instantanés, sans skeleton ni perte de focus.
  * Les filtres restent reflétés dans l'URL pour des liens partageables.
  */
-export const useGovernmentDetail = (slug: string | Ref<string>) => {
+export const useGovernmentDetail = async (slug: string | Ref<string>) => {
   const route = useRoute();
   const router = useRouter();
 
   const q = computed(() => (route.query.q as string) ?? '');
   const role = computed(() => (route.query.role as string) ?? '');
 
-  const { data, pending, error, refresh } = useFetch<GovernmentDetailResponse>(
+  // `await` volontaire : sans lui, `error` n'est pas encore peuplée quand la page décide du
+  // statut HTTP, et un slug inconnu partirait en 200.
+  const { data, pending, error, refresh } = await useFetch<GovernmentDetailResponse>(
     () => `/api/government/${toValue(slug)}`,
     {
       key: () => `government-detail-${toValue(slug)}`,

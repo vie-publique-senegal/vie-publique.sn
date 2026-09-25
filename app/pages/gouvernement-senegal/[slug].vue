@@ -16,20 +16,35 @@ const {
   updateFilters,
   loading: pending,
   error,
-} = useGovernmentDetail(slug);
+} = await useGovernmentDetail(slug);
 
 // Pour la navigation précédent / suivant (ordre chronologique)
 const { governments } = useGovernmentHistory();
 
-// 404 si le gouvernement n'existe pas
-watchEffect(() => {
-  if (!pending.value && error.value) {
-    throw createError({
-      statusCode: 404,
-      statusMessage: 'Gouvernement introuvable',
-      fatal: true,
-    });
-  }
+// 404 si le gouvernement n'existe pas.
+// `useFetch` est résolu ici (le composable l'attend) : l'erreur est donc connue pendant le
+// rendu SSR, et `createError` fixe réellement le statut HTTP. Levée depuis un `watchEffect`,
+// elle était captée par le scope de l'effet — la page partait en **200** avec un corps
+// « introuvable », un soft-404 que les moteurs indexent.
+if (error.value) {
+  throw createError({
+    statusCode: 404,
+    statusMessage: 'Gouvernement introuvable',
+    fatal: true,
+  });
+}
+
+// Navigation côté client vers un autre slug : le fetch se rejoue après le setup, donc
+// l'erreur n'arrive plus par le chemin ci-dessus.
+watch(error, (e) => {
+  if (e)
+    showError(
+      createError({
+        statusCode: 404,
+        statusMessage: 'Gouvernement introuvable',
+        fatal: true,
+      }),
+    );
 });
 
 /* --------------------- Recherche & filtres (URL) ------------------------- */
@@ -64,12 +79,8 @@ const hasActiveFilters = computed(() => Boolean(q.value || role.value));
 
 // État des résultats membres
 const hasMembers = computed(() => Boolean(stats.value && stats.value.total > 0));
-const noMembersMatch = computed(
-  () => hasMembers.value && groups.value.length === 0,
-);
-const visibleCount = computed(() =>
-  groups.value.reduce((sum, g) => sum + g.members.length, 0),
-);
+const noMembersMatch = computed(() => hasMembers.value && groups.value.length === 0);
+const visibleCount = computed(() => groups.value.reduce((sum, g) => sum + g.members.length, 0));
 
 /* ------------------------------- Helpers --------------------------------- */
 
@@ -132,15 +143,11 @@ const documentUrl = (decree: { id: number; slug: string }) =>
   `/documents/${decree.id}/${decree.slug}`;
 
 // Liste plate des membres rendus (pour le JSON-LD).
-const allMembersForSchema = computed(() =>
-  groups.value.flatMap((g) => g.members),
-);
+const allMembersForSchema = computed(() => groups.value.flatMap((g) => g.members));
 
 // Navigation précédent / suivant.
 // `governments` est trié du plus récent au plus ancien.
-const currentIndex = computed(() =>
-  governments.value.findIndex((g) => g.slug === slug.value),
-);
+const currentIndex = computed(() => governments.value.findIndex((g) => g.slug === slug.value));
 // Suivant chronologique = plus récent = index − 1 ; précédent = plus ancien = index + 1
 const newerGovernment = computed<Government | null>(() => {
   const i = currentIndex.value;
@@ -148,17 +155,13 @@ const newerGovernment = computed<Government | null>(() => {
 });
 const olderGovernment = computed<Government | null>(() => {
   const i = currentIndex.value;
-  return i >= 0 && i < governments.value.length - 1
-    ? governments.value[i + 1]
-    : null;
+  return i >= 0 && i < governments.value.length - 1 ? governments.value[i + 1] : null;
 });
 
 /* --------------------------------- SEO ----------------------------------- */
 
 const title = computed(() =>
-  government.value
-    ? `${government.value.name} - Gouvernement Sénégal`
-    : 'Gouvernement du Sénégal',
+  government.value ? `${government.value.name} - Gouvernement Sénégal` : 'Gouvernement du Sénégal',
 );
 
 const description = computed(() => {
@@ -252,9 +255,7 @@ useHead({
   script: [
     {
       type: 'application/ld+json',
-      children: computed(() =>
-        orgSchema.value ? JSON.stringify(orgSchema.value) : '',
-      ),
+      children: computed(() => (orgSchema.value ? JSON.stringify(orgSchema.value) : '')),
     },
     {
       type: 'application/ld+json',
@@ -319,9 +320,7 @@ useHead({
         >
           <dl class="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
-              <dt class="text-xs font-medium text-gray-400 dark:text-gray-500">
-                Président
-              </dt>
+              <dt class="text-xs font-medium text-gray-400 dark:text-gray-500">Président</dt>
               <dd class="mt-0.5 text-sm font-semibold text-gray-900 dark:text-white">
                 <NuxtLink
                   v-if="government.president && personRefUrl(government.president)"
@@ -334,9 +333,7 @@ useHead({
               </dd>
             </div>
             <div>
-              <dt class="text-xs font-medium text-gray-400 dark:text-gray-500">
-                Premier Ministre
-              </dt>
+              <dt class="text-xs font-medium text-gray-400 dark:text-gray-500">Premier Ministre</dt>
               <dd class="mt-0.5 text-sm font-semibold text-gray-900 dark:text-white">
                 <NuxtLink
                   v-if="government.prime_minister && personRefUrl(government.prime_minister)"
@@ -351,17 +348,13 @@ useHead({
               </dd>
             </div>
             <div>
-              <dt class="text-xs font-medium text-gray-400 dark:text-gray-500">
-                Durée
-              </dt>
+              <dt class="text-xs font-medium text-gray-400 dark:text-gray-500">Durée</dt>
               <dd class="mt-0.5 text-sm text-gray-700 dark:text-gray-300">
                 {{ stats ? formatDurationDays(stats.duration_days) : '-' }}
               </dd>
             </div>
             <div v-if="stats && stats.total > 0">
-              <dt class="text-xs font-medium text-gray-400 dark:text-gray-500">
-                Composition
-              </dt>
+              <dt class="text-xs font-medium text-gray-400 dark:text-gray-500">Composition</dt>
               <dd class="mt-0.5 text-sm text-gray-700 dark:text-gray-300">
                 {{ stats.total }} membres · {{ stats.women }} femmes
               </dd>
@@ -378,26 +371,31 @@ useHead({
                 v-if="government.pm_appointment_decree"
                 :to="documentUrl(government.pm_appointment_decree)"
                 class="font-medium text-sky-600 hover:underline dark:text-sky-400"
-              >{{ government.pm_appointment_decree.title }}</NuxtLink>
+                >{{ government.pm_appointment_decree.title }}</NuxtLink
+              >
               <span v-else class="font-medium">décret de nomination</span>, le Président
               <NuxtLink
                 v-if="personRefUrl(government.president)"
                 :to="personRefUrl(government.president)!"
                 class="font-medium text-sky-600 hover:underline dark:text-sky-400"
-              >{{ government.president?.full_name }}</NuxtLink>
+                >{{ government.president?.full_name }}</NuxtLink
+              >
               <span v-else class="font-medium">{{ government.president?.full_name }}</span>
               nomme
               <NuxtLink
                 v-if="personRefUrl(government.prime_minister)"
                 :to="personRefUrl(government.prime_minister)!"
                 class="font-medium text-sky-600 hover:underline dark:text-sky-400"
-              >{{ government.prime_minister.full_name }}</NuxtLink>
+                >{{ government.prime_minister.full_name }}</NuxtLink
+              >
               <span v-else class="font-medium">{{ government.prime_minister.full_name }}</span>
               Premier ministre<template v-if="government.formation_decree">
                 et fixe la composition du gouvernement (<NuxtLink
                   :to="documentUrl(government.formation_decree)"
                   class="font-medium text-sky-600 hover:underline dark:text-sky-400"
-                >{{ government.formation_decree.title }}</NuxtLink>)</template>.
+                  >{{ government.formation_decree.title }}</NuxtLink
+                >)</template
+              >.
             </template>
             <template v-else>
               Par
@@ -405,13 +403,15 @@ useHead({
                 v-if="government.formation_decree"
                 :to="documentUrl(government.formation_decree)"
                 class="font-medium text-sky-600 hover:underline dark:text-sky-400"
-              >{{ government.formation_decree.title }}</NuxtLink>
+                >{{ government.formation_decree.title }}</NuxtLink
+              >
               <span v-else class="font-medium">décret de formation</span>, le Président
               <NuxtLink
                 v-if="personRefUrl(government.president)"
                 :to="personRefUrl(government.president)!"
                 class="font-medium text-sky-600 hover:underline dark:text-sky-400"
-              >{{ government.president?.full_name }}</NuxtLink>
+                >{{ government.president?.full_name }}</NuxtLink
+              >
               <span v-else class="font-medium">{{ government.president?.full_name }}</span>
               forme le gouvernement.
             </template>
@@ -477,9 +477,7 @@ useHead({
               v-if="hasActiveFilters"
               class="flex flex-wrap items-center gap-2 text-xs text-gray-500 dark:text-gray-400"
             >
-              <span>
-                {{ visibleCount }} membre{{ visibleCount > 1 ? 's' : '' }}
-              </span>
+              <span> {{ visibleCount }} membre{{ visibleCount > 1 ? 's' : '' }} </span>
               <button
                 type="button"
                 class="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 font-medium text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
@@ -493,11 +491,7 @@ useHead({
 
           <!-- Groupes de membres rendus dynamiquement -->
           <template v-if="!noMembersMatch">
-            <section
-              v-for="group in groups"
-              :key="group.slug"
-              class="scroll-mt-24"
-            >
+            <section v-for="group in groups" :key="group.slug" class="scroll-mt-24">
               <h2
                 class="mb-3 border-b border-gray-100 pb-2 text-base font-semibold text-gray-900 dark:border-gray-700 dark:text-white"
               >
@@ -550,13 +544,7 @@ useHead({
             <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
               Aucun membre ne correspond à votre recherche ou au filtre sélectionné.
             </p>
-            <UButton
-              color="sky"
-              variant="soft"
-              size="sm"
-              class="mt-4"
-              @click="clearFilters"
-            >
+            <UButton color="sky" variant="soft" size="sm" class="mt-4" @click="clearFilters">
               Réinitialiser
             </UButton>
           </div>
@@ -592,9 +580,7 @@ useHead({
             <span class="text-[11px] text-gray-400 dark:text-gray-500">
               ← Gouvernement précédent
             </span>
-            <span
-              class="mt-0.5 truncate text-xs font-semibold text-gray-900 dark:text-white"
-            >
+            <span class="mt-0.5 truncate text-xs font-semibold text-gray-900 dark:text-white">
               {{ olderGovernment.name }}
             </span>
           </NuxtLink>
@@ -608,9 +594,7 @@ useHead({
             <span class="text-[11px] text-gray-400 dark:text-gray-500">
               Gouvernement suivant →
             </span>
-            <span
-              class="mt-0.5 truncate text-xs font-semibold text-gray-900 dark:text-white"
-            >
+            <span class="mt-0.5 truncate text-xs font-semibold text-gray-900 dark:text-white">
               {{ newerGovernment.name }}
             </span>
           </NuxtLink>

@@ -14,12 +14,23 @@ const {
   next,
   loading: pending,
   error,
-} = usePresidentDetail(slug);
+} = await usePresidentDetail(slug);
 
-watchEffect(() => {
-  if (!pending.value && error.value) {
-    throw createError({ statusCode: 404, statusMessage: 'Président introuvable', fatal: true });
-  }
+// `useFetch` est résolu ici (le composable l'attend) : l'erreur est donc connue pendant le
+// rendu SSR, et `createError` fixe réellement le statut HTTP. Levée depuis un `watchEffect`,
+// elle était captée par le scope de l'effet — la page partait en **200** avec un corps
+// « introuvable », un soft-404 que les moteurs indexent.
+if (error.value) {
+  throw createError({ statusCode: 404, statusMessage: 'Président introuvable', fatal: true });
+}
+
+// Navigation côté client vers un autre slug : le fetch se rejoue après le setup, donc
+// l'erreur n'arrive plus par le chemin ci-dessus.
+watch(error, (e) => {
+  if (e)
+    showError(
+      createError({ statusCode: 404, statusMessage: 'Président introuvable', fatal: true }),
+    );
 });
 
 /* ------------------------------- Helpers --------------------------------- */

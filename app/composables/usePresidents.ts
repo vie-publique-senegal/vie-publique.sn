@@ -15,8 +15,10 @@ export const usePresidents = () => {
 };
 
 /** Détail d'une présidence par slug. */
-export const usePresidentDetail = (slug: string | Ref<string>) => {
-  const { data, pending, error } = useFetch<PresidentDetailResponse>(
+export const usePresidentDetail = async (slug: string | Ref<string>) => {
+  // `await` volontaire : sans lui, `error` n'est pas encore peuplée quand la page décide du
+  // statut HTTP, et un slug inconnu partirait en 200.
+  const { data, pending, error } = await useFetch<PresidentDetailResponse>(
     () => `/api/leader/presidents/${toValue(slug)}`,
     { key: () => `president-${toValue(slug)}` },
   );

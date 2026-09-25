@@ -1,17 +1,11 @@
-import type {
-  PrimeMinistersResponse,
-  PrimeMinisterDetailResponse,
-} from '~~/types/leader-history';
+import type { PrimeMinistersResponse, PrimeMinisterDetailResponse } from '~~/types/leader-history';
 
 /** Liste de tous les mandats de Premiers ministres (fetch unique, clé stable). */
 export const usePrimeMinisters = () => {
-  const { data, pending, error } = useFetch<PrimeMinistersResponse>(
-    '/api/leader/prime-ministers',
-    {
-      key: 'pm-list',
-      default: () => ({ terms: [], total: 0, gaps: [] }),
-    },
-  );
+  const { data, pending, error } = useFetch<PrimeMinistersResponse>('/api/leader/prime-ministers', {
+    key: 'pm-list',
+    default: () => ({ terms: [], total: 0, gaps: [] }),
+  });
 
   const terms = computed(() => data.value?.terms ?? []);
   const gaps = computed(() => data.value?.gaps ?? []);
@@ -22,8 +16,10 @@ export const usePrimeMinisters = () => {
 };
 
 /** Détail d'un mandat de Premier ministre par slug. */
-export const usePrimeMinisterDetail = (slug: string | Ref<string>) => {
-  const { data, pending, error } = useFetch<PrimeMinisterDetailResponse>(
+export const usePrimeMinisterDetail = async (slug: string | Ref<string>) => {
+  // `await` volontaire : sans lui, `error` n'est pas encore peuplée quand la page décide du
+  // statut HTTP, et un slug inconnu partirait en 200.
+  const { data, pending, error } = await useFetch<PrimeMinisterDetailResponse>(
     () => `/api/leader/prime-ministers/${toValue(slug)}`,
     { key: () => `pm-${toValue(slug)}` },
   );
