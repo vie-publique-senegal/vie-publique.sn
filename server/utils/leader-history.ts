@@ -194,7 +194,20 @@ export function buildPrimeMinisterialTerms(govs: GovernmentBrief[]): {
 }
 
 /** Profil biographique complet d'une personnalité par slug. */
-export async function fetchLeaderProfile(slug: string): Promise<LeaderProfile | null> {
+/**
+ * Profil d'un dirigeant, **résolu par son id**.
+ *
+ * Surtout pas par le slug : `slug` n'est pas unique sur `public_persons` — trois fiches
+ * « Ousmane Sonko » le partagent en production, et « abdou-diouf » est porté par deux
+ * directeurs généraux homonymes de l'ancien président. Une requête `slug + limit 1` sans tri
+ * rend alors la fiche au plus petit id, c'est-à-dire n'importe laquelle : la page d'un chef
+ * de l'État pouvait afficher la biographie d'un homonyme.
+ *
+ * L'id est déjà connu de l'appelant — il vient de la relation `governments.president` ou
+ * `governments.prime_minister`, qui elle ne souffre aucune ambiguïté. Il n'y avait aucune
+ * raison de le jeter pour re-chercher par un champ qui ne distingue pas.
+ */
+export async function fetchLeaderProfile(id: number): Promise<LeaderProfile | null> {
   const directus = getCmsClient();
   const data = await directus.request(
     readItems('public_persons', {
@@ -216,7 +229,7 @@ export async function fetchLeaderProfile(slug: string): Promise<LeaderProfile | 
         'tiktok',
         'linkedin',
       ],
-      filter: { status: { _eq: 'published' }, slug: { _eq: slug } },
+      filter: { status: { _eq: 'published' }, id: { _eq: id } },
       limit: 1,
     }),
   );

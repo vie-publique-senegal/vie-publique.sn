@@ -19,12 +19,13 @@ export default defineCachedEventHandler(
         throw createError({ statusCode: 404, message: 'Président introuvable' });
       }
 
-      const profile = await fetchLeaderProfile(slug);
-      const appointment = profile
-        ? await fetchLeaderAppointment(profile.id, 'presidence')
-        : null;
+      const profile = await fetchLeaderProfile(term.president.id);
+      const appointment = profile ? await fetchLeaderAppointment(profile.id, 'presidence') : null;
 
-      const order = terms.map((t) => ({ slug: t.president.slug, full_name: t.president.full_name }));
+      const order = terms.map((t) => ({
+        slug: t.president.slug,
+        full_name: t.president.full_name,
+      }));
       const { prev, next } = leaderNav(order, slug);
 
       return { term, profile: profile!, appointment, prev, next };

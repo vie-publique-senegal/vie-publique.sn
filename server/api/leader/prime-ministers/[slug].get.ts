@@ -18,7 +18,7 @@ export default defineCachedEventHandler(
         throw createError({ statusCode: 404, message: 'Premier ministre introuvable' });
       }
 
-      const profile = await fetchLeaderProfile(slug);
+      const profile = await fetchLeaderProfile(term.prime_minister.id);
       const appointment = profile
         ? await fetchLeaderAppointment(profile.id, 'premier_ministre')
         : null;
