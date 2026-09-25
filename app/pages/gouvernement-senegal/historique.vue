@@ -48,7 +48,7 @@ const noResults = computed(() => !pending.value && !error.value && governments.v
 
 const title = 'Historique des gouvernements du Sénégal';
 const description =
-  "Frise chronologique des gouvernements du Sénégal depuis 1960 : présidents, Premiers ministres, nomination et composition.";
+  'Frise chronologique des gouvernements du Sénégal depuis 1960 : présidents, Premiers ministres, nomination et composition.';
 const url = `${siteUrl}/gouvernement-senegal/historique`;
 const image = `${siteUrl}/nomination-3.png`;
 
@@ -257,9 +257,7 @@ const togglePresidency = (slug: string) => {
             <h1 class="text-lg font-bold text-gray-900 dark:text-white sm:text-xl">
               Historique des gouvernements du Sénégal
             </h1>
-            <p class="text-xs text-gray-500 dark:text-gray-400">
-              Depuis l'indépendance en 1960
-            </p>
+            <p class="text-xs text-gray-500 dark:text-gray-400">Depuis l'indépendance en 1960</p>
           </div>
           <div class="hidden items-center gap-3 sm:flex">
             <span
@@ -441,9 +439,7 @@ const togglePresidency = (slug: string) => {
 
           <!-- Frise verticale (corps de l'accordéon) -->
           <div v-show="openPresidency === group.presidentSlug" class="px-4 pb-4">
-            <ol
-              class="relative space-y-4 border-l-2 border-gray-300 pt-2 dark:border-gray-600"
-            >
+            <ol class="relative space-y-4 border-l-2 border-gray-300 pt-2 dark:border-gray-600">
               <li v-for="(gov, index) in group.governments" :key="gov.id" class="relative pl-8">
                 <!-- Numéro sur la frise -->
                 <span
@@ -484,8 +480,9 @@ const togglePresidency = (slug: string) => {
                   <!-- Premier ministre / présidence directe -->
                   <p class="mt-2 text-xs text-gray-600 dark:text-gray-300">
                     <template v-if="gov.prime_minister">
-                      <span class="text-gray-400 dark:text-gray-500">Premier Ministre :</span>
-                      <NuxtLink
+                      <span class="text-gray-400 dark:text-gray-500">Premier Ministre&nbsp;:</span
+                      >{{ ' '
+                      }}<NuxtLink
                         :to="pmUrl(gov.prime_minister)"
                         class="text-sky-600 hover:underline dark:text-sky-400"
                       >
