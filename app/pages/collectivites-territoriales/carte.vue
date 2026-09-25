@@ -4,6 +4,14 @@ import { useCommunesGeo } from '~/composables/collectivites/useCommunesGeo';
 
 definePageMeta({ layout: 'fullscreen' });
 
+// Garde feature flag : 404 si la feature est désactivée
+const { isFeatureEnabled, loading: flagsLoading } = useFeatureFlags();
+watchEffect(() => {
+  if (!flagsLoading.value && !isFeatureEnabled('menu_collectivites_territoriales')) {
+    throw createError({ statusCode: 404, statusMessage: 'Page non trouvée' });
+  }
+});
+
 const route = useRoute();
 const router = useRouter();
 const { siteUrl, themeColor } = useSiteMetadata();

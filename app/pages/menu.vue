@@ -230,13 +230,12 @@ const allNavigationCards: NavigationCard[] = [
     to: '/elections-senegal',
     featureKey: 'menu_elections',
   },
-  // Pas de featureKey tant que le flag `menu_collectivites_territoriales` n'existe pas
-  // dans Directus (vp_feature_flags) : un flag absent = carte masquée.
   {
     title: 'Collectivités territoriales',
     description: 'Communes, maires, conseils municipaux, budgets locaux',
     icon: 'i-heroicons-map-pin',
     to: '/collectivites-territoriales',
+    featureKey: 'menu_collectivites_territoriales',
   },
   {
     title: 'Chatbot',

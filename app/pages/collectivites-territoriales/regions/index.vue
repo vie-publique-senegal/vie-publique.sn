@@ -6,6 +6,14 @@ import { repereCollectivites, repereDepartements } from '~/composables/collectiv
 import { useCollectionPageSeo } from '~/composables/collectivites/useCollectionPageSeo';
 import { useRegionsGeo } from '~/composables/collectivites/useRegionsGeo';
 
+// Garde feature flag : 404 si la feature est désactivée
+const { isFeatureEnabled, loading: flagsLoading } = useFeatureFlags();
+watchEffect(() => {
+  if (!flagsLoading.value && !isFeatureEnabled('menu_collectivites_territoriales')) {
+    throw createError({ statusCode: 404, statusMessage: 'Page non trouvée' });
+  }
+});
+
 // Hub des régions : le niveau qui manquait entre l'annuaire et le département.
 // Pas de recherche ici, contrairement au hub des départements — 14 lignes se
 // parcourent d'un coup d'œil, un champ de recherche serait du décor.

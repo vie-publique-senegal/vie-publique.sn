@@ -5,6 +5,14 @@ import { useCollectionPageSeo } from '~/composables/collectivites/useCollectionP
 import { useDepartementsGeo } from '~/composables/collectivites/useDepartementsGeo';
 import { useGeoSearch } from '~/composables/collectivites/useGeoSearch';
 
+// Garde feature flag : 404 si la feature est désactivée
+const { isFeatureEnabled, loading: flagsLoading } = useFeatureFlags();
+watchEffect(() => {
+  if (!flagsLoading.value && !isFeatureEnabled('menu_collectivites_territoriales')) {
+    throw createError({ statusCode: 404, statusMessage: 'Page non trouvée' });
+  }
+});
+
 // Hub des départements : page pivot entre l'annuaire (558 collectivités, filtres
 // en query params non indexables) et les fiches communes. Elle donne 46 URLs
 // stables et crawlables, chacune menant à une dizaine de fiches.

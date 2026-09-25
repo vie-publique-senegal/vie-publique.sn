@@ -293,6 +293,10 @@ onMounted(async () => {
     loadGeoSources(props.config.geoSources ?? DEFAULT_GEO_SOURCES),
   ]);
 
+  // Démonté pendant le chargement (navigation rapide, page remplacée par une
+  // 404 de feature flag) : le conteneur n'existe plus, maplibre planterait.
+  if (!mapContainer.value) return;
+
   await engine.initMap(mapContainer.value, {
     center: props.config.center ?? [-14.4524, 14.4974],
     zoom: props.config.zoom ?? 7,

@@ -1,6 +1,14 @@
 <script setup lang="ts">
 import type { GovernmentBrief, LeaderBrief } from '~~/types/leader-history';
 
+// Garde feature flag : 404 si la feature est désactivée
+const { isFeatureEnabled, loading: flagsLoading } = useFeatureFlags();
+watchEffect(() => {
+  if (!flagsLoading.value && !isFeatureEnabled('menu_historique_dirigeants')) {
+    throw createError({ statusCode: 404, statusMessage: 'Page non trouvée' });
+  }
+});
+
 const route = useRoute();
 const slug = computed(() => route.params.slug as string);
 
