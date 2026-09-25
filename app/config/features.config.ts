@@ -88,6 +88,12 @@ export const DEFAULT_FEATURES: Record<string, FeatureFlag> = {
     environments: ['dev', 'test'],
     description: 'Menu Collectivités territoriales (communes, départements, régions, carte)',
   },
+  menu_historique_dirigeants: {
+    key: 'menu_historique_dirigeants',
+    enabled: true,
+    environments: ['dev', 'test'],
+    description: 'Historique des présidents, Premiers ministres et gouvernements depuis 1960',
+  },
   menu_chatbot: {
     key: 'menu_chatbot',
     enabled: true,

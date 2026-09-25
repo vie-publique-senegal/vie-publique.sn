@@ -1,6 +1,14 @@
 <script setup lang="ts">
 import type { PresidentialTerm } from '~~/types/leader-history';
 
+// Garde feature flag : 404 si la feature est désactivée
+const { isFeatureEnabled, loading: flagsLoading } = useFeatureFlags();
+watchEffect(() => {
+  if (!flagsLoading.value && !isFeatureEnabled('menu_historique_dirigeants')) {
+    throw createError({ statusCode: 404, statusMessage: 'Page non trouvée' });
+  }
+});
+
 const { siteName, siteUrl, themeColor, keywords } = useSiteMetadata();
 
 const { terms, total, current, loading: pending, error } = usePresidents();

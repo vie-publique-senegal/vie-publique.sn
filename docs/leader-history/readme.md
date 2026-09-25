@@ -195,6 +195,18 @@ Helpers partagés par toutes les pages leaders (importés via `useLeaderFormat()
 
 ---
 
+## Feature flag
+
+Flag `menu_historique_dirigeants` (défaut dans `app/config/features.config.ts`,
+surchargeable dans `vp_feature_flags`). Il couvre les 6 pages de l'historique —
+présidents, Premiers ministres (listes + fiches) et gouvernements
+(`/gouvernement-senegal/historique` + `/gouvernement-senegal/[slug]`) — qui renvoient
+une 404 quand il est désactivé, ainsi que leurs points d'entrée : cartes Présidents
+et Premiers ministres de `/etat-senegal`, lien « historique » de `/gouvernement-senegal`.
+Indépendant de `menu_gouvernement` (carte « Gouvernement » du menu, gouvernement actuel).
+
+---
+
 ## Tester en local
 
 ```bash
