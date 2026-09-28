@@ -213,16 +213,21 @@ const isGovernmentMember = computed(() => {
   return isActive.value && !!cat && governmentCategories.includes(cat);
 });
 
+// Filtres de la liste mémorisés côté client (sessionStorage) : lus après hydratation
+// pour éviter tout mismatch SSR/client. Les filtres ne transitent plus par l'URL de la fiche.
+const { restore: restoreListQuery } = usePersonsListMemory();
+const listQuery = ref('');
+onMounted(() => {
+  listQuery.value = restoreListQuery();
+});
+
 // URL retour : gouvernement si ref=gouvernement ou si ministre actif sans ref explicite
 const backUrl = computed<string>(() => {
   const referer = route.query.ref as string;
   if (referer === 'gouvernement' || (!referer && isGovernmentMember.value)) {
     return '/gouvernement-senegal';
   }
-  const query = { ...route.query };
-  delete query.ref;
-  const qs = new URLSearchParams(query as Record<string, string>).toString();
-  return qs ? `/personnalites-senegal?${qs}` : '/personnalites-senegal';
+  return listQuery.value ? `/personnalites-senegal?${listQuery.value}` : '/personnalites-senegal';
 });
 
 const backLabel = computed(() => {
