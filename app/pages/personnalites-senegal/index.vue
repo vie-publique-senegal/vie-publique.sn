@@ -1,4 +1,10 @@
 <script setup lang="ts">
+import {
+  MANDATE_FILTER_LABELS,
+  type MandateFilter,
+  type PublicPerson,
+} from '~~/types/public-person';
+
 const { siteName, siteUrl, keywords, themeColor } = useSiteMetadata();
 
 const url = `${siteUrl}/personnalites-senegal`;
@@ -15,10 +21,12 @@ const {
   searchQuery,
   filterCategory,
   filterGender,
+  filterMandate,
   totalItems,
   totalPages,
   totalsByCategory,
   totalsByGender,
+  totalsByMandate,
   totalPersons,
   hasActiveFilters,
   resetFilters,
@@ -26,6 +34,7 @@ const {
   setSearchQuery,
   setFilterCategory,
   setFilterGender,
+  setFilterMandate,
 } = usePublicPersons();
 
 // SEO
@@ -158,12 +167,47 @@ watch(searchQuery, () => {
   currentPage.value = 1;
 });
 
-watch([filterCategory, filterGender], () => {
+watch([filterCategory, filterGender, filterMandate], () => {
   currentPage.value = 1;
 });
 
-// Label genre pour affichage
-const getGenderLabel = (sexe: string) => (sexe === 'female' ? 'Nommée' : 'Nommé');
+// Liste déroulante genre (libellé + compteur)
+const genderOptions = computed(() => [
+  { value: 'all', label: 'Hommes et femmes' },
+  { value: 'male', label: `Hommes (${totalsByGender.value.maleCount})` },
+  { value: 'female', label: `Femmes (${totalsByGender.value.femaleCount})` },
+]);
+
+// Liste déroulante élu / nommé : « Non classés » n'apparaît que s'il en reste (le total,
+// lui, les compte toujours — G19)
+const mandateOptions = computed(() => {
+  const options: Array<{ value: MandateFilter; label: string }> = [
+    { value: 'all', label: 'Élus et nommés' },
+    {
+      value: 'elected',
+      label: `${MANDATE_FILTER_LABELS.elected} (${totalsByMandate.value.elected})`,
+    },
+    {
+      value: 'appointed',
+      label: `${MANDATE_FILTER_LABELS.appointed} (${totalsByMandate.value.appointed})`,
+    },
+  ];
+  if (totalsByMandate.value.unclassified > 0 || filterMandate.value === 'unclassified') {
+    options.push({
+      value: 'unclassified',
+      label: `${MANDATE_FILTER_LABELS.unclassified} (${totalsByMandate.value.unclassified})`,
+    });
+  }
+  return options;
+});
+
+// « Élu(e) le » pour un mandat électif, « Nommé(e) le » sinon (accord au genre)
+const getAppointmentVerb = (person: PublicPerson) => {
+  const elected = person.current_appointment?.category?.mandate_type === 'elected';
+  const feminine = person.sexe === 'female';
+  if (elected) return feminine ? 'Élue' : 'Élu';
+  return feminine ? 'Nommée' : 'Nommé';
+};
 </script>
 
 <template>
@@ -234,38 +278,53 @@ const getGenderLabel = (sexe: string) => (sexe === 'female' ? 'Nommée' : 'Nomm�
           </button>
         </div>
 
-        <!-- Gender Filters -->
-        <div class="mt-3 flex gap-2">
-          <button
-            class="flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-all active:scale-95"
-            :class="[
-              filterGender === 'male'
-                ? 'bg-blue-600 text-white shadow-sm'
-                : 'bg-white text-gray-700 ring-1 ring-gray-200 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:ring-gray-700 dark:hover:bg-gray-700',
-            ]"
-            @click="setFilterGender(filterGender === 'male' ? 'all' : 'male')"
-          >
-            <UIcon name="i-heroicons-user-20-solid" class="h-3.5 w-3.5" />
-            Hommes
-            <span v-if="totalsByGender.maleCount" class="ml-0.5 text-[10px] opacity-70"
-              >({{ totalsByGender.maleCount }})</span
+        <!-- Genre + Élus / nommés : listes déroulantes (même motif que documents/public.vue) -->
+        <div class="scrollbar-hide -mx-4 mt-3 flex items-center gap-2 overflow-x-auto px-4 py-1">
+          <div class="relative shrink-0">
+            <select
+              :value="filterGender"
+              class="appearance-none rounded-full border-0 bg-gray-100 py-1.5 pl-3 pr-7 text-xs font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-400 dark:bg-gray-800 dark:text-gray-300 dark:focus:ring-gray-500"
+              aria-label="Filtrer par genre"
+              @change="setFilterGender(($event.target as HTMLSelectElement).value)"
             >
-          </button>
-          <button
-            class="flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-all active:scale-95"
-            :class="[
-              filterGender === 'female'
-                ? 'bg-purple-600 text-white shadow-sm'
-                : 'bg-white text-gray-700 ring-1 ring-gray-200 hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:ring-gray-700 dark:hover:bg-gray-700',
-            ]"
-            @click="setFilterGender(filterGender === 'female' ? 'all' : 'female')"
-          >
-            <UIcon name="i-heroicons-user-20-solid" class="h-3.5 w-3.5" />
-            Femmes
-            <span v-if="totalsByGender.femaleCount" class="ml-0.5 text-[10px] opacity-70"
-              >({{ totalsByGender.femaleCount }})</span
+              <option
+                v-for="opt in genderOptions"
+                :key="opt.value"
+                :value="opt.value"
+                :selected="opt.value === filterGender"
+              >
+                {{ opt.label }}
+              </option>
+            </select>
+            <UIcon
+              name="i-heroicons-chevron-down"
+              class="pointer-events-none absolute right-2 top-1/2 h-3 w-3 -translate-y-1/2 text-gray-400"
+            />
+          </div>
+
+          <div class="relative shrink-0">
+            <select
+              :value="filterMandate"
+              class="appearance-none rounded-full border-0 bg-gray-100 py-1.5 pl-3 pr-7 text-xs font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-400 dark:bg-gray-800 dark:text-gray-300 dark:focus:ring-gray-500"
+              aria-label="Filtrer par mode d'accès à la fonction : élus ou nommés"
+              @change="
+                setFilterMandate(($event.target as HTMLSelectElement).value as MandateFilter)
+              "
             >
-          </button>
+              <option
+                v-for="opt in mandateOptions"
+                :key="opt.value"
+                :value="opt.value"
+                :selected="opt.value === filterMandate"
+              >
+                {{ opt.label }}
+              </option>
+            </select>
+            <UIcon
+              name="i-heroicons-chevron-down"
+              class="pointer-events-none absolute right-2 top-1/2 h-3 w-3 -translate-y-1/2 text-gray-400"
+            />
+          </div>
         </div>
 
         <!-- Category Filters -->
@@ -308,6 +367,10 @@ const getGenderLabel = (sexe: string) => (sexe === 'female' ? 'Nommée' : 'Nomm�
             :class="filterGender === 'male' ? 'bg-blue-500' : 'bg-purple-500'"
           />
           {{ filterGender === 'male' ? 'Hommes' : 'Femmes' }}
+        </span>
+        <span v-if="filterMandate !== 'all'" class="inline-flex items-center gap-1">
+          <span class="h-2 w-2 rounded-full bg-gray-900 dark:bg-white" />
+          {{ MANDATE_FILTER_LABELS[filterMandate] }}
         </span>
         <span v-if="filterCategory !== 'all'" class="inline-flex items-center gap-1">
           <span class="bg-primary-500 h-2 w-2 rounded-full" />
@@ -440,7 +503,7 @@ const getGenderLabel = (sexe: string) => (sexe === 'female' ? 'Nommée' : 'Nomm�
                 class="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5"
               >
                 <time class="text-[11px] text-gray-400 dark:text-gray-500">
-                  {{ getGenderLabel(person.sexe) }} le
+                  {{ getAppointmentVerb(person) }} le
                   {{ $dateformat(person.current_appointment.appointment_date) }}
                 </time>
                 <span

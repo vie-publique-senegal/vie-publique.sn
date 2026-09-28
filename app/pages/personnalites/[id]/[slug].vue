@@ -395,6 +395,25 @@ const backLabel = computed(() => {
                   >
                     {{ currentAppointment.position_category }}
                   </span>
+                  <span
+                    v-if="currentAppointment?.category?.mandate_type"
+                    class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700 ring-1 ring-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:ring-gray-700"
+                    :title="
+                      currentAppointment.category.mandate_type === 'elected'
+                        ? 'Fonction pourvue par élection'
+                        : 'Fonction pourvue par nomination'
+                    "
+                  >
+                    {{
+                      currentAppointment.category.mandate_type === 'elected'
+                        ? person?.sexe === 'female'
+                          ? 'Élue'
+                          : 'Élu'
+                        : person?.sexe === 'female'
+                          ? 'Nommée'
+                          : 'Nommé'
+                    }}
+                  </span>
                 </div>
 
                 <!-- Social links -->

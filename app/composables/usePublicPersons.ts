@@ -1,4 +1,4 @@
-import type { PublicPerson } from '~/types/public-person';
+import { isMandateFilter, type MandateFilter, type PublicPerson } from '~~/types/public-person';
 
 export interface PublicPersonsOptions {
   sort?: string;
@@ -11,14 +11,18 @@ export interface PublicPersonsOptions {
  * Utilise useCmsCollection pour le fetch et useCollectionState pour l'état UI
  *
  * @example
- * const { persons, loading, searchQuery, filterCategory, filterGender } = usePublicPersons();
+ * const { persons, loading, searchQuery, filterCategory, filterGender, filterMandate } = usePublicPersons();
  */
 export const usePublicPersons = (options: PublicPersonsOptions = {}) => {
   const route = useRoute();
 
-  // Filtres spécifiques
-  const filterCategory = ref<string>('all');
-  const filterGender = ref<string>('all');
+  // Filtres spécifiques — lus depuis l'URL DE FAÇON SYNCHRONE (SSR + client, cf. CLAUDE.md)
+  const filterCategory = ref<string>((route.query.category as string) || 'all');
+  const filterGender = ref<string>((route.query.gender as string) || 'all');
+  // Facette élu / nommé (`?mandat=elected|appointed|unclassified`), portée par la catégorie (G19)
+  const filterMandate = ref<MandateFilter>(
+    isMandateFilter(route.query.mandat) ? route.query.mandat : 'all',
+  );
 
   // État UI avec sync URL
   const state = useCollectionState({
@@ -34,17 +38,8 @@ export const usePublicPersons = (options: PublicPersonsOptions = {}) => {
     },
     additionalFilters: {
       gender: filterGender,
+      mandat: filterMandate,
     },
-  });
-
-  // Lecture des filtres depuis l'URL au montage
-  onMounted(() => {
-    if (route.query.category) {
-      filterCategory.value = route.query.category as string;
-    }
-    if (route.query.gender) {
-      filterGender.value = route.query.gender as string;
-    }
   });
 
   // Sync filtre catégorie avec URL
@@ -66,6 +61,9 @@ export const usePublicPersons = (options: PublicPersonsOptions = {}) => {
     }
     if (filterGender.value && filterGender.value !== 'all') {
       f.filterGender = filterGender.value;
+    }
+    if (filterMandate.value !== 'all') {
+      f.filterMandate = filterMandate.value;
     }
     return f;
   });
@@ -93,6 +91,11 @@ export const usePublicPersons = (options: PublicPersonsOptions = {}) => {
     state.currentPage.value = 1;
   };
 
+  const setFilterMandate = (mandate: MandateFilter) => {
+    filterMandate.value = mandate;
+    state.currentPage.value = 1;
+  };
+
   // Stats globales
   const { data: stats } = useFetch('/api/public-persons/stats', {
     key: 'public-persons-stats',
@@ -104,6 +107,11 @@ export const usePublicPersons = (options: PublicPersonsOptions = {}) => {
 
   const totalsByGender = computed(() => {
     return stats.value?.totalsByGender || { maleCount: 0, femaleCount: 0 };
+  });
+
+  // Élus / nommés / non classés — les non classés restent comptés (G19)
+  const totalsByMandate = computed(() => {
+    return stats.value?.totalsByMandate || { elected: 0, appointed: 0, unclassified: 0 };
   });
 
   // Total global (toutes personnes, genre renseigné ou non — ex. maires sans `sexe`)
@@ -124,6 +132,7 @@ export const usePublicPersons = (options: PublicPersonsOptions = {}) => {
     itemsPerPage: state.itemsPerPage,
     filterCategory,
     filterGender,
+    filterMandate,
 
     // Méthodes
     setCurrentPage: state.setCurrentPage,
@@ -132,10 +141,12 @@ export const usePublicPersons = (options: PublicPersonsOptions = {}) => {
     setItemsPerPage: state.setItemsPerPage,
     setFilterCategory,
     setFilterGender,
+    setFilterMandate,
     resetFilters: () => {
       state.resetFilters();
       filterCategory.value = 'all';
       filterGender.value = 'all';
+      filterMandate.value = 'all';
     },
 
     // Computed
@@ -143,12 +154,14 @@ export const usePublicPersons = (options: PublicPersonsOptions = {}) => {
     totalPages,
     totalsByCategory,
     totalsByGender,
+    totalsByMandate,
     totalPersons,
     hasActiveFilters: computed(
       () =>
         state.hasActiveFilters.value ||
         filterCategory.value !== 'all' ||
-        filterGender.value !== 'all',
+        filterGender.value !== 'all' ||
+        filterMandate.value !== 'all',
     ),
   };
 };

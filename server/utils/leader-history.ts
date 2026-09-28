@@ -70,7 +70,7 @@ export async function fetchGovernmentsAsc(): Promise<GovernmentBrief[]> {
         filter: {
           status: { _eq: 'published' },
           government: { _nnull: true },
-          position_category_slug: { _nin: ['presidence', 'premier_ministre'] },
+          category: { slug: { _nin: ['presidence', 'premier_ministre'] } },
         },
         limit: -1,
       }),
@@ -277,7 +277,7 @@ export async function fetchLeaderAppointment(
       filter: {
         status: { _eq: 'published' },
         person: { _eq: personId },
-        position_category_slug: { _eq: categorySlug },
+        category: { slug: { _eq: categorySlug } },
       },
       sort: ['appointment_date'],
       limit: 1,
