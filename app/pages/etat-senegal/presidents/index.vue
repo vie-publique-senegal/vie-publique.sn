@@ -133,21 +133,23 @@ useHead({
 <template>
   <div class="min-h-screen pb-20 dark:bg-gray-900/95">
     <div class="container mx-auto px-4 pt-2">
-      <AppBreadcrumb :items="[{ label: 'État du Sénégal', to: '/etat-senegal' }, { label: 'Présidents' }]" />
+      <AppBreadcrumb
+        :items="[{ label: 'État du Sénégal', to: '/etat-senegal' }, { label: 'Présidents' }]"
+      />
     </div>
 
     <header
       class="sticky top-0 z-40 border-b border-gray-200 bg-white/95 backdrop-blur-sm dark:bg-gray-900/95"
     >
-      <div class="container mx-auto flex items-center justify-between px-4 py-3">
-        <div>
+      <div class="container mx-auto flex items-center justify-between gap-3 px-4 py-3">
+        <div class="min-w-0">
           <h1 class="text-lg font-bold text-gray-900 dark:text-white sm:text-xl">
             Présidents de la République du Sénégal
           </h1>
           <p class="text-xs text-gray-500 dark:text-gray-400">Depuis l'indépendance en 1960</p>
         </div>
         <span
-          class="inline-flex items-center rounded-full bg-sky-50 px-2.5 py-1 text-xs font-medium text-sky-700 dark:bg-sky-900/30 dark:text-sky-300"
+          class="inline-flex shrink-0 items-center whitespace-nowrap rounded-full bg-sky-50 px-2.5 py-1 text-xs font-medium text-sky-700 dark:bg-sky-900/30 dark:text-sky-300"
         >
           {{ total }} présidents
         </span>
