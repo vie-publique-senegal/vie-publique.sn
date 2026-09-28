@@ -132,7 +132,7 @@ useHead({
 });
 
 // URL vers la fiche détail
-const getDetailUrl = (person: any) => {
+const getDetailUrl = (person: { id: number | string; slug?: string | null; full_name: string }) => {
   const slug =
     person.slug ||
     person.full_name
@@ -142,11 +142,18 @@ const getDetailUrl = (person: any) => {
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-+|-+$/g, '');
 
-  return {
-    path: `/personnalites/${person.id}/${slug}`,
-    query: { ...route.query },
-  };
+  // URL propre (sans les filtres de la liste) : une seule URL crawlable par fiche.
+  // Le retour à la liste filtrée passe par usePersonsListMemory (sessionStorage).
+  return `/personnalites/${person.id}/${slug}`;
 };
+
+// Mémorise les filtres actifs pour le bouton « Retour » des fiches (client uniquement)
+const { save: saveListQuery } = usePersonsListMemory();
+watch(
+  () => route.query,
+  (q) => saveListQuery(q),
+  { immediate: true, deep: true },
+);
 
 // Total : pas la somme hommes + femmes (les personnes sans `sexe`, ex. maires, en seraient exclues)
 const totalCount = totalPersons;
