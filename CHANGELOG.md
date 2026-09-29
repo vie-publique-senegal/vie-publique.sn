@@ -6,6 +6,10 @@ l'historique git (`git log --grep="^feat"`, Conventional Commits).
 
 ## 2026
 
+### Septembre 2026
+
+- **Page « Tous nos liens »** (`/liens`) : les produits de Vie Publique (site, application mobile Android et iPhone, chaîne YouTube, newsletter, réseaux sociaux) réunis sur notre propre site, à la place de Linktree. C'est la nouvelle cible du QR code (t-shirts, supports de com) et des liens en bio.
+
 ### Août 2026
 
 - **Collectivités territoriales : navigation par région et par département** — une page par région (`/collectivites-territoriales/regions`) et par département (`/collectivites-territoriales/departements`), listant leurs communes, atteignables depuis l'annuaire, le fil d'ariane et les repères de chaque fiche : 62 pages de plus, stables et partageables, là où ces filtres n'existaient qu'en paramètre d'URL.

@@ -16,8 +16,18 @@ export const useAnalytics = () => {
     });
   };
 
+  // Page /liens (remplaçante du Linktree) : un clic par lien, internes compris
+  // (GA4 ne mesure d'office que les clics sortants).
+  const trackLinkClick = (linkId: string | number, section: string) => {
+    gtag("event", "liens_click", {
+      link_id: String(linkId),
+      link_section: section,
+    });
+  };
+
   return {
     trackQuizStart,
     trackQuizFinish,
+    trackLinkClick,
   };
 };

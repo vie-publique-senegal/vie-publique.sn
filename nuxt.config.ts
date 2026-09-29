@@ -297,6 +297,9 @@ export default defineNuxtConfig({
     '/budget/**': { redirect: { to: '/budget-senegal', statusCode: 301 }, prerender: true },
     '/publications': { redirect: { to: '/actualites', statusCode: 301 }, prerender: true },
     '/publications/**': { redirect: { to: '/actualites', statusCode: 301 }, prerender: true },
+    // Page de liens (remplace le Linktree) : URL canonique FR `/liens`
+    '/links': { redirect: { to: '/liens', statusCode: 301 }, prerender: true },
+    '/linktree': { redirect: { to: '/liens', statusCode: 301 }, prerender: true },
     // Redirections des anciennes URLs anglaises vers françaises
     '/about/privacy': {
       redirect: { to: '/a-propos/confidentialite', statusCode: 301 },
