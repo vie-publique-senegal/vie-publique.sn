@@ -47,7 +47,7 @@ Volumétrie et faits vérifiés le jour de la rédaction :
 
 ## 4. Prérequis (avant la phase A)
 
-1. **Scripts et données** : par convention d'équipe, aucun script ne vit dans le repo applicatif — les scripts d'exploitation électoraux et leurs données sources vivent dans le repo [vpsn-scripts](https://github.com/vie-publique-senegal/vpsn-scripts), dossier `elections/` (mode d'emploi dans son README ; les commandes s'exécutent depuis la racine de ce repo). Un runbook d'exécution condensé accompagne ce plan : `elections/MIGRATION-PROD.md` dans ce même repo. Sont utilisés par ce plan :
+1. **Scripts et données** : par convention d'équipe, aucun script ne vit dans le repo applicatif — les scripts d'exploitation électoraux et leurs données sources vivent dans le repo [vpsn-data-platform](https://github.com/vie-publique-senegal/vpsn-data-platform), dossier `modules/elections/` (mode d'emploi dans son README ; les commandes s'exécutent depuis la racine de ce repo). La procédure d'exécution qui accompagne ce plan est `modules/elections/RUNBOOK.md` dans ce même repo. Sont utilisés par ce plan :
    - `backfill-polling-stations.mjs` — prêt : la résolution des départements passe par les graphies du référentiel (la graphie « BIRKILANE » des bureaux prod ne correspond pas au nom « Birkelane » du référentiel) ;
    - `backfill-constituency-results.mjs` — prêt : copie 1:1 seule (la population n'est plus stockée nulle part : elle est la somme des observations communales, calculée à la lecture) ;
 
