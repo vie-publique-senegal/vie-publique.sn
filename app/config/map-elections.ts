@@ -140,7 +140,7 @@ function buildOfficesDataset(data: OfficeMapItem[]): MapDatasetConfig<OfficeMapI
     type: 'choropleth',
     visible: true,
     data,
-    geoLevel: 'departements',
+    geoSource: 'departements',
     // Jointure sur le slug du référentiel des deux côtés : `geoSlug` sur la donnée,
     // `slug` sur les features GeoJSON (réindexées sur le référentiel).
     joinField: 'geoSlug',
@@ -177,7 +177,7 @@ function buildOfficesDataset(data: OfficeMapItem[]): MapDatasetConfig<OfficeMapI
 
 function buildResultsDataset(
   data: ResultMapItem[],
-  geoLevel: 'departements' | 'communes',
+  geoSource: 'departements' | 'communes',
   options: { headOfListLabel?: string } = {},
 ): MapDatasetConfig<ResultMapItem> {
   const { headOfListLabel = 'Tête de liste' } = options
@@ -188,7 +188,12 @@ function buildResultsDataset(
     type: 'choropleth',
     visible: true,
     data,
-    geoLevel,
+    geoSource,
+    // Fond communal NON filtré (les 553 communes, voisines comprises) : libellés
+    // réservés aux zooms élevés et limites de département pour lire l'appartenance.
+    ...(geoSource === 'communes'
+      ? { featureLabels: { minZoom: 8, size: 10 }, departementBorders: true }
+      : {}),
     // Jointure sur le slug du référentiel des deux côtés : `geoSlug` sur la donnée,
     // `slug` sur les features GeoJSON (réindexées sur le référentiel).
     joinField: 'geoSlug',
@@ -305,7 +310,6 @@ function buildResultsLegend(data: ResultMapItem[]): LegendConfig {
 export interface ElectionMapConfigOptions {
   mode: BuilderMode
   title?: string
-  height?: string
   theme?: 'dark' | 'light'
   /** Centre/zoom initiaux — utilisés pour recentrer sur un département au drill-down */
   center?: [number, number]
@@ -318,7 +322,7 @@ export function buildElectionMapConfig(
   options: ElectionMapConfigOptions,
   data: OfficeMapItem[] | ResultMapItem[],
 ): SenegalMapConfig {
-  const { mode, title = '', height, theme = 'light', center, zoom } = options
+  const { mode, title = '', theme = 'light', center, zoom } = options
   const isCommunesLevel = mode === 'results-locale'
   const isDeptAggregate = mode === 'results-locale-departments'
 
@@ -337,15 +341,13 @@ export function buildElectionMapConfig(
   return {
     title,
     theme,
-    height: height ?? '600px',
     center: center ?? SENEGAL_CENTER,
     zoom: zoom ?? 6.3,
     interactionMode: 'flat',
-    geoSources: {
-      regions: null,
-      // Départements : le fichier canonique de SenegalMap, réindexé sur le référentiel
-      communes: isCommunesLevel ? '/geo/senegal-communes.geojson' : null,
-    },
+    // Départements : fond de la choroplèthe (ou des limites au niveau communal) ;
+    // communes : les POLYGONES, seulement quand on les dessine. Ni régions ni
+    // libellés de communes : aucune couche de ces cartes ne les exploite.
+    geoSources: isCommunesLevel ? ['departements', 'communes'] : ['departements'],
     datasets: [dataset],
     legend,
     controls: {
@@ -362,6 +364,6 @@ export function buildElectionMapConfig(
 
 /** Compat : config par défaut de la page démo /carte/elections (données vides) */
 export const electionMapConfig: SenegalMapConfig = buildElectionMapConfig(
-  { mode: 'offices', title: 'Carte électorale du Sénégal', height: 'calc(100dvh - 64px)', theme: 'dark' },
+  { mode: 'offices', title: 'Carte électorale du Sénégal', theme: 'dark' },
   [],
 )

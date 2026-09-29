@@ -24,6 +24,17 @@ export function useMapEngine() {
   let _onClickCallback: ((info: any) => void) | null = null
   let _resizeObserver: ResizeObserver | null = null
 
+  /**
+   * Jeton d'initialisation. `initMap` enchaîne trois attentes (import maplibre,
+   * chargement du style, import deck.gl) ; le composant peut être démonté ou
+   * relancer une init pendant l'une d'elles. `destroy()` appelle alors
+   * `map.remove()`, qui laisse un objet dont `style` vaut `undefined` : toute
+   * opération ultérieure dessus lève (« Cannot read properties of undefined
+   * (reading 'getProjection') » au moment d'attacher l'overlay deck.gl).
+   * On abandonne donc l'init dès que le jeton a changé.
+   */
+  let _initToken = 0
+
   // ─── Init ────────────────────────────────────────────────────────
   async function initMap(
     container: HTMLElement,
@@ -40,7 +51,13 @@ export function useMapEngine() {
     destroy()
     _onClickCallback = options.onClick ?? null
 
+    const token = ++_initToken
+    /** Cette init est-elle toujours celle qui fait foi, et sa carte vivante ? */
+    const estCourante = (map?: MapLibreMap) =>
+      token === _initToken && (!map || mapInstance.value === map)
+
     const { Map, AttributionControl } = await import('maplibre-gl')
+    if (!estCourante()) return
 
     const center = options.center ?? [-14.4524, 14.4974]
     const zoom = options.zoom ?? 7
@@ -86,6 +103,7 @@ export function useMapEngine() {
       if (map.loaded()) { clearTimeout(timeout); resolve() }
       else map.on('load', () => { clearTimeout(timeout); resolve() })
     })
+    if (!estCourante(map)) return
 
     // Resize forcé — le canvas peut avoir des dimensions incorrectes au premier rendu
     map.resize()
@@ -93,6 +111,7 @@ export function useMapEngine() {
     // deck.gl overlay (graceful : si ça échoue, le fond de carte reste)
     try {
       const { MapboxOverlay } = await import('@deck.gl/mapbox')
+      if (!estCourante(map)) return
       const overlay = new MapboxOverlay({
         // Sur tactile, le rendu interleaved partage le picking buffer avec MapLibre :
         // le premier tap est souvent consommé par la reconnaissance de geste (pan/zoom)
@@ -155,6 +174,11 @@ export function useMapEngine() {
     mapInstance.value?.flyTo({ center: [lng, lat], zoom: zoom ?? mapInstance.value.getZoom(), duration, essential: true })
   }
 
+  /** Cadre une emprise [[ouest, sud], [est, nord]] — drill-down sur un territoire. */
+  function fitBounds(bounds: [[number, number], [number, number]], padding = 48) {
+    mapInstance.value?.fitBounds(bounds, { padding, duration: 800, essential: true })
+  }
+
   function zoomIn() { mapInstance.value?.zoomIn({ duration: 300 }) }
   function zoomOut() { mapInstance.value?.zoomOut({ duration: 300 }) }
   function resetNorth() { mapInstance.value?.easeTo({ bearing: 0, pitch: 0, duration: 500 }) }
@@ -186,6 +210,10 @@ export function useMapEngine() {
 
   // ─── Cleanup ─────────────────────────────────────────────────────
   function destroy() {
+    // Invalide toute init en cours : sans ça, un démontage survenu avant même la
+    // création de la carte laisserait l'init aller au bout et fuiter une carte.
+    _initToken += 1
+
     _resizeObserver?.disconnect()
     _resizeObserver = null
 
@@ -207,7 +235,7 @@ export function useMapEngine() {
   return {
     mapInstance, deckOverlay, isReady, isContextLost, viewport,
     initMap, updateLayers,
-    flyTo, zoomIn, zoomOut, resetNorth, switchTheme,
+    flyTo, fitBounds, zoomIn, zoomOut, resetNorth, switchTheme,
     getCanvas, captureSnapshot, resize, destroy,
   }
 }

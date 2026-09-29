@@ -21,6 +21,21 @@ export type LayerType =
 
 export type RGBAColor = [number, number, number, number];
 
+// ─── Fonds géographiques ──────────────────────────────────────────
+
+/**
+ * Fichiers de `public/geo/` que la carte sait charger.
+ *
+ * `communes` porte les 553 POLYGONES de commune (1 Mo), `communeLabels` les 553
+ * centroïdes correspondants (111 Ko) : deux fichiers distincts, deux usages
+ * distincts. Une carte qui ne fait qu'étiqueter les communes ne doit charger que
+ * `communeLabels`.
+ */
+export type GeoSourceKey = 'regions' | 'departements' | 'communes' | 'communeLabels';
+
+/** Fond d'un choroplèthe (les libellés ne sont pas un fond de remplissage). */
+export type ChoroplethGeoSource = Exclude<GeoSourceKey, 'communeLabels'>;
+
 export interface ColorStop {
   /** Seuil numérique (ex. 0, 25, 50, 75, 100) */
   value: number;
@@ -72,8 +87,30 @@ export interface MapDatasetConfig<T = any> {
   joinField?: string;
   /** Champ dans le GeoJSON pour le join */
   geoJoinField?: string;
-  /** Fond de jointure de la choroplèthe (défaut : 'regions') */
-  geoLevel?: 'regions' | 'departements' | 'communes';
+  /**
+   * Fond géométrique du choroplèthe. Défaut `'regions'` — c'est le seul niveau
+   * qui existait avant l'ajout des polygones de commune, toutes les cartes
+   * historiques s'appuient dessus sans rien déclarer.
+   */
+  geoSource?: ChoroplethGeoSource;
+  /**
+   * Restreint les features du fond avant coloriage. Sert au drill-down : n'afficher
+   * que les communes du département ouvert plutôt que les 553 d'un coup.
+   */
+  geoFilter?: (feature: Feature) => boolean;
+  /**
+   * Libellés des features du fond (défaut : toujours affichés, 15 px au-delà du
+   * zoom 8, 13 px en deçà). Un fond dense — les 553 communes d'un coup — les
+   * réserve aux zooms élevés et les rapetisse pour rester lisible.
+   */
+  featureLabels?: { minZoom?: number; size?: number };
+  /**
+   * Trace les limites de département par-dessus le choroplèthe (défaut : false).
+   * Sert aux fonds communaux non filtrés, où l'appartenance d'une commune à son
+   * département ne se lit pas autrement. Exige le fond `departements` dans
+   * `geoSources`.
+   */
+  departementBorders?: boolean;
   /** Fonction qui extrait la valeur numérique pour colorier */
   getValue?: (d: T) => number;
   /** Fonction qui extrait le label textuel */
@@ -286,27 +323,29 @@ export interface SenegalMapConfig {
   title: string;
   /** Description courte */
   description?: string;
+  /**
+   * Affiche le bandeau titre en surimpression (défaut : true). À passer à `false`
+   * quand la page porte déjà son propre en-tête au même endroit — le titre reste
+   * utilisé pour l'export PNG.
+   */
+  showTitle?: boolean;
   /** Thème par défaut */
   theme?: 'dark' | 'light';
   /** Centre initial [lng, lat] */
   center?: [number, number];
   /** Zoom initial */
   zoom?: number;
-  /** Hauteur CSS du conteneur (défaut : plein écran moins le header) */
-  height?: string;
-  /**
-   * Sources GeoJSON par niveau (défaut : /geo/senegal-*.geojson).
-   * `null` désactive le chargement du niveau.
-   */
-  geoSources?: {
-    regions?: string | null;
-    departements?: string | null;
-    communes?: string | null;
-  };
   /** Mode d'interaction : 'flat' (2D only) ou '3d' (pitch/rotation) */
   interactionMode?: 'flat' | '3d';
   /** Presets de navigation */
   presets?: MapRegionPreset[];
+  /**
+   * Fonds géo à télécharger au montage. Défaut : régions + départements +
+   * libellés de communes, soit ce que chargeaient toutes les cartes avant que le
+   * fichier des polygones de commune (1 Mo) n'existe — à ne demander que si une
+   * couche l'exploite vraiment.
+   */
+  geoSources?: GeoSourceKey[];
   /** Datasets / couches à afficher */
   datasets: MapDatasetConfig[];
   /** Sidebar */

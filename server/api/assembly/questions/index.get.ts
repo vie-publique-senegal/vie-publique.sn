@@ -17,6 +17,7 @@ export default defineCachedEventHandler(
     const search = query.search as string;
     const sortBy = (query.sortBy as string) || '-question_date';
     const filterStatus = query.filterStatus as string;
+    const deputyId = (query.deputyId as string) || '';
     const includeStats = query.includeStats === 'true';
     const topDeputiesLimit = parseInt(query.topDeputiesLimit as string) || 4;
 
@@ -30,24 +31,56 @@ export default defineCachedEventHandler(
         },
       };
 
-      // Recherche textuelle (sujet de la question)
-      if (search) {
-        filter._or = [
-          {
-            subject: {
-              _icontains: search,
-            },
-          },
-          {
-            question_text: {
-              _icontains: search,
-            },
-          },
-        ];
+      // Filtre par député (page « toutes les questions d'un député »)
+      if (deputyId) {
+        filter.deputy = { id: { _eq: deputyId } };
       }
 
       // Calcul de l'offset pour la pagination
       const offset = (page - 1) * limit;
+
+      // Tri stable : beaucoup de questions partagent la même question_date
+      // (dépôts groupés). Sans départage sur l'id, l'ordre des ex æquo n'est pas
+      // garanti d'une requête à l'autre → un item peut apparaître sur deux pages
+      // consécutives et un autre disparaître.
+      const sort = sortBy === 'id' || sortBy === '-id' ? [sortBy] : [sortBy, '-id'];
+
+      // --- Recherche -------------------------------------------------------
+      // `_icontains` (ILIKE) est sensible aux accents (`defici` ≠ « déficit ») :
+      // la recherche passe donc par l'index replié en mémoire, qui rend aussi
+      // les ids de la page déjà triés. Voir server/utils/assembly-questions-search.ts.
+      // Ids de la page courante quand la recherche est active (null sinon).
+      let searchIds: (number | string)[] | null = null;
+      let searchTotal = 0;
+
+      if (search) {
+        try {
+          const result = await searchQuestions({ search, deputyId, sortBy, page, limit });
+          searchIds = result.ids;
+          searchTotal = result.total;
+        } catch (indexError) {
+          // Dégradation propre : on retombe sur le filtre Directus (fonctionnel,
+          // mais sensible aux accents) plutôt que de renvoyer une erreur.
+          reportServerError(indexError, 'assembly-questions-search-index', { search });
+          const term = search.trim();
+          filter._or = [
+            { subject: { _icontains: term } },
+            { question_text: { _icontains: term } },
+            { deputy: { first_name: { _icontains: term } } },
+            { deputy: { last_name: { _icontains: term } } },
+          ];
+        }
+      }
+
+      // Aucun résultat : inutile d'interroger Directus.
+      if (searchIds && searchIds.length === 0) {
+        return {
+          questions: [],
+          totalQuestions: 0,
+          pagination: { page, limit, total: 0, totalPages: 0 },
+          ...(includeStats && { topDeputies: [] as TopDeputy[] }),
+        };
+      }
 
       // Récupération des questions avec pagination
       const questionData = await directus
@@ -66,10 +99,12 @@ export default defineCachedEventHandler(
               'deputy.group.name',
               'deputy.group.color',
             ],
-            filter,
-            limit,
-            offset,
-            sort: [sortBy],
+            // Recherche active : l'index a déjà filtré/trié/paginé, on ne demande
+            // plus que les champs complets des ids de la page.
+            filter: searchIds ? { ...filter, id: { _in: searchIds } } : filter,
+            limit: searchIds ? searchIds.length : limit,
+            offset: searchIds ? 0 : offset,
+            sort,
           }),
         )
         .catch((error) => {
@@ -79,14 +114,23 @@ export default defineCachedEventHandler(
           });
         });
 
-      // Récupération du total de questions avec aggregate()
-      const [totalCountResult] = await directus.request(
-        aggregate('assembly_question', {
-          aggregate: { count: '*' },
-          query: { filter },
-        }),
-      );
-      const totalCount = Number(totalCountResult?.count || questionData.length);
+      // `id._in` ne garantit pas l'ordre : on réapplique celui de l'index.
+      if (searchIds) {
+        const rank = new Map(searchIds.map((id, i) => [String(id), i]));
+        questionData.sort((a, b) => (rank.get(String(a.id)) ?? 0) - (rank.get(String(b.id)) ?? 0));
+      }
+
+      // Total : fourni par l'index en recherche, sinon aggregate() Directus
+      let totalCount = searchTotal;
+      if (!searchIds) {
+        const [totalCountResult] = await directus.request(
+          aggregate('assembly_question', {
+            aggregate: { count: '*' },
+            query: { filter },
+          }),
+        );
+        totalCount = Number(totalCountResult?.count || questionData.length);
+      }
 
       // Transformation des données
       const transformedQuestions = questionData.map((question) => ({
@@ -170,7 +214,7 @@ export default defineCachedEventHandler(
   },
   {
     maxAge: 60 * 60, // 1 heure
-    name: 'assembly-questions-v2',
+    name: 'assembly-questions-v5',
     getKey: (event) => buildCacheKey('assembly-questions', getQuery(event)),
   },
 );

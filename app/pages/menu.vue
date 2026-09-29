@@ -230,6 +230,14 @@ const allNavigationCards: NavigationCard[] = [
     to: '/elections-senegal',
     featureKey: 'menu_elections',
   },
+  // Pas de featureKey tant que le flag `menu_collectivites_territoriales` n'existe pas
+  // dans Directus (vp_feature_flags) : un flag absent = carte masquée.
+  {
+    title: 'Collectivités territoriales',
+    description: 'Communes, maires, conseils municipaux, budgets locaux',
+    icon: 'i-heroicons-map-pin',
+    to: '/collectivites-territoriales',
+  },
   {
     title: 'Chatbot',
     description: 'Posez vos questions sur les documents',
@@ -345,6 +353,10 @@ const cardConfigs: CardConfigs = {
   Élections: {
     color: 'text-orange-600 dark:text-orange-400',
     bgColor: 'bg-orange-100 dark:bg-orange-900/30',
+  },
+  'Collectivités territoriales': {
+    color: 'text-sky-600 dark:text-sky-400',
+    bgColor: 'bg-sky-100 dark:bg-sky-900/30',
   },
   'Conseil des ministres': {
     color: 'text-emerald-600 dark:text-emerald-400',

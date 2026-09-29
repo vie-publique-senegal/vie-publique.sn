@@ -16,13 +16,24 @@ interface UseMapLayersOptions {
   datasets: Ref<MapDatasetConfig[]>;
   geoJsonRegions: Ref<FeatureCollection | null>;
   geoJsonDepartements?: Ref<FeatureCollection | null>;
+  /** Polygones des 553 communes. */
   geoJsonCommunes?: Ref<FeatureCollection | null>;
+  /** Centroïdes des 553 communes — c'est CE fichier qui sert aux étiquettes. */
+  geoJsonCommuneLabels?: Ref<FeatureCollection | null>;
   theme: Ref<'dark' | 'light'>;
   activeFilters: Ref<Record<string, any>>;
   filterConfigs: Ref<FilterConfig[]>;
   viewport: Ref<MapViewport>;
   layerVisibility: Ref<Record<string, boolean>>;
 }
+
+/**
+ * TextLayer ne pré-génère son atlas de glyphes que pour l'ASCII imprimable : sans
+ * ce réglage, tout caractère accentué est rendu comme un blanc (« Kébémer » →
+ * « K b mer »). `'auto'` fait construire l'atlas à partir des textes réellement
+ * affichés — indispensable pour les toponymes sénégalais.
+ */
+const TEXT_CHARACTER_SET = 'auto';
 
 // ─── Utilitaires couleur ─────────────────────────────────────────
 
@@ -120,6 +131,7 @@ export function useMapLayers(options: UseMapLayersOptions) {
     geoJsonRegions,
     geoJsonDepartements,
     geoJsonCommunes,
+    geoJsonCommuneLabels,
     theme,
     activeFilters,
     filterConfigs,
@@ -196,13 +208,14 @@ export function useMapLayers(options: UseMapLayersOptions) {
   // ─── Choroplèthe (GeoJsonLayer) ────────────────────────────────
 
   function buildChoroplethConfig(ds: MapDatasetConfig, data: any[]) {
-    const geoLevel = ds.geoLevel ?? 'regions';
-    const geoJson =
-      geoLevel === 'departements'
-        ? geoJsonDepartements?.value
-        : geoLevel === 'communes'
-          ? geoJsonCommunes?.value
-          : geoJsonRegions.value;
+    // Le fond par défaut reste les régions : les cartes écrites avant l'arrivée
+    // des polygones de commune ne déclarent pas de `geoSource`.
+    const geoSource = ds.geoSource ?? 'regions';
+    const geoJson = {
+      regions: geoJsonRegions.value,
+      departements: geoJsonDepartements?.value ?? null,
+      communes: geoJsonCommunes?.value ?? null,
+    }[geoSource];
     if (!geoJson) return null;
 
     // Construire un Map pour le join rapide
@@ -214,9 +227,12 @@ export function useMapLayers(options: UseMapLayersOptions) {
     }
 
     const geoJoinField = ds.geoJoinField ?? 'code';
+    const sourceFeatures = ds.geoFilter
+      ? geoJson.features.filter((feature) => ds.geoFilter!(feature))
+      : geoJson.features;
 
     // Créer une copie enrichie des features GeoJSON
-    const enrichedFeatures: any[] = geoJson.features.map((feature) => {
+    const enrichedFeatures: any[] = sourceFeatures.map((feature) => {
       const code = feature.properties?.[geoJoinField];
       const itemData = code ? dataMap.get(code) : null;
       const isPoint = feature.geometry?.type === 'Point';
@@ -312,8 +328,11 @@ export function useMapLayers(options: UseMapLayersOptions) {
       });
     }
 
-    // ─── Labels des features de base (communes : seulement à partir du zoom 8) ─
-    if (geoLevel !== 'communes' || currentZoom >= 8) {
+    // ─── Labels des features du fond ─────────────────────────────
+    // `featureLabels` les réserve aux zooms élevés sur un fond dense (les 553
+    // communes non filtrées) ; par défaut, toujours affichés.
+    const labelMinZoom = ds.featureLabels?.minZoom ?? 0;
+    if (currentZoom >= labelMinZoom) {
       const regionLabelData = (enrichedFeatures as any[])
         .map((feature: any) => {
           const centroid = computeCentroid(feature);
@@ -330,18 +349,14 @@ export function useMapLayers(options: UseMapLayersOptions) {
         pickable: false,
         getPosition: (d: any) => d.position,
         getText: (d: any) => d.name,
-        getSize: geoLevel === 'communes' ? 10 : currentZoom >= 8 ? 15 : 13,
+        getSize: ds.featureLabels?.size ?? (currentZoom >= 8 ? 15 : 13),
         getColor: theme.value === 'dark' ? [255, 255, 255, 230] : [0, 0, 0, 230],
         getTextAnchor: 'middle',
         getAlignmentBaseline: 'center',
         fontFamily: 'Inter, system-ui, sans-serif',
-        // Atlas de glyphes construit depuis les données : l'atlas deck.gl par défaut est
-        // ASCII et laisserait un blanc à la place des accents (« K b mer » pour Kébémer).
-        // Atlas de glyphes construit depuis les données : l'atlas deck.gl par défaut est
-        // ASCII et laisserait un blanc à la place des accents (« K b mer » pour Kébémer).
         // Pas de halo (`outlineWidth`) : il exigerait `fontSettings.sdf`, dont le rendu
-        // érode les accents — deck.gl se contentait jusqu'ici d'avertir sans rien dessiner.
-        characterSet: 'auto',
+        // érode les accents — deck.gl se contentait d'avertir sans rien dessiner.
+        characterSet: TEXT_CHARACTER_SET,
         fontWeight: 700,
         sizeUnits: 'pixels',
         billboard: false,
@@ -352,8 +367,8 @@ export function useMapLayers(options: UseMapLayersOptions) {
       });
     }
 
-    // ─── Bordures départements par-dessus une choroplèthe communale ─
-    if (geoLevel === 'communes' && geoJsonDepartements?.value) {
+    // ─── Limites de département par-dessus le choroplèthe (opt-in) ─
+    if (ds.departementBorders && geoSource !== 'departements' && geoJsonDepartements?.value) {
       layers.push({
         _type: 'geojson',
         _dsId: ds.id,
@@ -371,8 +386,15 @@ export function useMapLayers(options: UseMapLayersOptions) {
       });
     }
 
-    // ─── Départements : bordures + labels (zoom ≥ 7, base régions) ─
-    const deptGeojson = geoLevel === 'regions' ? geoJsonDepartements?.value : null;
+    // ─── Repères de contexte ────────────────────────────────────
+    // Uniquement sous un choroplèthe de régions : superposer les contours de
+    // département à un choroplèthe DE départements les dédoublerait, et étiqueter
+    // les 553 communes au-dessus d'un choroplèthe de communes ferait double emploi
+    // avec ses propres libellés.
+    const withContextLayers = geoSource === 'regions';
+
+    // ─── Départements : bordures + labels (zoom ≥ 7) ────────────
+    const deptGeojson = withContextLayers ? geoJsonDepartements?.value : null;
     if (deptGeojson && currentZoom >= 7) {
       // Bordures départements
       layers.push({
@@ -413,9 +435,7 @@ export function useMapLayers(options: UseMapLayersOptions) {
         getTextAnchor: 'middle',
         getAlignmentBaseline: 'center',
         fontFamily: 'Inter, system-ui, sans-serif',
-        // Atlas de glyphes construit depuis les données : l'atlas deck.gl par défaut est
-        // ASCII et laisserait un blanc à la place des accents (« K b mer » pour Kébémer).
-        characterSet: 'auto',
+        characterSet: TEXT_CHARACTER_SET,
         fontWeight: 500,
         sizeUnits: 'pixels',
         billboard: false,
@@ -426,15 +446,19 @@ export function useMapLayers(options: UseMapLayersOptions) {
       });
     }
 
-    // ─── Labels des communes (zoom ≥ 9, base régions — points senegal-communes-labels) ─
-    const communeGeojson = geoLevel === 'regions' ? geoJsonCommunes?.value : null;
+    // ─── Labels des communes (zoom ≥ 9) ─────────────────────────
+    // Source = les CENTROÏDES, pas les polygones : ce bloc lit `coordinates[0]`
+    // et `[1]` comme un couple lng/lat, ce qu'un Polygon ne fournit pas.
+    const communeGeojson = withContextLayers ? geoJsonCommuneLabels?.value : null;
     if (communeGeojson && currentZoom >= 9) {
       const communeLabelData = communeGeojson.features
         .map((feature) => {
-          const coords = feature.geometry?.coordinates;
+          const geometry = feature.geometry;
           const name = feature.properties?.name ?? '';
-          if (!coords || !name) return null;
-          return { position: [coords[0], coords[1]], name };
+          // Garde stricte sur le type : un polygone servi par erreur donnerait
+          // un anneau de coordonnées là où on attend un couple lng/lat.
+          if (geometry?.type !== 'Point' || !name) return null;
+          return { position: geometry.coordinates, name };
         })
         .filter(Boolean);
 
@@ -451,9 +475,7 @@ export function useMapLayers(options: UseMapLayersOptions) {
         getTextAnchor: 'middle',
         getAlignmentBaseline: 'center',
         fontFamily: 'Inter, system-ui, sans-serif',
-        // Atlas de glyphes construit depuis les données : l'atlas deck.gl par défaut est
-        // ASCII et laisserait un blanc à la place des accents (« K b mer » pour Kébémer).
-        characterSet: 'auto',
+        characterSet: TEXT_CHARACTER_SET,
         fontWeight: 400,
         fontStyle: 'italic',
         sizeUnits: 'pixels',
@@ -579,9 +601,7 @@ export function useMapLayers(options: UseMapLayersOptions) {
       getTextAnchor: 'middle',
       getAlignmentBaseline: 'center',
       fontFamily: 'Inter, system-ui, sans-serif',
-      // Atlas de glyphes construit depuis les données : l'atlas deck.gl par défaut est
-      // ASCII et laisserait un blanc à la place des accents (« K b mer » pour Kébémer).
-      characterSet: 'auto',
+      characterSet: TEXT_CHARACTER_SET,
       fontWeight: 600,
       updateTriggers: {
         getText: [data.length],

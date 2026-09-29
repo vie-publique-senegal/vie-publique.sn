@@ -106,6 +106,9 @@ export const usePublicPersons = (options: PublicPersonsOptions = {}) => {
     return stats.value?.totalsByGender || { maleCount: 0, femaleCount: 0 };
   });
 
+  // Total global (toutes personnes, genre renseigné ou non — ex. maires sans `sexe`)
+  const totalPersons = computed(() => stats.value?.total || 0);
+
   return {
     // Données
     persons: collection.items,
@@ -140,6 +143,7 @@ export const usePublicPersons = (options: PublicPersonsOptions = {}) => {
     totalPages,
     totalsByCategory,
     totalsByGender,
+    totalPersons,
     hasActiveFilters: computed(
       () =>
         state.hasActiveFilters.value ||

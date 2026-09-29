@@ -14,9 +14,11 @@ const isChatRoute = (path: string) => path === '/chatbot';
 // site, la bannière appli et le pied de page repoussaient le champ hors de l'écran
 // sur mobile.
 // (/chat/liste reste une page normale du site : c'est une liste, pas une conversation.)
+// La carte des communes est plein écran pour la même raison que /carte.
 const isFullscreenRoute = (path: string) =>
   path.startsWith('/carte/') ||
   path.startsWith('/dashboard/') ||
+  path.startsWith('/collectivites-territoriales/carte') ||
   (path.startsWith('/chat/') && path !== '/chat/liste');
 
 const isChatPage = ref(isChatRoute(useRoute().path));

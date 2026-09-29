@@ -1,0 +1,137 @@
+[
+  {
+    "id": "site-web",
+    "section": "products",
+    "title": "vie-publique.sn",
+    "description": "Actualités, Journal officiel, budget",
+    "url": "/",
+    "icon": "i-heroicons-globe-alt",
+    "sort": 10,
+    "status": "published"
+  },
+  {
+    "id": "app-android",
+    "section": "app",
+    "title": "Télécharger sur Google Play",
+    "description": "Google Play",
+    "url": "https://play.google.com/store/apps/details?id=sn.viepublique.app",
+    "icon": "i-simple-icons-googleplay",
+    "sort": 10,
+    "status": "published",
+    "image": "/img/google-store.svg"
+  },
+  {
+    "id": "app-ios",
+    "section": "app",
+    "title": "Télécharger dans l'App Store",
+    "description": "App Store",
+    "url": "https://apps.apple.com/us/app/vie-publique-s%C3%A9n%C3%A9gal/id6757257552",
+    "icon": "i-simple-icons-appstore",
+    "sort": 20,
+    "status": "published",
+    "image": "/img/apple-store.svg"
+  },
+  {
+    "id": "youtube",
+    "section": "products",
+    "title": "Chaîne YouTube",
+    "description": "Vidéos et podcasts",
+    "url": "https://www.youtube.com/@ViePubliqueSenegal",
+    "icon": "i-simple-icons-youtube",
+    "sort": 10,
+    "status": "draft"
+  },
+  {
+    "id": "newsletter",
+    "section": "products",
+    "title": "Newsletter",
+    "description": "L'essentiel par email, gratuit",
+    "url": "/newsletter",
+    "icon": "i-heroicons-envelope",
+    "sort": 30,
+    "status": "published"
+  },
+  {
+    "id": "archives-sn",
+    "section": "products",
+    "title": "archives.sn",
+    "description": "Documents publics officiels",
+    "url": "https://archives.sn",
+    "icon": "i-heroicons-archive-box",
+    "sort": 20,
+    "status": "published"
+  },
+  {
+    "id": "rapport-impact-2025-2026",
+    "section": "about",
+    "title": "Rapport d'impact 2025-2026",
+    "description": "Bilan et perspectives",
+    "url": "/docs/cf3af162-8223-47fb-a778-79fff8beaf83",
+    "icon": "i-heroicons-document-chart-bar",
+    "sort": 10,
+    "status": "published"
+  },
+  {
+    "id": "social-instagram",
+    "section": "social",
+    "title": "Instagram",
+    "url": "https://www.instagram.com/viepubliquesn",
+    "icon": "i-simple-icons-instagram",
+    "sort": 10,
+    "status": "published"
+  },
+  {
+    "id": "social-facebook",
+    "section": "social",
+    "title": "Facebook",
+    "url": "https://www.facebook.com/ViePubliqueSenegal",
+    "icon": "i-simple-icons-facebook",
+    "sort": 20,
+    "status": "published"
+  },
+  {
+    "id": "social-x",
+    "section": "social",
+    "title": "X (Twitter)",
+    "url": "https://x.com/ViePubliqueSN",
+    "icon": "i-simple-icons-x",
+    "sort": 30,
+    "status": "published"
+  },
+  {
+    "id": "social-linkedin",
+    "section": "social",
+    "title": "LinkedIn",
+    "url": "https://www.linkedin.com/company/vie-publique-sn",
+    "icon": "i-simple-icons-linkedin",
+    "sort": 40,
+    "status": "published"
+  },
+  {
+    "id": "social-youtube",
+    "section": "social",
+    "title": "YouTube",
+    "url": "https://www.youtube.com/@ViePubliqueSenegal",
+    "icon": "i-simple-icons-youtube",
+    "sort": 50,
+    "status": "published"
+  },
+  {
+    "id": "social-tiktok",
+    "section": "social",
+    "title": "TikTok",
+    "url": "https://www.tiktok.com/@viepubliquesenegal",
+    "icon": "i-simple-icons-tiktok",
+    "sort": 60,
+    "status": "published"
+  },
+  {
+    "id": "social-whatsapp",
+    "section": "social",
+    "title": "Chaîne WhatsApp",
+    "url": "https://whatsapp.com/channel/0029VawbhaFLikg1htAGXc2I",
+    "icon": "i-simple-icons-whatsapp",
+    "sort": 70,
+    "status": "published"
+  }
+]

@@ -256,7 +256,6 @@ const mapConfig = computed(() => {
         {
           mode: 'results-locale',
           title: props.title,
-          height: props.height,
           theme: 'light',
           center: drillDownCenter.value ?? undefined,
           zoom: 9.5,
@@ -268,7 +267,6 @@ const mapConfig = computed(() => {
       {
         mode: 'results-locale-departments',
         title: props.title,
-        height: props.height,
         theme: 'light',
       },
       departmentAggregate.value,
@@ -276,7 +274,7 @@ const mapConfig = computed(() => {
   }
 
   return buildElectionMapConfig(
-    { mode: props.mode, title: props.title, height: props.height, theme: 'light' },
+    { mode: props.mode, title: props.title, theme: 'light' },
     (items.value || []) as OfficeMapItem[] | ResultMapItem[],
   );
 });
@@ -370,6 +368,7 @@ function handleRegionClick(payload: { code: string; name: string; data: unknown 
       <MapSenegalMap
         :key="mapInstanceKey"
         :config="mapConfig"
+        :height="props.height"
         @action="handleAction"
         @region-click="handleRegionClick"
       />

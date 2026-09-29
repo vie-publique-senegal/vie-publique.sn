@@ -1,5 +1,6 @@
 /**
- * Graphies des noms géographiques / de circonscription (partagé serveur + client).
+ * Graphies des noms géographiques / de circonscription (partagé serveur + client,
+ * importable via #shared/geo-name, même mécanisme que #shared/clean-text).
  *
  * Depuis la bascule vers le référentiel versionné, un même département existe sous DEUX
  * graphies :
@@ -8,32 +9,45 @@
  * - celle du référentiel (`geo_entities.name_current`, Journal officiel) : accentuée et parfois
  *   orthographiée autrement (« Kédougou », « Malem Hoddar », « Nioro »).
  *
- * ⚠️ Les deux règles ci-dessous ne sont PAS interchangeables :
- * - `normalizeGeoName` sert à COMPARER deux graphies (résolution d'un nom reçu en entrée) ;
- * - `toHistoricalGeoName` sert à ÉCRIRE une valeur d'URL. La route
+ * ⚠️ Les règles ci-dessous ne sont PAS interchangeables :
+ * - `normalizeGeoName` sert à COMPARER deux graphies (résolution d'un nom reçu en entrée,
+ *   rapprochement référentiel ↔ fonds géo, recherche) ;
+ * - `slugifyGeoName` sert à ÉCRIRE un slug d'URL du module collectivités (indexé) ;
+ * - `toHistoricalGeoName` sert à ÉCRIRE une valeur d'URL de la carte électorale. La route
  *   `/elections-senegal/carte-electorale/nationale/<departement>` est indexée en graphie
  *   historique : tout lien construit dans l'application doit continuer à l'émettre.
  *
- * `normalizeGeoName` ne réconcilie que la casse, les accents et la ponctuation : « MALEM HODAR »
- * et « Malem Hoddar » restent deux clés distinctes. C'est pourquoi la résolution serveur indexe
- * les DEUX graphies d'une circonscription (voir `server/utils/electionConstituencyLookup.ts`).
+ * `normalizeGeoName` ne réconcilie que la casse, les accents, les ligatures et la ponctuation :
+ * « MALEM HODAR » et « Malem Hoddar » restent deux clés distinctes. C'est pourquoi la résolution
+ * serveur indexe les DEUX graphies d'une circonscription (voir
+ * `server/utils/electionConstituencyLookup.ts`).
  */
 
 /** Diacritiques laissés par la décomposition NFD. */
 const DIACRITICS = /[̀-ͯ]/g;
 
 /**
- * Clé de comparaison tolérante : minuscules, sans accents, toute ponctuation et tout blanc
- * réduits à un espace simple. « Saint-Louis », « SAINT LOUIS » et « saint  louis » → « saint louis ».
+ * Clé de comparaison tolérante : minuscules, sans accents, ligatures dépliées (« Cœur » →
+ * « coeur » — NFD ne les décompose pas), toute ponctuation et tout blanc réduits à un espace
+ * simple. « Saint-Louis », « SAINT LOUIS » et « saint  louis » → « saint louis ».
  */
 export function normalizeGeoName(value: string | null | undefined): string {
   if (!value) return '';
   return value
     .normalize('NFD')
     .replace(DIACRITICS, '')
+    .replace(/œ/gi, 'oe')
+    .replace(/æ/gi, 'ae')
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, ' ')
     .trim();
+}
+
+/** Slug URL dérivé d'un nom d'entité (« Mermoz–Sacré-Cœur » → mermoz-sacre-coeur). */
+export function slugifyGeoName(value: string): string {
+  return normalizeGeoName(value)
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
 }
 
 /**

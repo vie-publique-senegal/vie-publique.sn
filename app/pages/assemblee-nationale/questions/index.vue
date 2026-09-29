@@ -1,6 +1,41 @@
 <script setup lang="ts">
 const { siteName, siteUrl, keywords, themeColor } = useSiteMetadata();
 
+// --- 1. État & données -------------------------------------------------------
+
+// ✅ Nouvelle architecture : useCmsCollection + useCollectionState
+// Plus de onMounted() → SSR-friendly, pagination et recherche intégrées
+// La recherche est synchronisée avec le query param ?q= (urlParamsMapping) et
+// couvre le titre, le contenu et le nom du député, sans tenir compte des accents.
+// Les questions d'UN député ont leur page dédiée :
+// /assemblee-nationale/deputes/<id>/<nom>/questions
+const {
+  questions,
+  loading,
+  error,
+  currentPage,
+  itemsPerPage,
+  totalItems,
+  totalPages,
+  searchQuery,
+  topDeputies,
+  topDeputiesLoading,
+} = useAssemblyQuestions({ limit: 50, includeStats: true, topDeputiesLimit: 4 });
+
+// Les questions sont déjà paginées côté serveur via useCmsCollection
+const paginatedQuestions = computed(() => questions.value || []);
+
+// --- 2. Fonctions helper (avant tout computed/getter qui les utilise) ---------
+
+const formatDateISO = (date: string) => {
+  return new Date(date).toISOString();
+};
+
+// --- 3. Computed d'affichage & SEO -------------------------------------------
+
+/** Une page de résultats de recherche ne doit jamais être indexée (§SEO 10) */
+const isFilteredView = computed(() => Boolean(searchQuery.value));
+
 const title = "Questions écrites à l'Assemblée nationale du Sénégal | 15e législature";
 const description =
   "Consultez toutes les questions écrites posées par les députés de la 15e législature de l'Assemblée nationale du Sénégal. Activité parlementaire et contrôle de l'action gouvernementale.";
@@ -67,6 +102,8 @@ const governmentServiceSchema = {
   serviceType: 'Contrôle parlementaire',
 };
 
+// --- 4. Meta (en dernier : les getters ci-dessous lisent les computed ci-dessus)
+
 useSeoMeta({
   title,
   ogTitle: title,
@@ -98,7 +135,9 @@ useHead({
     { name: 'author', content: 'Assemblée nationale du Sénégal' },
     { property: 'og:type', content: 'website' },
     { property: 'og:site_name', content: siteName },
-    { name: 'robots', content: 'index, follow' },
+    // Vue filtrée (?q= / ?deputy=) : noindex, follow — évite le contenu dupliqué
+    // et l'espace d'URLs infini, tout en laissant circuler le jus vers les fiches.
+    { name: 'robots', content: () => (isFilteredView.value ? 'noindex, follow' : 'index, follow') },
     { name: 'geo.region', content: 'SN' },
     { name: 'geo.placename', content: 'Dakar' },
     { name: 'geo.position', content: '14.7645042;-17.3660286' },
@@ -122,26 +161,6 @@ useHead({
     },
   ],
 });
-
-// ✅ Nouvelle architecture : useCmsCollection + useCollectionState
-// Plus de onMounted() → SSR-friendly, pagination et recherche intégrées
-const {
-  questions,
-  loading,
-  error,
-  currentPage,
-  itemsPerPage,
-  totalItems,
-  topDeputies,
-  topDeputiesLoading,
-} = useAssemblyQuestions({ limit: 50, includeStats: true, topDeputiesLimit: 4 });
-
-// Les questions sont déjà paginées côté serveur via useCmsCollection
-const paginatedQuestions = computed(() => questions.value || []);
-
-const formatDateISO = (date: string) => {
-  return new Date(date).toISOString();
-};
 </script>
 
 <template>
@@ -185,7 +204,7 @@ const formatDateISO = (date: string) => {
           </NuxtLink>
           <div class="min-w-0 flex-1 md:flex-none md:text-center">
             <h1
-              class="text-lg font-bold text-gray-900 dark:text-white md:text-2xl"
+              class="truncate text-lg font-bold text-gray-900 dark:text-white md:text-2xl"
               itemprop="headline"
             >
               Questions écrites
@@ -194,9 +213,43 @@ const formatDateISO = (date: string) => {
               v-if="!loading && totalItems"
               class="mt-0.5 text-xs text-gray-500 dark:text-gray-400 md:text-sm"
             >
-              {{ totalItems }} questions au total
+              {{ totalItems }} question{{ totalItems > 1 ? 's' : '' }}
+              {{ isFilteredView ? 'trouvée' + (totalItems > 1 ? 's' : '') : 'au total' }}
             </p>
           </div>
+        </div>
+
+        <!-- Recherche (synchronisée avec ?q= dans l'URL) -->
+        <div class="group relative mt-3">
+          <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5">
+            <UIcon
+              name="i-heroicons-magnifying-glass-20-solid"
+              class="h-5 w-5 text-gray-400 transition-colors group-focus-within:text-gray-500"
+            />
+          </div>
+          <input
+            v-model="searchQuery"
+            type="search"
+            aria-label="Rechercher une question"
+            placeholder="Rechercher par député, titre ou contenu..."
+            class="block w-full rounded-xl border-0 bg-gray-100 py-3 pl-11 pr-10 text-sm text-gray-900 ring-1 ring-transparent transition-all placeholder:text-gray-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-gray-400 dark:bg-gray-800 dark:text-white dark:placeholder:text-gray-400 dark:focus:bg-gray-800/80 dark:focus:ring-gray-500 sm:py-2.5"
+          />
+          <button
+            v-if="searchQuery"
+            type="button"
+            aria-label="Effacer la recherche"
+            class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 transition-colors hover:text-gray-600 dark:hover:text-gray-300"
+            @click="searchQuery = ''"
+          >
+            <span
+              class="flex h-5 w-5 items-center justify-center rounded-full bg-gray-300 dark:bg-gray-600"
+            >
+              <UIcon
+                name="i-heroicons-x-mark-20-solid"
+                class="h-3.5 w-3.5 text-gray-600 dark:text-gray-300"
+              />
+            </span>
+          </button>
         </div>
       </div>
     </header>
@@ -247,8 +300,8 @@ const formatDateISO = (date: string) => {
 
       <!-- Content -->
       <div v-else class="space-y-6">
-        <!-- Top Deputies Section -->
-        <section>
+        <!-- Top Deputies Section (masquée en vue filtrée : le focus est la liste) -->
+        <section v-if="!isFilteredView">
           <h2 class="mb-3 text-sm font-bold text-gray-900 dark:text-white md:text-lg">
             Députés les plus actifs
           </h2>
@@ -332,11 +385,39 @@ const formatDateISO = (date: string) => {
           <meta itemprop="numberOfItems" :content="totalItems" />
 
           <h2 class="mb-3 text-sm font-bold text-gray-900 dark:text-white md:text-lg">
-            Toutes les questions
+            {{ isFilteredView ? 'Résultats' : 'Toutes les questions' }}
           </h2>
 
+          <!-- Empty State -->
+          <div
+            v-if="paginatedQuestions.length === 0"
+            class="rounded-2xl bg-white py-12 text-center ring-1 ring-gray-100 dark:bg-gray-800 dark:ring-gray-700"
+          >
+            <UIcon
+              name="i-heroicons-chat-bubble-left-right"
+              class="mx-auto mb-3 h-10 w-10 text-gray-300 dark:text-gray-600"
+            />
+            <h3 class="mb-1 text-sm font-semibold text-gray-900 dark:text-white">
+              Aucune question trouvée
+            </h3>
+            <p class="mb-4 px-4 text-xs text-gray-500 dark:text-gray-400">
+              {{
+                isFilteredView
+                  ? 'Essayez de modifier vos critères de recherche.'
+                  : 'Aucune question écrite référencée pour le moment.'
+              }}
+            </p>
+            <NuxtLink
+              v-if="isFilteredView"
+              to="/assemblee-nationale/questions"
+              class="inline-block rounded-full bg-gray-900 px-4 py-2 text-xs font-medium text-white transition-colors hover:bg-gray-800 dark:bg-white dark:text-gray-900"
+            >
+              Réinitialiser la recherche
+            </NuxtLink>
+          </div>
+
           <!-- Questions - Mobile: compact list, Desktop: cards -->
-          <div class="space-y-2">
+          <div v-else class="space-y-2">
             <NuxtLink
               v-for="(question, index) in paginatedQuestions"
               :key="question.id"
@@ -353,7 +434,13 @@ const formatDateISO = (date: string) => {
               />
               <meta itemprop="dateCreated" :content="formatDateISO(question.question_date)" />
 
-              <div itemprop="author" itemscope itemtype="https://schema.org/Person" class="hidden">
+              <div
+                v-if="question.deputy"
+                itemprop="author"
+                itemscope
+                itemtype="https://schema.org/Person"
+                class="hidden"
+              >
                 <meta
                   itemprop="name"
                   :content="`${question.deputy.first_name} ${question.deputy.last_name}`"
@@ -364,8 +451,8 @@ const formatDateISO = (date: string) => {
 
               <!-- Photo -->
               <CmsImage
-                :src="question.deputy.photo"
-                :alt="question.deputy.first_name"
+                :src="question.deputy?.photo"
+                :alt="question.deputy?.first_name || 'Député'"
                 class="h-12 w-12 shrink-0 rounded-full object-cover md:h-14 md:w-14"
                 itemprop="image"
               />
@@ -386,6 +473,7 @@ const formatDateISO = (date: string) => {
                   {{ question.subject }}
                 </h3>
                 <p
+                  v-if="question.deputy"
                   class="mt-0.5 text-[10px] text-blue-900 dark:text-blue-400 md:text-xs"
                   itemprop="author"
                 >
@@ -402,7 +490,7 @@ const formatDateISO = (date: string) => {
           </div>
 
           <!-- Pagination -->
-          <div class="mt-6 flex justify-center">
+          <div v-if="totalPages > 1" class="mt-6 flex justify-center">
             <UPagination
               v-model="currentPage"
               :total="totalItems"
