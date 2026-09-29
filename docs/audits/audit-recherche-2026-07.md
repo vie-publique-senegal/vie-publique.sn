@@ -5,6 +5,9 @@
 > 14 604 docs multi-types, accents/synonymes corrigés) — reste : backlog §4
 > Concerne : `server/api/search.ts`, `app/composables/useSearchEnhanced.ts`, `scripts/search-reindex.mjs`, index Typesense, workflows n8n
 > Remplace : `TODO-search-optimizations.md` (les items non traités y sont repris ici)
+> **30/09/2026** : `scripts/search-reindex.mjs` a quitté ce dépôt pour
+> `vpsn-data-plateform/modules/recherche/scripts/` (plan d'abord, `--env=prod`, `--yes-prod`).
+> Les commandes citées ci-dessous se lancent désormais depuis là-bas.
 
 ---
 
