@@ -23,9 +23,11 @@ const filteredYears = computed(() => {
     return props.config?.years || [];
   }
 
-  // Get years that have the selected election type
+  // Get years that have the selected election type (et un slug : les scrutins sans slug,
+  // ex. législatives historiques 1959-2022, ne sont jamais accessibles via /elections-senegal/[slug]
+  // et ne doivent donc jamais apparaître dans ce sélecteur)
   const yearsForType = props.config.elections
-    .filter(election => election.type === props.selectedType)
+    .filter(election => election.type === props.selectedType && !!election.slug)
     .map(election => election.year);
 
   // Filter the years array to only include years with this election type

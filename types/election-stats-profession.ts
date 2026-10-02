@@ -11,3 +11,9 @@ export type ElectionStatsList = {
     id: string;
   };
 };
+
+export type ElectionStatsGender = {
+  gender: 'F' | 'M' | 'unknown';
+  label: string;
+  count: number;
+};

@@ -54,14 +54,14 @@
       </div>
 
       <!-- Error State -->
-      <div v-else-if="error" class="rounded-2xl bg-red-50 p-6 text-center dark:bg-red-900/20">
-        <UIcon
-          name="i-heroicons-exclamation-triangle"
-          class="mx-auto mb-3 h-10 w-10 text-red-500"
-        />
-        <h3 class="font-semibold text-red-800 dark:text-red-200">Erreur de chargement</h3>
-        <p class="mt-1 text-sm text-red-600 dark:text-red-300">{{ error }}</p>
-      </div>
+      <AppErrorState
+        v-else-if="error"
+        :error="error"
+        title="Votes indisponibles"
+        message="Les votes de la législature n'ont pas pu être chargés."
+        retryable
+        @retry="refresh"
+      />
 
       <!-- Votes List -->
       <div v-else class="space-y-3 md:grid md:grid-cols-2 md:gap-4 md:space-y-0">
@@ -124,7 +124,7 @@
 const { siteName, siteUrl, themeColor } = useSiteMetadata();
 
 // ✅ Nouvelle architecture SSR : les données sont chargées automatiquement
-const { votes, loading, error } = useAssemblyVotes();
+const { votes, loading, error, refresh } = useAssemblyVotes();
 
 // ── SEO ──────────────────────────────────────────────────────────────
 const pageTitle = "Votes de l'Assemblée nationale du Sénégal";

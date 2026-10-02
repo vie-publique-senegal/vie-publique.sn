@@ -1,5 +1,17 @@
 # 🚀 Migration du Schéma Électoral – Guide de Déploiement
 
+> ⚠️ **Document historique** (mai 2026), antérieur à la convention `deployments/` (voir
+> [deployments/README.md](./deployments/README.md)). Son contenu est **partiellement
+> obsolète** : le champ `parent` sur `election_constituencies` mentionné ci-dessous a
+> depuis été **supprimé** : l'identité géographique est portée par le
+> référentiel versionné `geo_entities`, via la FK unique `geo_entity` (nom de champ au
+> singulier : il désigne une entité), voir [elections-model.md](./elections-model.md#5️⃣-election_constituencies--circonscriptions-électorales)),
+> et les évolutions ultérieures du schéma (identités pérennes persons/entités
+> politiques, géographie/cartes) sont documentées dans
+> [deployments/2026-07-migration-prod-identites-perennes.md](./deployments/2026-07-migration-prod-identites-perennes.md) et
+> [deployments/2026-07-migration-prod-geographie-cartes.md](./deployments/2026-07-migration-prod-geographie-cartes.md).
+> Conservé pour l'historique des champs `slug`/`short_bio`/`long_bio` candidats/élections.
+>
 > Guide complet pour migrer du schéma existant vers le nouveau schéma électoral générique
 
 ### Ajouter les champs manquants
@@ -11,9 +23,38 @@
 
 Dans `election_constitiencies` comme a un nouveau champs `nationale_type` il faut mettre les données existantes en `nationale_type`=`departement`
 
-**Dans `election_candidates`** :
+**Dans `election_candidates` (`election_candidates`)** :
 
-- `documents` M2O → documents (programme du candidat - pour les élection présidentielles)
+- `slug` | String | Slug d'un candidat
+- `short_bio` | Text | Résumé court candidat
+- `long_bio` | Text | Biographie détaillée candidat
+- `documents` | M2O → `documents` | Programme/document du candidat (principalement pour la présidentielle)
+
+**Affichage actuel dans l'application** :
+
+- La fiche candidat et les modales affichent en priorité `long_bio`
+- Si `long_bio` est vide, l'interface utilise `short_bio`
+- Si `short_bio` et `long_bio` sont vides, l'interface retombe sur `biography` pour compatibilité
+
+> En pratique, `biography` est désormais un champ legacy de transition. La cible fonctionnelle est d'alimenter `short_bio` et `long_bio`.
+
+**Actions de migration recommandées** :
+
+1. Ajouter les champs `short_bio` et `long_bio` sur la collection candidats.
+2. Conserver `biography` pendant la phase de transition pour éviter une régression de contenu.
+3. Migrer les contenus existants de `biography` vers `long_bio` par défaut quand une biographie longue existe déjà en base.
+4. Alimenter `short_bio` avec une version éditoriale courte quand un résumé est nécessaire sur les cartes, listes ou extraits.
+5. Ajouter le champ `documents` sur la collection candidats.
+6. Vérifier que le type de document `election` existe dans `documents.type`.
+7. Pour les candidats déjà publiés, rattacher le document de programme quand il existe.
+8. Laisser `documents = null` quand aucun programme n'est fourni.
+
+**Impact produit** :
+
+- ✅ Permet de distinguer résumé court et biographie détaillée
+- ✅ Garde la compatibilité avec les anciens contenus encore stockés dans `biography`
+- ✅ Permet d'afficher le programme candidat depuis la fiche publique
+- ✅ Garde la compatibilité avec les candidats sans document
 
 **Dans `carte`** :
 
@@ -34,6 +75,7 @@ Dans `election_constitiencies` comme a un nouveau champs `nationale_type` il fau
 
 | Champ | Type | Interface | Note |
 |-------|------|-----------|------|
+| `slug` | String | input-slug | URL-friendly identifier pour les routes |
 | `documents` | Alias | list-m2m (→ documents via elections_documents) | Documents liés |
 | `participation_rate` | Float | input | Taux de participation (%) |
 | `rounds` | Integer | input | Nombre de tours (défaut: 1) |
@@ -49,9 +91,11 @@ Dans `election_constitiencies` comme a un nouveau champs `nationale_type` il fau
 | `valid_votes` | Integer | input | Suffrages valablement exprimés |
 | `absolute_majority` | Integer | input | Majorité absolue (présidentielle) |
 | `national_quotient` | Float | input | Quotient national (législative) |
+| `pv_upload_active` | Boolean | boolean | Active l'onglet PVs sur le dashboard de l'élection |
 
 > Les champs `registered_voters`, `voters_count`, `null_ballots`, `valid_votes` permettent d'afficher les statistiques KPI sur le dashboard.
 > Le champ `absolute_majority` est utilisé pour les élections présidentielles, `national_quotient` pour les législatives.
+> Le champ `pv_upload_active` est un booléen (`true`/`false`, défaut recommandé: `false`) utilisé pour afficher/masquer l'onglet PVs.
 
 ---
 
