@@ -20,9 +20,11 @@ export function useMapPopup(datasets: Ref<MapDatasetConfig[]>) {
       return
     }
 
-    // Trouver le dataset correspondant à la couche cliquée
+    // Trouver le dataset correspondant à la couche cliquée. `_dsId` est porté par les
+    // props de la couche : les sous-couches (points sans contour…) ont un id suffixé
+    // que `id.replace('layer-', '')` ne saurait pas ramener à leur dataset.
     const layerId = info.layer?.id ?? ''
-    const dsId = layerId.replace('layer-', '')
+    const dsId = info.layer?.props?._dsId ?? layerId.replace('layer-', '')
     const ds = datasets.value.find((d) => d.id === dsId)
     if (!ds?.popup) {
       closePopup()

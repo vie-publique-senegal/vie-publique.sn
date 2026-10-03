@@ -31,6 +31,7 @@
 | **Sécurité — infra** | [`infra/plan-remediation.md`](./infra/plan-remediation.md) | [`infra/securite-infra-2026-07.md`](./infra/securite-infra-2026-07.md) (INFRA-1..13), [`infra/README.md`](./infra/README.md) (archi) |
 | **SEO** | [`/CLAUDE.md`](../CLAUDE.md) (§ SEO & Open Graph) | [`seo/seo-strategy.md`](./seo/seo-strategy.md), [`seo/seo-audit.md`](./seo/seo-audit.md), [`seo/seo-pages-detail-audit.md`](./seo/seo-pages-detail-audit.md), [`seo/seo-indexation-rapide.md`](./seo/seo-indexation-rapide.md), [`seo/llms-txt.md`](./seo/llms-txt.md) |
 | **URLs / slugs** | [`guidelines/url-structure-analysis.md`](./guidelines/url-structure-analysis.md) | — |
+| **Messages d'erreur utilisateur** | [`guidelines/messages-erreur.md`](./guidelines/messages-erreur.md) (`getFriendlyErrorMessage`, `<AppErrorState>`) | [`/CLAUDE.md`](../CLAUDE.md) (Section Messages d'erreur) |
 | **Statut HTTP des pages dynamiques (404)** | [`guidelines/todo-404-pages-dynamiques.md`](./guidelines/todo-404-pages-dynamiques.md) (chantier : 20 routes sur 33 répondent 200 sur une ressource absente) | [`seo/todo-seo.md`](./seo/todo-seo.md) |
 | **UI / Design** | [`guidelines/design.md`](./guidelines/design.md) | [`/CLAUDE.md`](../CLAUDE.md) (§ UI & Design), [`guidelines/skeleton-loaders.md`](./guidelines/skeleton-loaders.md) |
 | **Performance / temps de build** | [`infra/build-optimization.md`](./infra/build-optimization.md) | [`infra/docker-optimization.md`](./infra/docker-optimization.md) |

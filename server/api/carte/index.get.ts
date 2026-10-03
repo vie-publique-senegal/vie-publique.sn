@@ -1,44 +1,212 @@
-import { readItems } from '@directus/sdk'
+import { readItems, aggregate } from '@directus/sdk';
 
+interface StationAggregateRow {
+  electoral_file: number | string;
+  constituency: number | string;
+  count?: { id?: string };
+  countDistinct?: { polling_place?: string };
+}
+
+interface ResultRow {
+  id: number;
+  voters: number | null;
+  seat: number | null;
+  participation_10h: number | null;
+  participation_12h: number | null;
+  participation_14h: number | null;
+  participation_17h: number | null;
+  voters_count: number | null;
+  null_ballots: number | null;
+  valid_votes: number | null;
+  participation_rate: number | null;
+  round_2_voters_count: number | null;
+  round_2_null_ballots: number | null;
+  round_2_valid_votes: number | null;
+  round_2_participation_rate: number | null;
+  election: { id: number; type: string; year: number } | null;
+  constituency:
+    | ({
+        id: number;
+        name: string;
+        slug: string | null;
+        type: string;
+        nationale_type: string | null;
+      } & Record<string, unknown>)
+    | null;
+}
+
+/**
+ * Données carte par circonscription (électeurs, bureaux, participation).
+ * Source : election_constituency_results + agrégats election_polling_stations.
+ * L'identité géographique (departement/region/municipality/population) est résolue
+ * via le référentiel versionné geo_entities (resolveGeoUnit + instantané, fallback
+ * champs legacy pour les lignes diaspora/Territoire National). Fallback : collection
+ * legacy `carte` tant que les résultats ne sont pas backfillés (prod non migrée).
+ * Les contours ne sont plus servis : le front les charge depuis public/geo/ et les
+ * joint par constituencie.slug (`geo_slug` porte le slug du référentiel, additif).
+ */
 export default defineCachedEventHandler(
   async (event) => {
     try {
       const query = getQuery(event);
       const electionId = query.election as string | undefined;
 
-      // Récupérer le client CMS
       const cmsClient = getCmsClient();
 
-      // Construire les options de requête
-      const fields = ['*', 'election.id', 'election.type', 'election.year'];
+      const results = (await cmsClient
+        .request(
+          readItems('election_constituency_results', {
+            fields: [
+              'id',
+              'voters',
+              'seat',
+              'participation_10h',
+              'participation_12h',
+              'participation_14h',
+              'participation_17h',
+              'voters_count',
+              'null_ballots',
+              'valid_votes',
+              'participation_rate',
+              'round_2_voters_count',
+              'round_2_null_ballots',
+              'round_2_valid_votes',
+              'round_2_participation_rate',
+              'election.id',
+              'election.type',
+              'election.year',
+              'constituency.id',
+              'constituency.name',
+              'constituency.slug',
+              'constituency.type',
+              'constituency.nationale_type',
+              ...GEO_UNIT_FIELDS.map((f) => `constituency.${f}`),
+            ],
+            ...(electionId ? { filter: { election: { _eq: parseInt(electionId) } } } : {}),
+            limit: -1,
+            sort: ['id'],
+          }),
+        )
+        .catch(() => null)) as ResultRow[] | null;
 
-      // Appel API vers le CMS avec ou sans filtre
-      // Limite à -1 pour récupérer tous les enregistrements (communes peuvent être nombreuses ~543)
-      const response = electionId
-        ? await cmsClient.request(
-            readItems('carte', {
-              fields,
-              filter: { election: { _eq: parseInt(electionId) } },
-              limit: -1
-            })
+      if (!results || results.length === 0) {
+        // Fallback legacy : lecture de `carte` (comportement d'avant la bascule)
+        warnElectoralLegacyFallback('/api/carte', electionId ? `election ${electionId}` : 'all');
+        const fields = ['*', 'election.id', 'election.type', 'election.year'];
+        return await cmsClient.request(
+          readItems('carte', {
+            fields,
+            ...(electionId ? { filter: { election: { _eq: parseInt(electionId) } } } : {}),
+            limit: -1,
+          }),
+        );
+      }
+
+      // Agrégats bureaux/lieux par circonscription, via les fichiers électoraux
+      // nationaux des élections présentes dans les résultats
+      const electionIds = [
+        ...new Set(results.map((r) => r.election?.id).filter(Boolean)),
+      ] as number[];
+      const fileIdByElection = new Map<number, number | null>();
+      await Promise.all(
+        electionIds.map(async (id) => {
+          fileIdByElection.set(id, await resolveElectoralFileId(id, 'national'));
+        }),
+      );
+      const fileIds = [...new Set([...fileIdByElection.values()].filter(Boolean))] as number[];
+
+      const stationAggregates = new Map<string, { offices: number; places: number }>();
+      if (fileIds.length > 0) {
+        const aggregates = (await cmsClient
+          .request(
+            aggregate('election_polling_stations', {
+              aggregate: {
+                count: ['id'],
+                countDistinct: ['polling_place'],
+              },
+              groupBy: ['electoral_file', 'constituency'],
+              query: {
+                filter: { electoral_file: { _in: fileIds } },
+                limit: -1,
+              },
+            }),
           )
-        : await cmsClient.request(
-            readItems('carte', { fields, limit: -1 })
-          );
+          .catch(() => [])) as StationAggregateRow[];
 
-      return response;
+        for (const row of aggregates) {
+          stationAggregates.set(`${row.electoral_file}:${row.constituency}`, {
+            offices: parseInt(row.count?.id || '0'),
+            places: parseInt(row.countDistinct?.polling_place || '0'),
+          });
+        }
+      }
+
+      const geoSnapshot = await getGeoSnapshot();
+
+      // Contrat de réponse conservé (clés de `carte`), sans Position ;
+      // constituencie.slug reste TOUJOURS le slug de la circonscription (URLs publiques
+      // stables) et `geo_slug` porte, en plus, le slug du référentiel géographique ;
+      // identité géographique résolue via le référentiel geo_entities (fallback legacy)
+      return results.map((row) => {
+        const constituency = row.constituency;
+        const geo = resolveGeoUnit(constituency, geoSnapshot);
+        const isCommune = constituency?.nationale_type === 'commune';
+        const fileId = row.election ? fileIdByElection.get(row.election.id) : null;
+        const stats =
+          fileId && constituency
+            ? stationAggregates.get(`${fileId}:${constituency.id}`)
+            : undefined;
+
+        return {
+          id: row.id,
+          election: row.election,
+          constituencie: constituency
+            ? {
+                id: constituency.id,
+                name: geo?.name || constituency.name,
+                slug: constituency.slug,
+                geo_slug: geoSlugOf(geo),
+                type: constituency.type,
+                nationale_type: constituency.nationale_type,
+                region: geo?.region?.name ?? null,
+              }
+            : null,
+          departement: isCommune
+            ? geo?.parent?.name || null
+            : geo?.name || constituency?.name || null,
+          region: geo?.region?.name || null,
+          municipality: isCommune ? geo?.name || constituency?.name || null : null,
+          voters: row.voters,
+          seat: row.seat,
+          offices: stats?.offices ?? null,
+          places: stats?.places ?? null,
+          population: geo?.population ?? null,
+          participation_10h: row.participation_10h,
+          participation_12h: row.participation_12h,
+          participation_14h: row.participation_14h,
+          participation_17h: row.participation_17h,
+          voters_count: row.voters_count,
+          null_ballots: row.null_ballots,
+          valid_votes: row.valid_votes,
+          participation_rate: row.participation_rate,
+          round_2_voters_count: row.round_2_voters_count,
+          round_2_null_ballots: row.round_2_null_ballots,
+          round_2_valid_votes: row.round_2_valid_votes,
+          round_2_participation_rate: row.round_2_participation_rate,
+        };
+      });
     } catch (error) {
       console.error('Erreur lors de la récupération des données de carte:', error);
 
       throw createError({
         statusCode: 500,
-        statusMessage: 'Erreur lors de la récupération des données de carte'
+        statusMessage: 'Erreur lors de la récupération des données de carte',
       });
     }
   },
   {
     maxAge: 60 * 60, // 1 heure
-    name: 'carte',
+    name: 'carte-v4',
     getKey: (event) => {
       const query = getQuery(event);
       return `carte-${query.election || 'all'}`;

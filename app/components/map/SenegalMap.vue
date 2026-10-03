@@ -30,7 +30,6 @@ const props = defineProps<{
   height?: string;
 }>();
 
-
 const emit = defineEmits<{
   'region-click': [payload: { code: string; name: string; data: any }];
   'marker-click': [payload: { layerId: string; data: any; coordinates: [number, number] }];
@@ -171,7 +170,10 @@ function buildDeckLayers(configs: any[]): any[] {
       const LayerClass = DeckLayers[typeMap[cfg._type]];
       if (!LayerClass) return null;
       try {
-        const { _type, _dsId, clusterRadius, clusterMaxZoom, ...rest } = cfg;
+        // `_dsId` est conservé dans les props deck.gl : il permet de retrouver le
+        // dataset d'origine même pour les sous-couches dont l'id porte un suffixe
+        // (points sans contour, labels…), là où `id.replace('layer-', '')` échoue.
+        const { _type, clusterRadius, clusterMaxZoom, ...rest } = cfg;
         return new LayerClass(rest);
       } catch (err) {
         console.warn(`[SenegalMap] Layer "${cfg._type}" creation failed:`, err);
@@ -252,7 +254,7 @@ function handleMapClick(info: any) {
 
   handlePickInfo(info);
 
-  const layerId = info.layer?.id?.replace('layer-', '') ?? '';
+  const layerId = info.layer?.props?._dsId ?? info.layer?.id?.replace('layer-', '') ?? '';
   const ds = props.config.datasets.find((d) => d.id === layerId);
 
   if (ds?.type === 'choropleth' && info.object?.properties) {
@@ -292,6 +294,11 @@ onMounted(async () => {
     loadDeckModules().catch(() => null),
     loadGeoSources(props.config.geoSources ?? DEFAULT_GEO_SOURCES),
   ]);
+
+  // Le composant a pu être démonté pendant les chargements ci-dessus (navigation
+  // client, ou remontage par `:key` au drill-down) : sans ce contrôle, MapLibre reçoit
+  // un container null et lève « Invalid type: 'container' must be a String or HTMLElement ».
+  if (!mapContainer.value) return;
 
   await engine.initMap(mapContainer.value, {
     center: props.config.center ?? [-14.4524, 14.4974],
@@ -462,9 +469,12 @@ defineExpose({
   outline: none;
 }
 
-/* On fournit nos propres contrôles */
-.senegal-map :deep(.maplibregl-ctrl-top-right),
-.senegal-map :deep(.maplibregl-ctrl-top-left) {
+/* On fournit nos propres contrôles — ne cacher que les contrôles MapLibre
+   (.maplibregl-ctrl), jamais les conteneurs de coin : en mode non-interleaved
+   (mobile), le canvas deck.gl vit dans .maplibregl-ctrl-top-left et un
+   display:none sur le conteneur le rendrait 0×0 (couches invisibles). */
+.senegal-map :deep(.maplibregl-ctrl-top-right .maplibregl-ctrl),
+.senegal-map :deep(.maplibregl-ctrl-top-left .maplibregl-ctrl) {
   display: none;
 }
 
