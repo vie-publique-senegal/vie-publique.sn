@@ -63,7 +63,7 @@ interface ObservationRow {
 }
 interface AppointmentRow {
   municipality: number | null;
-  position_category: string | null;
+  category: { slug: string | null } | null;
   position_title: string | null;
   appointment_date: string | null;
   person: {
@@ -76,8 +76,9 @@ interface AppointmentRow {
 }
 
 /** Catégories de mandat exposées par la fiche commune. */
-const MAIRE = 'Maire';
-const SECRETAIRE_MUNICIPAL = 'Secrétaire municipal';
+// Slugs du référentiel public_position_categories
+const MAIRE = 'maire';
+const SECRETAIRE_MUNICIPAL = 'secretaire_municipal';
 
 /**
  * Slug public d'une commune : le nom seul quand il est unique parmi les 558,
@@ -212,7 +213,7 @@ export const getCommunesGeo = defineCachedFunction(
             readItems('public_person_appointments', {
               fields: [
                 'municipality',
-                'position_category',
+                'category.slug',
                 'position_title',
                 'appointment_date',
                 'person.id',
@@ -225,7 +226,7 @@ export const getCommunesGeo = defineCachedFunction(
                 status: { _eq: 'published' },
                 is_current: { _eq: true },
                 municipality: { _nnull: true },
-                position_category: { _in: [MAIRE, SECRETAIRE_MUNICIPAL] },
+                category: { slug: { _in: [MAIRE, SECRETAIRE_MUNICIPAL] } },
                 person: { status: { _eq: 'published' } },
               },
               limit: -1,
@@ -255,7 +256,7 @@ export const getCommunesGeo = defineCachedFunction(
     for (const appointment of appointments) {
       if (!appointment.municipality || !appointment.person) continue;
       const target =
-        appointment.position_category === SECRETAIRE_MUNICIPAL ? clerkByEntity : mayorByEntity;
+        appointment.category?.slug === SECRETAIRE_MUNICIPAL ? clerkByEntity : mayorByEntity;
       target.set(appointment.municipality, appointment);
     }
 
@@ -375,7 +376,7 @@ export const getCommunesGeo = defineCachedFunction(
     // démarrages (cf. CLAUDE.md). v6 : `contact.reseauxSociaux` s'ajoute au
     // payload — sans bump, une instance chaude servirait des contacts sans le
     // champ et l'onglet ne saurait pas l'afficher.
-    name: 'collectivites-communes-geo-v6',
+    name: 'collectivites-communes-geo-v7',
     maxAge: process.env.NODE_ENV === 'production' ? 30 * 60 : 0,
     getKey: () => 'all',
   },

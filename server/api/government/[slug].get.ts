@@ -1,4 +1,4 @@
-import { readItems, readField } from '@directus/sdk';
+import { readItems } from '@directus/sdk';
 import type {
   Government,
   GovernmentMemberFull,
@@ -138,8 +138,8 @@ export default defineCachedEventHandler(
               'id',
               'position_title',
               'organization_label',
-              'position_category',
-              'position_category_slug',
+              'category.slug',
+              'category.label',
               'appointment_date',
               'end_date',
               'end_reason',
@@ -153,9 +153,9 @@ export default defineCachedEventHandler(
             filter: {
               status: { _eq: 'published' },
               government: { slug: { _eq: slug } },
-              position_category_slug: { _nin: ['presidence', 'premier_ministre'] },
+              category: { slug: { _nin: ['presidence', 'premier_ministre'] } },
             },
-            sort: ['position_category_slug', 'person.full_name'],
+            sort: ['category.sort', 'person.full_name'],
             limit: -1,
           }),
         )
@@ -173,8 +173,8 @@ export default defineCachedEventHandler(
           id: m.id,
           position_title: m.position_title || '',
           organization_label: m.organization_label || '',
-          position_category: m.position_category || '',
-          position_category_slug: m.position_category_slug || '',
+          position_category: m.category?.label || '',
+          position_category_slug: m.category?.slug || '',
           appointment_date: m.appointment_date,
           end_date: m.end_date ?? null,
           end_reason: m.end_reason ?? null,
@@ -188,15 +188,23 @@ export default defineCachedEventHandler(
           },
         }));
 
-      // 3. Ordre + libellés des catégories depuis la métadonnée Directus (dynamique).
+      // 3. Ordre + libellés des catégories depuis le référentiel public_position_categories.
       let choices: Array<{ text?: string; value: string }> = [];
       try {
-        const field: any = await directus.request(
-          (readField as any)('public_person_appointments', 'position_category_slug'),
+        const rows = await directus.request(
+          readItems('public_position_categories', {
+            fields: ['slug', 'label'],
+            filter: { status: { _eq: 'published' } },
+            sort: ['sort'],
+            limit: -1,
+          }),
         );
-        choices = field?.meta?.options?.choices ?? [];
+        choices = (rows as Array<{ slug: string; label: string }>).map((c) => ({
+          value: c.slug,
+          text: c.label,
+        }));
       } catch (error) {
-        console.error('Erreur Directus readField position_category_slug:', error);
+        reportServerError(error, 'government/detail/categories');
       }
       const orderIndex = new Map<string, number>();
       const labelBySlug = new Map<string, string>();
@@ -210,13 +218,8 @@ export default defineCachedEventHandler(
 
       // 4. Stats globales (sur l'ensemble des membres, avant filtres).
       const start = new Date(government.start_date).getTime();
-      const end = government.end_date
-        ? new Date(government.end_date).getTime()
-        : Date.now();
-      const durationDays = Math.max(
-        0,
-        Math.floor((end - start) / (1000 * 60 * 60 * 24)),
-      );
+      const end = government.end_date ? new Date(government.end_date).getTime() : Date.now();
+      const durationDays = Math.max(0, Math.floor((end - start) / (1000 * 60 * 60 * 24)));
       const stats: GovernmentStats = {
         total: allMembers.length,
         women: allMembers.filter((m) => m.person.sexe === 'female').length,
@@ -233,9 +236,7 @@ export default defineCachedEventHandler(
       // Libellé lisible d'un rôle : on privilégie `position_category` (libellé
       // humain stocké sur la donnée), puis le texte du choix CMS, puis le slug.
       const roleLabel = (s: string): string => {
-        const fromData = allMembers.find(
-          (m) => m.position_category_slug === s,
-        )?.position_category;
+        const fromData = allMembers.find((m) => m.position_category_slug === s)?.position_category;
         if (fromData && fromData.trim()) return fromData;
         const fromCms = labelBySlug.get(s);
         if (fromCms && fromCms.trim()) return fromCms;
@@ -298,6 +299,6 @@ export default defineCachedEventHandler(
     maxAge: process.env.NODE_ENV === 'production' ? 30 * 60 : 0, // 30 min en prod, pas de cache en dev
     getKey: (event) =>
       buildCacheKey(`government-detail-${getRouterParam(event, 'slug')}`, getQuery(event)),
-    name: 'government-detail',
+    name: 'government-detail-v2',
   },
 );

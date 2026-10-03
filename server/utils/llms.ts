@@ -100,7 +100,7 @@ export const getLlmsStats = defineCachedFunction(
         current_appointment: {
           is_current: { _eq: true },
           status: { _eq: 'published' },
-          position_category: { _in: ['Ministre', "Secrétaire d'État"] },
+          category: { slug: { _in: ['ministre', 'secretaire_etat'] } },
         },
       }),
     ]);
@@ -145,7 +145,7 @@ export const getLlmsStats = defineCachedFunction(
         readItems('public_persons', {
           fields: [
             'full_name',
-            'current_appointment.position_category',
+            'current_appointment.category.slug',
             'current_appointment.appointment_date',
           ],
           filter: {
@@ -153,7 +153,7 @@ export const getLlmsStats = defineCachedFunction(
             current_appointment: {
               is_current: { _eq: true },
               status: { _eq: 'published' },
-              position_category: { _in: ['Président de la République', 'Premier Ministre'] },
+              category: { slug: { _in: ['presidence', 'premier_ministre'] } },
             },
           },
           limit: 5,
@@ -162,7 +162,7 @@ export const getLlmsStats = defineCachedFunction(
       type HeadOfState = {
         full_name: string;
         current_appointment?: {
-          position_category?: string;
+          category?: { slug?: string | null } | null;
           appointment_date?: string | null;
         } | null;
       };
@@ -171,9 +171,9 @@ export const getLlmsStats = defineCachedFunction(
           name: person.full_name,
           since: person.current_appointment?.appointment_date || null,
         };
-        if (person.current_appointment?.position_category === 'Président de la République') {
+        if (person.current_appointment?.category?.slug === 'presidence') {
           president = fact;
-        } else if (person.current_appointment?.position_category === 'Premier Ministre') {
+        } else if (person.current_appointment?.category?.slug === 'premier_ministre') {
           primeMinister = fact;
         }
       }
@@ -200,7 +200,7 @@ export const getLlmsStats = defineCachedFunction(
   },
   {
     maxAge: process.env.NODE_ENV === 'production' ? 60 * 60 : 0, // 1 h en prod
-    name: 'llms-stats-v3',
+    name: 'llms-stats-v4',
     getKey: () => 'all',
   },
 );
