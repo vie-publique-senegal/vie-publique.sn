@@ -123,8 +123,9 @@ Deux collections normalisées dans le groupe "Annuaire" du CMS :
 | sort | integer | non | Ordre d'affichage |
 | person | integer -> public_persons | oui | La personnalité (M2O) |
 | position_title | text | oui | Intitulé du poste (ex: "Ministre des Finances") |
-| position_category | string | oui | Catégorie (Ministre, Directeur général, PCA, Ambassadeur...) |
-| position_category_slug | string | non | Slug de la catégorie (pour filtres URL) |
+| category | integer -> public_position_categories | non | Catégorie de fonction (M2O, référentiel ci-dessous). Porte la distinction élu / nommé. **Source à lire** côté site. |
+| position_category | string | oui | **Abandonné** (2026-09-28) : doublon texte de `category.label`, plus lu par le site, à supprimer dans Directus dès que les workflows n8n posent `category` |
+| position_category_slug | string | non | **Abandonné** : doublon texte de `category.slug`, même sort |
 | organization_label | text | oui | Organisme (ex: "Ministère de l'Économie") |
 | appointment_date | datetime | oui | Date de prise de fonction |
 | end_date | datetime | non | Date de fin de fonction |
@@ -206,6 +207,43 @@ Ancien : `positions.type` = texte libre sur la même ligne.
 Nouveau : `public_person_appointments.position_category` sur la table des nominations.
 
 **Impact** : pour afficher le type d'une personne, il faut passer par sa nomination actuelle (`current_appointment -> position_category`).
+
+#### P4 bis : Référentiel `public_position_categories` (élu / nommé) — 2026-09-28
+
+Les deux listes déroulantes texte `position_category` / `position_category_slug` ne disaient
+pas comment on accède à la fonction (un maire est élu, un préfet est nommé). La distinction
+porte sur la **catégorie**, pas sur le mandat : elle vit dans une table de référence,
+`public_position_categories` (une ligne par catégorie), reliée par le m2o
+`public_person_appointments.category`.
+
+| Champ | Type | Description |
+|-------|------|-------------|
+| slug | string, unique | Clé stable = ancienne valeur de `position_category_slug` (`maire`, `ministre`…). Porte les URL et le paramètre `?category=` : ne change jamais |
+| label | string | Libellé affiché = ancienne valeur de `position_category` |
+| mandate_type | `elected` / `appointed` / null | Élu / nommé. `null` = non classé (`autre`) |
+| sort | integer | Ordre d'affichage des catégories (filtres, groupes) |
+| status | draft / published / archived | |
+
+Le référentiel et le rattachement des mandats sont versionnés et rejoués par le dépôt
+`vpsn-data-platform` (`modules/annuaire-personnalites-publiques/`, fichier
+`data/position-categories.json` + scripts `poser-categories-de-fonction.mjs` et
+`rattacher-mandats-categorie.mjs`).
+
+**Côté site** : les lecteurs de l'annuaire (`/api/public-persons`, `/stats`, `/[id]`,
+`/api/government/categories`) lisent `current_appointment.category.{slug,label,mandate_type}`
+(voir `server/utils/position-category.ts`) ; les champs texte ne sont plus lus, un mandat
+sans `category` est simplement « non classé ». Le filtre **Élus / Nommés / Non classés** de
+`/personnalites-senegal` (`?mandat=elected|appointed|unclassified`) en découle ; les non
+classés restent comptés dans le total, et l'option « Non classés » disparaît d'elle-même
+quand il n'en reste aucun. Les autres lecteurs (gouvernement actuel et historique,
+dirigeants, `llms.txt`, communes) filtrent aussi sur `category.slug` : **plus rien côté
+site ne lit `position_category` / `position_category_slug`**. Leur
+retrait dans Directus est une opération versionnée du dépôt `vpsn-data-platform`
+(`retirer-champs-categorie-texte.mjs`).
+
+⚠️ Piège permission : la relation `category.*` disparaît silencieusement si le rôle du jeton
+CMS n'a pas le droit Read sur `public_position_categories` (posé sur le dev par
+`reconcile-frontend-policy.mjs`, à rejouer sur test et prod).
 
 #### P5 : Prédécesseur structuré
 

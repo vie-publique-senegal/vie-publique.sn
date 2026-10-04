@@ -11,8 +11,8 @@ export default defineCachedEventHandler(
     try {
       const directus = getCmsClient();
 
-      // Catégories de postes gouvernementaux
-      const governmentCategories = ['Premier Ministre', 'Ministre', "Secrétaire d'État"];
+      // Catégories de postes gouvernementaux, par slug du référentiel public_position_categories
+      const governmentCategories = ['premier_ministre', 'ministre', 'secretaire_etat'];
 
       // Récupération des personnalités ayant un poste gouvernemental actuel
       const personsData = await directus
@@ -27,7 +27,8 @@ export default defineCachedEventHandler(
               'education',
               'current_appointment.id',
               'current_appointment.position_title',
-              'current_appointment.position_category',
+              'current_appointment.category.slug',
+              'current_appointment.category.label',
               'current_appointment.organization_label',
               'current_appointment.appointment_date',
               'current_appointment.end_date',
@@ -37,14 +38,12 @@ export default defineCachedEventHandler(
             filter: {
               status: { _eq: 'published' },
               current_appointment: {
-                position_category: {
-                  _in: governmentCategories,
-                },
+                category: { slug: { _in: governmentCategories } },
                 is_current: { _eq: true },
                 status: { _eq: 'published' },
               },
             },
-            sort: ['current_appointment.position_category', 'full_name'],
+            sort: ['current_appointment.category.sort', 'full_name'],
             limit: -1,
           }),
         )
@@ -57,12 +56,12 @@ export default defineCachedEventHandler(
         });
 
       // Transformation des données vers le format GovernmentMember
-      const transformedGovernment: GovernmentMember[] = personsData.map((person: any) => ({
+      const toMember = (person: any): GovernmentMember => ({
         id: String(person.id),
         name: person.full_name,
         slug: person.slug || generateSlugFromName(person.full_name),
         sexe: person.sexe || 'male',
-        type: person.current_appointment?.position_category || null,
+        type: person.current_appointment?.category?.label ?? null,
         role:
           person.current_appointment?.position_title ||
           person.current_appointment?.position_category ||
@@ -75,14 +74,20 @@ export default defineCachedEventHandler(
         predecessor: person.current_appointment?.predecessor_label || null,
         rating: null,
         portrait: null,
-      }));
+      });
 
-      // Regrouper par type
-      const primeMinister = transformedGovernment.filter((m) => m.type === 'Premier Ministre');
-      const ministers = transformedGovernment.filter((m) => m.type === 'Ministre');
-      const secretariesOfState = transformedGovernment.filter(
-        (m) => m.type === "Secrétaire d'État",
-      );
+      // Regroupement par slug de catégorie (le libellé, lui, est affiché tel quel)
+      const slugOf = (person: any): string | null =>
+        person.current_appointment?.category?.slug ?? null;
+      const withSlug = (slug: string) =>
+        personsData.filter((person: any) => slugOf(person) === slug).map(toMember);
+
+      const transformedGovernment: GovernmentMember[] = personsData.map(toMember);
+
+      // Regrouper par catégorie
+      const primeMinister = withSlug('premier_ministre');
+      const ministers = withSlug('ministre');
+      const secretariesOfState = withSlug('secretaire_etat');
 
       return {
         government: {
@@ -109,6 +114,6 @@ export default defineCachedEventHandler(
   },
   {
     maxAge: process.env.NODE_ENV === 'production' ? 5 * 60 : 0, // 5 min en prod, pas de cache en dev
-    name: 'government-current-v2',
+    name: 'government-current-v3',
   },
 );

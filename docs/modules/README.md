@@ -20,6 +20,7 @@
 | [`dons/`](./dons/) | [`donation-system.md`](./dons/donation-system.md) | `/don` |
 | [`dashboard/`](./dashboard/) | [`dashboard-projets.md`](./dashboard/dashboard-projets.md) | `/observatoire/*` (chantier) |
 | [`a-propos/`](./a-propos/) | [`refonte-section-association.md`](./a-propos/refonte-section-association.md) | `/a-propos` |
+| [`liens/`](./liens/) | [`README.md`](./liens/README.md) | `/liens` (remplace le Linktree, cible du QR code) |
 | [`actualites/`](./actualites/) | [`blog-directus.md`](./actualites/blog-directus.md) | `/actualites` |
 | [`analytics/`](./analytics/) | [`analytics-stack.md`](./analytics/analytics-stack.md) | — (transversal) |
 | [`notifications/`](./notifications/) | [`push-notifications.md`](./notifications/push-notifications.md) | — (web push + push natif iOS) |

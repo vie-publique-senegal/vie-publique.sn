@@ -1,4 +1,5 @@
 import { aggregate, readItems } from '@directus/sdk';
+import type { MandateFilter } from '~~/types/public-person';
 
 export default defineCachedEventHandler(
   async () => {
@@ -15,12 +16,16 @@ export default defineCachedEventHandler(
       // Comptage par catégorie de la DERNIÈRE nomination (current_appointment), en cours ou
       // terminée : c'est ce que renvoie le filtre catégorie de la liste — les compteurs doivent
       // compter la même chose (sinon écart pastille/résultats dès qu'une fonction se termine).
+      // La catégorie est lue sur le référentiel relationnel `category` (public_position_categories),
+      // qui porte aussi la distinction élu / nommé (mandate_type, G19).
       // groupBy sur champ relationnel non supporté par Directus → requête plate + regroupement JS.
       const personsCategories = await directus.request(
         readItems('public_persons', {
           fields: [
-            'current_appointment.position_category',
-            'current_appointment.position_category_slug',
+            'current_appointment.category.slug',
+            'current_appointment.category.label',
+            'current_appointment.category.mandate_type',
+            'current_appointment.category.sort',
           ],
           filter: personFilter,
           limit: -1,
@@ -36,22 +41,44 @@ export default defineCachedEventHandler(
         }),
       );
 
-      // Transformation - Catégories (clé = slug, valeur = { label, count })
       type PersonCategoryRow = {
         current_appointment?: {
-          position_category?: string | null;
-          position_category_slug?: string | null;
+          category?: {
+            slug?: string | null;
+            label?: string | null;
+            mandate_type?: string | null;
+            sort?: number | null;
+          } | null;
         } | null;
       };
-      const totalsByCategory: Record<string, { label: string; count: number }> = {};
+
+      // Catégories (clé = slug, valeur = { label, count }), dans l'ordre `sort` du référentiel
+      const totalsByCategory: Record<string, { label: string; count: number; sort: number }> = {};
+      // Facette élu / nommé : les non classés (catégorie sans type OU mandat sans catégorie)
+      // sont comptés, jamais masqués — le total affiché doit rester vrai (G19).
+      const totalsByMandate: Record<Exclude<MandateFilter, 'all'>, number> = {
+        elected: 0,
+        appointed: 0,
+        unclassified: 0,
+      };
+
       (personsCategories as PersonCategoryRow[]).forEach((person) => {
-        const label = person.current_appointment?.position_category;
-        const slug = person.current_appointment?.position_category_slug;
-        if (!label || !slug) return;
-        if (!totalsByCategory[slug]) {
-          totalsByCategory[slug] = { label, count: 0 };
+        const category = person.current_appointment?.category;
+        const mandateType = category?.mandate_type;
+        if (mandateType === 'elected' || mandateType === 'appointed') {
+          totalsByMandate[mandateType]++;
+        } else {
+          totalsByMandate.unclassified++;
         }
-        totalsByCategory[slug].count++;
+        if (!category?.slug || !category.label) return;
+        if (!totalsByCategory[category.slug]) {
+          totalsByCategory[category.slug] = {
+            label: category.label,
+            count: 0,
+            sort: category.sort ?? Number.MAX_SAFE_INTEGER,
+          };
+        }
+        totalsByCategory[category.slug].count++;
       });
 
       // Transformation - Genre
@@ -77,13 +104,16 @@ export default defineCachedEventHandler(
 
       return {
         totalsByCategory: Object.fromEntries(
-          Object.entries(totalsByCategory).sort(([, a], [, b]) => a.label.localeCompare(b.label)),
+          Object.entries(totalsByCategory)
+            .sort(([, a], [, b]) => a.sort - b.sort || a.label.localeCompare(b.label))
+            .map(([slug, { label, count }]) => [slug, { label, count }]),
         ),
+        totalsByMandate,
         totalsByGender: { maleCount, femaleCount },
         total,
       };
     } catch (error) {
-      console.error('Error fetching public persons stats:', error);
+      reportServerError(error, 'public-persons/stats');
       throw createError({
         statusCode: 500,
         statusMessage: 'Une erreur est survenue lors de la récupération des statistiques',
@@ -92,7 +122,7 @@ export default defineCachedEventHandler(
   },
   {
     maxAge: process.env.NODE_ENV === 'production' ? 5 * 60 : 0, // 5 min en prod (à augmenter après stabilisation)
-    name: 'public-persons-stats-v3',
+    name: 'public-persons-stats-v6',
     getKey: () => 'public-persons-stats',
   },
 );

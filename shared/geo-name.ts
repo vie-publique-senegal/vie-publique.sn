@@ -1,20 +1,45 @@
-// Normalisation des noms d'entités géographiques — partagée serveur/client
-// (importable via #shared/geo-name, même mécanisme que #shared/clean-text).
-//
-// Reproduit `name_normalized` côté Directus : minuscules, sans accents,
-// ponctuation de liaison repliée en espace. C'est la clé de rapprochement entre
-// le référentiel (`geo_entities`) et les sources externes qui n'orthographient
-// pas pareil (« Dakar-Plateau » / « Dakar Plateau », « Mermoz–Sacré-Cœur »).
+/**
+ * Graphies des noms géographiques / de circonscription (partagé serveur + client,
+ * importable via #shared/geo-name, même mécanisme que #shared/clean-text).
+ *
+ * Depuis la bascule vers le référentiel versionné, un même département existe sous DEUX
+ * graphies :
+ * - celle des fichiers électoraux (`election_constituencies.name`) : MAJUSCULES sans accents
+ *   (« KEDOUGOU », « MALEM HODAR », « NIORO DU RIP ») ;
+ * - celle du référentiel (`geo_entities.name_current`, Journal officiel) : accentuée et parfois
+ *   orthographiée autrement (« Kédougou », « Malem Hoddar », « Nioro »).
+ *
+ * ⚠️ Les règles ci-dessous ne sont PAS interchangeables :
+ * - `normalizeGeoName` sert à COMPARER deux graphies (résolution d'un nom reçu en entrée,
+ *   rapprochement référentiel ↔ fonds géo, recherche) ;
+ * - `slugifyGeoName` sert à ÉCRIRE un slug d'URL du module collectivités (indexé) ;
+ * - `toHistoricalGeoName` sert à ÉCRIRE une valeur d'URL de la carte électorale. La route
+ *   `/elections-senegal/carte-electorale/nationale/<departement>` est indexée en graphie
+ *   historique : tout lien construit dans l'application doit continuer à l'émettre.
+ *
+ * `normalizeGeoName` ne réconcilie que la casse, les accents, les ligatures et la ponctuation :
+ * « MALEM HODAR » et « Malem Hoddar » restent deux clés distinctes. C'est pourquoi la résolution
+ * serveur indexe les DEUX graphies d'une circonscription (voir
+ * `server/utils/electionConstituencyLookup.ts`).
+ */
 
+/** Diacritiques laissés par la décomposition NFD. */
+const DIACRITICS = /[̀-ͯ]/g;
+
+/**
+ * Clé de comparaison tolérante : minuscules, sans accents, ligatures dépliées (« Cœur » →
+ * « coeur » — NFD ne les décompose pas), toute ponctuation et tout blanc réduits à un espace
+ * simple. « Saint-Louis », « SAINT LOUIS » et « saint  louis » → « saint louis ».
+ */
 export function normalizeGeoName(value: string | null | undefined): string {
-  return (value ?? '')
+  if (!value) return '';
+  return value
     .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
+    .replace(DIACRITICS, '')
     .replace(/œ/gi, 'oe')
     .replace(/æ/gi, 'ae')
     .toLowerCase()
-    .replace(/['’`´\-–—_.]/g, ' ')
-    .replace(/\s+/g, ' ')
+    .replace(/[^a-z0-9]+/g, ' ')
     .trim();
 }
 
@@ -23,4 +48,27 @@ export function slugifyGeoName(value: string): string {
   return normalizeGeoName(value)
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
+}
+
+/**
+ * Graphie historique des fichiers électoraux : MAJUSCULES sans accents, ponctuation d'origine
+ * conservée (les tirets de « SAINT-LOUIS » comptent), blancs normalisés.
+ */
+export function toHistoricalGeoName(value: string | null | undefined): string {
+  if (!value) return '';
+  return value.normalize('NFD').replace(DIACRITICS, '').toUpperCase().replace(/\s+/g, ' ').trim();
+}
+
+/** Racine de la carte électorale nationale. */
+export const NATIONAL_MAP_PATH = '/elections-senegal/carte-electorale/nationale';
+
+/**
+ * Chemin de la page de détail d'un département, en graphie historique.
+ *
+ * SEUL constructeur de cette valeur d'URL : les deux graphies répondent côté serveur, mais
+ * l'application n'en émet qu'une (celle déjà indexée), et la canonical de la page s'aligne
+ * dessus pour éviter le contenu dupliqué.
+ */
+export function nationalDepartmentPath(department: string | null | undefined): string {
+  return `${NATIONAL_MAP_PATH}/${encodeURIComponent(toHistoricalGeoName(department))}`;
 }

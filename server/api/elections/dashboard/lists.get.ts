@@ -1,5 +1,31 @@
 import { readItems } from "@directus/sdk";
 
+const toSlug = (value: string) =>
+  value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, "-")
+    .replace(/[^a-z0-9-]/g, "")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+
+const normalizeCandidate = (rawCandidate: any) => {
+  // L'identité vient de la person liée (fallback sur les champs legacy du candidat)
+  const candidate = mergePersonIdentity(rawCandidate);
+  const fallbackSlug = toSlug(`${candidate?.first_name || ""} ${candidate?.last_name || ""}`) || `candidat-${candidate?.id || "inconnu"}`;
+  const shortBio = typeof candidate?.short_bio === "string" ? candidate.short_bio : (typeof candidate?.biography === "string" ? candidate.biography : null);
+  const longBio = typeof candidate?.long_bio === "string" ? candidate.long_bio : null;
+
+  return {
+    ...candidate,
+    slug: typeof candidate?.slug === "string" && candidate.slug ? candidate.slug : fallbackSlug,
+    short_bio: shortBio,
+    long_bio: longBio,
+  };
+};
+
 export default defineCachedEventHandler(
   async (event) => {
     const directus = getCmsClient() as any;
@@ -28,6 +54,7 @@ export default defineCachedEventHandler(
           filter: {
             year: { _eq: year },
             type: { _eq: type },
+            status: { _nin: ["draft", "archived"] },
           },
           sort: ["-election_date", "-id"],
           limit: 1,
@@ -44,14 +71,33 @@ export default defineCachedEventHandler(
       if (constituencyId) {
         targetConstituencyIds.push(constituencyId);
 
-        const children = await directus.request(
-          (readItems as any)("election_constituencies", {
-              fields: ['id'],
-              filter: { parent: { _eq: constituencyId } }
-          })
-        );
-        if (children && children.length > 0) {
-          targetConstituencyIds.push(...children.map((c: any) => c.id));
+        // Expansion département → communes via la hiérarchie du référentiel versionné.
+        // Celle-ci n'est pas traversable en filtre Directus (pas de relation inverse sur
+        // geo_entities) : on calcule d'abord les entités descendantes du département dans
+        // l'instantané, puis on filtre les circonscriptions sur `geo_entity: { _in }`.
+        const [requested, geoSnapshot] = await Promise.all([
+          directus.request(
+            (readItems as any)("election_constituencies", {
+                fields: ['id', ...GEO_UNIT_FIELDS],
+                filter: { id: { _eq: constituencyId } },
+                limit: 1,
+            })
+          ),
+          getGeoSnapshot(),
+        ]);
+        const descendantEntityIds = geoSnapshot.descendantIds(geoEntityIdOf(requested?.[0]));
+        if (descendantEntityIds.length > 0) {
+          const children = await directus.request(
+            (readItems as any)("election_constituencies", {
+                fields: ['id'],
+                filter: { geo_entity: { _in: descendantEntityIds } },
+                limit: -1,
+                sort: ['id'],
+            })
+          );
+          if (children && children.length > 0) {
+            targetConstituencyIds.push(...children.map((c: any) => c.id));
+          }
         }
       }
 
@@ -68,51 +114,89 @@ export default defineCachedEventHandler(
           filter.constituency = { _in: targetConstituencyIds };
       }
 
-      const lists = await directus.request(
-        (readItems as any)("election_electoral_lists", {
-          fields: [
-            "id",
-            "name",
-            "type",
-            "is_substitute",
-            "constituency.id",
-            "constituency.name",
-            "constituency.type",
-            "constituency.nationale_type",
-            "coalition.id",
-            "coalition.name",
-            "coalition.color",
-            "coalition.logo",
-            {
-              candidates: [
-                "id",
-                "first_name",
-                "last_name",
-                "photo",
-                "profession",
-                "gender",
-                "position",
-                "biography",
-                "birthdate",
-                "birthplace",
-                "voter_number",
-                "facebook",
-                "twitter",
-                "documents.id",
-                "documents.file",
-                "documents.title",
-                "documents.slug",
-              ],
-            },
-          ],
-          filter,
-          sort: ["type", "is_substitute", "name"],
-          limit: -1,
-        })
-      );
+      const listFieldsBase = [
+        "id",
+        "name",
+        "type",
+        "is_substitute",
+        "constituency.id",
+        "constituency.name",
+        "constituency.type",
+        "constituency.nationale_type",
+        "coalition.id",
+        "coalition.color",
+        "coalition.logo",
+        ...ENTITY_IDENTITY_FIELDS.map((f) => `coalition.political_entity.${f}`),
+      ];
+      const candidateFields = [
+        "*",
+        { person: PERSON_IDENTITY_FIELDS },
+      ];
+
+      const readLists = async () =>
+        directus.request(
+          (readItems as any)("election_electoral_lists", {
+            fields: [
+              ...listFieldsBase,
+              { candidates: candidateFields },
+            ],
+            filter,
+            sort: ["type", "is_substitute", "name"],
+            limit: -1,
+          })
+        );
+
+      let lists: any[] = [];
+
+      lists = await readLists();
+
+      // Programmes de la participation (election_programs) : exposés sur coalition.programs,
+      // et en compat sur candidate.documents (le profil présidentiel lit encore cette clé).
+      const listCoalitionIds = [
+        ...new Set((lists || []).map((l: any) => l?.coalition?.id).filter(Boolean)),
+      ];
+      const programsByCoalition = new Map<number, any[]>();
+      if (listCoalitionIds.length > 0) {
+        try {
+          const programs = await directus.request(
+            (readItems as any)("election_programs", {
+              fields: ["id", "language", "version", "participation", "document.id", "document.file", "document.title", "document.slug"],
+              filter: {
+                participation: { _in: listCoalitionIds },
+                status: { _eq: "published" },
+              },
+              limit: -1,
+            })
+          );
+          for (const program of programs as any[]) {
+            const key = program.participation;
+            if (!programsByCoalition.has(key)) programsByCoalition.set(key, []);
+            programsByCoalition.get(key)?.push(program);
+          }
+        } catch (programsError: any) {
+          console.error("Error fetching participation programs:", programsError?.message || programsError);
+        }
+      }
+
+      // Identité de la coalition via son entité politique (fallback legacy)
+      const normalizedLists = (lists || []).map((list: any) => {
+        const programs = programsByCoalition.get(list?.coalition?.id) || [];
+        return {
+          ...list,
+          coalition: list?.coalition
+            ? { ...mergeEntityIdentity(list.coalition), programs }
+            : list?.coalition,
+          candidates: Array.isArray(list?.candidates)
+            ? list.candidates.map((c: any) => ({
+                ...normalizeCandidate(c),
+                documents: programs[0]?.document ?? null,
+              }))
+            : [],
+        };
+      });
 
       return {
-        data: lists,
+        data: normalizedLists,
       };
     } catch (error: any) {
       console.error("Error in dashboard lists.get:", error);
