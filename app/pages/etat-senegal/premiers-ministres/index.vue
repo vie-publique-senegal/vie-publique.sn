@@ -1,13 +1,7 @@
 <script setup lang="ts">
 import type { LeaderBrief, PrimeMinisterGap, PrimeMinisterialTerm } from '~~/types/leader-history';
 
-// Garde feature flag : 404 si la feature est désactivée
-const { isFeatureEnabled, loading: flagsLoading } = useFeatureFlags();
-watchEffect(() => {
-  if (!flagsLoading.value && !isFeatureEnabled('menu_historique_dirigeants')) {
-    throw createError({ statusCode: 404, statusMessage: 'Page non trouvée' });
-  }
-});
+useFeatureGuard('menu_historique_dirigeants');
 
 const { siteName, siteUrl, themeColor, keywords } = useSiteMetadata();
 

@@ -4,13 +4,7 @@ import { repereCollectivites, reperesPopulation } from '~/composables/collectivi
 import { useCollectionPageSeo } from '~/composables/collectivites/useCollectionPageSeo';
 import { useDepartementGeo } from '~/composables/collectivites/useDepartementsGeo';
 
-// Garde feature flag : 404 si la feature est désactivée
-const { isFeatureEnabled, loading: flagsLoading } = useFeatureFlags();
-watchEffect(() => {
-  if (!flagsLoading.value && !isFeatureEnabled('menu_collectivites_territoriales')) {
-    throw createError({ statusCode: 404, statusMessage: 'Page non trouvée' });
-  }
-});
+useFeatureGuard('menu_collectivites_territoriales');
 
 // Page hub d'un département : liste ses communes et renvoie vers leurs fiches.
 // Pas de filtre ni de pagination - un département compte au plus une trentaine
