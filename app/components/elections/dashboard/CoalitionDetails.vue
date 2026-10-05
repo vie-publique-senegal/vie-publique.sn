@@ -81,8 +81,10 @@ const groupedLists = computed(() => {
 
   let baseLists = lists.value;
 
+  // Locales : pas de filtre par type de liste, mais la recherche s'applique aussi
+  // (elle était ignorée : le champ « Rechercher un candidat » ne filtrait rien).
   if (isLocal.value) {
-    return baseLists;
+    return searchQuery.value ? filterListsBySearch(baseLists, searchQuery.value) : baseLists;
   }
 
   if (searchQuery.value) {

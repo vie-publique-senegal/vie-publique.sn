@@ -2,14 +2,17 @@
 import { normalizeGeoName } from './geo-name';
 
 /**
- * Vrai si l'une des valeurs contient la recherche, sans tenir compte de la casse, des
- * accents ni de la ponctuation (« guediawaye » trouve « Guédiawaye », « hann bel air »
- * trouve « HANN-BEL AIR »). Une recherche vide laisse tout passer.
+ * Vrai si les valeurs contiennent CHAQUE mot de la recherche (dans n'importe quel ordre),
+ * sans tenir compte de la casse, des accents ni de la ponctuation : « guediawaye » trouve
+ * « Guédiawaye », « hann bel air » trouve « HANN-BEL AIR », « coumba sene » trouve
+ * « Coumba Ndoffène SENE ». Les valeurs sont parcourues ensemble (« dakar benno » trouve la
+ * ligne commune DAKAR / coalition Benno). Une recherche vide laisse tout passer.
  */
 export function matchesSearch(query: string | null | undefined, ...values: unknown[]): boolean {
   const needle = normalizeGeoName(query);
   if (!needle) return true;
-  return values.some((value) =>
-    normalizeGeoName(value === null || value === undefined ? '' : String(value)).includes(needle),
-  );
+  const haystack = values
+    .map((value) => normalizeGeoName(value === null || value === undefined ? '' : String(value)))
+    .join(' ');
+  return needle.split(' ').every((word) => haystack.includes(word));
 }
