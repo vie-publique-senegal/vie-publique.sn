@@ -66,7 +66,12 @@ export default defineCachedEventHandler(
         { person: PERSON_IDENTITY_FIELDS },
       ];
 
-      const readLists = async () =>
+      const normalizedSlug = toSlug(routeSlug);
+      const slugValues = [...new Set([routeSlug, normalizedSlug])];
+
+      // `extraFilter` restreint aux listes visées : sans lui, toutes les listes de
+      // l'élection sont lues (2 879 aux locales, 3 à 4 s).
+      const readLists = async (extraFilter?: Record<string, unknown>) =>
         directus.request(
           (readItems as any)("election_electoral_lists", {
             fields: [
@@ -85,30 +90,63 @@ export default defineCachedEventHandler(
             filter: {
               election: { _eq: election.id },
               status: { _eq: "published" },
+              ...(extraFilter || {}),
             },
             sort: ["is_substitute", "type", "name"],
             limit: -1,
           })
         );
 
-      let lists: any[] = [];
-
-      lists = await readLists();
-
-      const normalizedSlug = toSlug(routeSlug);
-      const matches: any[] = [];
-
-      for (const list of lists || []) {
-        const candidates = Array.isArray(list?.candidates) ? list.candidates : [];
-        for (const rawCandidate of candidates) {
-          const candidate = normalizeCandidate(rawCandidate);
-          // Match strict sur le slug fusionné (slug person si liée, sinon slug candidat legacy).
-          // Pas de compat sur l'ancien slug candidat : les deux espaces de slugs se chevauchent
-          // (le slug candidat d'une personne peut être le slug person d'une autre).
-          if (toSlug(candidate.slug || "") === normalizedSlug) {
-            matches.push({ candidate, list });
+      const findMatches = (lists: any[]) => {
+        const found: any[] = [];
+        for (const list of lists || []) {
+          const candidates = Array.isArray(list?.candidates) ? list.candidates : [];
+          for (const rawCandidate of candidates) {
+            const candidate = normalizeCandidate(rawCandidate);
+            // Match strict sur le slug fusionné (slug person si liée, sinon slug candidat legacy).
+            // Pas de compat sur l'ancien slug candidat : les deux espaces de slugs se chevauchent
+            // (le slug candidat d'une personne peut être le slug person d'une autre).
+            if (toSlug(candidate.slug || "") === normalizedSlug) {
+              found.push({ candidate, list });
+            }
           }
         }
+        return found;
+      };
+
+      // Chemin rapide : listes des candidatures dont la person porte ce slug (requête légère
+      // sur election_candidates), puis le même match strict en mémoire. Repli sur la lecture
+      // complète si rien n'est trouvé (candidat sans person, identifié par le slug dérivé de
+      // son nom) ou si la requête échoue (schéma d'un environnement non migré).
+      let matches: any[] = [];
+      try {
+        const candidacies = await directus.request(
+          (readItems as any)("election_candidates", {
+            fields: ["electoral_list"],
+            filter: {
+              person: { slug: { _in: slugValues } },
+              electoral_list: { election: { _eq: election.id } },
+            },
+            limit: -1,
+          })
+        );
+        const listIds = [
+          ...new Set(
+            ((candidacies || []) as { electoral_list?: number | null }[])
+              .map((c) => c?.electoral_list)
+              .filter(Boolean),
+          ),
+        ];
+        if (listIds.length > 0) {
+          matches = findMatches(await readLists({ id: { _in: listIds } }));
+        }
+      } catch (fastPathError) {
+        reportServerError(fastPathError, "elections-candidate-profile-fast-path", {
+          slug: routeSlug,
+        });
+      }
+      if (!matches.length) {
+        matches = findMatches(await readLists());
       }
 
       if (!matches.length) {
@@ -165,13 +203,18 @@ export default defineCachedEventHandler(
         },
       };
     } catch (error: any) {
-      console.error("Error in dashboard candidate profile:", error);
-      return { data: null, error: error?.message || "unknown" };
+      // Erreur levée (et non `{ data: null }`) : Nitro ne met pas en cache une erreur, alors
+      // qu'une réponse « vide » restait servie 10 min comme un profil introuvable.
+      reportServerError(error, "elections-candidate-profile", { slug: routeSlug, year, type });
+      throw createError({
+        statusCode: 502,
+        message: "Profil candidat momentanément indisponible",
+      });
     }
   },
   {
     maxAge: 60 * 10,
-    name: "elections-dashboard-candidate-profile",
+    name: "elections-dashboard-candidate-profile-v3",
     getKey: (event) => {
       const query = getQuery(event);
       const slug = getRouterParam(event, "slug") || "unknown";

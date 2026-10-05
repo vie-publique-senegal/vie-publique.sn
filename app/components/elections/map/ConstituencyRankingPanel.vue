@@ -118,7 +118,7 @@ const coalitionLabel = (coalition: RankingCoalition) =>
       >
         <div class="flex items-center justify-between">
           <div>
-            <h2 class="text-lg font-black uppercase tracking-tight text-gray-900 dark:text-white">
+            <h2 class="text-lg font-bold tracking-tight text-gray-900 dark:text-white">
               {{ constituency.name }}
             </h2>
             <p class="text-sm text-gray-500 dark:text-gray-400">Classement des coalitions</p>
@@ -171,9 +171,7 @@ const coalitionLabel = (coalition: RankingCoalition) =>
         <!-- Classement -->
         <template v-else-if="ranking">
           <div class="px-4 py-3">
-            <h3
-              class="mb-2 text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400"
-            >
+            <h3 class="mb-2 text-xs font-bold tracking-wider text-gray-500 dark:text-gray-400">
               1er tour
             </h3>
             <div class="space-y-1.5">
@@ -202,7 +200,7 @@ const coalitionLabel = (coalition: RankingCoalition) =>
                     </span>
                   </div>
                   <span
-                    class="shrink-0 text-sm font-black tabular-nums text-green-700 dark:text-green-400"
+                    class="shrink-0 text-sm font-bold tabular-nums text-green-700 dark:text-green-400"
                   >
                     {{ formatNumber(item.votes) }}
                   </span>
@@ -219,9 +217,7 @@ const coalitionLabel = (coalition: RankingCoalition) =>
             v-if="ranking.round2 && ranking.round2.length > 0"
             class="border-t border-gray-100 px-4 pb-4 pt-1 dark:border-gray-800"
           >
-            <h3
-              class="mb-2 mt-3 text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400"
-            >
+            <h3 class="mb-2 mt-3 text-xs font-bold tracking-wider text-gray-500 dark:text-gray-400">
               2d tour
             </h3>
             <div class="space-y-1.5">
@@ -250,7 +246,7 @@ const coalitionLabel = (coalition: RankingCoalition) =>
                     </span>
                   </div>
                   <span
-                    class="shrink-0 text-sm font-black tabular-nums text-green-700 dark:text-green-400"
+                    class="shrink-0 text-sm font-bold tabular-nums text-green-700 dark:text-green-400"
                   >
                     {{ formatNumber(item.votes) }}
                   </span>

@@ -98,6 +98,7 @@ interface ResultRow {
     slug?: string | null;
     geo_slug?: string | null;
     nationale_type?: string | null;
+    region?: string | null;
     parent?: { name?: string | null; slug?: string | null; geo_slug?: string | null } | null;
   } | null;
   winning_list?: {
@@ -185,6 +186,7 @@ const { data: items, status } = useAsyncData(
         parentSlug: row.constituencie?.parent?.slug ?? null,
         parentGeoSlug: row.constituencie?.parent?.geo_slug ?? null,
         parentName: row.constituencie?.parent?.name ?? null,
+        regionName: row.constituencie?.region ?? null,
         votersCount: row.voters_count ?? null,
         nullBallots: row.null_ballots ?? null,
         validVotes: row.valid_votes ?? null,
@@ -361,6 +363,7 @@ function openCommuneDetail(commune: ResultMapItem) {
 
   emit('department-selected', {
     departement: commune.parentName,
+    region: commune.regionName ?? '',
     communes,
   });
 }

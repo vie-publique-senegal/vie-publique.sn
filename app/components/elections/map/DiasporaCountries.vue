@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { matchesSearch } from '#shared/search';
 interface CountryStats {
   country: string;
   count: {
@@ -67,11 +68,7 @@ const filteredRows = computed(() => {
 
   // Appliquer le filtre
   if (q.value) {
-    rows = rows.filter((person) => {
-      return Object.values(person).some((value) => {
-        return String(value).toLowerCase().includes(q.value.toLowerCase());
-      });
-    });
+    rows = rows.filter((person) => matchesSearch(q.value, ...Object.values(person)));
   }
 
   return rows;

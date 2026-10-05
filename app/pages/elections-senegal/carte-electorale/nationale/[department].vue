@@ -1,5 +1,6 @@
 <!-- pages/elections-senegal/carte-electorale/nationale/[department].vue -->
 <script setup lang="ts">
+import { matchesSearch } from '#shared/search';
 import type { PollingStation } from '~~/types/election-map-national';
 
 const route = useRoute();
@@ -103,12 +104,8 @@ const filteredDetails = computed(() => {
 
   // Recherche
   if (search.value) {
-    const searchLower = search.value.toLowerCase().trim();
-    filtered = filtered.filter(
-      (item) =>
-        item.municipality.toLowerCase().includes(searchLower) ||
-        item.polling_place.toLowerCase().includes(searchLower) ||
-        item.implantation?.toLowerCase().includes(searchLower),
+    filtered = filtered.filter((item) =>
+      matchesSearch(search.value, item.municipality, item.polling_place, item.implantation),
     );
   }
 

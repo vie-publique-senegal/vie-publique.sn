@@ -39,7 +39,7 @@ const formatPct = (v: number | null | undefined) =>
     <div class="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
       <div class="flex items-center gap-2">
         <div class="h-1.5 w-6 rounded-full bg-amber-500"></div>
-        <h3 class="text-lg font-black uppercase tracking-tighter text-gray-900 dark:text-white">
+        <h3 class="text-lg font-bold tracking-tight text-gray-900 dark:text-white">
           Second Tour
         </h3>
         <UBadge color="amber" variant="subtle" size="xs" class="uppercase font-bold tracking-widest">
@@ -73,7 +73,7 @@ const formatPct = (v: number | null | undefined) =>
         <div class="flex-shrink-0 w-7 text-center">
           <span
             :class="[
-              'inline-flex items-center justify-center w-7 h-7 rounded-full text-sm font-black',
+              'inline-flex items-center justify-center w-7 h-7 rounded-full text-sm font-bold',
               index === 0 ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300' : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'
             ]"
           >
@@ -109,7 +109,7 @@ const formatPct = (v: number | null | undefined) =>
           <h4 v-if="coalition.head_of_list" class="text-sm font-bold text-gray-900 dark:text-white leading-tight truncate">
             {{ coalition.head_of_list.first_name }} {{ coalition.head_of_list.last_name }}
           </h4>
-          <h4 v-else class="text-sm font-bold text-gray-900 dark:text-white leading-tight truncate italic opacity-60">
+          <h4 v-else class="text-sm font-bold text-gray-900 dark:text-white leading-tight truncate opacity-60">
             Candidat non renseigné
           </h4>
           <p class="text-xs text-gray-500 truncate">{{ coalition.name }}</p>

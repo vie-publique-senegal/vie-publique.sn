@@ -10,9 +10,14 @@ const route = useRoute();
 const router = useRouter();
 const constituencySlug = computed(() => route.params.constituencySlug as string);
 
-const { selectedYear, selectedType, currentElection, loadingConfig } = useElectoralDashboard();
+const { selectedYear, selectedType, currentElection, loadingConfig, configFailed } =
+  useElectoralDashboard();
 
-const { constituencies, loading: loadingConstituencies } = useElectoralConstituencies({
+const {
+  constituencies,
+  loading: loadingConstituencies,
+  error: constituenciesError,
+} = useElectoralConstituencies({
   year: selectedYear,
   type: selectedType,
 });
@@ -23,6 +28,8 @@ const constituency = computed(
 
 const loading = computed(() => loadingConfig.value || loadingConstituencies.value);
 const notFound = computed(() => !loading.value && !constituency.value);
+// 404 HTTP seulement si les données ont bien été lues (une panne CMS n'est pas un « introuvable »)
+const sendNotFoundStatus = computed(() => !configFailed.value && !constituenciesError.value);
 
 const candidatsUrl = computed(() => `/elections-senegal/${currentElection.value?.slug}/candidats`);
 
@@ -75,6 +82,7 @@ useSeoMeta({
         name="i-heroicons-face-frown"
         class="mx-auto mb-4 h-16 w-16 text-gray-300 dark:text-gray-700"
       />
+      <AppResponseStatus v-if="sendNotFoundStatus" :code="404" />
       <h2 class="mb-2 text-xl font-bold text-gray-900 dark:text-white">
         Circonscription introuvable
       </h2>

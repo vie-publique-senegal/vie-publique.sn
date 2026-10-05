@@ -1,5 +1,10 @@
 import { readItems } from '@directus/sdk';
 import { isMunicipalConstituencyType } from '#shared/election-constituency';
+import { normalizeGeoName } from '#shared/geo-name';
+
+// Recherche insensible à la casse, aux accents et à la ponctuation (« guediawaye » trouve
+// « Guédiawaye », « hann bel air » trouve « HANN BEL AIR »).
+const searchKey = (value: unknown) => normalizeGeoName(typeof value === 'string' ? value : '');
 
 export default defineCachedEventHandler(
   async (event) => {
@@ -163,14 +168,13 @@ export default defineCachedEventHandler(
         })
         .sort((a: any, b: any) => a.name.localeCompare(b.name));
 
-      const search = query.search as string;
+      const search = searchKey(query.search);
       if (search) {
-        const lowercaseSearch = search.toLowerCase();
         return results.filter((dept: any) => {
-          const matchDept = dept.name.toLowerCase().includes(lowercaseSearch);
+          const matchDept = searchKey(dept.name).includes(search);
           const attachedMunicipalities = deptMunicipalitiesMap.get(dept.id) || [];
           const matchCommune = attachedMunicipalities.some((c) =>
-            c.name.toLowerCase().includes(lowercaseSearch),
+            searchKey(c.name).includes(search),
           );
           return matchDept || matchCommune;
         });
@@ -187,10 +191,12 @@ export default defineCachedEventHandler(
   },
   {
     maxAge: 60 * 30,
-    name: 'elections-dashboard-constituencies-v4',
+    name: 'elections-dashboard-constituencies-v5',
     getKey: (event) => {
       const query = getQuery(event);
-      return `constituencies-${query.year}-${query.type}-${query.search || 'none'}`;
+      // Recherche normalisée (ASCII) : la clé brute était nettoyée par le stockage, si bien
+      // que « guédiawaye » et « guediawaye » partageaient la même entrée de cache.
+      return `constituencies-${query.year}-${query.type}-${searchKey(query.search).replace(/ /g, '_') || 'none'}`;
     },
   },
 );

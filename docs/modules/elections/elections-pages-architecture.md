@@ -106,6 +106,16 @@ app/pages/elections-senegal/
 
 > L'onglet actif est le **dernier segment du path** (pas un query param). L'élection est résolue par son **slug CMS** ; les onglets visibles dépendent du statut et du type de l'élection (voir les règles dans [elections-dashboard.md](./elections-dashboard.md#34-onglets-visibles-selon-statut-et-type)). Coalition et circonscription sont résolues par leur **slug d'URL** dédié, plus par query param (`?coalition=`/`?constituency=` sont abandonnés).
 
+**Introuvable = 404 HTTP.** Élection, circonscription, coalition (département ou commune) et profil
+candidat inexistants gardent leur écran « introuvable » dans le dashboard, mais la réponse SSR porte
+le statut **404** via `<AppResponseStatus :code="404" />` (pas de soft 404 indexé). Garde-fou : pas
+de 404 quand l'API a échoué (`configFailed` / `failed` des composables, l'API répondant 200
+`{ data: [], error }`) — une panne CMS ne doit pas désindexer une page.
+
+**Sitemap** (`server/api/__sitemap__/urls.ts`, §6c) : pour les locales, pages département,
+coalition × département, coalition × commune/ville et profils candidats, dérivées des listes publiées
+(commune → département via le référentiel géographique).
+
 ---
 
 ## 📄 Pages

@@ -25,7 +25,7 @@ const emit = defineEmits<{
         :class="[
           'sm:flex-1',
           props.modelValue === tab.id
-            ? 'bg-primary-600 dark:bg-primary-500 text-white font-black shadow-md'
+            ? 'bg-primary-600 dark:bg-primary-500 text-white font-bold shadow-md'
             : 'text-gray-500 hover:text-primary-600 dark:text-gray-400 dark:hover:text-white font-bold flex-1',
         ]"
         @click="emit('update:modelValue', tab.id)"

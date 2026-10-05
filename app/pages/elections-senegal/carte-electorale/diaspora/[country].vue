@@ -1,5 +1,6 @@
 <!-- pages/elections-senegal/carte-electorale/diaspora/[country].vue -->
 <script setup lang="ts">
+import { matchesSearch } from '#shared/search';
 /**
  * Page de détails d'un pays de la diaspora
  * Suit le pattern: page -> composable -> server -> Directus
@@ -42,11 +43,7 @@ const filteredRows = computed(() => {
     return locations.value;
   }
 
-  return locations.value.filter((location) => {
-    return Object.values(location).some((value) => {
-      return String(value).toLowerCase().includes(q.value.toLowerCase());
-    });
-  });
+  return locations.value.filter((location) => matchesSearch(q.value, ...Object.values(location)));
 });
 
 // URL de retour (fallback) : le dashboard de l'élection si on en vient, sinon la vue diaspora

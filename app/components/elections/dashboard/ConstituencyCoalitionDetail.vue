@@ -28,7 +28,7 @@ const props = defineProps<{
 
 const router = useRouter();
 
-const { lists, loading } = useElectoralDashboardLists({
+const { lists, loading, failed } = useElectoralDashboardLists({
   constituencyId: computed(() => String(props.constituencyId)),
   year: computed(() => props.year),
   type: computed(() => props.type),
@@ -112,6 +112,8 @@ useSeoMeta({
       name="i-heroicons-face-frown"
       class="mx-auto mb-4 h-16 w-16 text-gray-300 dark:text-gray-700"
     />
+    <!-- 404 HTTP seulement si les listes ont bien été lues (panne CMS ≠ « introuvable ») -->
+    <AppResponseStatus v-if="!failed" :code="404" />
     <h2 class="mb-2 text-xl font-bold text-gray-900 dark:text-white">Coalition introuvable</h2>
     <p class="mb-6 text-sm text-gray-500">
       Cette coalition n'existe pas dans cette circonscription.

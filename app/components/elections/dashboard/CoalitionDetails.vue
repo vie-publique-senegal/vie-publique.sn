@@ -223,7 +223,7 @@ function openCandidateProfile(candidate: Candidate) {
       <template v-else>
         <div v-for="group in groupedLists" :key="group.name" class="space-y-4">
           <div class="bg-primary-50 dark:bg-primary-900/10 p-4 rounded-xl border border-primary-100 dark:border-primary-900/50">
-            <h3 class="text-xl md:text-lg font-black text-primary-700 dark:text-primary-400 uppercase flex items-center gap-2">
+            <h3 class="text-xl md:text-lg font-bold text-primary-700 dark:text-primary-400 flex items-center gap-2">
               <UIcon name="i-heroicons-map-pin" class="h-5 w-5" />
               {{ group.name }}
             </h3>

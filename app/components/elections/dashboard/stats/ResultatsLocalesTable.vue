@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { matchesSearch } from '#shared/search';
 import {
   type TableResultItem,
   useElectionMapDataResult,
@@ -40,12 +41,8 @@ const filteredData = computed(() => {
   if (!tableData.value) return [];
   if (!searchQuery.value) return tableData.value;
 
-  const query = searchQuery.value.toLowerCase().trim();
-  return tableData.value.filter(
-    (item) =>
-      item.commune.toLowerCase().includes(query) ||
-      item.coalition.toLowerCase().includes(query) ||
-      item.headOfList.toLowerCase().includes(query),
+  return tableData.value.filter((item) =>
+    matchesSearch(searchQuery.value, item.commune, item.coalition, item.headOfList),
   );
 });
 
@@ -191,9 +188,7 @@ defineExpose({
       >
         <!-- Commune + Coalition info -->
         <div class="min-w-0 flex-1">
-          <h4
-            class="truncate text-sm font-bold uppercase tracking-tight text-gray-900 dark:text-white"
-          >
+          <h4 class="truncate text-sm font-bold tracking-tight text-gray-900 dark:text-white">
             {{ item.commune }}
           </h4>
           <div class="mt-0.5 flex items-center gap-1.5">
@@ -209,7 +204,7 @@ defineExpose({
 
         <!-- Voix, ou % de la liste gagnante quand les voix ne sont pas saisies -->
         <div v-if="showScore" class="shrink-0 text-right">
-          <span class="text-sm font-black tabular-nums text-gray-900 dark:text-white">{{
+          <span class="text-sm font-bold tabular-nums text-gray-900 dark:text-white">{{
             hasVotes
               ? formatNumber(item.votes)
               : item.winningPercentage != null

@@ -45,18 +45,16 @@ const isInRound2 = computed(
       <!-- Badge Second Tour -->
       <div v-if="isInRound2" class="absolute right-3 top-3">
         <span
-          class="inline-flex items-center gap-1 rounded-full bg-amber-500 px-2 py-1 text-[9px] font-black uppercase tracking-widest text-white shadow"
+          class="inline-flex items-center gap-1 rounded-full bg-amber-500 px-2 py-1 text-[9px] font-bold uppercase tracking-widest text-white shadow"
         >
           2<sup>e</sup> tour
         </span>
       </div>
 
-      <h4 v-if="coalition.head_of_list" class="text-lg font-black uppercase leading-tight">
+      <h4 v-if="coalition.head_of_list" class="text-lg font-bold leading-tight">
         {{ coalition.head_of_list.first_name }} {{ coalition.head_of_list.last_name }}
       </h4>
-      <h4 v-else class="text-lg font-black uppercase italic leading-tight opacity-50">
-        Non spécifié
-      </h4>
+      <h4 v-else class="text-lg font-bold leading-tight opacity-50">Non spécifié</h4>
 
       <div class="mt-3 flex items-center justify-between border-t border-white/20 pt-3">
         <span class="max-w-[80%] truncate text-[10px] font-bold uppercase tracking-widest">

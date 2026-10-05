@@ -25,7 +25,7 @@ export const useElectoralDashboardLists = (options: {
   const year = isRef(options.year) ? options.year : ref(options.year);
   const type = isRef(options.type) ? options.type : ref(options.type);
 
-  const { data, pending: loading, error, refresh } = useFetch<{ data: ElectoralList[] }>(
+  const { data, pending: loading, error, refresh } = useFetch<{ data: ElectoralList[]; error?: string }>(
     "/api/elections/dashboard/lists",
     {
       query: {
@@ -42,11 +42,14 @@ export const useElectoralDashboardLists = (options: {
   );
 
   const lists = computed(() => data.value?.data || []);
+  // L'API répond 200 `{ data: [], error }` quand le CMS échoue : à distinguer d'une liste vide
+  const failed = computed(() => !!error.value || !!data.value?.error);
 
   return {
     lists,
     loading,
     error,
+    failed,
     refresh,
   };
 };

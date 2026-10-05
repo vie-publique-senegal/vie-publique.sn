@@ -29,7 +29,7 @@ const emit = defineEmits<{
       </div>
     </div>
     <div class="min-w-0 flex-1">
-      <h3 class="text-xs sm:text-sm font-black uppercase tracking-tight group-hover:text-primary-600 transition-colors line-clamp-1">
+      <h3 class="text-xs sm:text-sm font-bold tracking-tight group-hover:text-primary-600 transition-colors line-clamp-1">
         {{ coalition.list_order }}<span class="mx-0.5 sm:mx-1">•</span>{{ coalition.name }}
       </h3>
       <p class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">

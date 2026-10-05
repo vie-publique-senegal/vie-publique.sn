@@ -155,7 +155,7 @@ onUnmounted(() => {
       <!-- Info Section -->
       <div class="flex-1 p-4 lg:p-5 space-y-3">
         <div class="flex items-center gap-3">
-          <UBadge color="green" variant="subtle" class="rounded-full px-2.5 py-0.5 font-black uppercase text-[9px] tracking-widest">
+          <UBadge color="green" variant="subtle" class="rounded-full px-2.5 py-0.5 font-bold uppercase text-[9px] tracking-widest">
             Terminée
           </UBadge>
           <div class="flex items-center gap-1 text-gray-400 font-bold text-[9px] uppercase tracking-wider">
@@ -164,7 +164,7 @@ onUnmounted(() => {
           </div>
         </div>
 
-        <h2 class="text-lg lg:text-xl font-black uppercase tracking-tight leading-none text-gray-900 dark:text-white">
+        <h2 class="text-lg lg:text-xl font-bold tracking-tight leading-none text-gray-900 dark:text-white">
           {{ election.name }}
         </h2>
 
@@ -180,7 +180,7 @@ onUnmounted(() => {
                 <UIcon :name="link.icon" class="h-4 w-4" />
               </div>
               <div class="min-w-0">
-                <p class="text-[9px] font-black uppercase tracking-wider text-gray-900 dark:text-white leading-none mb-0.5">{{ link.label }}</p>
+                <p class="text-[9px] font-bold uppercase tracking-wider text-gray-900 dark:text-white leading-none mb-0.5">{{ link.label }}</p>
                 <p class="text-[8px] font-medium text-gray-500 truncate">{{ link.description }}</p>
               </div>
             </NuxtLink>
@@ -201,24 +201,24 @@ onUnmounted(() => {
               <UIcon v-else name="i-heroicons-user" class="h-6 w-6 text-gray-300 dark:text-gray-700" />
             </div>
             <div class="min-w-0">
-                  <p class="text-[8px] uppercase font-black text-primary-600 dark:text-primary-400 tracking-widest mb-0.5">Vainqueur</p>
-                  <h3 class="font-black text-gray-900 dark:text-white leading-tight mb-0.5 text-sm">
+                  <p class="text-[8px] uppercase font-bold text-primary-600 dark:text-primary-400 tracking-widest mb-0.5">Vainqueur</p>
+                  <h3 class="font-bold text-gray-900 dark:text-white leading-tight mb-0.5 text-sm">
                       {{ winningCoalition.head_of_list?.first_name }} {{ winningCoalition.head_of_list?.last_name }}
                   </h3>
-                  <p class="text-2xl font-black text-primary-600 tracking-tighter leading-none">{{ winningCoalitionPercentage.toFixed(2) }}%</p>
+                  <p class="text-2xl font-bold text-primary-600 tracking-tight leading-none">{{ winningCoalitionPercentage.toFixed(2) }}%</p>
               </div>
           </div>
 
           <!-- Legislative Sièges -->
           <div v-else-if="hasLegislativeSeats" class="space-y-4">
-              <p class="text-[9px] uppercase font-black text-gray-400 tracking-widest">Répartition des sièges</p>
+              <p class="text-[9px] uppercase font-bold text-gray-400 tracking-widest">Répartition des sièges</p>
               <div class="grid grid-cols-2 gap-3">
                   <div
 v-for="(col, idx) in topLegislativeCoalitions" :key="col.id"
                     class="bg-white dark:bg-gray-950 p-3 rounded-2xl border dark:border-gray-800 shadow-sm"
                   >
-                      <p class="text-[8px] font-black uppercase text-gray-400 truncate">{{ col.acronym || col.name }}</p>
-                      <p class="text-xl font-black text-primary-600">{{ (Number(col.sieges) || 0) + (Number((col as any).sieges_departement) || 0) }}</p>
+                      <p class="text-[8px] font-bold uppercase text-gray-400 truncate">{{ col.acronym || col.name }}</p>
+                      <p class="text-xl font-bold text-primary-600">{{ (Number(col.sieges) || 0) + (Number((col as any).sieges_departement) || 0) }}</p>
                       <p class="text-[8px] font-bold text-gray-500">{{ idx === 0 ? 'Majorité' : 'Opposition' }}</p>
                   </div>
               </div>
@@ -227,7 +227,7 @@ v-for="(col, idx) in topLegislativeCoalitions" :key="col.id"
           <!-- Placeholder -->
           <div v-else class="text-center opacity-40">
               <UIcon name="i-heroicons-pause-circle" class="h-10 w-10 mx-auto text-gray-300 mb-2" />
-              <p class="text-[9px] font-black uppercase tracking-widest text-gray-400">Calcul des résultats...</p>
+              <p class="text-[9px] font-bold uppercase tracking-widest text-gray-400">Calcul des résultats...</p>
           </div>
       </div>
     </div>
@@ -236,20 +236,20 @@ v-for="(col, idx) in topLegislativeCoalitions" :key="col.id"
     <div v-else class="flex flex-col lg:flex-row">
       <div class="flex-1 p-6 lg:p-8 space-y-4">
         <div class="flex items-center gap-3">
-          <UBadge :color="getStatusColor(election.status)" variant="subtle" class="rounded-full px-3 py-1 font-black uppercase text-[10px] tracking-widest">
+          <UBadge :color="getStatusColor(election.status)" variant="subtle" class="rounded-full px-3 py-1 font-bold uppercase text-[10px] tracking-widest">
             {{ { 'scheduled': 'Programmée', 'ongoing': 'En cours', 'pending': 'À venir' }[election.status] || election.status }}
           </UBadge>
-          <div v-if="countdown" class="bg-gray-100 dark:bg-gray-800 rounded-full px-3 py-1 flex items-center gap-1.5 text-[10px] font-black uppercase text-gray-500 animate-pulse">
+          <div v-if="countdown" class="bg-gray-100 dark:bg-gray-800 rounded-full px-3 py-1 flex items-center gap-1.5 text-[10px] font-bold uppercase text-gray-500 animate-pulse">
             <UIcon name="i-heroicons-clock" class="h-3.5 w-3.5" />
             {{ countdown }}
           </div>
         </div>
 
-        <h2 class="text-2xl font-black uppercase tracking-tighter leading-tight text-gray-900 dark:text-white">
+        <h2 class="text-2xl font-bold tracking-tight leading-tight text-gray-900 dark:text-white">
           {{ election.name }}
         </h2>
 
-        <div class="flex flex-wrap gap-4 text-[10px] font-black uppercase tracking-widest text-gray-400">
+        <div class="flex flex-wrap gap-4 text-[10px] font-bold uppercase tracking-widest text-gray-400">
           <div class="flex items-center gap-1.5">
              <UIcon name="i-heroicons-calendar" class="h-4 w-4 text-primary-500" />
              Scrutin: {{ formatDate(election.election_date) }}
@@ -264,13 +264,13 @@ v-for="(col, idx) in topLegislativeCoalitions" :key="col.id"
       <!-- Campaign Simple Footer/Sideline -->
       <div class="lg:w-64 bg-gray-50 dark:bg-gray-900 p-6 flex flex-col justify-center border-l dark:border-gray-800">
           <div class="space-y-3">
-             <p class="text-[9px] uppercase font-black text-gray-400 tracking-widest">Campagne électorale</p>
+             <p class="text-[9px] uppercase font-bold text-gray-400 tracking-widest">Campagne électorale</p>
              <div class="space-y-1">
-                <p class="text-xs font-black dark:text-white flex justify-between">
+                <p class="text-xs font-bold dark:text-white flex justify-between">
                    <span class="text-gray-400 font-bold uppercase text-[8px]">Incipit:</span>
                    {{ formatDate(election.campaign_start_date) || '-' }}
                 </p>
-                <p class="text-xs font-black dark:text-white flex justify-between">
+                <p class="text-xs font-bold dark:text-white flex justify-between">
                    <span class="text-gray-400 font-bold uppercase text-[8px]">Clôture:</span>
                    {{ formatDate(election.campaign_end_date) || '-' }}
                 </p>

@@ -7,7 +7,8 @@ const router = useRouter();
 const electionSlug = computed(() => route.params.slug as string);
 
 const dashboard = useElectoralDashboard();
-const { selectedYear, selectedType, config, currentElection, loadingConfig } = dashboard;
+const { selectedYear, selectedType, config, currentElection, loadingConfig, configFailed } =
+  dashboard;
 
 // Résoudre l'élection par son slug CMS
 const electionBySlug = computed(
@@ -311,9 +312,11 @@ useHead({
           name="i-heroicons-face-frown"
           class="mx-auto mb-4 h-16 w-16 text-gray-300 dark:text-gray-700"
         />
-        <h1 class="mb-2 text-xl font-bold text-gray-900 dark:text-white">
+        <AppResponseStatus v-if="!configFailed" :code="404" />
+        <!-- h2 : le h1 de la page est déjà l'en-tête « Élections Sénégal » -->
+        <h2 class="mb-2 text-xl font-bold text-gray-900 dark:text-white">
           Élection introuvable
-        </h1>
+        </h2>
         <p class="mb-6 text-sm text-gray-500">
           Aucune élection ne correspond à cette adresse.
         </p>
@@ -352,7 +355,7 @@ useHead({
     <footer class="mt-20 border-t border-gray-200 py-12 dark:border-gray-800">
       <div class="container mx-auto px-4">
         <div>
-          <h5 class="text-lg font-black uppercase italic text-gray-400">Plateforme Électorale</h5>
+          <h5 class="text-lg font-bold text-gray-400">Plateforme Électorale</h5>
           <p class="mt-2 max-w-md text-xs text-gray-500">
             Source officielle des listes électorales validées par la Direction Générale des
             Élections (DGE) du Sénégal. Cette plateforme assure la transparence et l'accessibilité à

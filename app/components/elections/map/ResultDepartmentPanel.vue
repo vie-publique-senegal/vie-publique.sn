@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { matchesSearch } from '#shared/search';
 import type { TableResultItem } from '~/composables/useElectionMapJsonResult';
 import { formatPercent } from '#shared/format';
 
@@ -77,13 +78,9 @@ const departmentResults = computed(() => {
 });
 
 const filteredResults = computed(() => {
-  const q = searchQuery.value.trim().toLowerCase();
-  if (!q) return departmentResults.value;
-  return departmentResults.value.filter(
-    (r) =>
-      r.commune.toLowerCase().includes(q) ||
-      r.coalition.toLowerCase().includes(q) ||
-      r.headOfList.toLowerCase().includes(q),
+  if (!searchQuery.value.trim()) return departmentResults.value;
+  return departmentResults.value.filter((r) =>
+    matchesSearch(searchQuery.value, r.commune, r.coalition, r.headOfList),
   );
 });
 
@@ -150,11 +147,11 @@ const medalEmoji = (index: number) => ['🥇', '🥈', '🥉'][index] || '';
       >
         <div class="mb-3 flex items-center justify-between">
           <div>
-            <h2 class="text-lg font-black uppercase tracking-tight text-gray-900 dark:text-white">
+            <h2 class="text-lg font-bold tracking-tight text-gray-900 dark:text-white">
               {{ department.departement }}
             </h2>
             <p class="text-sm text-gray-500 dark:text-gray-400">
-              Région {{ department.region }} · Résultats
+              {{ department.region ? `Région ${department.region} · Résultats` : 'Résultats' }}
             </p>
           </div>
           <button
@@ -198,7 +195,7 @@ const medalEmoji = (index: number) => ['🥇', '🥈', '🥉'][index] || '';
             >
               Communes
             </div>
-            <div class="mt-0.5 text-lg font-black tabular-nums text-green-700 dark:text-green-400">
+            <div class="mt-0.5 text-lg font-bold tabular-nums text-green-700 dark:text-green-400">
               {{ communeCount }}
             </div>
           </div>
@@ -208,7 +205,7 @@ const medalEmoji = (index: number) => ['🥇', '🥈', '🥉'][index] || '';
             >
               Total voix
             </div>
-            <div class="mt-0.5 text-lg font-black tabular-nums text-green-700 dark:text-green-400">
+            <div class="mt-0.5 text-lg font-bold tabular-nums text-green-700 dark:text-green-400">
               {{ formatNumber(departmentResults.reduce((sum, r) => sum + r.votes, 0)) }}
             </div>
           </div>
@@ -216,9 +213,7 @@ const medalEmoji = (index: number) => ['🥇', '🥈', '🥉'][index] || '';
 
         <!-- Top 3 communes par votes -->
         <div v-if="topCommunes.length > 0 && !searchQuery" class="px-4 pb-3">
-          <h3
-            class="mb-2 text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400"
-          >
+          <h3 class="mb-2 text-xs font-bold tracking-wider text-gray-500 dark:text-gray-400">
             Top 3 communes par nombre de voix
           </h3>
           <div class="space-y-1.5">
@@ -241,7 +236,7 @@ const medalEmoji = (index: number) => ['🥇', '🥈', '🥉'][index] || '';
                     {{ item.commune }}
                   </span>
                 </div>
-                <span class="text-sm font-black tabular-nums text-green-700 dark:text-green-400">
+                <span class="text-sm font-bold tabular-nums text-green-700 dark:text-green-400">
                   {{ formatNumber(item.votes) }} voix
                 </span>
               </div>
@@ -263,9 +258,7 @@ const medalEmoji = (index: number) => ['🥇', '🥈', '🥉'][index] || '';
 
         <!-- Liste des communes -->
         <div v-if="departmentResults.length > 0" class="px-4 py-3">
-          <h3
-            class="mb-2 text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400"
-          >
+          <h3 class="mb-2 text-xs font-bold tracking-wider text-gray-500 dark:text-gray-400">
             {{
               searchQuery
                 ? `Résultats (${filteredResults.length})`
@@ -297,7 +290,7 @@ const medalEmoji = (index: number) => ['🥇', '🥈', '🥉'][index] || '';
                 </span>
                 <span
                   v-if="scoreLabel(item)"
-                  class="shrink-0 text-xs font-black tabular-nums text-green-700 dark:text-green-400"
+                  class="shrink-0 text-xs font-bold tabular-nums text-green-700 dark:text-green-400"
                 >
                   {{ scoreLabel(item) }}
                 </span>

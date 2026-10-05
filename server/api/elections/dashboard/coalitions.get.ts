@@ -1,4 +1,9 @@
 import { readItems } from "@directus/sdk";
+import { normalizeGeoName } from "#shared/geo-name";
+
+// Recherche insensible à la casse ET aux accents (« senegal » trouve « Sénégal ») : faite
+// après lecture, `_icontains` de Directus restant sensible aux accents.
+const searchKey = (value: unknown) => normalizeGeoName(typeof value === "string" ? value : "");
 
 export default defineCachedEventHandler(
   async (event) => {
@@ -7,7 +12,7 @@ export default defineCachedEventHandler(
     const year = query.year ? parseInt(query.year as string) : null;
     const type = query.type as string;
     const constituencyId = query.constituency_id;
-    const search = query.search as string;
+    const search = searchKey(query.search);
 
     if (!year || !type) {
       return {
@@ -76,17 +81,6 @@ export default defineCachedEventHandler(
         id: { _in: coalitionIds }
       };
 
-      if (search) {
-        filter._or = [
-          // Les noms vivent sur l'entité politique
-          { political_entity: { name: { _icontains: search } } },
-          { political_entity: { acronym: { _icontains: search } } },
-          // L'identité de la tête de liste vit sur sa person
-          { head_of_list: { person: { first_name: { _icontains: search } } } },
-          { head_of_list: { person: { last_name: { _icontains: search } } } }
-        ];
-      }
-
       const coalitions = await directus.request(
         (readItems as any)("election_coalition", {
           fields: [
@@ -120,11 +114,21 @@ export default defineCachedEventHandler(
         head_of_list: c.head_of_list ? mergePersonIdentity(c.head_of_list) : c.head_of_list,
       }));
 
+      // Mêmes champs que l'ancien filtre Directus : nom et sigle (entité politique),
+      // prénom et nom de la tête de liste (person)
+      const matchedCoalitions = search
+        ? mergedCoalitions.filter((c) =>
+            [c.name, c.acronym, c.head_of_list?.first_name, c.head_of_list?.last_name].some(
+              (value) => searchKey(value).includes(search)
+            )
+          )
+        : mergedCoalitions;
+
       return {
-        data: mergedCoalitions,
+        data: matchedCoalitions,
         meta: {
           electionId,
-          count: coalitions.length
+          count: matchedCoalitions.length
         }
       };
     } catch (error: any) {
@@ -137,10 +141,12 @@ export default defineCachedEventHandler(
   },
   {
     maxAge: 60 * 30,
-    name: "elections-dashboard-coalitions",
+    name: "elections-dashboard-coalitions-v2",
     getKey: (event) => {
       const query = getQuery(event);
-      return `coalitions-${query.year}-${query.type}-${query.constituency_id || 'all'}-${query.search || 'none'}`;
+      // Recherche normalisée (ASCII) : la clé brute était nettoyée par le stockage, si bien
+      // que « guédiawaye » et « guediawaye » partageaient la même entrée de cache.
+      return `coalitions-${query.year}-${query.type}-${query.constituency_id || 'all'}-${searchKey(query.search).replace(/ /g, '_') || 'none'}`;
     },
   }
 );

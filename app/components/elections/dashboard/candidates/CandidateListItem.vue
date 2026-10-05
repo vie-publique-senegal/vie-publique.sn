@@ -18,7 +18,7 @@ const emit = defineEmits<{
     class="flex items-center gap-3 p-3 bg-white dark:bg-gray-900 border dark:border-gray-800 rounded-lg hover:border-primary-500/50 transition-colors group cursor-pointer"
     @click="emit('select', candidate)"
   >
-    <div class="font-black text-gray-300 dark:text-gray-700 text-lg w-8 text-center italic group-hover:text-primary-500">
+    <div class="font-bold text-gray-300 dark:text-gray-700 text-lg w-8 text-center group-hover:text-primary-500">
       {{ candidate.position }}
     </div>
     <div class="h-10 w-10 shrink-0 rounded-full overflow-hidden border dark:border-gray-700 bg-gray-100">

@@ -67,7 +67,7 @@ const shouldShowSelectors = computed(() => {
             <UIcon name="i-heroicons-bolt-20-solid" class="text-white h-6 w-6" />
           </div>
           <div>
-            <h1 class="text-xl md:text-2xl font-black italic uppercase tracking-tighter">
+            <h1 class="text-xl md:text-2xl font-bold tracking-tight">
               Elections <span class="text-primary-600">{{ selectedYear }}</span>
             </h1>
             <div class="flex items-center gap-2">

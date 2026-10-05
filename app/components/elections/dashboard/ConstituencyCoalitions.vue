@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { matchesSearch } from '#shared/search';
 import { useElectoralDashboardLists } from '~/composables/elections/dashboard/useElectoralDashboardLists';
 import {
   isMunicipalConstituencyType,
@@ -85,11 +86,8 @@ const filteredLists = computed(() => {
   }
 
   if (searchQuery.value) {
-    const q = searchQuery.value.toLowerCase();
-    result = result.filter(
-      (l: any) =>
-        l.coalition?.name?.toLowerCase().includes(q) ||
-        l.coalition?.acronym?.toLowerCase().includes(q),
+    result = result.filter((l: any) =>
+      matchesSearch(searchQuery.value, l.coalition?.name, l.coalition?.acronym),
     );
   }
 
@@ -156,7 +154,7 @@ const selectCoalition = (list: any) => {
               <div class="bg-primary-50 dark:bg-primary-900/20 rounded-lg p-1.5">
                 <UIcon name="i-heroicons-map-pin" class="text-primary-600 h-4 w-4" />
               </div>
-              <h2 class="text-xl font-black uppercase tracking-tighter md:text-2xl">
+              <h2 class="text-xl font-bold tracking-tight md:text-2xl">
                 {{ constituencyName }}
               </h2>
             </div>

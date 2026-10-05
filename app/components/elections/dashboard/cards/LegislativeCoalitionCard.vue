@@ -35,13 +35,13 @@ const { getCoalitionColor } = useElectoralFormatting();
           <UIcon v-else name="i-heroicons-photo" class="text-gray-200 h-8 w-8" />
         </div>
         <div class="bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-full border border-gray-100 dark:border-gray-700">
-          <span class="text-[9px] font-black uppercase tracking-widest text-gray-500">N°{{ coalition.list_order }}</span>
+          <span class="text-[9px] font-bold uppercase tracking-widest text-gray-500">N°{{ coalition.list_order }}</span>
         </div>
       </div>
 
       <!-- Name -->
       <div class="min-w-0">
-        <h4 class="text-xs font-black text-gray-900 dark:text-white group-hover:text-primary-600 transition-colors uppercase leading-tight line-clamp-2">
+        <h4 class="text-xs font-bold text-gray-900 dark:text-white group-hover:text-primary-600 transition-colors leading-tight line-clamp-2">
           {{ coalition.name }}
         </h4>
       </div>
