@@ -23,6 +23,13 @@ export default defineAppConfig({
         },
       },
     },
+    // Menus déroulants au-dessus des barres collantes : par défaut `z-20`, ils passaient SOUS
+    // les en-têtes `sticky z-40` des pages (onglets du dashboard électoral, en-tête mobile de
+    // /recherche) quand la liste s'ouvre vers le haut — cas typique sur mobile, clavier ouvert.
+    // `z-50` = niveau de UPopover dans Nuxt UI.
+    selectMenu: { container: 'z-50 group' },
+    inputMenu: { container: 'z-50 group' },
+    dropdown: { container: 'z-50 group' },
     input: {
       color: {
         white: {
