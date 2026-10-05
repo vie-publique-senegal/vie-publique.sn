@@ -86,14 +86,6 @@ const goToCoalition = (id: number) => {
   }
 };
 
-const goToConstituency = (id: number) => {
-  const electionSlug = currentElection.value?.slug;
-  const slug = constituencies.value.find((c) => c.id === id)?.slug;
-  if (electionSlug && slug) {
-    router.push(`/elections-senegal/${electionSlug}/candidats/circonscription/${slug}`);
-  }
-};
-
 useSeoMeta({
   title: () =>
     currentElection.value?.name
@@ -118,7 +110,7 @@ useSeoMeta({
   <div class="mx-auto max-w-7xl space-y-8">
     <transition name="fade">
       <ElectionsDashboardElectoralDetailsCard
-        v-if="currentElection"
+        v-if="currentElection && !isLocalElection"
         :election="currentElection"
         :coalitions="coalitions"
         :constituencies="constituencies"
@@ -251,18 +243,12 @@ useSeoMeta({
 
       <!-- Élections locales : circonscriptions -->
       <template v-if="isLocalElection">
-        <ElectionsDashboardCoalitionGridLoadingState v-if="loadingConstituencies" />
-        <div
-          v-else-if="constituencies.length > 0"
-          class="grid grid-cols-2 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
-        >
-          <ElectionsDashboardCardsConstituencyCard
-            v-for="c in constituencies"
-            :key="c.id"
-            :constituency="c"
-            @select="goToConstituency"
-          />
-        </div>
+        <USkeleton v-if="loadingConstituencies" class="h-96 w-full rounded-xl" />
+        <ElectionsDashboardConstituencyTable
+          v-else-if="constituencies.length > 0 && currentElection?.slug"
+          :constituencies="constituencies"
+          :election-slug="currentElection.slug"
+        />
         <ElectionsDashboardEmptyStateCoalitions v-else />
       </template>
 

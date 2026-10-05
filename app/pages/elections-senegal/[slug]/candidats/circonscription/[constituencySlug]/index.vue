@@ -5,9 +5,9 @@
  */
 import { useElectoralDashboard } from '~/composables/elections/dashboard/useElectoralDashboard';
 import { useElectoralConstituencies } from '~/composables/elections/dashboard/useElectoralConstituencies';
+import type { CoalitionLinkPayload } from '~/components/elections/dashboard/ConstituencyCoalitions.vue';
 
 const route = useRoute();
-const router = useRouter();
 const constituencySlug = computed(() => route.params.constituencySlug as string);
 
 const { selectedYear, selectedType, currentElection, loadingConfig, configFailed } =
@@ -33,15 +33,7 @@ const sendNotFoundStatus = computed(() => !configFailed.value && !constituencies
 
 const candidatsUrl = computed(() => `/elections-senegal/${currentElection.value?.slug}/candidats`);
 
-interface SelectCoalitionPayload {
-  coalitionId: number | string;
-  coalitionSlug?: string | null;
-  constituencyId: number | string;
-  /** Slug de la circonscription de la liste (commune ou ville) */
-  constituencySlug?: string | null;
-}
-
-const handleSelectCoalition = (payload: SelectCoalitionPayload) => {
+const coalitionUrl = (payload: CoalitionLinkPayload) => {
   // La coalition d'une élection locale n'a pas toujours d'entité politique
   // rattachée (slug) : on retombe sur l'id numérique plutôt que de bloquer la navigation.
   const coalitionSegment = payload.coalitionSlug || String(payload.coalitionId);
@@ -50,9 +42,7 @@ const handleSelectCoalition = (payload: SelectCoalitionPayload) => {
   const isDepartmentList = String(payload.constituencyId) === String(constituency.value?.id);
   const communeSegment =
     !isDepartmentList && payload.constituencySlug ? `/${payload.constituencySlug}` : '';
-  router.push(
-    `/elections-senegal/${currentElection.value?.slug}/candidats/circonscription/${constituencySlug.value}${communeSegment}/coalition/${coalitionSegment}`,
-  );
+  return `/elections-senegal/${currentElection.value?.slug}/candidats/circonscription/${constituencySlug.value}${communeSegment}/coalition/${coalitionSegment}`;
 };
 
 useSeoMeta({
@@ -100,8 +90,8 @@ useSeoMeta({
       :constituency-name="constituency!.name"
       :year="selectedYear"
       :type="selectedType"
-      @close="router.push(candidatsUrl)"
-      @select-coalition="handleSelectCoalition"
+      :back-url="candidatsUrl"
+      :coalition-url="coalitionUrl"
     />
   </div>
 </template>

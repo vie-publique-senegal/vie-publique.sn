@@ -1,6 +1,6 @@
 import { readItems } from '@directus/sdk';
 import { isMunicipalConstituencyType } from '#shared/election-constituency';
-import { normalizeGeoName } from '#shared/geo-name';
+import { normalizeGeoName, slugifyGeoName } from '#shared/geo-name';
 
 // Recherche insensible à la casse, aux accents et à la ponctuation (« guediawaye » trouve
 // « Guédiawaye », « hann bel air » trouve « HANN BEL AIR »).
@@ -160,6 +160,8 @@ export default defineCachedEventHandler(
             geo_slug: geoSlugOf(geo),
             type: dept.type,
             region: geo?.region?.name ?? null,
+            // Slug de la page région (/collectivites-territoriales/regions/<slug>), même dérivation
+            region_slug: geo?.region?.name ? slugifyGeoName(geo.region.name) : null,
             seats: dept.seats,
             communes_count: attachedMunicipalities.filter((m) => m.nationale_type === 'commune')
               .length,
@@ -191,7 +193,7 @@ export default defineCachedEventHandler(
   },
   {
     maxAge: 60 * 30,
-    name: 'elections-dashboard-constituencies-v5',
+    name: 'elections-dashboard-constituencies-v6',
     getKey: (event) => {
       const query = getQuery(event);
       // Recherche normalisée (ASCII) : la clé brute était nettoyée par le stockage, si bien

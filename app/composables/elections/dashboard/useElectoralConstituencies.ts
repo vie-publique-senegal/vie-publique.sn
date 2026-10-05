@@ -6,6 +6,8 @@ export interface Constituency {
   communes_count?: number;
   coalitions_count?: number;
   nationale_type?: string;
+  region?: string | null;
+  region_slug?: string | null;
   seats?: number;
 }
 
