@@ -55,6 +55,8 @@ export interface ResultMapItem {
   parentName?: string | null
   /** Commune sans limite cartographiée : rendue en point, signalée dans l'info-bulle */
   contourUnavailable?: boolean
+  /** Ville (locales) : pas de contour propre, listée dans le détail du département seulement */
+  isCity?: boolean
   /** Indicateurs de résultat (nullables : saisis éditorialement au fil de l'eau) */
   votersCount?: number | null
   nullBallots?: number | null

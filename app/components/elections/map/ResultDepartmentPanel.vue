@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { TableResultItem } from '~/composables/useElectionMapJsonResult';
+import { formatPercent } from '#shared/format';
 
 interface DepartmentInfo {
   departement: string;
@@ -86,14 +87,30 @@ const filteredResults = computed(() => {
   );
 });
 
+// Voix saisies ? Sinon (locales 2022) seul le % de la liste gagnante est connu :
+// pas de total ni de top 3 par voix, le % remplace « 0 voix » sur chaque ligne.
+const hasVotes = computed(() => departmentResults.value.some((r) => r.votes > 0));
+
+// Les villes se traitent comme des communes mais ne comptent pas parmi elles
+const communeCount = computed(() => departmentResults.value.filter((r) => !r.isCity).length);
+const hasCities = computed(() => communeCount.value < departmentResults.value.length);
+const collectivitiesLabel = computed(() => (hasCities.value ? 'communes et villes' : 'communes'));
+
 // Top 3 communes par votes
 const topCommunes = computed(() => {
+  if (!hasVotes.value) return [];
   return [...departmentResults.value].sort((a, b) => b.votes - a.votes).slice(0, 3);
 });
 
 const formatNumber = (value?: number) => {
   if (value === undefined || value === null) return 'N/A';
   return value.toLocaleString('fr-FR');
+};
+
+// Voix si saisies, sinon % de la liste gagnante (jamais « 0 voix »)
+const scoreLabel = (item: TableResultItem): string | null => {
+  if (hasVotes.value) return `${formatNumber(item.votes)} voix`;
+  return item.winningPercentage != null ? formatPercent(item.winningPercentage) : null;
 };
 
 const medalEmoji = (index: number) => ['🥇', '🥈', '🥉'][index] || '';
@@ -154,7 +171,7 @@ const medalEmoji = (index: number) => ['🥇', '🥈', '🥉'][index] || '';
           <UInput
             v-model="searchQuery"
             icon="i-heroicons-magnifying-glass"
-            :placeholder="`Rechercher parmi ${departmentResults.length} communes...`"
+            :placeholder="`Rechercher parmi ${departmentResults.length} ${collectivitiesLabel}...`"
             size="sm"
             class="w-full"
             :ui="{ icon: { trailing: { pointer: '' } } }"
@@ -174,7 +191,7 @@ const medalEmoji = (index: number) => ['🥇', '🥈', '🥉'][index] || '';
       <!-- Contenu scrollable -->
       <div :class="['flex-1 overflow-y-auto', isMobile ? 'pb-20' : '']">
         <!-- Résumé stats -->
-        <div class="grid grid-cols-2 gap-2 p-4">
+        <div :class="['grid gap-2 p-4', hasVotes ? 'grid-cols-2' : 'grid-cols-1']">
           <div class="rounded-xl bg-gray-50 p-3 text-center dark:bg-gray-800">
             <div
               class="text-[10px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400"
@@ -182,10 +199,10 @@ const medalEmoji = (index: number) => ['🥇', '🥈', '🥉'][index] || '';
               Communes
             </div>
             <div class="mt-0.5 text-lg font-black tabular-nums text-green-700 dark:text-green-400">
-              {{ departmentResults.length }}
+              {{ communeCount }}
             </div>
           </div>
-          <div class="rounded-xl bg-gray-50 p-3 text-center dark:bg-gray-800">
+          <div v-if="hasVotes" class="rounded-xl bg-gray-50 p-3 text-center dark:bg-gray-800">
             <div
               class="text-[10px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400"
             >
@@ -252,7 +269,7 @@ const medalEmoji = (index: number) => ['🥇', '🥈', '🥉'][index] || '';
             {{
               searchQuery
                 ? `Résultats (${filteredResults.length})`
-                : `Toutes les communes (${departmentResults.length})`
+                : `Toutes les ${collectivitiesLabel} (${departmentResults.length})`
             }}
           </h3>
 
@@ -279,9 +296,10 @@ const medalEmoji = (index: number) => ['🥇', '🥈', '🥉'][index] || '';
                   {{ item.commune }}
                 </span>
                 <span
+                  v-if="scoreLabel(item)"
                   class="shrink-0 text-xs font-black tabular-nums text-green-700 dark:text-green-400"
                 >
-                  {{ formatNumber(item.votes) }} voix
+                  {{ scoreLabel(item) }}
                 </span>
               </div>
               <div class="mt-1 flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">

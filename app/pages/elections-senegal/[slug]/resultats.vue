@@ -5,6 +5,7 @@ import {
   type TableResultItem,
   useElectionMapDataResult,
 } from '~/composables/useElectionMapJsonResult';
+import { isMunicipalConstituencyType } from '#shared/election-constituency';
 
 const { selectedYear, selectedType, currentElection, loadingConfig } = useElectoralDashboard();
 
@@ -48,9 +49,12 @@ const { data: mapResultRows } = useFetch<any[]>('/api/carte/result', {
 
 const mapResultAvailable = computed(() => {
   if (!currentElection.value?.id) return false;
-  const wantedLevel = isLocalElection.value ? 'commune' : 'departement';
+  const matchesLevel = (nationaleType: string | null | undefined) =>
+    isLocalElection.value
+      ? isMunicipalConstituencyType(nationaleType)
+      : nationaleType === 'departement';
   return (mapResultRows.value || []).some(
-    (row) => row?.constituencie?.slug && row?.constituencie?.nationale_type === wantedLevel,
+    (row) => row?.constituencie?.slug && matchesLevel(row?.constituencie?.nationale_type),
   );
 });
 

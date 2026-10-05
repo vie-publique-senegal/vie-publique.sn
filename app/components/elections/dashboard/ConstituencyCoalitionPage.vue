@@ -1,14 +1,21 @@
 <script setup lang="ts">
 /**
- * Coalitions en lice dans une circonscription (élections locales). Route
- * dédiée et indexable, remplace l'ancien `/candidats?constituency=<id>`.
+ * Page « coalition dans une circonscription » (élections locales), partagée par :
+ * - `/circonscription/<département>/coalition/<coalition>` : toutes les listes du département ;
+ * - `/circonscription/<département>/<commune>/coalition/<coalition>` : la liste d'une
+ *   commune ou ville (URL propre et indexable, slug de circonscription de la commune).
+ * Remplace l'ancien `/candidats?constituency=<id>&coalition=<id>`.
+ *
+ * Résout le département ; listes et coalition sont lues par
+ * `ElectionsDashboardConstituencyCoalitionDetail`, monté une fois l'id connu (SSR).
  */
 import { useElectoralDashboard } from '~/composables/elections/dashboard/useElectoralDashboard';
 import { useElectoralConstituencies } from '~/composables/elections/dashboard/useElectoralConstituencies';
 
 const route = useRoute();
-const router = useRouter();
 const constituencySlug = computed(() => route.params.constituencySlug as string);
+const coalitionSlugParam = computed(() => route.params.coalitionSlug as string);
+const communeSlug = computed(() => (route.params.communeSlug as string | undefined) || null);
 
 const { selectedYear, selectedType, currentElection, loadingConfig } = useElectoralDashboard();
 
@@ -25,36 +32,12 @@ const loading = computed(() => loadingConfig.value || loadingConstituencies.valu
 const notFound = computed(() => !loading.value && !constituency.value);
 
 const candidatsUrl = computed(() => `/elections-senegal/${currentElection.value?.slug}/candidats`);
+const constituencyUrl = computed(
+  () => `${candidatsUrl.value}/circonscription/${constituencySlug.value}`,
+);
 
-interface SelectCoalitionPayload {
-  coalitionId: number | string;
-  coalitionSlug?: string | null;
-  constituencyId: number | string;
-}
-
-const handleSelectCoalition = (payload: SelectCoalitionPayload) => {
-  const targetSlug =
-    constituencies.value.find((c) => String(c.id) === String(payload.constituencyId))?.slug ??
-    constituencySlug.value;
-  // La coalition d'une élection locale n'a pas toujours d'entité politique
-  // rattachée (slug) : on retombe sur l'id numérique plutôt que de bloquer la navigation.
-  const coalitionSegment = payload.coalitionSlug || String(payload.coalitionId);
-  router.push(
-    `/elections-senegal/${currentElection.value?.slug}/candidats/circonscription/${targetSlug}/coalition/${coalitionSegment}`,
-  );
-};
-
-useSeoMeta({
-  title: () =>
-    constituency.value
-      ? `${constituency.value.name} · ${currentElection.value?.name || ''}`
-      : 'Circonscription | Élections Sénégal',
-  description: () =>
-    constituency.value
-      ? `Coalitions et listes en lice à ${constituency.value.name} pour ${currentElection.value?.name || 'cette élection'}.`
-      : 'Détail de circonscription électorale.',
-  ogTitle: () => constituency.value?.name || 'Circonscription',
-});
+// Titre de repli ; le composant enfant, déclaré après, le remplace par « Coalition · Lieu ».
+useSeoMeta({ title: 'Coalition | Élections Sénégal' });
 </script>
 
 <template>
@@ -71,25 +54,25 @@ useSeoMeta({
         name="i-heroicons-face-frown"
         class="mx-auto mb-4 h-16 w-16 text-gray-300 dark:text-gray-700"
       />
-      <h2 class="mb-2 text-xl font-bold text-gray-900 dark:text-white">
-        Circonscription introuvable
-      </h2>
+      <h2 class="mb-2 text-xl font-bold text-gray-900 dark:text-white">Coalition introuvable</h2>
       <p class="mb-6 text-sm text-gray-500">
-        Cette circonscription n'existe pas ou n'est pas encore publiée.
+        Cette coalition n'existe pas dans cette circonscription.
       </p>
       <UButton :to="candidatsUrl" icon="i-heroicons-arrow-left" variant="soft"
         >Retour aux candidats</UButton
       >
     </div>
 
-    <ElectionsDashboardConstituencyCoalitions
+    <ElectionsDashboardConstituencyCoalitionDetail
       v-else
       :constituency-id="constituency!.id"
       :constituency-name="constituency!.name"
+      :coalition-slug="coalitionSlugParam"
+      :commune-slug="communeSlug"
       :year="selectedYear"
       :type="selectedType"
-      @close="router.push(candidatsUrl)"
-      @select-coalition="handleSelectCoalition"
+      :candidats-url="candidatsUrl"
+      :constituency-url="constituencyUrl"
     />
   </div>
 </template>

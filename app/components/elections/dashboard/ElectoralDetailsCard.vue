@@ -97,6 +97,20 @@ const topLegislativeCoalitions = computed(() => {
      }).slice(0, 2);
 });
 
+const hasPresidentialWinner = computed(
+  () => props.election.type === 'presidential' && !!winningCoalition.value?.head_of_list,
+);
+const hasLegislativeSeats = computed(
+  () => props.election.type === 'legislative' && topLegislativeCoalitions.value.length > 0,
+);
+// « Calcul des résultats… » n'a de sens que si des chiffres de participation existent :
+// sans inscrits ni votants (ex. locales 2022), la colonne résultats est masquée.
+const hasTurnoutFigures = computed(
+  () => !!props.election.registered_voters || !!props.election.voters_count,
+);
+const showResultsColumn = computed(
+  () => hasPresidentialWinner.value || hasLegislativeSeats.value || hasTurnoutFigures.value,
+);
 
 const quickLinks = computed(() => {
   const links = [];
@@ -174,10 +188,10 @@ onUnmounted(() => {
       </div>
 
       <!-- Results Section -->
-      <div class="lg:w-[320px] bg-gray-50 dark:bg-gray-900/50 p-5 lg:p-6 border-l dark:border-gray-800 flex flex-col justify-center">
+      <div v-if="showResultsColumn" class="lg:w-[320px] bg-gray-50 dark:bg-gray-900/50 p-5 lg:p-6 border-l dark:border-gray-800 flex flex-col justify-center">
 
           <!-- Presidential Winner -->
-          <div v-if="election.type === 'presidential' && winningCoalition && winningCoalition.head_of_list" class="flex items-center gap-4">
+          <div v-if="hasPresidentialWinner && winningCoalition" class="flex items-center gap-4">
             <div class="h-12 w-12 rounded-full ring-2 ring-white dark:ring-gray-800 shadow-lg overflow-hidden shrink-0 bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
               <CmsImage
                 v-if="winningCoalition.head_of_list?.photo"
@@ -196,10 +210,11 @@ onUnmounted(() => {
           </div>
 
           <!-- Legislative Sièges -->
-          <div v-else-if="election.type === 'legislative' && topLegislativeCoalitions.length > 0" class="space-y-4">
+          <div v-else-if="hasLegislativeSeats" class="space-y-4">
               <p class="text-[9px] uppercase font-black text-gray-400 tracking-widest">Répartition des sièges</p>
               <div class="grid grid-cols-2 gap-3">
-                  <div v-for="(col, idx) in topLegislativeCoalitions" :key="col.id"
+                  <div
+v-for="(col, idx) in topLegislativeCoalitions" :key="col.id"
                     class="bg-white dark:bg-gray-950 p-3 rounded-2xl border dark:border-gray-800 shadow-sm"
                   >
                       <p class="text-[8px] font-black uppercase text-gray-400 truncate">{{ col.acronym || col.name }}</p>

@@ -51,8 +51,10 @@ app/pages/elections-senegal/
 │   │   ├── coalition/
 │   │   │   └── [coalitionSlug].vue       # Fiche coalition
 │   │   └── circonscription/
-│   │       └── [constituencySlug].vue    # Fiche circonscription
-│   │           └── coalition/[coalitionSlug].vue  # Croisement circonscription × coalition
+│   │       └── [constituencySlug]/       # Routes sœurs (pas de parent <NuxtPage>)
+│   │           ├── index.vue             # Fiche circonscription (département ; filtre ?commune_id=)
+│   │           ├── coalition/[coalitionSlug].vue  # Coalition × département (toutes ses listes)
+│   │           └── [communeSlug]/coalition/[coalitionSlug].vue  # Coalition × commune ou ville (URL indexable)
 │   ├── carte.vue                         # Carte des résultats
 │   ├── resultats.vue                     # Résultats (KPIs, classement, 2nd tour)
 │   ├── pvs.vue                           # Procès-verbaux (si pv_upload_active)
@@ -87,6 +89,7 @@ app/pages/elections-senegal/
 | `/elections-senegal/[slug]/candidats/coalition/[coalitionSlug]` | Fiche coalition |
 | `/elections-senegal/[slug]/candidats/circonscription/[constituencySlug]` | Fiche circonscription |
 | `/elections-senegal/[slug]/candidats/circonscription/[constituencySlug]/coalition/[coalitionSlug]` | Croisement circonscription × coalition |
+| `/elections-senegal/[slug]/candidats/circonscription/[constituencySlug]/[communeSlug]/coalition/[coalitionSlug]` | Liste d'une coalition dans une commune ou ville du département (`communeSlug` = slug de circonscription de la commune, ex. `dakar-ville`) |
 | `/elections-senegal/[slug]/carte` | Carte des résultats |
 | `/elections-senegal/[slug]/pvs` | Procès-verbaux |
 | `/elections-senegal/[slug]/documents` | Documents de l'élection |

@@ -32,7 +32,8 @@ export const useElectoralConstituencies = (params: {
       type,
       search,
     },
-    watch: [year, type, search],
+    // `search` est optionnel : un `undefined` dans `watch` déclenche « Invalid watch source »
+    watch: search ? [year, type, search] : [year, type],
     server: true,
     lazy: true,
   });

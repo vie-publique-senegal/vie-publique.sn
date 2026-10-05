@@ -59,6 +59,21 @@ const filterOptions = computed(() => [
   },
 ]);
 
+// Nombre de circonscriptions distinctes (et non listes / 2 : les locales n'ont pas de
+// suppléants, la moitié des listes sous-comptait les circonscriptions).
+const constituencyCount = computed(
+  () =>
+    new Set(
+      (lists.value || []).map(
+        (l) =>
+          (l.constituency as { id?: number | string } | null | undefined)?.id ??
+          l.constituency?.name ??
+          // Liste sans circonscription (liste nationale) : titulaires + suppléants = 1
+          `type:${l.type}`,
+      ),
+    ).size,
+);
+
 const { groupListsByConstituency, filterListsBySearch, filterListsByType } = useElectoralGrouping();
 
 const groupedLists = computed(() => {
@@ -83,9 +98,6 @@ const groupedLists = computed(() => {
   return groupListsByConstituency(baseLists);
 });
 
-const selectedCandidate = ref<Candidate | null>(null);
-const isModalOpen = ref(false);
-
 const candidateSlug = (candidate: Candidate) => {
   const rawSlug = (candidate as any)?.slug;
   if (typeof rawSlug === 'string' && rawSlug.trim()) {
@@ -107,16 +119,11 @@ function openCandidateProfile(candidate: Candidate) {
   const slug = candidateSlug(candidate);
   if (!slug) return;
 
-  if (props.type === 'presidential' || props.type === 'legislative') {
-    const electionSlug = currentElection.value?.slug;
-    if (electionSlug) {
-      router.push(`/elections-senegal/${electionSlug}/candidats/${slug}`);
-    }
-    return;
+  // Page profil (bio, infos…) pour tous les scrutins, locales comprises
+  const electionSlug = currentElection.value?.slug;
+  if (electionSlug) {
+    router.push(`/elections-senegal/${electionSlug}/candidats/${slug}`);
   }
-
-  selectedCandidate.value = candidate;
-  isModalOpen.value = true;
 }
 </script>
 
@@ -125,7 +132,7 @@ function openCandidateProfile(candidate: Candidate) {
     <!-- Header with Back Button -->
     <ElectionsDashboardPresidentialDetailsHeader
       :coalition-name="coalitionName"
-      :list-count="lists.length"
+      :list-count="constituencyCount"
       :type="type"
       :candidate="isPresidential && lists.length > 0 ? lists[0].candidates[0] : null"
       @close="emit('close')"
@@ -278,12 +285,5 @@ function openCandidateProfile(candidate: Candidate) {
         <h4 class="text-lg font-bold text-gray-400">Aucun résultat</h4>
         <p class="text-sm text-gray-500 max-w-xs mx-auto">Essayez de changer les filtres ou de modifier votre recherche.</p>
     </div>
-
-    <!-- Candidate Detail Modal -->
-    <ElectionsDashboardModalsCandidateDetailModal
-      v-if="isLocal"
-      v-model="isModalOpen"
-      :candidate="selectedCandidate"
-    />
   </div>
 </template>

@@ -1,5 +1,9 @@
 <script setup lang="ts">
-import { useElectionMapDataResult } from '~/composables/useElectionMapJsonResult';
+import {
+  type TableResultItem,
+  useElectionMapDataResult,
+} from '~/composables/useElectionMapJsonResult';
+import { formatPercent } from '#shared/format';
 
 interface Props {
   electionType: string;
@@ -45,11 +49,25 @@ const filteredData = computed(() => {
   );
 });
 
+// Colonne de score : les voix si elles sont saisies, sinon le % de la liste gagnante
+// (locales 2022 : classement en % sans voix), masquée si aucune des deux n'existe.
+const hasVotes = computed(() => (tableData.value || []).some((item) => item.votes > 0));
+const hasPercentages = computed(() =>
+  (tableData.value || []).some((item) => item.winningPercentage != null),
+);
+const showScore = computed(() => hasVotes.value || hasPercentages.value);
+
+const scoreOf = (item: TableResultItem): number =>
+  hasVotes.value ? item.votes : (item.winningPercentage ?? -1);
+
+const sortValue = (item: TableResultItem, field: 'commune' | 'coalition' | 'votes') =>
+  field === 'votes' ? scoreOf(item) : item[field];
+
 const sortedData = computed(() => {
   const data = [...filteredData.value];
   return data.sort((a, b) => {
-    let valA = a[sortConfig.value.field];
-    let valB = b[sortConfig.value.field];
+    let valA = sortValue(a, sortConfig.value.field);
+    let valB = sortValue(b, sortConfig.value.field);
 
     if (typeof valA === 'string') valA = valA.toLowerCase();
     if (typeof valB === 'string') valB = valB.toLowerCase();
@@ -127,10 +145,11 @@ defineExpose({
         <UIcon :name="getSortIcon('coalition')" class="h-3 w-3" />
       </button>
       <button
+        v-if="showScore"
         class="hover:text-primary-600 ml-auto flex items-center gap-1 transition-colors"
         @click="toggleSort('votes')"
       >
-        Voix
+        {{ hasVotes ? 'Voix' : 'Score' }}
         <UIcon :name="getSortIcon('votes')" class="h-3 w-3" />
       </button>
     </div>
@@ -188,10 +207,14 @@ defineExpose({
           </p>
         </div>
 
-        <!-- Votes -->
-        <div class="shrink-0 text-right">
+        <!-- Voix, ou % de la liste gagnante quand les voix ne sont pas saisies -->
+        <div v-if="showScore" class="shrink-0 text-right">
           <span class="text-sm font-black tabular-nums text-gray-900 dark:text-white">{{
-            formatNumber(item.votes)
+            hasVotes
+              ? formatNumber(item.votes)
+              : item.winningPercentage != null
+                ? formatPercent(item.winningPercentage)
+                : '—'
           }}</span>
         </div>
       </div>

@@ -1,5 +1,6 @@
 // server/api/elections/participation.get.ts
 import { readItems } from "@directus/sdk";
+import { isMunicipalConstituencyType } from "#shared/election-constituency";
 
 interface ParticipationRow {
   voters: number | null;
@@ -61,7 +62,7 @@ export default defineCachedEventHandler(
           .map((row) => {
             const constituency = row.constituency;
             const geo = resolveGeoUnit(constituency, geoSnapshot);
-            const isCommune = constituency?.nationale_type === "commune";
+            const isCommune = isMunicipalConstituencyType(constituency?.nationale_type);
             return {
               departement: isCommune ? geo?.parent?.name || null : geo?.name || constituency?.name || null,
               region: geo?.region?.name || null,
@@ -107,7 +108,7 @@ export default defineCachedEventHandler(
   },
   {
     maxAge: 5 * 60, // Cache de 5 minutes (données en temps réel)
-    name: "election-participation-v4",
+    name: "election-participation-v5",
     getKey: (event) => {
       const query = getQuery(event);
       return `election-participation-${query.election || "all"}`;

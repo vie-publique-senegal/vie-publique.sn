@@ -1,6 +1,10 @@
 // composables/useElectionMapDataResult.ts
 import type { DepartmentStats } from "~~/types/election-map-national";
 import type { ConstituencyContour } from "./useConstituencyContours";
+import {
+  isMunicipalConstituencyType,
+  municipalConstituencyLabel,
+} from "#shared/election-constituency";
 
 interface GeoData {
   id: number;
@@ -33,6 +37,8 @@ interface GeoData {
     }[];
   };
   voters?: number;
+  /** % de la liste gagnante, seule mesure disponible quand les voix ne sont pas saisies */
+  winning_percentage?: number | null;
   // Position n'est plus servie que par la réponse fallback legacy (collection carte)
   Position?: {
     type: string;
@@ -64,6 +70,10 @@ export interface TableResultItem {
   coalitionColor: string;
   headOfList: string;
   votes: number;
+  /** % de la liste gagnante (null si non saisi) */
+  winningPercentage: number | null;
+  /** Ville (locales) : traitée comme une commune, mais ne compte pas parmi les communes */
+  isCity?: boolean;
   departement?: string;
   region?: string;
 }
@@ -129,7 +139,8 @@ export function useElectionMapDataResult() {
 
          // 2. FILTER BY CONSTITUENCY TYPE
          if (electionType === 'locale') {
-             return constData.type === 'national' && constData.nationale_type === 'commune';
+             // Communes et villes (une ville se traite comme une commune)
+             return constData.type === 'national' && isMunicipalConstituencyType(constData.nationale_type);
          } else {
              return constData.type === 'national' && constData.nationale_type === 'departement';
          }
@@ -205,11 +216,15 @@ export function useElectionMapDataResult() {
 
             return {
                 id: item.id,
-                commune: constData?.name || "Inconnu",
+                commune: constData?.name
+                  ? municipalConstituencyLabel(constData.name, constData.nationale_type)
+                  : "Inconnu",
                 coalition: item.coalition_gagnante?.name || "Sans coalition",
                 coalitionColor: item.coalition_gagnante?.color || "#cccccc",
                 headOfList: headOfList,
                 votes: item.voters || 0,
+                winningPercentage: item.winning_percentage ?? null,
+                isCity: constData?.nationale_type === "ville",
                 departement: item.departement || "",
                 region: constData?.region || item.region || "",
             };

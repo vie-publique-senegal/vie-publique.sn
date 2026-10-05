@@ -20,6 +20,10 @@ import {
   type ResultMapItem,
 } from '~/config/map-elections';
 import { useConstituencyContours, contourPosition } from '~/composables/useConstituencyContours';
+import {
+  isMunicipalConstituencyType,
+  municipalConstituencyLabel,
+} from '#shared/election-constituency';
 
 interface Props {
   mode: ElectionMapMode;
@@ -157,15 +161,23 @@ const { data: items, status } = useAsyncData(
     const params: Record<string, string> = {};
     if (props.electionId) params.election = String(props.electionId);
     const rows = await $fetch<ResultRow[]>('/api/carte/result', { params });
-    const wantedLevel = props.mode === 'results-locale' ? 'commune' : 'departement';
+    // Locales : communes ET villes (une ville se traite comme une commune)
+    const matchesLevel = (nationaleType: string | null | undefined) =>
+      props.mode === 'results-locale'
+        ? isMunicipalConstituencyType(nationaleType)
+        : nationaleType === 'departement';
     return (rows || [])
       .filter(
-        (row) => row.constituencie?.geo_slug && row.constituencie?.nationale_type === wantedLevel,
+        (row) => row.constituencie?.geo_slug && matchesLevel(row.constituencie?.nationale_type),
       )
       .map((row) => ({
         slug: row.constituencie!.slug ?? row.constituencie!.geo_slug!,
         geoSlug: row.constituencie!.geo_slug!,
-        name: row.constituencie!.name,
+        name: municipalConstituencyLabel(
+          row.constituencie!.name,
+          row.constituencie!.nationale_type,
+        ),
+        isCity: row.constituencie!.nationale_type === 'ville',
         winnerName: row.coalition_gagnante?.name || '',
         winnerColor: row.coalition_gagnante?.color || '',
         headOfList: headOfList(row, props.mode),
@@ -236,17 +248,22 @@ function resetDrillDown() {
   drillDownCenter.value = null;
 }
 
+// Les villes n'ont pas de contour : hors choroplèthe et hors « majorité des communes »,
+// elles ne figurent que dans le panneau de détail de leur département.
+const localeItemsOfDept = (deptGeoSlug: string) =>
+  ((items.value || []) as ResultMapItem[]).filter((c) => c.parentGeoSlug === deptGeoSlug);
+
 const departmentAggregate = computed(() =>
   props.mode === 'results-locale'
-    ? aggregateResultsByDepartment((items.value || []) as ResultMapItem[])
+    ? aggregateResultsByDepartment(
+        ((items.value || []) as ResultMapItem[]).filter((c) => !c.isCity),
+      )
     : [],
 );
 
 const communesForDrillDown = computed(() => {
   if (!drillDownDept.value) return [];
-  return ((items.value || []) as ResultMapItem[]).filter(
-    (c) => c.parentGeoSlug === drillDownDept.value!.slug,
-  );
+  return localeItemsOfDept(drillDownDept.value.slug).filter((c) => !c.isCity);
 });
 
 const mapConfig = computed(() => {
@@ -327,13 +344,18 @@ function openDepartmentAggregate(dept: ResultMapItem) {
 /** Clic sur une commune (mode results-locale, drill-down actif) : panneau détail */
 function openCommuneDetail(commune: ResultMapItem) {
   if (!commune.parentName) return;
-  const communes = communesForDrillDown.value.map((c) => ({
+  // Villes du département en tête, puis ses communes
+  const deptItems = drillDownDept.value ? localeItemsOfDept(drillDownDept.value.slug) : [];
+  const ordered = [...deptItems.filter((c) => c.isCity), ...deptItems.filter((c) => !c.isCity)];
+  const communes = ordered.map((c) => ({
     id: c.slug,
     commune: c.name,
     coalition: c.winnerName || 'Sans coalition',
     coalitionColor: c.winnerColor || '#cccccc',
     headOfList: c.headOfList || 'Non défini',
     votes: c.voters,
+    winningPercentage: c.winningPercentage ?? null,
+    isCity: c.isCity,
     departement: c.parentName,
   }));
 
