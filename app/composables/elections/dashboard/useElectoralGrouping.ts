@@ -1,3 +1,5 @@
+import { matchesSearch } from '#shared/search';
+
 export function useElectoralGrouping() {
   const groupListsByConstituency = (lists: any[]) => {
     const groups: Record<string, any> = {};
@@ -20,12 +22,12 @@ export function useElectoralGrouping() {
     );
   };
 
+  // Nom complet du candidat, insensible à la casse et aux accents (« ndeye » trouve « Ndèye »)
   const filterListsBySearch = (lists: any[], query: string) => {
-    const lowerSearch = query.toLowerCase();
     return lists.map(list => ({
       ...list,
       candidates: list.candidates.filter((c: any) =>
-        `${c.first_name || ''} ${c.last_name || ''}`.toLowerCase().includes(lowerSearch)
+        matchesSearch(query, `${c.first_name || ''} ${c.last_name || ''}`)
       )
     })).filter(list => list.candidates.length > 0);
   };
