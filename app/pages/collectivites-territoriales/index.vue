@@ -4,6 +4,8 @@ import { normalizeGeoName } from '#shared/geo-name';
 import { useCollectionPageSeo } from '~/composables/collectivites/useCollectionPageSeo';
 import { useCommunesGeo } from '~/composables/collectivites/useCommunesGeo';
 
+useFeatureGuard('menu_collectivites_territoriales');
+
 const { siteUrl } = useSiteMetadata();
 const route = useRoute();
 const router = useRouter();

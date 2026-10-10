@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { GovernmentBrief, LeaderBrief } from '~~/types/leader-history';
 
+useFeatureGuard('menu_historique_dirigeants');
+
 const route = useRoute();
 const slug = computed(() => route.params.slug as string);
 

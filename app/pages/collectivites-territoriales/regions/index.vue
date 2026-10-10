@@ -6,6 +6,8 @@ import { repereCollectivites, repereDepartements } from '~/composables/collectiv
 import { useCollectionPageSeo } from '~/composables/collectivites/useCollectionPageSeo';
 import { useRegionsGeo } from '~/composables/collectivites/useRegionsGeo';
 
+useFeatureGuard('menu_collectivites_territoriales');
+
 // Hub des régions : le niveau qui manquait entre l'annuaire et le département.
 // Pas de recherche ici, contrairement au hub des départements — 14 lignes se
 // parcourent d'un coup d'œil, un champ de recherche serait du décor.

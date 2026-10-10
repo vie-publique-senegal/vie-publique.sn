@@ -20,6 +20,9 @@ const {
   error,
 } = useGovernment();
 
+// Le lien vers l'historique suit le flag de ses pages (404 si désactivé)
+const { isFeatureEnabled } = useFeatureFlags();
+
 // Schema GovernmentOrganization (réactif)
 const governmentSchema = computed(() => {
   const members = [primeMinister.value, ...ministers.value, ...secretariesOfState.value].filter(
@@ -436,6 +439,7 @@ const getDuration = (nominationDate: string): string => {
           class="flex flex-col gap-3 border-t border-gray-200 pt-6 dark:border-gray-700 sm:flex-row sm:items-center sm:justify-between"
         >
           <NuxtLink
+            v-if="isFeatureEnabled('menu_historique_dirigeants')"
             to="/gouvernement-senegal/historique"
             class="inline-flex items-center gap-2 text-sm font-medium text-sky-600 hover:text-sky-700 dark:text-sky-400"
           >
