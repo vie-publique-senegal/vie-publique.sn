@@ -13,6 +13,8 @@ const props = defineProps<{
   voix?: boolean;
   /** Langue du vocal (BCP-47). Jamais de valeur par défaut ici. */
   voixLang?: string;
+  /** Profil vocal du serveur, porté par la variante. Absent = voix par défaut. */
+  voixProfil?: string;
   /**
    * Échec de la LECTURE, remonté par la coquille. Affiché au même endroit que
    * celui de la dictée : l'utilisateur n'a pas à savoir laquelle des deux
@@ -77,6 +79,7 @@ const {
   effacerErreur,
 } = useDicteeVocale({
   lang: langue,
+  profil: props.voixProfil,
   onLangue: (lang) => emit('langue', lang),
   onTexte: (texte) => {
     // On COMPLÈTE, on n'écrase pas : l'utilisateur a pu commencer à taper.

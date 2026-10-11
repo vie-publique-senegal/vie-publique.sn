@@ -465,6 +465,25 @@ aurait jeté l'enregistrement à l'instant précis où l'on voulait le transcrir
 > dictée **jetait** ce qui venait d'être dit, alors que son étiquette annonçait un simple arrêt. Il
 > termine désormais, comme le fait déjà l'arrêt sur silence.
 
+### Profil vocal par variante — même RAG, autre voix (2026-10-11)
+
+Une variante peut demander à l'API une **autre paire de moteurs serveur** que celle par défaut :
+`ChatVariant.voiceProfile`, transmis tel quel comme `voice_profile` à `POST /speak` (JSON) et à
+`POST /transcribe` (formulaire). Absent, rien ne part et l'API sert sa voix par défaut.
+
+- **Seul `rag-serveur` le lit.** Web Speech reste prioritaire là où il sait faire — le français —,
+  donc un profil ne change rien à une conversation française ;
+- **le nom est opaque** (`alt` aujourd'hui) et doit être autorisé dans les `voice_profiles` du
+  tenant côté API (`rag-platform`, `docs/decisions/2026-10-11-profils-vocaux.md`). Sinon, `422` :
+  la lecture échoue avec le message habituel, le texte reste affiché ;
+- **première utilisation : `/chat/gemini-voix-kiriku`**, où `alt` désigne l'API Kiriku d'AI Hub
+  Senegal (ASR M-Kiriku, TTS Kiriku sur GPU). La variante démarre en wolof (`voiceLang: 'wo-SN'`),
+  puisque ce profil ne sert que le wolof.
+
+⚠️ **Gouvernance** : sur cette variante, l'audio et le texte lu partent chez **AI Hub Senegal** et
+non chez Google. La mention du § 5 (« transmise à notre service, qui la fait transcrire par un
+prestataire ») reste exacte, sans nommer le prestataire, comme pour Gemini.
+
 ## 7. Lecture AU FIL du flux — le cœur du sujet
 
 Lire la réponse une fois terminée ferait entendre le premier mot plusieurs secondes après l'avoir lu

@@ -105,6 +105,14 @@ export interface ChatVariant {
    * (docs/modules/chat/voix.md § Après Web Speech).
    */
   voiceLang?: string;
+  /**
+   * Profil vocal du serveur (`voice_profile` de l'API RAG) : même RAG, autre
+   * voix. Absent = la voix par défaut. Le nom est opaque et doit figurer dans
+   * les `voice_profiles` du tenant côté API, sinon `/speak` et `/transcribe`
+   * répondent 422. Ne concerne que le moteur serveur : en français, Web Speech
+   * reste prioritaire et n'en tient pas compte.
+   */
+  voiceProfile?: string;
   starterQuestions?: string[];
   /** Chargement paresseux : le code d'une variante ne pèse pas sur les autres. */
   loadAdapter?: () => Promise<ChatAdapterFactory>;

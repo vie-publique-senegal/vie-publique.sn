@@ -25,6 +25,8 @@ const CLE_ACTIF = 'vp-chat-voix-lecture-v1';
 
 export interface OptionsLectureVocale {
   lang: Ref<string> | ComputedRef<string>;
+  /** Profil vocal du serveur, fixé par la variante. Absent = voix par défaut. */
+  profil?: string;
 }
 
 export function useLectureVocale(options: OptionsLectureVocale) {
@@ -103,7 +105,11 @@ export function useLectureVocale(options: OptionsLectureVocale) {
 
         enLecture.value = true;
         try {
-          await moteurCourant.parler(phrase, { lang: options.lang.value, signal });
+          await moteurCourant.parler(phrase, {
+            lang: options.lang.value,
+            signal,
+            profil: options.profil,
+          });
         } catch (echec) {
           // Un énoncé qui échoue ne doit pas tuer la lecture : on passe au
           // suivant. Mais on le DIT — l'utilisateur a le texte sous les yeux,

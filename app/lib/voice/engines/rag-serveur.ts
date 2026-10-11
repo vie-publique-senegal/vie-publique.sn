@@ -134,10 +134,16 @@ export function creerMoteurRagServeur(deps: DependancesMoteurRag = {}): MoteurVo
       void lecteur.play().catch(() => {});
     },
 
-    async parler(texte: string, { lang, signal }: OptionsLecture) {
+    async parler(texte: string, { lang, signal, profil }: OptionsLecture) {
       if (signal.aborted) return;
 
-      const audio = await demander(`${base()}/speak`, { texte, lang, jetons: jetons(), signal });
+      const audio = await demander(`${base()}/speak`, {
+        texte,
+        lang,
+        profil,
+        jetons: jetons(),
+        signal,
+      });
       if (signal.aborted) return;
 
       // Un objet URL plutôt qu'une data-URL : le WAV pèse plusieurs centaines
@@ -160,7 +166,7 @@ export function creerMoteurRagServeur(deps: DependancesMoteurRag = {}): MoteurVo
       }
     },
 
-    async ecouter({ lang, signal, signalFin, onLangue }: OptionsEcoute) {
+    async ecouter({ lang, signal, signalFin, onLangue, profil }: OptionsEcoute) {
       const type = typeSupporte();
       if (!type) throw new ErreurVocale('non-supporte');
 
@@ -185,6 +191,7 @@ export function creerMoteurRagServeur(deps: DependancesMoteurRag = {}): MoteurVo
         const { texte, langue } = await transcrire(audio, {
           base: base(),
           lang,
+          profil,
           jetons: jetons(),
           signal,
         });
@@ -254,6 +261,7 @@ async function transcrire(
   contexte: {
     base: string;
     lang: string;
+    profil?: string;
     jetons: ReturnType<typeof creerGestionnaireJeton>;
     signal: AbortSignal;
   },
@@ -263,6 +271,7 @@ async function transcrire(
   // type déclaré ET sur les octets de tête, jamais sur l'extension.
   corps.append('file', audio, 'dictee');
   if (contexte.lang) corps.append('lang', contexte.lang);
+  if (contexte.profil) corps.append('voice_profile', contexte.profil);
 
   let jeton: string;
   try {
@@ -303,6 +312,7 @@ async function demander(
   contexte: {
     texte: string;
     lang: string;
+    profil?: string;
     jetons: ReturnType<typeof creerGestionnaireJeton>;
     signal: AbortSignal;
   },
@@ -319,7 +329,11 @@ async function demander(
     reponse = await fetch(url, {
       method: 'POST',
       headers: { Authorization: `Bearer ${jeton}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: contexte.texte, lang: contexte.lang || undefined }),
+      body: JSON.stringify({
+        text: contexte.texte,
+        lang: contexte.lang || undefined,
+        voice_profile: contexte.profil || undefined,
+      }),
       signal: contexte.signal,
     });
   } catch (erreur) {

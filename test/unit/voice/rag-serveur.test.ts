@@ -167,6 +167,61 @@ describe('moteur de dictée serveur', () => {
     expect(corps.get('file')).toBeInstanceOf(Blob);
   });
 
+  it('transmet le profil vocal de la variante à /transcribe, et seulement s’il existe', async () => {
+    const fetchSimule = reponses({});
+    vi.stubGlobal('fetch', fetchSimule);
+
+    for (const profil of ['alt', undefined]) {
+      const fin = new AbortController();
+      bientot(fin);
+      await moteur().ecouter({
+        lang: 'wo-SN',
+        signal: new AbortController().signal,
+        signalFin: fin.signal,
+        profil,
+      });
+    }
+
+    const corps = fetchSimule.mock.calls
+      .filter(([url]) => String(url).endsWith('/transcribe'))
+      .map(([, init]) => (init as RequestInit).body as FormData);
+    expect(corps[0].get('voice_profile')).toBe('alt');
+    // Sans profil, le champ n'existe pas : la voix par défaut reste celle de l'API.
+    expect(corps[1].has('voice_profile')).toBe(false);
+  });
+
+  it('transmet le profil vocal de la variante à /speak', async () => {
+    class FauxAudio {
+      src = '';
+      lang = '';
+      onended: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+      pause = vi.fn();
+      play = vi.fn(async () => {
+        queueMicrotask(() => this.onended?.());
+      });
+    }
+    vi.stubGlobal('Audio', FauxAudio);
+    vi.stubGlobal('URL', { createObjectURL: () => 'blob:x', revokeObjectURL: () => {} });
+    const fetchSimule = vi.fn(async (url: string) =>
+      String(url).endsWith('/session')
+        ? ({ ok: true, json: async () => ({ token: 'j', expires_in: 900 }) } as Response)
+        : ({ ok: true, status: 200, blob: async () => new Blob(['son']) } as Response),
+    );
+    vi.stubGlobal('fetch', fetchSimule);
+
+    const m = moteur();
+    const signal = new AbortController().signal;
+    await m.parler('Naka nga def.', { lang: 'wo-SN', signal, profil: 'alt' });
+    await m.parler('Naka nga def.', { lang: 'wo-SN', signal });
+
+    const corps = fetchSimule.mock.calls
+      .filter(([url]) => String(url).endsWith('/speak'))
+      .map(([, init]) => JSON.parse(String((init as RequestInit).body)));
+    expect(corps[0]).toMatchObject({ text: 'Naka nga def.', voice_profile: 'alt' });
+    expect(corps[1]).not.toHaveProperty('voice_profile');
+  });
+
   it('rapporte la langue entendue — c’est elle qui commande toute la suite', async () => {
     vi.stubGlobal('fetch', reponses({ corps: { text: 'Naka nga def', lang: 'wo' } }));
     const fin = new AbortController();
