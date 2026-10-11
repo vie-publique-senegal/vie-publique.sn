@@ -183,6 +183,47 @@ async function envoyer(question: string) {
   let termine = false;
   // Une nouvelle question annule la lecture de la précédente.
   lecture.arreter();
+
+  /**
+   * ⚠️ **Lire à voix haute IMPOSE la langue de l'échange.**
+   *
+   * Sans cette déclaration, « Auto » laissait le modèle choisir la langue de sa
+   * réponse. C'est le bon défaut pour RÉPONDRE — et ce n'en est pas un pour
+   * LIRE : personne ne connaissait alors cette langue, ni le widget ni l'API,
+   * dont la consigne dit seulement « réponds dans la langue de la question »
+   * (`prompts.py` de rag-platform). Le moteur de lecture retombait donc sur
+   * `voiceLang`, et une réponse wolof se faisait prononcer par une voix
+   * française — du charabia, là où l'absence de son aurait été honnête.
+   *
+   * On ne devine donc pas après coup, on décide avant : dès que le son est
+   * actif, la langue de l'échange est celle du sélecteur, et la réponse ne peut
+   * plus être dans une langue que la lecture ne sait pas servir.
+   *
+   * ⚠️ L'autre issue était de **détecter** la langue de la réponse ici même.
+   * Elle est écartée depuis le 2026-09-05, et pas par paresse : le cas central
+   * de ce corpus est du wolof truffé de termes administratifs français, c'est-à-
+   * dire précisément ce sur quoi une détection se trompe.
+   *
+   * La déclaration est **visible** : le sélecteur cesse d'afficher « Auto »,
+   * donc l'utilisateur lit la langue qu'il vient de s'imposer et peut la changer
+   * d'un geste. Une imposition silencieuse aurait fait mentir l'interface.
+   *
+   * ⚠️ **Les trois conditions, et aucune n'est décorative.** `actif` est persisté
+   * en `localStorage`, indépendamment du drapeau Directus et du moteur : sans
+   * `vocalAutorise` ni `disponible`, un visiteur qui a activé le son un jour
+   * verrait sa langue imposée alors que plus rien ne lit — donc une réponse
+   * wolof devenue française, sans bouton pour l'expliquer. On n'impose la langue
+   * que là où la lecture a effectivement lieu, ce sont les mêmes conditions que
+   * l'affichage du bouton.
+   */
+  if (
+    vocalAutorise.value &&
+    lecture.disponible.value &&
+    lecture.actif.value &&
+    langueEchange.value === null
+  ) {
+    langueEchange.value = langueParDefaut.value;
+  }
   await defilerEnBas();
 
   try {
@@ -191,7 +232,8 @@ async function envoyer(question: string) {
     for await (const evenement of client.send(question, {
       conversationId: conversationId.value ?? undefined,
       // Omise tant que rien ne l'a déclarée : l'API répond alors dans la langue
-      // de la question.
+      // de la question. ⚠️ Activer la lecture la déclare — voir ci-dessus, sans
+      // quoi on lirait une réponse dont on ignore la langue.
       lang: langueEchange.value ?? undefined,
       signal: abandon.signal,
     })) {

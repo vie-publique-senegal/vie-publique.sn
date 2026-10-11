@@ -94,6 +94,23 @@ moteurLecture(lang)    →  web-speech en fr, rag-serveur en wo
   n'est **pas envoyé** et l'API répond dans la langue de la question — le
   comportement historique. Envoyer un défaut ferait répondre en français à un
   visiteur qui écrit autrement.
+- **⚠️ Sauf si le son est actif : lire à voix haute IMPOSE la langue** (depuis le
+  2026-10-11). « Auto » est le bon défaut pour **répondre** et n'en est pas un
+  pour **lire** : personne ne connaît alors la langue de la réponse, ni le widget
+  ni l'API, dont la consigne dit seulement « réponds dans la langue de la
+  question ». La lecture retombait donc sur `voiceLang` et une réponse wolof se
+  faisait prononcer par une voix française — du charabia. Dès que le son est
+  actif, `envoyer()` déclare la langue de l'échange depuis le sélecteur : réponse
+  et lecture ne peuvent plus se contredire. La déclaration est **visible**, le
+  sélecteur cessant d'afficher « Auto ».
+  ⚠️ Trois conditions, parce que `actif` est persisté en `localStorage`
+  indépendamment du drapeau `chat_voice` et du moteur : on n'impose la langue que
+  là où la lecture a lieu.
+  ⚠️ **Reste un angle mort, plus étroit** : activer le son **après** une réponse
+  en langue non déclarée en reprend la lecture avec le moteur du défaut. La
+  réponse est déjà écrite, sa langue n'a jamais été constatée, et la reprise la
+  devine — c'est le prix de la reprise ajoutée le 2026-09-05, qu'un bouton muet
+  avait rendue nécessaire.
 - **Le sélecteur affiche `Auto / Français / Wolof`** et la dictée le préremplit
   avec ce qu'elle a entendu.
 - **Aucune détection dans le navigateur.** Redétecter la langue d'un texte que
