@@ -135,6 +135,11 @@ describe('moteur de dictée serveur', () => {
     m.amorcer!();
     expect(instances).toHaveLength(1);
     expect(instances[0].src).toContain('data:audio/wav');
+    // Le silence doit contenir des échantillons : un WAV réduit à son en-tête
+    // n'est pas joué par Safari, et l'élément n'est alors jamais déverrouillé.
+    const octets = Uint8Array.from(atob(instances[0].src.split(',')[1]!), (c) => c.charCodeAt(0));
+    const vue = new DataView(octets.buffer);
+    expect(vue.getUint32(40, true)).toBeGreaterThan(0); // taille du chunk `data`
 
     await m.parler('Naka nga def.', { lang: 'wo-SN', signal: new AbortController().signal });
 

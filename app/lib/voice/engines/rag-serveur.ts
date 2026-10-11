@@ -45,15 +45,22 @@ const TYPES_CANDIDATS = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'a
 const DUREE_MAX_MS = 90_000;
 
 /**
- * WAV vide de 44 octets, joué DANS le geste utilisateur pour débloquer l'audio.
+ * 50 ms de silence (WAV 8 kHz, 16 bits), joué DANS le geste utilisateur pour
+ * débloquer l'audio.
  *
- * iOS n'autorise la lecture que si le premier `play()` d'un élément part d'une
- * interaction. Le nôtre part après l'appel réseau à `/speak` — trop tard. On
- * déverrouille donc un élément au clic, et on le RÉUTILISE ensuite : une fois
- * autorisé, il le reste.
+ * iOS et Safari n'autorisent la lecture que si le premier `play()` d'un élément
+ * part d'une interaction. Le nôtre part après l'appel réseau à `/speak` — trop
+ * tard. On déverrouille donc un élément au clic, et on le RÉUTILISE ensuite :
+ * une fois autorisé, il le reste.
+ *
+ * ⚠️ **Le silence doit contenir des échantillons.** Jusqu'au 2026-10-11 c'était
+ * un WAV de 44 octets, en-tête seul : Safari ne le jouait pas, l'élément n'était
+ * jamais déverrouillé, et la lecture ne tenait que si `/speak` répondait dans la
+ * seconde d'activation qui suit le clic. D'où un symptôme trompeur — la voix
+ * Kiriku (0,8 s) lisait, la voix par défaut (9 à 13 s sur CPU) échouait, sur
+ * Safari macOS comme iOS ; Chrome, plus permissif, lisait les deux.
  */
-const SILENCE =
-  'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAgD4AAAB9AAACABAAZGF0YQAAAAA=';
+const SILENCE = `data:audio/wav;base64,UklGRkQDAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YSADAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==`;
 
 /** Messages d'erreur de l'API qu'il vaut la peine de distinguer pour l'utilisateur. */
 function codeDepuisStatut(statut: number) {
