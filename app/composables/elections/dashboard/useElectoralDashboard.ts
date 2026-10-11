@@ -72,6 +72,11 @@ export const useElectoralDashboard = () => {
     key: 'election-dashboard-config',
     server: true,
   });
+  // L'API répond 200 `{ …repli, error: true }` quand le CMS échoue : à distinguer d'une
+  // élection réellement absente (sert à ne pas renvoyer de 404 HTTP sur une panne)
+  const configFailed = computed(
+    () => !!configError.value || !!(config.value as { error?: boolean } | null)?.error,
+  );
 
   // Initialiser avec la dernière élection "completed" par défaut
   // SEULEMENT si pas déjà défini ET si on n'est PAS sur une page élection par slug
@@ -218,5 +223,6 @@ export const useElectoralDashboard = () => {
     currentElectionDocuments,
     loadingConfig,
     configError,
+    configFailed,
   };
 };

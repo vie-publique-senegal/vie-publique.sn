@@ -1,5 +1,10 @@
 <script setup lang="ts">
+import { matchesSearch } from '#shared/search';
 import { useElectoralDashboardLists } from '~/composables/elections/dashboard/useElectoralDashboardLists';
+import {
+  isMunicipalConstituencyType,
+  municipalConstituencyLabel,
+} from '#shared/election-constituency';
 
 const props = defineProps<{
   constituencyId: string | number;
@@ -22,20 +27,37 @@ const { lists, loading } = useElectoralDashboardLists({
   constituencyId: computed(() => String(props.constituencyId)),
 });
 
+// « Ville de DAKAR » : les noms bruts des listes sont en capitales, le libellé suit
+const constituencyLabel = (c?: { name?: string; nationale_type?: string | null } | null) => {
+  const name = c?.name || '';
+  const label = municipalConstituencyLabel(name, c?.nationale_type);
+  return name && name === name.toUpperCase() ? label.toUpperCase() : label;
+};
+
 const communes = computed(() => {
   if (!lists.value) return [];
-  const uniqueCommunes = new Map();
+  const uniqueCommunes = new Map<string | number, { name: string; isCity: boolean }>();
   lists.value.forEach((list: any) => {
+    // Communes et villes (une ville se traite comme une commune) ; villes en tête
     if (
       list.constituency &&
-      (list.constituency.type === 'commune' || list.constituency.nationale_type === 'commune')
+      (list.constituency.type === 'commune' ||
+        isMunicipalConstituencyType(list.constituency.nationale_type))
     ) {
-      uniqueCommunes.set(list.constituency.id, list.constituency.name);
+      uniqueCommunes.set(list.constituency.id, {
+        name: list.constituency.name,
+        isCity: list.constituency.nationale_type === 'ville',
+      });
     }
   });
   return Array.from(uniqueCommunes.entries())
-    .map(([id, name]) => ({ id, name, label: name }))
-    .sort((a, b) => a.name.localeCompare(b.name));
+    .map(([id, { name, isCity }]) => ({
+      id,
+      name,
+      isCity,
+      label: constituencyLabel({ name, nationale_type: isCity ? 'ville' : null }),
+    }))
+    .sort((a, b) => Number(b.isCity) - Number(a.isCity) || a.name.localeCompare(b.name));
 });
 
 watch(selectedCommuneId, (newId) => {
@@ -64,11 +86,8 @@ const filteredLists = computed(() => {
   }
 
   if (searchQuery.value) {
-    const q = searchQuery.value.toLowerCase();
-    result = result.filter(
-      (l: any) =>
-        l.coalition?.name?.toLowerCase().includes(q) ||
-        l.coalition?.acronym?.toLowerCase().includes(q),
+    result = result.filter((l: any) =>
+      matchesSearch(searchQuery.value, l.coalition?.name, l.coalition?.acronym),
     );
   }
 
@@ -107,6 +126,8 @@ const selectCoalition = (list: any) => {
       coalitionId: list.coalition.id,
       coalitionSlug: list.coalition.political_entity?.slug || null,
       constituencyId: targetConstituencyId,
+      // Slug de la commune/ville de la liste : URL propre de la page coalition
+      constituencySlug: list.constituency?.slug || null,
     });
   }
 };
@@ -133,7 +154,7 @@ const selectCoalition = (list: any) => {
               <div class="bg-primary-50 dark:bg-primary-900/20 rounded-lg p-1.5">
                 <UIcon name="i-heroicons-map-pin" class="text-primary-600 h-4 w-4" />
               </div>
-              <h2 class="text-xl font-black uppercase tracking-tighter md:text-2xl">
+              <h2 class="text-xl font-bold tracking-tight md:text-2xl">
                 {{ constituencyName }}
               </h2>
             </div>
@@ -190,7 +211,7 @@ const selectCoalition = (list: any) => {
     >
       <div
         v-for="list in uniqueCoalitions"
-        :key="list.coalition?.id || list.id"
+        :key="`${list.coalition?.id || list.id}-${list.constituency?.id ?? ''}`"
         class="hover:ring-primary-500 group relative cursor-pointer overflow-hidden rounded-2xl border bg-white shadow-sm transition-all hover:shadow-lg hover:ring-2 dark:border-gray-800 dark:bg-gray-900"
         @click="selectCoalition(list)"
       >
@@ -208,7 +229,7 @@ const selectCoalition = (list: any) => {
           </div>
           <div>
             <p class="text-primary-600 mb-1 text-xs font-bold uppercase tracking-wider">
-              {{ list.constituency?.name }}
+              {{ constituencyLabel(list.constituency) }}
             </p>
             <h3 class="line-clamp-2 text-lg font-bold leading-tight text-gray-900 dark:text-white">
               {{ list.coalition?.name || list.name }}

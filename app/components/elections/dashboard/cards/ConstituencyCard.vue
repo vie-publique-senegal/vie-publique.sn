@@ -75,7 +75,7 @@ const labelByType = computed(() => {
 
     <!-- Nom de la circonscription -->
     <div class="mb-4">
-      <h3 class="text-base font-black text-gray-900 dark:text-white group-hover:text-primary-600 transition-colors leading-tight mb-1">
+      <h3 class="text-base font-bold text-gray-900 dark:text-white group-hover:text-primary-600 transition-colors leading-tight mb-1">
         {{ constituency.name }}
       </h3>
     </div>
@@ -85,13 +85,13 @@ const labelByType = computed(() => {
       <!-- Communes Count (Only if department) -->
       <div v-if="constituency.communes_count" class="flex flex-col">
           <span class="text-[10px] text-gray-400 uppercase font-semibold">Communes</span>
-          <span class="text-xl font-black text-gray-900 dark:text-gray-100 leading-none mt-1">{{ constituency.communes_count }}</span>
+          <span class="text-xl font-bold text-gray-900 dark:text-gray-100 leading-none mt-1">{{ constituency.communes_count }}</span>
       </div>
 
       <!-- Coalitions Count -->
       <div class="flex flex-col items-end flex-1 pr-6">
           <span class="text-[10px] text-gray-400 uppercase font-semibold">Listes</span>
-          <span class="text-xl font-black text-primary-600 dark:text-primary-400 leading-none mt-1">{{ constituency.coalitions_count }}</span>
+          <span class="text-xl font-bold text-primary-600 dark:text-primary-400 leading-none mt-1">{{ constituency.coalitions_count }}</span>
       </div>
     </div>
 

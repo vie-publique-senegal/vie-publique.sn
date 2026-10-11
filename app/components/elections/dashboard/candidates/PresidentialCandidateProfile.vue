@@ -438,7 +438,7 @@ const showPdfViewer = ref(false);
                 </p>
                 <p
                   v-if="video.date"
-                  class="mt-1 text-[10px] font-black uppercase tracking-widest text-gray-400"
+                  class="mt-1 text-[10px] font-bold uppercase tracking-widest text-gray-400"
                 >
                   Diffusé le {{ formatDate(video.date) }}
                 </p>

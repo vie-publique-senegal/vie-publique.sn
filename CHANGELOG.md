@@ -6,6 +6,10 @@ l'historique git (`git log --grep="^feat"`, Conventional Commits).
 
 ## 2026
 
+### Octobre 2026
+
+- **Élections locales : une page par liste communale** — chaque liste des locales a son adresse propre (`/elections-senegal/<élection>/candidats/circonscription/<département>/<commune>/coalition/<coalition>`), indexable par les moteurs de recherche, avec ses candidats et un lien vers le profil de chacun. Les villes (Dakar, Pikine, Guédiawaye, Rufisque, Thiès) sont traitées comme des communes dans les listes, les résultats et la carte.
+
 ### Septembre 2026
 
 - **Page « Tous nos liens »** (`/liens`) : les produits de Vie Publique (site, application mobile Android et iPhone, chaîne YouTube, newsletter, réseaux sociaux) réunis sur notre propre site, à la place de Linktree. C'est la nouvelle cible du QR code (t-shirts, supports de com) et des liens en bio.

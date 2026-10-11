@@ -1,4 +1,10 @@
 import { readItems } from '@directus/sdk';
+import { isMunicipalConstituencyType } from '#shared/election-constituency';
+import { normalizeGeoName } from '#shared/geo-name';
+
+// Recherche insensible à la casse, aux accents et à la ponctuation (« guediawaye » trouve
+// « Guédiawaye », « hann bel air » trouve « HANN BEL AIR »).
+const searchKey = (value: unknown) => normalizeGeoName(typeof value === 'string' ? value : '');
 
 export default defineCachedEventHandler(
   async (event) => {
@@ -57,8 +63,10 @@ export default defineCachedEventHandler(
       const departments = allConstituencies.filter(
         (c: any) => c.type === 'national' && c.nationale_type === 'departement',
       );
-      const communes = allConstituencies.filter(
-        (c: any) => c.type === 'national' && c.nationale_type === 'commune',
+      // Circonscriptions municipales : communes ET villes (locales), rattachées à leur
+      // département de la même façon. Les villes ne comptent pas dans `communes_count`.
+      const municipalities = allConstituencies.filter(
+        (c: any) => c.type === 'national' && isMunicipalConstituencyType(c.nationale_type),
       );
 
       // Hiérarchie commune → département via l'instantané : on remonte au premier ANCÊTRE
@@ -74,14 +82,14 @@ export default defineCachedEventHandler(
         return deptEntity ? (deptIdByGeoEntity.get(deptEntity.id) ?? null) : null;
       };
 
-      const deptCommunesMap = new Map<string, any[]>();
-      communes.forEach((commune: any) => {
-        const deptId = departmentOf(commune);
+      const deptMunicipalitiesMap = new Map<string, any[]>();
+      municipalities.forEach((municipality: any) => {
+        const deptId = departmentOf(municipality);
         if (deptId) {
-          if (!deptCommunesMap.has(deptId)) {
-            deptCommunesMap.set(deptId, []);
+          if (!deptMunicipalitiesMap.has(deptId)) {
+            deptMunicipalitiesMap.set(deptId, []);
           }
-          deptCommunesMap.get(deptId)?.push(commune);
+          deptMunicipalitiesMap.get(deptId)?.push(municipality);
         }
       });
 
@@ -119,7 +127,10 @@ export default defineCachedEventHandler(
           constitDef.type === 'diaspora'
         ) {
           targetDeptId = constitDef.id;
-        } else if (constitDef.type === 'national' && constitDef.nationale_type === 'commune') {
+        } else if (
+          constitDef.type === 'national' &&
+          isMunicipalConstituencyType(constitDef.nationale_type)
+        ) {
           targetDeptId = departmentOf(constitDef);
         }
 
@@ -138,7 +149,7 @@ export default defineCachedEventHandler(
 
       const results = departments
         .map((dept: any) => {
-          const attachedCommunes = deptCommunesMap.get(dept.id) || [];
+          const attachedMunicipalities = deptMunicipalitiesMap.get(dept.id) || [];
           const uniqueCoalitions = deptCoalitionsMap.get(dept.id) || new Set();
           const geo = resolveGeoUnit(dept, geoSnapshot);
 
@@ -150,20 +161,20 @@ export default defineCachedEventHandler(
             type: dept.type,
             region: geo?.region?.name ?? null,
             seats: dept.seats,
-            communes_count: attachedCommunes.length,
+            communes_count: attachedMunicipalities.filter((m) => m.nationale_type === 'commune')
+              .length,
             coalitions_count: uniqueCoalitions.size,
           };
         })
         .sort((a: any, b: any) => a.name.localeCompare(b.name));
 
-      const search = query.search as string;
+      const search = searchKey(query.search);
       if (search) {
-        const lowercaseSearch = search.toLowerCase();
         return results.filter((dept: any) => {
-          const matchDept = dept.name.toLowerCase().includes(lowercaseSearch);
-          const attachedCommunes = deptCommunesMap.get(dept.id) || [];
-          const matchCommune = attachedCommunes.some((c) =>
-            c.name.toLowerCase().includes(lowercaseSearch),
+          const matchDept = searchKey(dept.name).includes(search);
+          const attachedMunicipalities = deptMunicipalitiesMap.get(dept.id) || [];
+          const matchCommune = attachedMunicipalities.some((c) =>
+            searchKey(c.name).includes(search),
           );
           return matchDept || matchCommune;
         });
@@ -180,10 +191,12 @@ export default defineCachedEventHandler(
   },
   {
     maxAge: 60 * 30,
-    name: 'elections-dashboard-constituencies-v3',
+    name: 'elections-dashboard-constituencies-v5',
     getKey: (event) => {
       const query = getQuery(event);
-      return `constituencies-${query.year}-${query.type}-${query.search || 'none'}`;
+      // Recherche normalisée (ASCII) : la clé brute était nettoyée par le stockage, si bien
+      // que « guédiawaye » et « guediawaye » partageaient la même entrée de cache.
+      return `constituencies-${query.year}-${query.type}-${searchKey(query.search).replace(/ /g, '_') || 'none'}`;
     },
   },
 );

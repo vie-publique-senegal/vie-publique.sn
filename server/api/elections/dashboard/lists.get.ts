@@ -121,7 +121,10 @@ export default defineCachedEventHandler(
         "is_substitute",
         "constituency.id",
         "constituency.name",
+        "constituency.slug",
         "constituency.type",
+        // Nom d'affichage (« Biscuiterie » plutôt que « BISCUITERIE ») via le référentiel
+        ...GEO_UNIT_FIELDS.map((f) => `constituency.${f}`),
         "constituency.nationale_type",
         "coalition.id",
         "coalition.color",
@@ -178,11 +181,23 @@ export default defineCachedEventHandler(
         }
       }
 
+      // Nom d'affichage de la circonscription (graphie du référentiel, `name` restant la
+      // graphie brute des fichiers électoraux) ; la FK geo_entity n'est pas exposée.
+      // Instantané en cache ; vide (repli sur `name`) si le référentiel est indisponible
+      const displaySnapshot = await getGeoSnapshot();
+      const withDisplayName = (constituency: Record<string, unknown> | null) => {
+        if (!constituency) return constituency;
+        const { geo_entity: _geoEntity, ...rest } = constituency;
+        const geo = resolveGeoUnit(constituency, displaySnapshot);
+        return { ...rest, display_name: geo?.name || constituency.name };
+      };
+
       // Identité de la coalition via son entité politique (fallback legacy)
       const normalizedLists = (lists || []).map((list: any) => {
         const programs = programsByCoalition.get(list?.coalition?.id) || [];
         return {
           ...list,
+          constituency: withDisplayName(list?.constituency),
           coalition: list?.coalition
             ? { ...mergeEntityIdentity(list.coalition), programs }
             : list?.coalition,

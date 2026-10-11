@@ -6,7 +6,7 @@
           <UIcon name="i-heroicons-lock-closed" class="h-5 w-5 text-primary" />
         </div>
         <div>
-          <h2 class="text-base font-black uppercase tracking-tight text-gray-900 dark:text-white">
+          <h2 class="text-base font-bold tracking-tight text-gray-900 dark:text-white">
             Connexion Observateur
           </h2>
           <p class="text-xs text-gray-500 dark:text-gray-400">
@@ -80,7 +80,7 @@
             type="button"
             color="gray"
             variant="soft"
-            class="flex-1 font-black uppercase tracking-widest text-center justify-center"
+            class="flex-1 font-bold uppercase tracking-widest text-center justify-center"
             @click="isOpen = false"
           >
             Annuler
@@ -88,7 +88,7 @@
           <UButton
             type="submit"
             color="primary"
-            class="flex-1 font-black uppercase tracking-widest text-center justify-center"
+            class="flex-1 font-bold uppercase tracking-widest text-center justify-center"
             :loading="loading"
             :disabled="loading || lockoutSecondsLeft > 0"
           >

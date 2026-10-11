@@ -199,6 +199,7 @@ useHead({
           name="i-heroicons-user-circle"
           class="mx-auto mb-4 h-16 w-16 text-gray-300 dark:text-gray-700"
         />
+        <AppResponseStatus :code="404" />
         <h2 class="mb-2 text-xl font-bold text-gray-900 dark:text-white">Profil introuvable</h2>
         <p class="mb-6 text-sm text-gray-500">
           Le candidat demandé n'existe pas ou n'est pas encore publié pour cette élection.

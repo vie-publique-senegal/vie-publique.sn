@@ -38,4 +38,6 @@ export interface ElectionDetails {
   campaign_start_date: string | null;
   campaign_end_date: string | null;
   election_date_round_2?: string | null;
+  registered_voters?: number | null;
+  voters_count?: number | null;
 }

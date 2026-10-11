@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { matchesSearch } from '#shared/search';
 /**
  * Diaspora structurée par les 8 zones électorales officielles (circonscriptions
  * de l'étranger du référentiel), avec drill-down zone → pays → page pays.
@@ -83,8 +84,7 @@ const countryRows = computed(() => {
     places: parseInt(c.countDistinct?.polling_place || '0'),
   }));
   if (searchQuery.value) {
-    const q = searchQuery.value.toLowerCase();
-    rows = rows.filter((r) => r.country.toLowerCase().includes(q));
+    rows = rows.filter((r) => matchesSearch(searchQuery.value, r.country));
   }
   return rows.sort((a, b) => b.voters - a.voters);
 });

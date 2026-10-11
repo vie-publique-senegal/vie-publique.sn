@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { matchesSearch } from '#shared/search';
 interface MunicipalityInfo {
   municipality: string;
   voters: number;
@@ -56,9 +57,10 @@ watch(
 // Communes filtrées par recherche
 const filteredCommunes = computed(() => {
   if (!props.department?.municipalities?.length) return [];
-  const q = searchQuery.value.trim().toLowerCase();
-  if (!q) return props.department.municipalities;
-  return props.department.municipalities.filter((c) => c.municipality.toLowerCase().includes(q));
+  if (!searchQuery.value.trim()) return props.department.municipalities;
+  return props.department.municipalities.filter((c) =>
+    matchesSearch(searchQuery.value, c.municipality),
+  );
 });
 
 // Top 3 communes par nombre d'électeurs
@@ -128,7 +130,7 @@ const getDepartmentDetailUrl = () => {
       >
         <div class="mb-3 flex items-center justify-between">
           <div>
-            <h2 class="text-lg font-black uppercase tracking-tight text-gray-900 dark:text-white">
+            <h2 class="text-lg font-bold tracking-tight text-gray-900 dark:text-white">
               {{ department.departement }}
             </h2>
             <p class="text-sm text-gray-500 dark:text-gray-400">Région {{ department.region }}</p>
@@ -174,7 +176,7 @@ const getDepartmentDetailUrl = () => {
             >
               Électeurs
             </div>
-            <div class="mt-0.5 text-lg font-black tabular-nums text-green-700 dark:text-green-400">
+            <div class="mt-0.5 text-lg font-bold tabular-nums text-green-700 dark:text-green-400">
               {{ formatNumber(department.totalVoters) }}
             </div>
           </div>
@@ -184,7 +186,7 @@ const getDepartmentDetailUrl = () => {
             >
               Communes
             </div>
-            <div class="mt-0.5 text-lg font-black tabular-nums text-green-700 dark:text-green-400">
+            <div class="mt-0.5 text-lg font-bold tabular-nums text-green-700 dark:text-green-400">
               {{ department.municipalityCount }}
             </div>
           </div>
@@ -194,7 +196,7 @@ const getDepartmentDetailUrl = () => {
             >
               Lieux de vote
             </div>
-            <div class="mt-0.5 text-lg font-black tabular-nums text-green-700 dark:text-green-400">
+            <div class="mt-0.5 text-lg font-bold tabular-nums text-green-700 dark:text-green-400">
               {{ formatNumber(department.totalPlaces) }}
             </div>
           </div>
@@ -204,7 +206,7 @@ const getDepartmentDetailUrl = () => {
             >
               Bureaux
             </div>
-            <div class="mt-0.5 text-lg font-black tabular-nums text-green-700 dark:text-green-400">
+            <div class="mt-0.5 text-lg font-bold tabular-nums text-green-700 dark:text-green-400">
               {{ formatNumber(department.totalOffices) }}
             </div>
           </div>
@@ -212,9 +214,7 @@ const getDepartmentDetailUrl = () => {
 
         <!-- Top 3 communes -->
         <div v-if="topCommunes.length > 0 && !searchQuery" class="px-4 pb-3">
-          <h3
-            class="mb-2 text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400"
-          >
+          <h3 class="mb-2 text-xs font-bold tracking-wider text-gray-500 dark:text-gray-400">
             Top 3 communes par électeurs
           </h3>
           <div class="space-y-1.5">
@@ -235,7 +235,7 @@ const getDepartmentDetailUrl = () => {
                   {{ commune.municipality }}
                 </span>
               </div>
-              <span class="text-sm font-black tabular-nums text-green-700 dark:text-green-400">
+              <span class="text-sm font-bold tabular-nums text-green-700 dark:text-green-400">
                 {{ formatNumber(commune.voters) }}
               </span>
             </div>
@@ -247,9 +247,7 @@ const getDepartmentDetailUrl = () => {
 
         <!-- Liste des communes filtrées -->
         <div v-if="hasCommuneData" class="px-4 py-3">
-          <h3
-            class="mb-2 text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400"
-          >
+          <h3 class="mb-2 text-xs font-bold tracking-wider text-gray-500 dark:text-gray-400">
             {{
               searchQuery
                 ? `Résultats (${filteredCommunes.length})`

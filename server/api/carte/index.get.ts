@@ -1,4 +1,5 @@
 import { readItems, aggregate } from '@directus/sdk';
+import { isMunicipalConstituencyType } from '#shared/election-constituency';
 
 interface StationAggregateRow {
   electoral_file: number | string;
@@ -150,7 +151,7 @@ export default defineCachedEventHandler(
       return results.map((row) => {
         const constituency = row.constituency;
         const geo = resolveGeoUnit(constituency, geoSnapshot);
-        const isCommune = constituency?.nationale_type === 'commune';
+        const isCommune = isMunicipalConstituencyType(constituency?.nationale_type);
         const fileId = row.election ? fileIdByElection.get(row.election.id) : null;
         const stats =
           fileId && constituency
@@ -206,7 +207,7 @@ export default defineCachedEventHandler(
   },
   {
     maxAge: 60 * 60, // 1 heure
-    name: 'carte-v4',
+    name: 'carte-v5',
     getKey: (event) => {
       const query = getQuery(event);
       return `carte-${query.election || 'all'}`;

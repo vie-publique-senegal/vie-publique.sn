@@ -1,5 +1,6 @@
 <!-- components/TableauDepartements.vue -->
 <script setup lang="ts">
+import { matchesSearch } from '#shared/search';
 import type { DepartmentStats } from '~~/types/election-map-national';
 
 interface Props {
@@ -55,8 +56,7 @@ const filteredDepartments = computed(() => {
 
   // Recherche
   if (search.value) {
-    const searchLower = search.value.toLowerCase().trim();
-    filtered = filtered.filter((dept) => dept.department.toLowerCase().includes(searchLower));
+    filtered = filtered.filter((dept) => matchesSearch(search.value, dept.department));
   }
 
   // Tri

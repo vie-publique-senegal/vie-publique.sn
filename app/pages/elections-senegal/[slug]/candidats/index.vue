@@ -145,7 +145,7 @@ useSeoMeta({
                   ? 'Les Candidats'
                   : 'Les Coalitions'
             }}
-            <span class="text-primary-600 font-black">
+            <span class="text-primary-600 font-bold">
               ({{
                 isLocalElection
                   ? constituencies.length

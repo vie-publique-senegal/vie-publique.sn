@@ -1,4 +1,5 @@
 ﻿import { defineSitemapEventHandler } from '#imports';
+import { isMunicipalConstituencyType } from '#shared/election-constituency';
 import { readItems } from '@directus/sdk';
 import { AUDIT_INSTITUTION_PAGES } from '~~/types/document';
 
@@ -401,45 +402,80 @@ export default defineSitemapEventHandler(async () => {
           }
         }
 
-        // 6c. Locales : pages circonscription (route /candidats/circonscription/[constituencySlug]),
-        // limitées aux départements ayant au moins une liste publiée.
+        // 6c. Locales : les listes sont portées par les communes et villes, rattachées à leur
+        // département via le référentiel géographique (ancêtre de niveau département).
+        // Pages : département (/circonscription/<dept>), coalition × département
+        // (/<dept>/coalition/<coal>), coalition × commune (/<dept>/<commune>/coalition/<coal>)
+        // et profils candidats (/candidats/<person>). Segment coalition = slug de l'entité
+        // politique, sinon id (même règle que la navigation du dashboard).
         if (isLocale) {
           try {
-            const lists = (await directus.request(
-              readItems('election_electoral_lists' as any, {
-                fields: ['constituency.id'],
-                filter: { election: { _eq: election.id }, status: { _eq: 'published' } },
-                limit: -1,
-              }),
-            )) as any[];
-
-            const constituencyIds = [
-              ...new Set(lists.map((l) => l.constituency?.id).filter(Boolean)),
-            ];
-
-            if (constituencyIds.length > 0) {
-              const constituencies = (await directus.request(
-                readItems('election_constituencies' as any, {
-                  fields: ['id', 'slug', 'type', 'nationale_type'],
-                  filter: { id: { _in: constituencyIds } },
+            const [lists, departments, geoSnapshot] = await Promise.all([
+              directus.request(
+                readItems('election_electoral_lists' as any, {
+                  fields: [
+                    'constituency.slug',
+                    'constituency.type',
+                    'constituency.nationale_type',
+                    'constituency.geo_entity',
+                    'coalition.id',
+                    'coalition.political_entity.slug',
+                    'candidates.person.slug',
+                  ],
+                  filter: { election: { _eq: election.id }, status: { _eq: 'published' } },
                   limit: -1,
                 }),
-              )) as any[];
+              ) as Promise<any[]>,
+              directus.request(
+                readItems('election_constituencies' as any, {
+                  fields: ['slug', 'geo_entity'],
+                  filter: { type: { _eq: 'national' }, nationale_type: { _eq: 'departement' } },
+                  limit: -1,
+                }),
+              ) as Promise<any[]>,
+              getGeoSnapshot(),
+            ]);
 
-              for (const constituency of constituencies) {
-                if (
-                  constituency.type === 'national' &&
-                  constituency.nationale_type === 'departement' &&
-                  constituency.slug
-                ) {
-                  urls.push({
-                    loc: `${base}/candidats/circonscription/${constituency.slug}`,
-                    ...(lastmod && { lastmod }),
-                    changefreq,
-                    priority: 0.5,
-                  });
-                }
+            const deptSlugByEntity = new Map<number, string>();
+            for (const dept of departments) {
+              const entityId = geoEntityIdOf(dept);
+              if (entityId !== null && dept.slug) deptSlugByEntity.set(entityId, dept.slug);
+            }
+
+            const locs = new Map<string, number>();
+            for (const list of lists) {
+              const constituency = list.constituency;
+              if (
+                !constituency?.slug ||
+                constituency.type !== 'national' ||
+                !isMunicipalConstituencyType(constituency.nationale_type)
+              ) {
+                continue;
               }
+              const deptEntity = geoSnapshot.ancestorOfLevel(
+                geoEntityIdOf(constituency),
+                'departement',
+              );
+              const deptSlug = deptEntity ? deptSlugByEntity.get(deptEntity.id) : undefined;
+              if (!deptSlug) continue;
+
+              const deptLoc = `${base}/candidats/circonscription/${deptSlug}`;
+              locs.set(deptLoc, 0.5);
+              const coalitionSegment =
+                list.coalition?.political_entity?.slug ||
+                (list.coalition?.id ? String(list.coalition.id) : null);
+              if (coalitionSegment) {
+                locs.set(`${deptLoc}/coalition/${coalitionSegment}`, 0.4);
+                locs.set(`${deptLoc}/${constituency.slug}/coalition/${coalitionSegment}`, 0.4);
+              }
+              for (const candidate of list.candidates || []) {
+                const personSlug = candidate?.person?.slug;
+                if (personSlug) locs.set(`${base}/candidats/${personSlug}`, 0.4);
+              }
+            }
+
+            for (const [loc, priority] of locs) {
+              urls.push({ loc, ...(lastmod && { lastmod }), changefreq, priority });
             }
           } catch (sitemapError) {
             console.warn(

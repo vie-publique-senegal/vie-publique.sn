@@ -1,6 +1,6 @@
 # Carte électorale, fichier électoral et résultats - architecture
 
-**Dernière mise à jour** : 2026-07-29
+**Dernière mise à jour** : 2026-10-05
 
 > Comment le site modélise et sert la géographie électorale du Sénégal : le fichier
 > électoral (et sa carte électorale), les bureaux de vote, les circonscriptions,
@@ -312,8 +312,12 @@ Même schéma, source différente :
    `constituency` est renommée `constituencie` pour compat avec l'ancien contrat ;
 3. Côté client, `ElectionUnifiedMap.vue` filtre les lignes reçues sur
    `constituencie.nationale_type === 'departement'` (mode `results`) ou
-   `'commune'` (mode `results-locale`) — **c'est ce champ qui distingue une carte
-   nationale d'une carte communale**, pas un paramètre d'API séparé ;
+   `'commune'` ou `'ville'` (mode `results-locale`) — **c'est ce champ qui distingue une carte
+   nationale d'une carte communale**, pas un paramètre d'API séparé. Une **ville** (Dakar,
+   Pikine, Guédiawaye, Rufisque, Thiès) se traite comme une commune (résultat, liste gagnante,
+   comptage des listes du département — `shared/election-constituency.ts`) mais n'a **pas de
+   contour** : elle reste hors choroplèthe et hors « majorité des communes », et n'apparaît
+   que dans le panneau de détail de son département ;
 4. Chaque ligne devient un `ResultMapItem { slug: constituencie.geo_slug, winnerName,
    winnerColor, parentSlug: constituencie.parent.slug, ... }` ;
 5. Même mécanique de join que ci-dessus (étape 9 du 6bis.3), sur

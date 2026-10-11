@@ -51,8 +51,10 @@ app/pages/elections-senegal/
 │   │   ├── coalition/
 │   │   │   └── [coalitionSlug].vue       # Fiche coalition
 │   │   └── circonscription/
-│   │       └── [constituencySlug].vue    # Fiche circonscription
-│   │           └── coalition/[coalitionSlug].vue  # Croisement circonscription × coalition
+│   │       └── [constituencySlug]/       # Routes sœurs (pas de parent <NuxtPage>)
+│   │           ├── index.vue             # Fiche circonscription (département ; filtre ?commune_id=)
+│   │           ├── coalition/[coalitionSlug].vue  # Coalition × département (toutes ses listes)
+│   │           └── [communeSlug]/coalition/[coalitionSlug].vue  # Coalition × commune ou ville (URL indexable)
 │   ├── carte.vue                         # Carte des résultats
 │   ├── resultats.vue                     # Résultats (KPIs, classement, 2nd tour)
 │   ├── pvs.vue                           # Procès-verbaux (si pv_upload_active)
@@ -87,6 +89,7 @@ app/pages/elections-senegal/
 | `/elections-senegal/[slug]/candidats/coalition/[coalitionSlug]` | Fiche coalition |
 | `/elections-senegal/[slug]/candidats/circonscription/[constituencySlug]` | Fiche circonscription |
 | `/elections-senegal/[slug]/candidats/circonscription/[constituencySlug]/coalition/[coalitionSlug]` | Croisement circonscription × coalition |
+| `/elections-senegal/[slug]/candidats/circonscription/[constituencySlug]/[communeSlug]/coalition/[coalitionSlug]` | Liste d'une coalition dans une commune ou ville du département (`communeSlug` = slug de circonscription de la commune, ex. `dakar-ville`) |
 | `/elections-senegal/[slug]/carte` | Carte des résultats |
 | `/elections-senegal/[slug]/pvs` | Procès-verbaux |
 | `/elections-senegal/[slug]/documents` | Documents de l'élection |
@@ -102,6 +105,16 @@ app/pages/elections-senegal/
 | `/elections-senegal/carte-electorale/resume` | Totaux nationale + diaspora |
 
 > L'onglet actif est le **dernier segment du path** (pas un query param). L'élection est résolue par son **slug CMS** ; les onglets visibles dépendent du statut et du type de l'élection (voir les règles dans [elections-dashboard.md](./elections-dashboard.md#34-onglets-visibles-selon-statut-et-type)). Coalition et circonscription sont résolues par leur **slug d'URL** dédié, plus par query param (`?coalition=`/`?constituency=` sont abandonnés).
+
+**Introuvable = 404 HTTP.** Élection, circonscription, coalition (département ou commune) et profil
+candidat inexistants gardent leur écran « introuvable » dans le dashboard, mais la réponse SSR porte
+le statut **404** via `<AppResponseStatus :code="404" />` (pas de soft 404 indexé). Garde-fou : pas
+de 404 quand l'API a échoué (`configFailed` / `failed` des composables, l'API répondant 200
+`{ data: [], error }`) — une panne CMS ne doit pas désindexer une page.
+
+**Sitemap** (`server/api/__sitemap__/urls.ts`, §6c) : pour les locales, pages département,
+coalition × département, coalition × commune/ville et profils candidats, dérivées des listes publiées
+(commune → département via le référentiel géographique).
 
 ---
 

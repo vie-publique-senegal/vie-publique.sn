@@ -88,7 +88,7 @@ const rows = computed(() => {
     <div class="relative max-h-[600px] overflow-auto">
       <div class="sticky top-0 z-20 border-b bg-gray-50 dark:border-gray-800 dark:bg-gray-900">
         <div
-          class="grid min-w-full grid-cols-12 text-xs font-black uppercase tracking-widest text-gray-500 dark:text-gray-400"
+          class="grid min-w-full grid-cols-12 text-xs font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400"
         >
           <!-- Title Column -->
           <div

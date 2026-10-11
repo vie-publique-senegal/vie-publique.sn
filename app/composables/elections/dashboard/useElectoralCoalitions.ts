@@ -38,6 +38,7 @@ export const useElectoralCoalitions = (options: UseCoalitionsOptions = {}) => {
   const { data, pending: loading, error, refresh } = useFetch<{
     data: Coalition[] | Coalition;
     coalition?: Coalition;
+    error?: string;
   }>(apiUrl, {
     query,
     key: computed(() => `dashboard-coalitions-${id.value || 'list'}-${year.value || 'all'}-${type.value || 'all'}-${ranking.value || 'false'}-${search.value || 'no-search'}`),
@@ -52,10 +53,14 @@ export const useElectoralCoalitions = (options: UseCoalitionsOptions = {}) => {
       return [];
   });
 
+  // L'API répond 200 `{ data: [], error }` quand le CMS échoue : à distinguer d'une liste vide
+  const failed = computed(() => !!error.value || !!data.value?.error);
+
   return {
     coalitions,
     loading,
     error,
+    failed,
     refresh,
   };
 };
