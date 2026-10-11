@@ -21,6 +21,24 @@ export const CHAT_ASSISTANT_TAGLINE =
 /** Cible de la redirection `/chat`. ⚠️ Dupliqué en dur dans les `routeRules` de nuxt.config.ts. */
 export const CHAT_DEFAULT_VARIANT = 'gemini';
 
+// Le corpus indexé ne couvre pas tout le site : une question hors périmètre
+// reçoit « je ne sais pas ». C'est le comportement attendu, pas une panne. Le
+// périmètre vient de la réconciliation d'ingestion (fichiers < 5 Mo, législation
+// depuis 2023) ; le décompte est arrondi car il bouge à chaque passage — relevé
+// sur `GET /documents` de rag.vie-publique.sn. Partagé par les variantes qui
+// interrogent ce RAG : c'est le même corpus.
+const AVERTISSEMENT_CORPUS_RAG =
+  'Corpus partiel : environ 5 400 des 12 600 documents publiés sont indexés (fichiers de moins de 5 Mo, textes législatifs depuis 2023).';
+
+const QUESTIONS_RAG = [
+  'Quels départements sont touchés par l’insécurité alimentaire sévère ?',
+  'Quel déficit budgétaire le projet de loi de finances 2026 prévoit-il ?',
+  'À quel taux la LFR 2025 révise-t-elle la croissance du PIB ?',
+];
+
+const chargerAdaptateurRag = () =>
+  import('~/lib/chat/adapters/gemini').then((m) => m.createGeminiAdapter);
+
 export const CHAT_VARIANTS: ChatVariant[] = [
   {
     id: 'gemini',
@@ -30,19 +48,28 @@ export const CHAT_VARIANTS: ChatVariant[] = [
     status: 'active',
     icon: 'i-simple-icons-googlegemini',
     available: true,
-    // Le corpus indexé ne couvre pas tout le site : une question hors périmètre
-    // reçoit « je ne sais pas ». C'est le comportement attendu, pas une panne.
-    // Le périmètre vient de la réconciliation d'ingestion (fichiers < 5 Mo,
-    // législation depuis 2023) ; le décompte est arrondi car il bouge à chaque
-    // passage — relevé sur `GET /documents` de rag.vie-publique.sn.
-    warning:
-      'Corpus partiel : environ 5 400 des 12 600 documents publiés sont indexés (fichiers de moins de 5 Mo, textes législatifs depuis 2023).',
-    starterQuestions: [
-      'Quels départements sont touchés par l’insécurité alimentaire sévère ?',
-      'Quel déficit budgétaire le projet de loi de finances 2026 prévoit-il ?',
-      'À quel taux la LFR 2025 révise-t-elle la croissance du PIB ?',
-    ],
-    loadAdapter: () => import('~/lib/chat/adapters/gemini').then((m) => m.createGeminiAdapter),
+    warning: AVERTISSEMENT_CORPUS_RAG,
+    starterQuestions: QUESTIONS_RAG,
+    loadAdapter: chargerAdaptateurRag,
+  },
+  {
+    id: 'gemini-voix-kiriku',
+    label: 'API RAG Gemini — voix Kiriku',
+    description:
+      'Le même RAG, avec la dictée et la lecture wolof servies par l’API Kiriku d’AI Hub Senegal (modèles M-Kiriku et Kiriku TTS) au lieu de nos propres moteurs.',
+    status: 'active',
+    icon: 'i-heroicons-speaker-wave',
+    available: true,
+    // Kiriku ne parle que wolof : en français, Web Speech garde la main et
+    // cette variante se comporte exactement comme `gemini`. D'où le wolof par
+    // défaut — le sélecteur de langue permet toujours de repasser en français.
+    voiceLang: 'wo-SN',
+    // Nom opaque déclaré côté API (`RAG_KIRIKU_API_PROFILE`) et autorisé dans
+    // les `voice_profiles` du tenant. Sans cela, /speak et /transcribe : 422.
+    voiceProfile: 'alt',
+    warning: AVERTISSEMENT_CORPUS_RAG,
+    starterQuestions: QUESTIONS_RAG,
+    loadAdapter: chargerAdaptateurRag,
   },
   {
     id: 'azure',

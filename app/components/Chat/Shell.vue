@@ -75,7 +75,7 @@ const LANGUES = [
   { valeur: 'wo-SN', libelle: 'Wolof' },
 ];
 
-const lecture = useLectureVocale({ lang: langueVocale });
+const lecture = useLectureVocale({ lang: langueVocale, profil: props.variant.voiceProfile });
 
 /**
  * Dernière réponse affichée — celle que l'activation du son doit reprendre.
@@ -493,6 +493,7 @@ onBeforeUnmount(() => {
       :cooldown="cooldown"
       :voix="vocalAutorise"
       :voix-lang="langueVocale"
+      :voix-profil="variant.voiceProfile"
       :erreur-voix="lecture.erreur.value"
       @send="envoyer"
       @langue="langueEchange = $event"
