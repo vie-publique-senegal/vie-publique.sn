@@ -128,6 +128,13 @@ export interface ChatVariant {
    */
   engines?: ChatVariantEngines;
   starterQuestions?: string[];
+  /**
+   * Exemples en wolof, montrés par l'interface vocale quand le wolof est
+   * choisi (sinon `starterQuestions`). Termes techniques gardés en français
+   * dans la phrase : le corpus est en français, un terme wolof seul (« xiif »)
+   * ne retrouve rien — testé le 2026-10-16.
+   */
+  starterQuestionsWolof?: string[];
   /** Chargement paresseux : le code d'une variante ne pèse pas sur les autres. */
   loadAdapter?: () => Promise<ChatAdapterFactory>;
 }

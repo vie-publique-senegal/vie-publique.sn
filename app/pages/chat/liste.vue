@@ -6,6 +6,7 @@ import {
   CHAT_CORPUS_RAG,
   CHAT_STATUS_LABELS,
   CHAT_VARIANTS,
+  CHAT_VOCAL_VARIANTS,
 } from '~/config/chat-variants';
 import type { ChatVariantEngines } from '~~/types/chat';
 
@@ -19,6 +20,11 @@ const moteursReponse = new Set(
   CHAT_VARIANTS.filter((v) => v.available && v.engines).map((v) => v.engines!.answer),
 );
 const moteurReponseCommun = moteursReponse.size === 1 ? [...moteursReponse][0] : null;
+
+/** Variantes de l'interface vocale, dans l'ordre du registre de config. */
+const variantesVocales = CHAT_VOCAL_VARIANTS.map((id) =>
+  CHAT_VARIANTS.find((v) => v.id === id && v.available),
+).filter((v): v is (typeof CHAT_VARIANTS)[number] => Boolean(v));
 
 /** Les moteurs d'une variante, dans l'ordre du parcours : dicter, répondre, lire. */
 function lignesMoteurs(moteurs: ChatVariantEngines) {
@@ -58,13 +64,18 @@ useHead({
       {{ CHAT_ASSISTANT_NAME }}
     </h1>
     <p class="mt-3 text-gray-600 dark:text-gray-300">{{ CHAT_ASSISTANT_TAGLINE }}</p>
-    <p v-if="moteurReponseCommun" class="mt-2 text-sm text-gray-500 dark:text-gray-400">
-      Toutes les variantes partagent la même recherche et la même réponse ({{
-        moteurReponseCommun
-      }}) : seule la voix wolof change.
-    </p>
 
-    <ul class="mt-10 space-y-3">
+    <!-- Même recherche et même réponse pour toutes : seule la voix change, et
+         les pastilles des cartes disent laquelle. Le moteur de réponse n'est
+         pas nommé ici — c'est un détail pour l'équipe, pas pour le visiteur. -->
+    <h2
+      v-if="moteurReponseCommun"
+      class="mt-10 text-sm font-medium text-gray-500 dark:text-gray-400"
+    >
+      Choisissez la voix wolof à tester
+    </h2>
+
+    <ul class="space-y-3" :class="moteurReponseCommun ? 'mt-3' : 'mt-10'">
       <li v-for="variant in CHAT_VARIANTS" :key="variant.id">
         <!-- Une variante sans backend n'est pas cliquable : faire tester un faux
              chat produirait de faux retours. Elle reste listée pour montrer ce
@@ -135,6 +146,42 @@ useHead({
         </component>
       </li>
     </ul>
+
+    <!-- Interface vocale en essai : mêmes variantes, ergonomie « micro d'abord ». -->
+    <template v-if="variantesVocales.length">
+      <h2 class="mt-10 text-sm font-medium text-gray-500 dark:text-gray-400">
+        Interface vocale (essai) — on parle, la réponse est lue
+      </h2>
+      <ul class="mt-3 space-y-3">
+        <li v-for="variante in variantesVocales" :key="variante.id">
+          <NuxtLink
+            :to="`/chat/vocal/${variante.id}`"
+            class="bg-primary-50 hover:bg-primary-100 group flex items-center gap-4 rounded-2xl p-4 transition-colors dark:bg-gray-800 dark:hover:bg-gray-700"
+          >
+            <span
+              class="bg-primary-600 flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white"
+            >
+              <UIcon name="i-lucide-mic" class="h-5 w-5" />
+            </span>
+            <span class="min-w-0 flex-1">
+              <span class="block font-semibold text-gray-900 dark:text-white">
+                Voix {{ variante.engines?.voice ?? variante.label }}
+              </span>
+              <span
+                v-if="variante.engines?.dictation"
+                class="mt-0.5 block text-sm text-gray-600 dark:text-gray-300"
+              >
+                Dictée {{ variante.engines.dictation }}
+              </span>
+            </span>
+            <UIcon
+              name="i-heroicons-arrow-right"
+              class="h-5 w-5 shrink-0 text-gray-400 transition-transform group-hover:translate-x-0.5"
+            />
+          </NuxtLink>
+        </li>
+      </ul>
+    </template>
 
     <section class="mt-10 rounded-2xl bg-gray-50 p-5 dark:bg-gray-800">
       <h2 class="flex items-center gap-2 font-semibold text-gray-900 dark:text-white">

@@ -27,6 +27,13 @@ export interface OptionsLectureVocale {
   lang: Ref<string> | ComputedRef<string>;
   /** Profil vocal du serveur, fixé par la variante. Absent = voix par défaut. */
   profil?: string;
+  /**
+   * Mémoriser le son activé entre les sessions (défaut). `false` pour une
+   * interface qui décide elle-même quand lire — l'interface vocale lit les
+   * réponses aux questions DICTÉES —, sans toucher à la sourdine mémorisée
+   * du chat classique, qui partage la même clé.
+   */
+  memoriser?: boolean;
 }
 
 export function useLectureVocale(options: OptionsLectureVocale) {
@@ -38,7 +45,7 @@ export function useLectureVocale(options: OptionsLectureVocale) {
    * consommer l'activation utilisateur exigée par iOS : voir `basculer()`, qui
    * DOIT amorcer le moteur — lever ce drapeau ne débloque rien à lui seul.
    */
-  const actif = useLocalStorage(CLE_ACTIF, false);
+  const actif = options.memoriser === false ? ref(false) : useLocalStorage(CLE_ACTIF, false);
 
   const enLecture = ref(false);
   /**
@@ -187,6 +194,28 @@ export function useLectureVocale(options: OptionsLectureVocale) {
     }
   }
 
+  /**
+   * Active le son SANS rien lire : à appeler depuis un geste (le micro de
+   * l'interface vocale), pour que la réponse puisse être lue au fil du flux.
+   * Même contrainte iOS que `basculer()` : jamais après un `await`.
+   */
+  function activer() {
+    moteur.value?.amorcer?.();
+    actif.value = true;
+  }
+
+  /**
+   * Lit ce texte depuis le début, en coupant toute lecture en cours (bouton
+   * « Écouter » d'une réponse). Même contrainte de geste que `activer()`.
+   */
+  function lire(texte: string) {
+    activer();
+    arreter();
+    if (!texte.trim()) return;
+    mettreEnFile(tampon.pousser(texte));
+    mettreEnFile(tampon.vider());
+  }
+
   // La synthèse est un service GLOBAL du navigateur : elle survit au composant
   // et continuerait de parler sur la page suivante si personne ne l'annulait.
   onBeforeUnmount(arreter);
@@ -204,6 +233,8 @@ export function useLectureVocale(options: OptionsLectureVocale) {
     /** Barge-in et interruptions. Idempotent. */
     arreter,
     basculer,
+    activer,
+    lire,
     /** Diagnostic : nombre de voix installées pour la langue courante. */
     nombreDeVoix: () => moteur.value?.voixDisponibles?.(options.lang.value) ?? 0,
   };
