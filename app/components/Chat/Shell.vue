@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useClipboard } from '@vueuse/core';
 import { toast } from 'vue-sonner';
-import { CHAT_ASSISTANT_NAME } from '~/config/chat-variants';
+import { CHAT_ASSISTANT_NAME, CHAT_ASSISTANT_TAGLINE } from '~/config/chat-variants';
 import { construireRetour } from '~/lib/chat/report';
 import { moteurEcoute, moteurLecture } from '~/lib/voice';
 import type { ChatMessageModel } from './Message.vue';
@@ -156,6 +156,18 @@ function demarrerCooldown(secondes: number) {
   }, 1000);
 }
 
+/**
+ * « Arrêter » sur la pastille de lecture : coupe la lecture de CETTE réponse
+ * seulement. Sans le drapeau, les tokens suivants du flux relanceraient la
+ * lecture à la phrase d'après. Remis à zéro à chaque nouvelle question.
+ */
+let lectureInterrompue = false;
+
+function arreterLecture() {
+  lectureInterrompue = true;
+  lecture.arreter();
+}
+
 function arreter() {
   abandon?.abort();
   // Couper la génération coupe aussi la lecture : sinon l'assistant continuerait
@@ -181,6 +193,7 @@ async function envoyer(question: string) {
   enCours.value = true;
   abandon = new AbortController();
   let termine = false;
+  lectureInterrompue = false;
   // Une nouvelle question annule la lecture de la précédente.
   lecture.arreter();
 
@@ -244,7 +257,7 @@ async function envoyer(question: string) {
           // dès qu'une phrase est complète. Attendre `done` pour lire ferait
           // entendre le premier mot après la fin de la génération — le streaming
           // ne servirait alors plus à rien.
-          lecture.pousser(evenement.text);
+          if (!lectureInterrompue) lecture.pousser(evenement.text);
           await defilerEnBas();
           break;
         case 'sources':
@@ -257,7 +270,7 @@ async function envoyer(question: string) {
           termine = true;
           // La dernière phrase n'a pas de ponctuation finale garantie : sans ce
           // vidage, elle resterait dans le tampon et ne serait jamais lue.
-          lecture.terminer();
+          if (!lectureInterrompue) lecture.terminer();
           if (evenement.conversationReset) reponse.reset = true;
           if (evenement.conversationId) conversationId.value = evenement.conversationId;
           reponse.meta = evenement.meta;
@@ -453,8 +466,7 @@ onBeforeUnmount(() => {
           {{ CHAT_ASSISTANT_NAME }}
         </h1>
         <p class="mx-auto mt-2 text-gray-600 dark:text-gray-300">
-          L’assistant de Vie Publique Sénégal. Il recherche dans les lois, rapports, décrets,
-          budgets et autres documents publics pour vous fournir une réponse sourcée.
+          {{ CHAT_ASSISTANT_TAGLINE }}
         </p>
 
         <ul v-if="variant.starterQuestions?.length" class="mt-8 space-y-2 text-left">
@@ -485,6 +497,26 @@ onBeforeUnmount(() => {
           @report="signaler"
         />
       </div>
+    </div>
+
+    <!-- Lecture en cours : sans ce repère, la voix continuait après la fin du
+         texte sans rien à l'écran pour l'arrêter, sinon la sourdine de l'en-tête
+         — qui coupe aussi les réponses SUIVANTES. Ici on n'arrête que celle-ci. -->
+    <div
+      v-if="lecture.enLecture.value"
+      class="flex justify-center bg-gray-50 px-4 pb-2 dark:bg-gray-900"
+      role="status"
+    >
+      <button
+        type="button"
+        class="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-sm text-gray-700 ring-1 ring-gray-200 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-200 dark:ring-gray-700 dark:hover:bg-gray-700"
+        @click="arreterLecture"
+      >
+        <UIcon name="i-lucide-volume-2" class="text-primary-500 h-4 w-4" aria-hidden="true" />
+        Lecture en cours
+        <span class="text-gray-400" aria-hidden="true">·</span>
+        <span class="font-medium">Arrêter</span>
+      </button>
     </div>
 
     <ChatComposer
