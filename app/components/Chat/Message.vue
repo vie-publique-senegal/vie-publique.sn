@@ -83,6 +83,10 @@ const html = computed(() => renderChatMarkdown(props.message.text));
         />
       </div>
 
+      <!-- Juste sous le texte, avant les sources : l'interface vocale y place
+           « Écouter ». Vide par défaut, sans effet sur la coquille classique. -->
+      <slot name="apres-texte" />
+
       <!-- Documents cités -->
       <div
         v-if="message.sources?.length"

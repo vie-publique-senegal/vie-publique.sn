@@ -26,6 +26,13 @@ export const CHAT_ASSISTANT_TAGLINE =
 export const CHAT_DEFAULT_VARIANT = 'gemini';
 
 /**
+ * Variante servie par l'interface vocale en essai (`/chat/vocal/<id>`), mise
+ * en avant sur `/chat/liste`. La page accepte toute variante disponible ; ceci
+ * ne choisit que le lien proposé.
+ */
+export const CHAT_VOCAL_VARIANT = 'gemini-voix-kiriku';
+
+/**
  * Le corpus interrogé par le RAG, décrit UNE fois : les variantes Gemini
  * partagent le même, seule la voix change. Affiché en bas de `/chat/liste`.
  *

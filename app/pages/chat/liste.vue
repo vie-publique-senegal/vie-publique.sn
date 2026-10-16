@@ -6,6 +6,7 @@ import {
   CHAT_CORPUS_RAG,
   CHAT_STATUS_LABELS,
   CHAT_VARIANTS,
+  CHAT_VOCAL_VARIANT,
 } from '~/config/chat-variants';
 import type { ChatVariantEngines } from '~~/types/chat';
 
@@ -19,6 +20,9 @@ const moteursReponse = new Set(
   CHAT_VARIANTS.filter((v) => v.available && v.engines).map((v) => v.engines!.answer),
 );
 const moteurReponseCommun = moteursReponse.size === 1 ? [...moteursReponse][0] : null;
+
+const vocalVariantVoix =
+  CHAT_VARIANTS.find((v) => v.id === CHAT_VOCAL_VARIANT)?.engines?.voice ?? '';
 
 /** Les moteurs d'une variante, dans l'ordre du parcours : dicter, répondre, lire. */
 function lignesMoteurs(moteurs: ChatVariantEngines) {
@@ -135,6 +139,30 @@ useHead({
         </component>
       </li>
     </ul>
+
+    <!-- Interface vocale en essai : même variante, ergonomie « micro d'abord ». -->
+    <NuxtLink
+      :to="`/chat/vocal/${CHAT_VOCAL_VARIANT}`"
+      class="bg-primary-50 hover:bg-primary-100 group mt-3 flex items-center gap-4 rounded-2xl p-4 transition-colors dark:bg-gray-800 dark:hover:bg-gray-700"
+    >
+      <span
+        class="bg-primary-600 flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white"
+      >
+        <UIcon name="i-lucide-mic" class="h-5 w-5" />
+      </span>
+      <span class="min-w-0 flex-1">
+        <span class="block font-semibold text-gray-900 dark:text-white">
+          Interface vocale (essai)
+        </span>
+        <span class="mt-0.5 block text-sm text-gray-600 dark:text-gray-300">
+          Micro d’abord : on parle, la réponse est lue. Voix {{ vocalVariantVoix }}.
+        </span>
+      </span>
+      <UIcon
+        name="i-heroicons-arrow-right"
+        class="h-5 w-5 shrink-0 text-gray-400 transition-transform group-hover:translate-x-0.5"
+      />
+    </NuxtLink>
 
     <section class="mt-10 rounded-2xl bg-gray-50 p-5 dark:bg-gray-800">
       <h2 class="flex items-center gap-2 font-semibold text-gray-900 dark:text-white">
