@@ -1,4 +1,4 @@
-import type { ChatVariant, ChatVariantStatus } from '~~/types/chat';
+import type { ChatVariant } from '~~/types/chat';
 
 /**
  * Registre des variantes du banc d'essai — SOURCE DE VÉRITÉ UNIQUE.
@@ -89,10 +89,17 @@ const QUESTIONS_RAG_WOLOF = [
 const chargerAdaptateurRag = () =>
   import('~/lib/chat/adapters/gemini').then((m) => m.createGeminiAdapter);
 
+/**
+ * Libellés « dictée + voix » (« Gemini + Kiriku » = dictée Gemini, voix
+ * Kiriku) : la réponse est la même partout, seuls ces deux moteurs changent.
+ * L'hébergement (notre serveur, AI Hub) reste dans `engines`, pour l'équipe.
+ * ⚠️ Le libellé figure dans les retours copiés (« Signaler ») : l'`id`, lui,
+ * ne change pas et reste la clé de rapprochement.
+ */
 export const CHAT_VARIANTS: ChatVariant[] = [
   {
     id: 'gemini',
-    label: 'Gemini — voix Kiriku (notre serveur)',
+    label: 'Gemini + Kiriku',
     description:
       'Lecture wolof par la voix Kiriku, hébergée sur notre propre serveur. Dictée par Gemini.',
     status: 'active',
@@ -110,7 +117,7 @@ export const CHAT_VARIANTS: ChatVariant[] = [
   },
   {
     id: 'gemini-voix-kiriku',
-    label: 'Gemini — voix Kiriku (AI Hub)',
+    label: 'Kiriku + Kiriku',
     description:
       'Dictée et lecture wolof servies par l’API Kiriku d’AI Hub Senegal (modèles M-Kiriku et Kiriku TTS).',
     status: 'active',
@@ -135,7 +142,7 @@ export const CHAT_VARIANTS: ChatVariant[] = [
   },
   {
     id: 'gemini-voix-gemini',
-    label: 'Gemini — voix Gemini',
+    label: 'Gemini + Gemini',
     description:
       'Lecture wolof par le TTS de Gemini : il lit les montants, pourcentages et sigles tels quels, sans conversion préalable.',
     status: 'active',
@@ -170,12 +177,6 @@ export const CHAT_VARIANTS: ChatVariant[] = [
     loadAdapter: undefined,
   },
 ];
-
-export const CHAT_STATUS_LABELS: Record<ChatVariantStatus, string> = {
-  active: 'En test',
-  legacy: 'Historique',
-  retired: 'Abandonné',
-};
 
 export function findChatVariant(id: string | undefined): ChatVariant | undefined {
   return CHAT_VARIANTS.find((variant) => variant.id === id);
