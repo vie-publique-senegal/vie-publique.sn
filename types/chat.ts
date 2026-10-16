@@ -79,6 +79,13 @@ export type ChatAdapterFactory = (config: ChatPublicConfig) => ChatAdapter;
 /** `active` = POC en cours, `legacy` = conservé pour comparaison, `retired` = abandonné. */
 export type ChatVariantStatus = 'active' | 'legacy' | 'retired';
 
+/** Moteurs d'une variante : réponse, dictée wolof, lecture wolof. */
+export interface ChatVariantEngines {
+  answer: string;
+  dictation?: string;
+  voice?: string;
+}
+
 export interface ChatVariant {
   /** Identifiant d'URL (`/chat/<id>`) ET de stack. Jamais un numéro de version. */
   id: string;
@@ -113,6 +120,13 @@ export interface ChatVariant {
    * reste prioritaire et n'en tient pas compte.
    */
   voiceProfile?: string;
+  /**
+   * Moteurs réellement servis, affichés sur `/chat/liste` et dans le pied de
+   * conversation. Plusieurs variantes partagent le même RAG et ne diffèrent que
+   * par la voix : sans cette ligne, elles se ressemblent à s'y méprendre.
+   * Libellés pour humains, jamais lus par le code.
+   */
+  engines?: ChatVariantEngines;
   starterQuestions?: string[];
   /** Chargement paresseux : le code d'une variante ne pèse pas sur les autres. */
   loadAdapter?: () => Promise<ChatAdapterFactory>;

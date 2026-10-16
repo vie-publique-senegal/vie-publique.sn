@@ -42,19 +42,24 @@ const chargerAdaptateurRag = () =>
 export const CHAT_VARIANTS: ChatVariant[] = [
   {
     id: 'gemini',
-    label: 'API RAG Gemini',
+    label: 'Gemini — voix Kiriku (notre serveur)',
     description:
-      'Recherche dans les documents publics puis réponse générée avec citation des sources. API développée en interne.',
+      'Recherche dans les documents publics puis réponse générée avec citation des sources. API développée en interne. En wolof, la voix Kiriku tourne sur notre propre serveur.',
     status: 'active',
     icon: 'i-simple-icons-googlegemini',
     available: true,
+    engines: {
+      answer: 'Gemini Flash',
+      dictation: 'Gemini',
+      voice: 'Kiriku — notre serveur',
+    },
     warning: AVERTISSEMENT_CORPUS_RAG,
     starterQuestions: QUESTIONS_RAG,
     loadAdapter: chargerAdaptateurRag,
   },
   {
     id: 'gemini-voix-kiriku',
-    label: 'API RAG Gemini — voix Kiriku',
+    label: 'Gemini — voix Kiriku (AI Hub)',
     description:
       'Le même RAG, avec la dictée et la lecture wolof servies par l’API Kiriku d’AI Hub Senegal (modèles M-Kiriku et Kiriku TTS) au lieu de nos propres moteurs.',
     status: 'active',
@@ -67,6 +72,34 @@ export const CHAT_VARIANTS: ChatVariant[] = [
     // Nom opaque déclaré côté API (`RAG_KIRIKU_API_PROFILE`) et autorisé dans
     // les `voice_profiles` du tenant. Sans cela, /speak et /transcribe : 422.
     voiceProfile: 'alt',
+    engines: {
+      answer: 'Gemini Flash',
+      dictation: 'M-Kiriku — AI Hub',
+      voice: 'Kiriku — AI Hub',
+    },
+    warning: AVERTISSEMENT_CORPUS_RAG,
+    starterQuestions: QUESTIONS_RAG,
+    loadAdapter: chargerAdaptateurRag,
+  },
+  {
+    id: 'gemini-voix-gemini',
+    label: 'Gemini — voix Gemini',
+    description:
+      'Le même RAG, avec la lecture wolof servie par le TTS de Gemini. Il lit les montants, pourcentages et sigles tels quels, sans conversion préalable.',
+    status: 'active',
+    icon: 'i-heroicons-sparkles',
+    available: true,
+    // Même raison que `gemini-voix-kiriku` : en français Web Speech garde la
+    // main, la variante n'a d'intérêt qu'en wolof.
+    voiceLang: 'wo-SN',
+    // Profil `alt2` de l'API (RAG_GEMINI_TTS_PROFILE) : synthèse Gemini, dictée
+    // Gemini par défaut. Doit figurer dans les `voice_profiles` du tenant.
+    voiceProfile: 'alt2',
+    engines: {
+      answer: 'Gemini Flash',
+      dictation: 'Gemini',
+      voice: 'Gemini TTS',
+    },
     warning: AVERTISSEMENT_CORPUS_RAG,
     starterQuestions: QUESTIONS_RAG,
     loadAdapter: chargerAdaptateurRag,
