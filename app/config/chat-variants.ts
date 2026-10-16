@@ -78,8 +78,10 @@ const QUESTIONS_RAG = [
 // Testées sur le RAG le 2026-10-16 : réponses courtes (milliards, %), donc
 // supportables à l'écoute, et sourcées. Une année explicite est nécessaire :
 // « léegi » (maintenant) ramenait des documents de 2000-2017.
+// Dette : 2025 et pas 2026 — le corpus a le ratio 2025 (117,3 % du PIB), pas
+// celui de 2026 (« je ne sais pas »). Budget 2027 : couvert par le PLF 2027.
 const QUESTIONS_RAG_WOLOF = [
-  'Ñaata la budget bu Senegaal ci 2026\u00a0?',
+  'Ñaata la budget bu Senegaal ci 2027\u00a0?',
   'Ñaata la déficit bi ci loi de finances 2026 di tollu\u00a0?',
   'Bor bu Senegaal ci 2025, ñaata la tollu ci PIB\u00a0?',
 ];
