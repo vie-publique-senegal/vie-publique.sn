@@ -44,6 +44,7 @@ un composant dédié plutôt que tordre l'interface pour tout le monde.
 | `/chat/liste` | Liste des variantes. |
 | `/chat/<stack>` | Une variante. Nommée **par stack** (`gemini`, `azure`), jamais par n° de version. |
 | `/chat/gemini-voix-kiriku` | Le RAG `gemini`, voix wolof servie par l'API Kiriku d'AI Hub Senegal (`voiceProfile: 'alt'`, cf. `voix.md` § Profil vocal par variante). |
+| `/chat/gemini-voix-gemini` | Le RAG `gemini`, voix wolof servie par le TTS Gemini (`voiceProfile: 'alt2'`, dictée Gemini par défaut, cf. `voix.md` § Profil vocal par variante). |
 
 ⚠️ La redirection `/chat` est un **302, pas un 301** : la variante par défaut changera au fil des
 POC, et un 301 resterait caché indéfiniment dans le navigateur des testeurs. L'URL est

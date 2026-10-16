@@ -479,6 +479,13 @@ Une variante peut demander à l'API une **autre paire de moteurs serveur** que c
 - **première utilisation : `/chat/gemini-voix-kiriku`**, où `alt` désigne l'API Kiriku d'AI Hub
   Senegal (ASR M-Kiriku, TTS Kiriku sur GPU). La variante démarre en wolof (`voiceLang: 'wo-SN'`),
   puisque ce profil ne sert que le wolof.
+- **deuxième : `/chat/gemini-voix-gemini`** (2026-10-16), où `alt2` désigne le **TTS Gemini**.
+  Seule la lecture change : la dictée reste le Gemini par défaut. L'API lui passe le texte **brut**,
+  sans conversion des nombres ni épellation des sigles, qu'il lit mieux tels quels
+  (`rag-platform`, `docs/decisions/2026-10-16-tts-gemini-wolof.md`).
+
+Chaque variante déclare ses moteurs dans `ChatVariant.engines` (dictée, réponse, voix), affichés
+sur `/chat/liste` : trois variantes d'un même RAG ne se distinguent pas autrement.
 
 ⚠️ **Gouvernance** : sur cette variante, l'audio et le texte lu partent chez **AI Hub Senegal** et
 non chez Google. La mention du § 5 (« transmise à notre service, qui la fait transcrire par un

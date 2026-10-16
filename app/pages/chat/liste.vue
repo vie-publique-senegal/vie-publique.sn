@@ -1,6 +1,26 @@
 <script setup lang="ts">
 import { NuxtLink } from '#components';
 import { CHAT_ASSISTANT_NAME, CHAT_STATUS_LABELS, CHAT_VARIANTS } from '~/config/chat-variants';
+import type { ChatVariantEngines } from '~~/types/chat';
+
+/** Les moteurs d'une variante, dans l'ordre du parcours : dicter, répondre, lire. */
+function lignesMoteurs(moteurs: ChatVariantEngines) {
+  return [
+    {
+      cle: 'dictation',
+      titre: 'Dictée wolof',
+      icone: 'i-heroicons-microphone',
+      valeur: moteurs.dictation,
+    },
+    {
+      cle: 'answer',
+      titre: 'Réponse',
+      icone: 'i-heroicons-chat-bubble-left-right',
+      valeur: moteurs.answer,
+    },
+    { cle: 'voice', titre: 'Voix wolof', icone: 'i-heroicons-speaker-wave', valeur: moteurs.voice },
+  ].filter((ligne) => ligne.valeur);
+}
 
 /**
  * Page d'atterrissage du banc d'essai, GÉNÉRÉE DEPUIS LE REGISTRE : une liste
@@ -63,6 +83,20 @@ useHead({
             </div>
 
             <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">{{ variant.description }}</p>
+
+            <!-- Les variantes d'un même RAG ne diffèrent que par la voix : c'est
+                 cette ligne qui les distingue d'un coup d'œil. -->
+            <dl v-if="variant.engines" class="mt-2 flex flex-wrap gap-1.5 text-xs">
+              <div
+                v-for="ligne in lignesMoteurs(variant.engines)"
+                :key="ligne.cle"
+                class="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 dark:bg-gray-800"
+              >
+                <UIcon :name="ligne.icone" class="h-3.5 w-3.5 text-gray-500 dark:text-gray-400" />
+                <dt class="text-gray-500 dark:text-gray-400">{{ ligne.titre }}</dt>
+                <dd class="font-medium text-gray-800 dark:text-gray-200">{{ ligne.valeur }}</dd>
+              </div>
+            </dl>
 
             <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">
               <template v-if="variant.available">
