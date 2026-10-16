@@ -29,11 +29,12 @@ export const CHAT_ASSISTANT_TAGLINE =
 export const CHAT_DEFAULT_VARIANT = 'gemini';
 
 /**
- * Variante servie par l'interface vocale en essai (`/chat/vocal/<id>`), mise
- * en avant sur `/chat/liste`. La page accepte toute variante disponible ; ceci
- * ne choisit que le lien proposé.
+ * Variantes proposées dans l'interface vocale en essai (`/chat/vocal/<id>`),
+ * mises en avant sur `/chat/liste`. La page accepte toute variante
+ * disponible ; cette liste ne choisit que les liens proposés. Les deux sont en
+ * wolof par défaut (`voiceLang` de la variante) : on compare les voix.
  */
-export const CHAT_VOCAL_VARIANT = 'gemini-voix-kiriku';
+export const CHAT_VOCAL_VARIANTS = ['gemini-voix-kiriku', 'gemini-voix-gemini'];
 
 /**
  * Le corpus interrogé par le RAG, décrit UNE fois : les variantes Gemini

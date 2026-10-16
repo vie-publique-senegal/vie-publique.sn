@@ -16,7 +16,18 @@ export interface ChatMessageModel {
   reset?: boolean;
 }
 
-const props = defineProps<{ message: ChatMessageModel }>();
+const props = withDefaults(
+  defineProps<{
+    message: ChatMessageModel;
+    /**
+     * `detail` : titre, page et extrait de chaque passage (coquille classique —
+     * l'extrait sert à vérifier la citation). `vignettes` : une carte par
+     * document, couverture et pages (interface vocale).
+     */
+    sourcesStyle?: 'detail' | 'vignettes';
+  }>(),
+  { sourcesStyle: 'detail' },
+);
 
 defineEmits<{
   /** `ask` : rejouer une question suggérée. `report` : copier le contexte du message. */
@@ -88,8 +99,12 @@ const html = computed(() => renderChatMarkdown(props.message.text));
       <slot name="apres-texte" />
 
       <!-- Documents cités -->
+      <ChatSourceCards
+        v-if="message.sources?.length && sourcesStyle === 'vignettes'"
+        :sources="message.sources"
+      />
       <div
-        v-if="message.sources?.length"
+        v-else-if="message.sources?.length"
         class="mt-4 border-t border-gray-100 pt-3 dark:border-gray-700"
       >
         <p class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">

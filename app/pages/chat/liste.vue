@@ -6,7 +6,7 @@ import {
   CHAT_CORPUS_RAG,
   CHAT_STATUS_LABELS,
   CHAT_VARIANTS,
-  CHAT_VOCAL_VARIANT,
+  CHAT_VOCAL_VARIANTS,
 } from '~/config/chat-variants';
 import type { ChatVariantEngines } from '~~/types/chat';
 
@@ -21,8 +21,10 @@ const moteursReponse = new Set(
 );
 const moteurReponseCommun = moteursReponse.size === 1 ? [...moteursReponse][0] : null;
 
-const vocalVariantVoix =
-  CHAT_VARIANTS.find((v) => v.id === CHAT_VOCAL_VARIANT)?.engines?.voice ?? '';
+/** Variantes de l'interface vocale, dans l'ordre du registre de config. */
+const variantesVocales = CHAT_VOCAL_VARIANTS.map((id) =>
+  CHAT_VARIANTS.find((v) => v.id === id && v.available),
+).filter((v): v is (typeof CHAT_VARIANTS)[number] => Boolean(v));
 
 /** Les moteurs d'une variante, dans l'ordre du parcours : dicter, répondre, lire. */
 function lignesMoteurs(moteurs: ChatVariantEngines) {
@@ -145,29 +147,41 @@ useHead({
       </li>
     </ul>
 
-    <!-- Interface vocale en essai : même variante, ergonomie « micro d'abord ». -->
-    <NuxtLink
-      :to="`/chat/vocal/${CHAT_VOCAL_VARIANT}`"
-      class="bg-primary-50 hover:bg-primary-100 group mt-3 flex items-center gap-4 rounded-2xl p-4 transition-colors dark:bg-gray-800 dark:hover:bg-gray-700"
-    >
-      <span
-        class="bg-primary-600 flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white"
-      >
-        <UIcon name="i-lucide-mic" class="h-5 w-5" />
-      </span>
-      <span class="min-w-0 flex-1">
-        <span class="block font-semibold text-gray-900 dark:text-white">
-          Interface vocale (essai)
-        </span>
-        <span class="mt-0.5 block text-sm text-gray-600 dark:text-gray-300">
-          Micro d’abord : on parle, la réponse est lue. Voix {{ vocalVariantVoix }}.
-        </span>
-      </span>
-      <UIcon
-        name="i-heroicons-arrow-right"
-        class="h-5 w-5 shrink-0 text-gray-400 transition-transform group-hover:translate-x-0.5"
-      />
-    </NuxtLink>
+    <!-- Interface vocale en essai : mêmes variantes, ergonomie « micro d'abord ». -->
+    <template v-if="variantesVocales.length">
+      <h2 class="mt-10 text-sm font-medium text-gray-500 dark:text-gray-400">
+        Interface vocale (essai) — on parle, la réponse est lue
+      </h2>
+      <ul class="mt-3 space-y-3">
+        <li v-for="variante in variantesVocales" :key="variante.id">
+          <NuxtLink
+            :to="`/chat/vocal/${variante.id}`"
+            class="bg-primary-50 hover:bg-primary-100 group flex items-center gap-4 rounded-2xl p-4 transition-colors dark:bg-gray-800 dark:hover:bg-gray-700"
+          >
+            <span
+              class="bg-primary-600 flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white"
+            >
+              <UIcon name="i-lucide-mic" class="h-5 w-5" />
+            </span>
+            <span class="min-w-0 flex-1">
+              <span class="block font-semibold text-gray-900 dark:text-white">
+                Voix {{ variante.engines?.voice ?? variante.label }}
+              </span>
+              <span
+                v-if="variante.engines?.dictation"
+                class="mt-0.5 block text-sm text-gray-600 dark:text-gray-300"
+              >
+                Dictée {{ variante.engines.dictation }}
+              </span>
+            </span>
+            <UIcon
+              name="i-heroicons-arrow-right"
+              class="h-5 w-5 shrink-0 text-gray-400 transition-transform group-hover:translate-x-0.5"
+            />
+          </NuxtLink>
+        </li>
+      </ul>
+    </template>
 
     <section class="mt-10 rounded-2xl bg-gray-50 p-5 dark:bg-gray-800">
       <h2 class="flex items-center gap-2 font-semibold text-gray-900 dark:text-white">

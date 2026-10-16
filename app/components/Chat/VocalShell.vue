@@ -518,7 +518,12 @@ onBeforeUnmount(() => {
 
       <div v-else class="mx-auto max-w-3xl space-y-6">
         <div v-for="message in messages" :key="message.id" class="space-y-2">
-          <ChatMessage :message="message" @ask="envoyer" @report="signaler">
+          <ChatMessage
+            :message="message"
+            sources-style="vignettes"
+            @ask="envoyer"
+            @report="signaler"
+          >
             <!-- Écouter / Arrêter, juste sous le texte de la réponse : sous les
                  sources, il fallait faire défiler pour le trouver. -->
             <template #apres-texte>
