@@ -23,7 +23,7 @@ export const CHAT_ASSISTANT_NAME = 'Vie Publique IA';
 
 /** Une phrase, pas un paragraphe : affichée sous le nom, sur la liste et à l'accueil du chat. */
 export const CHAT_ASSISTANT_TAGLINE =
-  'Posez vos questions sur les lois, les budgets et les rapports publics : l’assistant répond en citant ses sources.';
+  'Des réponses sourcées sur les lois, les budgets et les rapports publics.';
 
 /** Cible de la redirection `/chat`. ⚠️ Dupliqué en dur dans les `routeRules` de nuxt.config.ts. */
 export const CHAT_DEFAULT_VARIANT = 'gemini';
