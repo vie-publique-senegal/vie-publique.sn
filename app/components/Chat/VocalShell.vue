@@ -785,7 +785,7 @@ onBeforeUnmount(() => {
         </form>
 
         <p class="mt-3 truncate text-center text-[11px] text-gray-400 dark:text-gray-500">
-          Interface vocale (essai) · {{ variant.label }}
+          Interface vocale · {{ variant.label }}
         </p>
       </div>
     </div>
