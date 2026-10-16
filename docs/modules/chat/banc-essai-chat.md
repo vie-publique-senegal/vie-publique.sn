@@ -1,9 +1,10 @@
-# Sira — banc d'essai de chatbots (`/chat/**`)
+# Assistant Vie Publique — banc d'essai de chatbots (`/chat/**`)
 
 > Doc d'entrée du module. Plusieurs stacks de RAG conversationnel tournent en parallèle **sous
 > la même interface**, chacune à son URL, pour que les équipes internes les testent et comparent.
 
-**Sira** est le nom public de l'assistant, commun à toutes les variantes : *« l'assistant de Vie
+**Vie Publique** est le nom affiché de l'assistant, commun à toutes les variantes (« Sira »
+jusqu'au 2026-10-16, retiré tant que l'assistant n'est pas un produit public) : *« l'assistant de Vie
 Publique Sénégal. Il recherche dans les lois, rapports, décrets, budgets et autres documents
 publics pour vous fournir une réponse sourcée. »* Le nom vit dans le registre
 (`CHAT_ASSISTANT_NAME`) — une variante est un **moteur**, pas un assistant différent.
@@ -178,7 +179,7 @@ Repère : **l'interface doit ressembler aux assistants grand public**, mobile d'
 sert au diagnostic est reculé sous la saisie ; rien ne s'interpose entre l'utilisateur et sa
 question.
 
-- **En-tête** réduit à trois éléments : retour vers `/chat/liste`, « Sira », nouveau fil (icône
+- **En-tête** réduit à trois éléments : retour vers `/chat/liste`, « Vie Publique », nouveau fil (icône
   seule sur mobile, icône + libellé dès `sm`).
 - **Pas de bandeau fixe.** La limite du corpus est rappelée une fois à l'accueil de la
   conversation et disparaît dès le premier message — elle est déjà expliquée sur `/chat/liste`.

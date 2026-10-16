@@ -1,6 +1,6 @@
 # Vocal du chat — dictée et lecture (`/chat/**`)
 
-> Entrée et sortie vocales de **Sira**. Doc canonique du sujet ; la vue d'ensemble du module reste
+> Entrée et sortie vocales de **l'assistant Vie Publique**. Doc canonique du sujet ; la vue d'ensemble du module reste
 > [`banc-essai-chat.md`](./banc-essai-chat.md).
 >
 > **Le vocal est ADDITIF** : tout reste utilisable au clavier sans lui. Un moteur absent ne dégrade
