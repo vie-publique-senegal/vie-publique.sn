@@ -12,11 +12,15 @@ import type { ChatVariant, ChatVariantStatus } from '~~/types/chat';
  * (le wolof comme langue d'interaction).
  */
 
-/** Nom public de l'assistant, commun à toutes les variantes. */
-export const CHAT_ASSISTANT_NAME = 'Sira';
+/**
+ * Nom public de l'assistant, commun à toutes les variantes. « Sira » jusqu'au
+ * 2026-10-16 : un nom propre promet un produit, or l'assistant n'est pas encore
+ * public. Le nom du site suffit tant qu'il reste un banc d'essai.
+ */
+export const CHAT_ASSISTANT_NAME = 'Vie Publique';
 
 export const CHAT_ASSISTANT_TAGLINE =
-  'Sira, l’assistant de Vie Publique Sénégal. Il recherche dans les lois, rapports, décrets, budgets et autres documents publics pour vous fournir une réponse sourcée.';
+  'L’assistant de Vie Publique Sénégal. Il recherche dans les lois, rapports, décrets, budgets et autres documents publics pour vous fournir une réponse sourcée.';
 
 /** Cible de la redirection `/chat`. ⚠️ Dupliqué en dur dans les `routeRules` de nuxt.config.ts. */
 export const CHAT_DEFAULT_VARIANT = 'gemini';
