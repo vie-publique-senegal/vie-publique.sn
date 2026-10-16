@@ -5,6 +5,8 @@ import { useCollectionPageSeo } from '~/composables/collectivites/useCollectionP
 import { useDepartementsGeo } from '~/composables/collectivites/useDepartementsGeo';
 import { useGeoSearch } from '~/composables/collectivites/useGeoSearch';
 
+useFeatureGuard('menu_collectivites_territoriales');
+
 // Hub des départements : page pivot entre l'annuaire (558 collectivités, filtres
 // en query params non indexables) et les fiches communes. Elle donne 46 URLs
 // stables et crawlables, chacune menant à une dizaine de fiches.

@@ -296,8 +296,9 @@ onMounted(async () => {
   ]);
 
   // Le composant a pu être démonté pendant les chargements ci-dessus (navigation
-  // client, ou remontage par `:key` au drill-down) : sans ce contrôle, MapLibre reçoit
-  // un container null et lève « Invalid type: 'container' must be a String or HTMLElement ».
+  // client, remontage par `:key` au drill-down, ou page remplacée par la 404 d'un
+  // feature flag) : sans ce contrôle, MapLibre reçoit un container null et lève
+  // « Invalid type: 'container' must be a String or HTMLElement ».
   if (!mapContainer.value) return;
 
   await engine.initMap(mapContainer.value, {

@@ -4,6 +4,8 @@ import { useCommunesGeo } from '~/composables/collectivites/useCommunesGeo';
 
 definePageMeta({ layout: 'fullscreen' });
 
+useFeatureGuard('menu_collectivites_territoriales');
+
 const route = useRoute();
 const router = useRouter();
 const { siteUrl, themeColor } = useSiteMetadata();

@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { Government, GovernmentWithStats } from '~~/types/government';
 
+useFeatureGuard('menu_historique_dirigeants');
+
 const { siteName, siteUrl, keywords, themeColor } = useSiteMetadata();
 
 const {
