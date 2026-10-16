@@ -25,14 +25,37 @@ export const CHAT_ASSISTANT_TAGLINE =
 /** Cible de la redirection `/chat`. ⚠️ Dupliqué en dur dans les `routeRules` de nuxt.config.ts. */
 export const CHAT_DEFAULT_VARIANT = 'gemini';
 
-// Le corpus indexé ne couvre pas tout le site : une question hors périmètre
-// reçoit « je ne sais pas ». C'est le comportement attendu, pas une panne. Le
-// périmètre vient de la réconciliation d'ingestion (fichiers < 5 Mo, législation
-// depuis 2023) ; le décompte est arrondi car il bouge à chaque passage — relevé
-// sur `GET /documents` de rag.vie-publique.sn. Partagé par les variantes qui
-// interrogent ce RAG : c'est le même corpus.
+/**
+ * Le corpus interrogé par le RAG, décrit UNE fois : les variantes Gemini
+ * partagent le même, seule la voix change. Affiché en bas de `/chat/liste`.
+ *
+ * Le corpus indexé ne couvre pas tout le site : une question hors périmètre
+ * reçoit « je ne sais pas ». C'est le comportement attendu, pas une panne. Le
+ * périmètre vient du workflow n8n « Ingestion continue » (fichiers ≤ 30 Mo
+ * depuis le 2026-10-16, législation depuis 2023). Le décompte est arrondi
+ * (« près de ») : il monte à chaque passage — 4 986 documents
+ * distincts relevés dans le store le 2026-10-16 (`scripts/etat_store.py` de
+ * rag-platform).
+ */
+export const CHAT_CORPUS_RAG = {
+  title: 'Ce que l’assistant connaît',
+  // Espace insécable dans « 5 000 » : sinon le nombre se coupe en fin de ligne.
+  summary: 'Près de 5\u00a0000 documents publics sont indexés, en français.',
+  included: [
+    'Budgets et lois de finances',
+    'Rapports de contrôle et de reddition des comptes',
+    'Statistiques',
+    'Textes législatifs publiés depuis 2023',
+  ],
+  excluded: ['Textes législatifs antérieurs à 2023', 'Fichiers de plus de 30 Mo'],
+  outOfScope:
+    'Hors de ce périmètre, l’assistant répond qu’il ne sait pas : il ne répond qu’à partir des documents indexés, et cite toujours ses sources.',
+};
+
+// Rappel court, affiché à l'accueil de chaque conversation : quelqu'un qui
+// arrive directement sur /chat/<id> n'a pas vu /chat/liste.
 const AVERTISSEMENT_CORPUS_RAG =
-  'Corpus partiel : environ 5 400 des 12 600 documents publiés sont indexés (fichiers de moins de 5 Mo, textes législatifs depuis 2023).';
+  'Corpus partiel : près de 5\u00a0000 documents publics indexés (fichiers jusqu’à 30 Mo, textes législatifs depuis 2023).';
 
 const QUESTIONS_RAG = [
   'Quels départements sont touchés par l’insécurité alimentaire sévère ?',
@@ -48,7 +71,7 @@ export const CHAT_VARIANTS: ChatVariant[] = [
     id: 'gemini',
     label: 'Gemini — voix Kiriku (notre serveur)',
     description:
-      'Recherche dans les documents publics puis réponse générée avec citation des sources. API développée en interne. En wolof, la voix Kiriku tourne sur notre propre serveur.',
+      'Lecture wolof par la voix Kiriku, hébergée sur notre propre serveur. Dictée par Gemini.',
     status: 'active',
     icon: 'i-simple-icons-googlegemini',
     available: true,
@@ -65,7 +88,7 @@ export const CHAT_VARIANTS: ChatVariant[] = [
     id: 'gemini-voix-kiriku',
     label: 'Gemini — voix Kiriku (AI Hub)',
     description:
-      'Le même RAG, avec la dictée et la lecture wolof servies par l’API Kiriku d’AI Hub Senegal (modèles M-Kiriku et Kiriku TTS) au lieu de nos propres moteurs.',
+      'Dictée et lecture wolof servies par l’API Kiriku d’AI Hub Senegal (modèles M-Kiriku et Kiriku TTS).',
     status: 'active',
     icon: 'i-heroicons-speaker-wave',
     available: true,
@@ -89,7 +112,7 @@ export const CHAT_VARIANTS: ChatVariant[] = [
     id: 'gemini-voix-gemini',
     label: 'Gemini — voix Gemini',
     description:
-      'Le même RAG, avec la lecture wolof servie par le TTS de Gemini. Il lit les montants, pourcentages et sigles tels quels, sans conversion préalable.',
+      'Lecture wolof par le TTS de Gemini : il lit les montants, pourcentages et sigles tels quels, sans conversion préalable.',
     status: 'active',
     icon: 'i-heroicons-sparkles',
     available: true,

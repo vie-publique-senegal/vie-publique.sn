@@ -1,7 +1,24 @@
 <script setup lang="ts">
 import { NuxtLink } from '#components';
-import { CHAT_ASSISTANT_NAME, CHAT_STATUS_LABELS, CHAT_VARIANTS } from '~/config/chat-variants';
+import {
+  CHAT_ASSISTANT_NAME,
+  CHAT_ASSISTANT_TAGLINE,
+  CHAT_CORPUS_RAG,
+  CHAT_STATUS_LABELS,
+  CHAT_VARIANTS,
+} from '~/config/chat-variants';
 import type { ChatVariantEngines } from '~~/types/chat';
+
+/**
+ * Moteur de réponse commun à toutes les variantes testables, s'il n'y en a
+ * qu'un : il est alors dit une fois en tête de liste, pas répété sur chaque
+ * carte. Calculé depuis le registre — une variante d'une autre stack le fait
+ * revenir dans les cartes sans rien toucher ici.
+ */
+const moteursReponse = new Set(
+  CHAT_VARIANTS.filter((v) => v.available && v.engines).map((v) => v.engines!.answer),
+);
+const moteurReponseCommun = moteursReponse.size === 1 ? [...moteursReponse][0] : null;
 
 /** Les moteurs d'une variante, dans l'ordre du parcours : dicter, répondre, lire. */
 function lignesMoteurs(moteurs: ChatVariantEngines) {
@@ -19,7 +36,7 @@ function lignesMoteurs(moteurs: ChatVariantEngines) {
       valeur: moteurs.answer,
     },
     { cle: 'voice', titre: 'Voix wolof', icone: 'i-heroicons-speaker-wave', valeur: moteurs.voice },
-  ].filter((ligne) => ligne.valeur);
+  ].filter((ligne) => ligne.valeur && !(ligne.cle === 'answer' && moteurReponseCommun));
 }
 
 /**
@@ -40,9 +57,11 @@ useHead({
     <h1 class="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
       {{ CHAT_ASSISTANT_NAME }}
     </h1>
-    <p class="mt-3 text-gray-600 dark:text-gray-300">
-      L’assistant de Vie Publique Sénégal. Il recherche dans les lois, rapports, décrets, budgets et
-      autres documents publics pour vous fournir une réponse sourcée.
+    <p class="mt-3 text-gray-600 dark:text-gray-300">{{ CHAT_ASSISTANT_TAGLINE }}</p>
+    <p v-if="moteurReponseCommun" class="mt-2 text-sm text-gray-500 dark:text-gray-400">
+      Toutes les variantes partagent la même recherche et la même réponse ({{
+        moteurReponseCommun
+      }}) : seule la voix wolof change.
     </p>
 
     <ul class="mt-10 space-y-3">
@@ -82,10 +101,12 @@ useHead({
               <UBadge v-else size="xs" variant="subtle" color="gray">Désactivé</UBadge>
             </div>
 
-            <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">{{ variant.description }}</p>
-
-            <!-- Les variantes d'un même RAG ne diffèrent que par la voix : c'est
-                 cette ligne qui les distingue d'un coup d'œil. -->
+            <!-- Les variantes d'un même RAG ne diffèrent que par la voix : les
+                 pastilles le disent seules, la description n'est affichée que
+                 pour une variante sans moteurs déclarés. -->
+            <p v-if="!variant.engines" class="mt-1 text-sm text-gray-600 dark:text-gray-300">
+              {{ variant.description }}
+            </p>
             <dl v-if="variant.engines" class="mt-2 flex flex-wrap gap-1.5 text-xs">
               <div
                 v-for="ligne in lignesMoteurs(variant.engines)"
@@ -98,12 +119,11 @@ useHead({
               </div>
             </dl>
 
-            <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">
-              <template v-if="variant.available">
-                /chat/{{ variant.id
-                }}<template v-if="variant.warning"> — {{ variant.warning }}</template>
-              </template>
-              <template v-else>Backend pas encore branché — rien à tester pour l’instant.</template>
+            <!-- Ni route ni avertissement de corpus sur une variante testable :
+                 l'URL se lit dans la barre d'adresse, le corpus est commun et
+                 décrit une fois sous la liste. -->
+            <p v-if="!variant.available" class="mt-1 text-xs text-gray-400 dark:text-gray-500">
+              Backend pas encore branché — rien à tester pour l’instant.
             </p>
           </div>
 
@@ -115,6 +135,45 @@ useHead({
         </component>
       </li>
     </ul>
+
+    <section class="mt-10 rounded-2xl bg-gray-50 p-5 dark:bg-gray-800">
+      <h2 class="flex items-center gap-2 font-semibold text-gray-900 dark:text-white">
+        <UIcon name="i-heroicons-book-open" class="h-5 w-5 text-gray-500 dark:text-gray-400" />
+        {{ CHAT_CORPUS_RAG.title }}
+      </h2>
+      <p class="mt-2 text-sm text-gray-600 dark:text-gray-300">{{ CHAT_CORPUS_RAG.summary }}</p>
+
+      <div class="mt-4 grid gap-4 text-sm sm:grid-cols-2">
+        <div>
+          <h3 class="font-medium text-gray-900 dark:text-white">Indexés</h3>
+          <ul class="mt-1.5 space-y-1">
+            <li
+              v-for="item in CHAT_CORPUS_RAG.included"
+              :key="item"
+              class="flex items-start gap-1.5 text-gray-600 dark:text-gray-300"
+            >
+              <UIcon name="i-heroicons-check" class="mt-0.5 h-4 w-4 shrink-0 text-green-600" />
+              {{ item }}
+            </li>
+          </ul>
+        </div>
+        <div>
+          <h3 class="font-medium text-gray-900 dark:text-white">Pas encore indexés</h3>
+          <ul class="mt-1.5 space-y-1">
+            <li
+              v-for="item in CHAT_CORPUS_RAG.excluded"
+              :key="item"
+              class="flex items-start gap-1.5 text-gray-600 dark:text-gray-300"
+            >
+              <UIcon name="i-heroicons-minus" class="mt-0.5 h-4 w-4 shrink-0 text-gray-400" />
+              {{ item }}
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <p class="mt-4 text-xs text-gray-500 dark:text-gray-400">{{ CHAT_CORPUS_RAG.outOfScope }}</p>
+    </section>
 
     <p class="mt-10 text-xs text-gray-400 dark:text-gray-500">
       Plusieurs moteurs sont à l’essai sous la même interface. L’URL identifie le moteur : citez-la

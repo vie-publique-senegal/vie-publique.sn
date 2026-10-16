@@ -21,13 +21,17 @@ const isFullscreenRoute = (path: string) =>
   path.startsWith('/collectivites-territoriales/carte') ||
   (path.startsWith('/chat/') && path !== '/chat/liste');
 
+const isChatBenchRoute = (path: string) => path === '/chat' || path.startsWith('/chat/');
+
 const isChatPage = ref(isChatRoute(useRoute().path));
 const isFullscreenPage = ref(isFullscreenRoute(useRoute().path));
+const isChatBench = ref(isChatBenchRoute(useRoute().path));
 watch(
   () => useRoute().path,
   (newPath) => {
     isChatPage.value = isChatRoute(newPath);
     isFullscreenPage.value = isFullscreenRoute(newPath);
+    isChatBench.value = isChatBenchRoute(newPath);
   },
 );
 const links = [
@@ -157,9 +161,10 @@ onMounted(() => {
       <AppInstallPrompt />
     </ClientOnly> -->
 
-    <!-- Notification Consent Modal -->
+    <!-- Notification Consent Modal — jamais sur /chat/** : elle s'ouvrait
+         par-dessus une conversation en cours (micro, lecture). -->
     <ClientOnly>
-      <NotificationConsentModal :delay="5000" />
+      <NotificationConsentModal v-if="!isChatBench" :delay="5000" />
     </ClientOnly>
 
     <Toaster position="bottom-center" />
