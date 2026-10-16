@@ -62,13 +62,18 @@ useHead({
       {{ CHAT_ASSISTANT_NAME }}
     </h1>
     <p class="mt-3 text-gray-600 dark:text-gray-300">{{ CHAT_ASSISTANT_TAGLINE }}</p>
-    <p v-if="moteurReponseCommun" class="mt-2 text-sm text-gray-500 dark:text-gray-400">
-      Toutes les variantes partagent la même recherche et la même réponse ({{
-        moteurReponseCommun
-      }}) : seule la voix wolof change.
-    </p>
 
-    <ul class="mt-10 space-y-3">
+    <!-- Même recherche et même réponse pour toutes : seule la voix change, et
+         les pastilles des cartes disent laquelle. Le moteur de réponse n'est
+         pas nommé ici — c'est un détail pour l'équipe, pas pour le visiteur. -->
+    <h2
+      v-if="moteurReponseCommun"
+      class="mt-10 text-sm font-medium text-gray-500 dark:text-gray-400"
+    >
+      Choisissez la voix wolof à tester
+    </h2>
+
+    <ul class="space-y-3" :class="moteurReponseCommun ? 'mt-3' : 'mt-10'">
       <li v-for="variant in CHAT_VARIANTS" :key="variant.id">
         <!-- Une variante sans backend n'est pas cliquable : faire tester un faux
              chat produirait de faux retours. Elle reste listée pour montrer ce

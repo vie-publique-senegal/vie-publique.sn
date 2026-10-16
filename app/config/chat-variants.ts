@@ -15,12 +15,15 @@ import type { ChatVariant, ChatVariantStatus } from '~~/types/chat';
 /**
  * Nom public de l'assistant, commun à toutes les variantes. « Sira » jusqu'au
  * 2026-10-16 : un nom propre promet un produit, or l'assistant n'est pas encore
- * public. Le nom du site suffit tant qu'il reste un banc d'essai.
+ * public. « Vie Publique » seul répétait le logo du site juste au-dessus ;
+ * « IA » lève l'ambiguïté et dit franchement à qui l'on parle — attendu d'un
+ * service public. Dans une phrase : « l'assistant IA de Vie Publique ».
  */
-export const CHAT_ASSISTANT_NAME = 'Vie Publique';
+export const CHAT_ASSISTANT_NAME = 'Vie Publique IA';
 
+/** Une phrase, pas un paragraphe : affichée sous le nom, sur la liste et à l'accueil du chat. */
 export const CHAT_ASSISTANT_TAGLINE =
-  'L’assistant de Vie Publique Sénégal. Il recherche dans les lois, rapports, décrets, budgets et autres documents publics pour vous fournir une réponse sourcée.';
+  'Posez vos questions sur les lois, les budgets et les rapports publics : l’assistant répond en citant ses sources.';
 
 /** Cible de la redirection `/chat`. ⚠️ Dupliqué en dur dans les `routeRules` de nuxt.config.ts. */
 export const CHAT_DEFAULT_VARIANT = 'gemini';
