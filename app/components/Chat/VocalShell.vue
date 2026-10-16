@@ -235,7 +235,7 @@ function arreterReponse() {
   arreterLecture();
 }
 
-async function envoyer(texte: string, options: { dicte?: boolean } = {}) {
+async function envoyer(texte: string, options: { dicte?: boolean; lire?: boolean } = {}) {
   if (enCours.value || cooldown.value > 0) return;
 
   messages.value.push({
@@ -256,8 +256,10 @@ async function envoyer(texte: string, options: { dicte?: boolean } = {}) {
   abandon = new AbortController();
   let termine = false;
   arreterLecture();
-  // Question dictée → réponse lue. Le son a été amorcé au geste du micro.
-  lireAuFil = Boolean(options.dicte) && vocalAutorise.value && lecture.disponible.value;
+  // Question dictée (ou exemple touché) → réponse lue. Le son a été amorcé au
+  // geste qui a déclenché l'envoi.
+  lireAuFil =
+    Boolean(options.dicte || options.lire) && vocalAutorise.value && lecture.disponible.value;
   if (lireAuFil) messageLu.value = reponse.id;
   await defilerEnBas();
 
@@ -330,6 +332,22 @@ async function envoyer(texte: string, options: { dicte?: boolean } = {}) {
     if (!lecture.enLecture.value) messageLu.value = null;
     await defilerEnBas();
   }
+}
+
+/** Exemples de l'accueil, dans la langue choisie. */
+const exemples = computed(() =>
+  enWolof.value && props.variant.starterQuestionsWolof?.length
+    ? props.variant.starterQuestionsWolof
+    : (props.variant.starterQuestions ?? []),
+);
+
+/**
+ * Toucher un exemple vaut une question posée à l'oral : la réponse est lue.
+ * `activer()` AVANT tout `await` — c'est le geste qui débloque le son sur iOS.
+ */
+function poserExemple(exemple: string) {
+  if (vocalAutorise.value && lecture.disponible.value) lecture.activer();
+  void envoyer(exemple, { lire: true });
 }
 
 function envoyerTexte() {
@@ -485,24 +503,22 @@ onBeforeUnmount(() => {
     <!-- Conversation -->
     <div ref="zoneMessages" class="flex-1 overflow-y-auto px-4 py-6">
       <div v-if="!messages.length" class="mx-auto max-w-2xl py-4 text-center sm:py-10">
+        <!-- Un titre, pas de paragraphe : le libellé sous le micro dit déjà
+             quoi faire (« Appuyer pour parler en wolof »). -->
         <h1 class="text-2xl font-bold text-gray-900 dark:text-white sm:text-3xl">
-          Posez votre question à voix haute
+          Posez votre question
         </h1>
-        <p class="mx-auto mt-3 max-w-md text-gray-600 dark:text-gray-300">
-          Appuyez sur le micro et parlez{{ enWolof ? ' en wolof' : '' }}. L’assistant cherche dans
-          les documents publics et vous lit la réponse.
-        </p>
 
-        <div v-if="variant.starterQuestions?.length" class="mt-8 text-left">
+        <div v-if="exemples.length" class="mt-6 text-left">
           <p class="px-1 text-sm text-gray-500 dark:text-gray-400">Par exemple</p>
           <ul
             class="mt-2 divide-y divide-gray-100 overflow-hidden rounded-2xl bg-white ring-1 ring-gray-200 dark:divide-gray-700 dark:bg-gray-800 dark:ring-gray-700"
           >
-            <li v-for="exemple in variant.starterQuestions" :key="exemple">
+            <li v-for="exemple in exemples" :key="exemple">
               <button
                 type="button"
                 class="flex w-full items-center justify-between gap-3 px-4 py-3 text-left text-sm text-gray-800 hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-gray-700"
-                @click="envoyer(exemple)"
+                @click="poserExemple(exemple)"
               >
                 {{ exemple }}
                 <UIcon name="i-heroicons-chevron-right" class="h-4 w-4 shrink-0 text-gray-400" />

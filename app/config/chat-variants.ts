@@ -74,6 +74,16 @@ const QUESTIONS_RAG = [
   'À quel taux la LFR 2025 révise-t-elle la croissance du PIB ?',
 ];
 
+// Espace insécable avant « ? » : sinon il passe seul à la ligne sur mobile.
+// Testées sur le RAG le 2026-10-16 : réponses courtes (milliards, %), donc
+// supportables à l'écoute, et sourcées. Une année explicite est nécessaire :
+// « léegi » (maintenant) ramenait des documents de 2000-2017.
+const QUESTIONS_RAG_WOLOF = [
+  'Ñaata la budget bu Senegaal ci 2026\u00a0?',
+  'Ñaata la déficit bi ci loi de finances 2026 di tollu\u00a0?',
+  'Bor bu Senegaal ci 2025, ñaata la tollu ci PIB\u00a0?',
+];
+
 const chargerAdaptateurRag = () =>
   import('~/lib/chat/adapters/gemini').then((m) => m.createGeminiAdapter);
 
@@ -93,6 +103,7 @@ export const CHAT_VARIANTS: ChatVariant[] = [
     },
     warning: AVERTISSEMENT_CORPUS_RAG,
     starterQuestions: QUESTIONS_RAG,
+    starterQuestionsWolof: QUESTIONS_RAG_WOLOF,
     loadAdapter: chargerAdaptateurRag,
   },
   {
@@ -117,6 +128,7 @@ export const CHAT_VARIANTS: ChatVariant[] = [
     },
     warning: AVERTISSEMENT_CORPUS_RAG,
     starterQuestions: QUESTIONS_RAG,
+    starterQuestionsWolof: QUESTIONS_RAG_WOLOF,
     loadAdapter: chargerAdaptateurRag,
   },
   {
@@ -140,6 +152,7 @@ export const CHAT_VARIANTS: ChatVariant[] = [
     },
     warning: AVERTISSEMENT_CORPUS_RAG,
     starterQuestions: QUESTIONS_RAG,
+    starterQuestionsWolof: QUESTIONS_RAG_WOLOF,
     loadAdapter: chargerAdaptateurRag,
   },
   {
