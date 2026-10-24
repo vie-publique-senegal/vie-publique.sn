@@ -10,6 +10,9 @@ import { readItems } from "@directus/sdk";
  * - limit: Nombre d'éléments par page (défaut: 1000)
  * - election: ID de l'élection pour filtrer les données
  *
+ * Source : election_polling_stations via le fichier électoral diaspora.
+ * Fallback : election_map_diaspora tant que la prod n'est pas migrée.
+ *
  * @returns Liste des bureaux de vote avec pagination et recherche
  */
 export default defineCachedEventHandler(
@@ -28,32 +31,39 @@ export default defineCachedEventHandler(
     const page = parseInt((query.page as string) || "1");
     const limit = parseInt((query.limit as string) || "1000");
     const electionId = query.election as string | undefined;
+    const electoralFileParam = query.electoral_file as string | undefined;
 
     try {
       const directus = getCmsClient();
+      const countryName = decodeURIComponent(country);
 
-      // Construction du filtre
-      interface FilterType {
-        country: { _eq: string };
-        election?: { _eq: number };
-        _or?: Array<{
-          locality?: { _contains: string };
-          polling_place?: { _contains: string };
-        }>;
+      const fileId = electoralFileParam
+        ? parseInt(electoralFileParam)
+        : await resolveElectoralFileId(
+            electionId ? parseInt(electionId) : null,
+            "diaspora"
+          );
+
+      const useLegacy = !fileId;
+      if (useLegacy) {
+        warnElectoralLegacyFallback("/api/elections/diaspora/country-details", countryName);
       }
 
-      const filter: FilterType = {
-        country: {
-          _eq: decodeURIComponent(country),
-        },
+      const collection = useLegacy ? "election_map_diaspora" : "election_polling_stations";
+
+      // Construction du filtre (mêmes clés texte sur les deux collections)
+      const filter: Record<string, unknown> = {
+        country: { _eq: countryName },
       };
 
-      // Ajouter le filtre d'élection si présent
-      if (electionId) {
-        filter.election = { _eq: parseInt(electionId) };
+      if (useLegacy) {
+        if (electionId) {
+          filter.election = { _eq: parseInt(electionId) };
+        }
+      } else {
+        filter.electoral_file = { _eq: fileId };
       }
 
-      // Ajouter le filtre de recherche si présent
       if (search) {
         filter._or = [
           { locality: { _contains: search } },
@@ -64,7 +74,16 @@ export default defineCachedEventHandler(
       // Récupération des données avec pagination
       const [locations, totalCount] = await Promise.all([
         directus.request(
-          readItems("election_map_diaspora", {
+          readItems(collection, {
+            fields: [
+              "id",
+              "country",
+              "locality",
+              "diplomatic_representation",
+              "polling_place",
+              "office_number",
+              "voters",
+            ],
             filter,
             sort: ["locality", "polling_place", "office_number"],
             page,
@@ -73,7 +92,7 @@ export default defineCachedEventHandler(
         ),
         // Récupérer le nombre total pour la pagination
         directus.request(
-          readItems("election_map_diaspora", {
+          readItems(collection, {
             filter,
             aggregate: {
               count: ["id"],
@@ -116,7 +135,7 @@ export default defineCachedEventHandler(
   },
   {
     maxAge: 60 * 30, // 30 minutes de cache
-    name: "diaspora-country-details",
+    name: "diaspora-country-details-v2",
     getKey: (event) => {
       const country = getRouterParam(event, "country");
       return buildCacheKey(`diaspora-country-details-${country}`, getQuery(event));

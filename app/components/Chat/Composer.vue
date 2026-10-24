@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useLocalStorage } from '@vueuse/core';
+import { CLE_MENTION_VOIX, texteMentionVoix } from '~/lib/chat/mention-voix';
 
 const props = defineProps<{
   /** Une requête est en cours : on propose l'arrêt plutôt que l'envoi. */
@@ -13,6 +14,8 @@ const props = defineProps<{
   voix?: boolean;
   /** Langue du vocal (BCP-47). Jamais de valeur par défaut ici. */
   voixLang?: string;
+  /** Profil vocal du serveur, porté par la variante. Absent = voix par défaut. */
+  voixProfil?: string;
   /**
    * Échec de la LECTURE, remonté par la coquille. Affiché au même endroit que
    * celui de la dictée : l'utilisateur n'a pas à savoir laquelle des deux
@@ -36,27 +39,9 @@ const textarea = ref<{ textarea?: HTMLTextAreaElement } | HTMLElement | null>(nu
 
 const disabled = computed(() => Boolean(props.cooldown && props.cooldown > 0));
 
-/**
- * Mention sur la transmission de l'audio, affichée UNE FOIS avant le premier
- * enregistrement. Point de gouvernance, pas de confort : la reconnaissance
- * vocale n'est pas locale, l'audio part chez un tiers. Sur un service public,
- * l'utilisateur doit le savoir avant de parler, pas après.
- *
- * ⚠️ **Le destinataire dépend de la plateforme, pas seulement du navigateur.**
- * Mesuré le 2026-08-04 sur iPhone : Chrome iOS affiche « les données vocales
- * seront envoyées à **Apple** » — c'est le service système, pas Google. Nommer
- * un seul fournisseur rendrait la mention FAUSSE pour une partie des visiteurs,
- * ce qui est pire que de ne rien dire sur un site de service public. D'où une
- * formulation qui couvre les trois cas sans en garantir un.
- *
- * ⚠️ **Depuis le moteur serveur (2026-09-04), il y a DEUX chemins et donc deux
- * mentions.** Celle du navigateur reste vraie mot pour mot ; elle devient fausse
- * dès que la dictée passe par notre API, puisque l'audio transite alors bien par
- * nos serveurs. Une phrase unique qui couvrirait les deux cas serait vague là où
- * la précédente était précise. Clé de consentement en `v2` : ceux qui ont
- * accepté l'ancienne formulation n'ont pas accepté celle-ci.
- */
-const mentionVue = useLocalStorage('vp-chat-voix-mention-v2', false);
+// Mention avant le premier enregistrement : texte et clé partagés avec
+// l'interface vocale, voir `~/lib/chat/mention-voix`.
+const mentionVue = useLocalStorage(CLE_MENTION_VOIX, false);
 const mentionAffichee = ref(false);
 
 const langue = computed(() => props.voixLang ?? '');
@@ -77,6 +62,7 @@ const {
   effacerErreur,
 } = useDicteeVocale({
   lang: langue,
+  profil: props.voixProfil,
   onLangue: (lang) => emit('langue', lang),
   onTexte: (texte) => {
     // On COMPLÈTE, on n'écrase pas : l'utilisateur a pu commencer à taper.
@@ -89,11 +75,7 @@ const {
 /** La dictée passe-t-elle par nos serveurs ? La mention en dépend, pas l'UI. */
 const dicteeParNosServeurs = computed(() => moteurDictee.value === 'rag-serveur');
 
-const texteMention = computed(() =>
-  dicteeParNosServeurs.value
-    ? 'Votre voix est enregistrée puis transmise à notre service, qui la fait transcrire par un prestataire. L’enregistrement n’est pas conservé : seul le texte transcrit reste, dans le champ de saisie, où vous pouvez le corriger. Vous pouvez taper votre question à la place.'
-    : 'Votre voix est transmise au service de reconnaissance vocale de votre navigateur ou de votre appareil — Apple, Google ou Microsoft selon le cas — afin d’être transcrite. Elle ne transite pas par nos serveurs, et n’est pas conservée par Vie Publique. Vous pouvez taper votre question à la place.',
-);
+const texteMention = computed(() => texteMentionVoix(dicteeParNosServeurs.value));
 
 const micDisponible = computed(() => Boolean(props.voix) && dicteeDisponible.value);
 /** Refus de permission : bouton conservé mais inerte et expliqué, plutôt qu'évaporé. */
@@ -102,7 +84,7 @@ const micRefuse = computed(
 );
 
 const etiquetteMic = computed(() => {
-  if (etatDictee.value === 'transcription') return 'Transcription en cours';
+  if (etatDictee.value === 'transcription') return 'Transcription de votre voix…';
   if (etatDictee.value === 'ecoute') return 'Écoute… appuyez quand vous avez fini';
   return 'Dicter la question';
 });
@@ -195,7 +177,9 @@ defineExpose({ focus, arreterDictee });
         <UTextarea
           ref="textarea"
           v-model="question"
-          placeholder="Posez une question..."
+          :placeholder="
+            micDisponible ? 'Écrivez ou dictez votre question' : 'Posez une question...'
+          "
           color="primary"
           variant="outline"
           class="w-full"
@@ -204,25 +188,43 @@ defineExpose({ focus, arreterDictee });
           size="xl"
           :disabled="disabled"
           :autoresize="true"
-          :ui="{ base: 'rounded-3xl resize-none pb-12 px-4 pt-3.5 md:text-sm' }"
+          :ui="{
+            base: 'resize-none md:text-sm',
+            padding: {
+              xl: micDisponible || micRefuse ? 'py-2.5 pl-12 pr-12' : 'py-2.5 pl-3.5 pr-12',
+            },
+          }"
           @keydown.enter.exact.prevent="submit"
         />
 
         <!-- Micro à GAUCHE, envoi à droite : la dictée est une alternative à la
-             frappe, pas une variante de l'envoi. -->
-        <div v-if="micDisponible || micRefuse" class="absolute bottom-3 left-3">
+             frappe, pas une variante de l'envoi. Le padding du champ (`ui.padding`
+             ci-dessus) leur réserve la place : passé dans `ui.base`, il était écrasé
+             par celui de la taille `xl` (tailwind-merge) et le micro recouvrait le
+             texte. -->
+        <div v-if="micDisponible || micRefuse" class="absolute bottom-1 left-1.5">
           <UTooltip
             :text="micRefuse ? 'Micro refusé — réautorisez-le dans votre navigateur' : etiquetteMic"
             :delay-duration="0"
           >
+            <!-- Écoute : carré « stop » (un micro barré se lit « micro coupé »).
+                 Transcription : roue qui tourne. ⚠️ Pas d'`animate-pulse` ici :
+                 app.css le repeint en gris en dark (règle des skeletons), le
+                 rouge d'enregistrement disparaissait. -->
             <UButton
               type="button"
               :color="enEcoute ? 'red' : 'gray'"
               :variant="enEcoute ? 'solid' : 'ghost'"
               size="sm"
-              :icon="enEcoute ? 'i-lucide-mic-off' : 'i-lucide-mic'"
+              :icon="
+                etatDictee === 'transcription'
+                  ? 'i-lucide-loader-circle'
+                  : enEcoute
+                    ? 'i-lucide-square'
+                    : 'i-lucide-mic'
+              "
               class="rounded-full"
-              :class="etatDictee === 'ecoute' ? 'animate-pulse' : ''"
+              :class="etatDictee === 'transcription' ? '[&>span]:animate-spin' : ''"
               :disabled="disabled || micRefuse"
               :aria-label="etiquetteMic"
               :aria-pressed="enEcoute"
@@ -231,7 +233,7 @@ defineExpose({ focus, arreterDictee });
           </UTooltip>
         </div>
 
-        <div class="absolute bottom-3 right-3">
+        <div class="absolute bottom-1 right-1.5">
           <UButton
             v-if="busy"
             type="button"
@@ -267,10 +269,17 @@ defineExpose({ focus, arreterDictee });
         role="status"
         aria-live="polite"
       >
-        <span
-          class="h-2 w-2 flex-shrink-0 animate-pulse rounded-full bg-red-500"
+        <UIcon
+          v-if="etatDictee === 'transcription'"
+          name="i-lucide-loader-circle"
+          class="h-4 w-4 flex-shrink-0 animate-spin"
           aria-hidden="true"
         />
+        <!-- `animate-ping` et non `animate-pulse` : voir le bouton micro. -->
+        <span v-else class="relative flex h-2 w-2 flex-shrink-0" aria-hidden="true">
+          <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400" />
+          <span class="relative inline-flex h-2 w-2 rounded-full bg-red-500" />
+        </span>
         <span class="truncate">{{ textePartiel || etiquetteMic }}</span>
       </p>
     </div>

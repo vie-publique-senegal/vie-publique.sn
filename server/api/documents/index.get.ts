@@ -1,6 +1,6 @@
 import { readItems } from '@directus/sdk';
 import type { Document } from '~~/types/document';
-// Source de vérité partagée avec scripts/search-reindex.mjs (alias Nuxt 4 du dossier shared/)
+// Libellés partagés avec l'indexation (vpsn-data-plateform/modules/recherche/scripts/search-reindex.mjs, copie contrôlée) — alias Nuxt 4 du dossier shared/
 import { DOCUMENT_TYPE_LABELS } from '#shared/document-type-labels.mjs';
 
 /**

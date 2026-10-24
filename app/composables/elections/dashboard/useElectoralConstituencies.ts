@@ -1,6 +1,7 @@
 export interface Constituency {
   id: string | number;
   name: string;
+  slug?: string | null;
   type: string;
   communes_count?: number;
   coalitions_count?: number;
@@ -16,28 +17,30 @@ export const useElectoralConstituencies = (params: {
   const { year, type, search } = params;
 
   // Calculer une clé unique basée sur les paramètres
-  const queryKey = computed(() =>
-    `constituencies-${year.value}-${type.value}-${search?.value || 'no-search'}`
+  const queryKey = computed(
+    () => `constituencies-${year.value}-${type.value}-${search?.value || 'no-search'}`,
   );
 
-  const { data: constituencies, pending: loading, error } = useFetch<Constituency[]>(
-    '/api/elections/dashboard/constituencies',
-    {
-      key: queryKey,
-      query: {
-        year,
-        type,
-        search
-      },
-      watch: [year, type, search],
-      server: true,
-      lazy: true
-    }
-  );
+  const {
+    data: constituencies,
+    pending: loading,
+    error,
+  } = useFetch<Constituency[]>('/api/elections/dashboard/constituencies', {
+    key: queryKey,
+    query: {
+      year,
+      type,
+      search,
+    },
+    // `search` est optionnel : un `undefined` dans `watch` déclenche « Invalid watch source »
+    watch: search ? [year, type, search] : [year, type],
+    server: true,
+    lazy: true,
+  });
 
   return {
     constituencies: computed(() => constituencies.value || []),
     loading,
-    error
+    error,
   };
 };

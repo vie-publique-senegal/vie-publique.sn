@@ -146,7 +146,7 @@ export default defineEventHandler(async (event) => {
       const article = hit.document;
       if (!article) return hit;
 
-      // Index v2 : l'URL publique est précalculée à l'indexation (scripts/search-reindex.mjs)
+      // Index v2 : l'URL publique est précalculée à l'indexation (vpsn-data-plateform/modules/recherche/scripts/search-reindex.mjs)
       if (article.url) {
         return { ...hit, formattedUrl: article.url };
       }

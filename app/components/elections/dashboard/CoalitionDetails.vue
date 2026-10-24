@@ -13,12 +13,13 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits(['close']);
+const router = useRouter();
 
 const isPresidential = computed(() => props.type === 'presidential');
 const isLocal = computed(() => ['locale', 'locales', 'local'].includes(props.type));
 
 const dashboard = useElectoralDashboard();
-const { searchQuery } = dashboard;
+const { searchQuery, currentElection } = dashboard;
 
 const { lists, loading, error } = useElectoralDashboardLists({
   coalitionId: props.coalitionId,
@@ -58,6 +59,21 @@ const filterOptions = computed(() => [
   },
 ]);
 
+// Nombre de circonscriptions distinctes (et non listes / 2 : les locales n'ont pas de
+// suppléants, la moitié des listes sous-comptait les circonscriptions).
+const constituencyCount = computed(
+  () =>
+    new Set(
+      (lists.value || []).map(
+        (l) =>
+          (l.constituency as { id?: number | string } | null | undefined)?.id ??
+          l.constituency?.name ??
+          // Liste sans circonscription (liste nationale) : titulaires + suppléants = 1
+          `type:${l.type}`,
+      ),
+    ).size,
+);
+
 const { groupListsByConstituency, filterListsBySearch, filterListsByType } = useElectoralGrouping();
 
 const groupedLists = computed(() => {
@@ -65,8 +81,10 @@ const groupedLists = computed(() => {
 
   let baseLists = lists.value;
 
+  // Locales : pas de filtre par type de liste, mais la recherche s'applique aussi
+  // (elle était ignorée : le champ « Rechercher un candidat » ne filtrait rien).
   if (isLocal.value) {
-    return baseLists;
+    return searchQuery.value ? filterListsBySearch(baseLists, searchQuery.value) : baseLists;
   }
 
   if (searchQuery.value) {
@@ -82,12 +100,32 @@ const groupedLists = computed(() => {
   return groupListsByConstituency(baseLists);
 });
 
-const selectedCandidate = ref<Candidate | null>(null);
-const isModalOpen = ref(false);
+const candidateSlug = (candidate: Candidate) => {
+  const rawSlug = (candidate as any)?.slug;
+  if (typeof rawSlug === 'string' && rawSlug.trim()) {
+    return rawSlug.trim().toLowerCase();
+  }
 
-function openCandidateModal(candidate: Candidate) {
-  selectedCandidate.value = candidate;
-  isModalOpen.value = true;
+  return `${candidate?.first_name || ''} ${candidate?.last_name || ''}`
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9-]/g, '')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+};
+
+function openCandidateProfile(candidate: Candidate) {
+  const slug = candidateSlug(candidate);
+  if (!slug) return;
+
+  // Page profil (bio, infos…) pour tous les scrutins, locales comprises
+  const electionSlug = currentElection.value?.slug;
+  if (electionSlug) {
+    router.push(`/elections-senegal/${electionSlug}/candidats/${slug}`);
+  }
 }
 </script>
 
@@ -96,19 +134,19 @@ function openCandidateModal(candidate: Candidate) {
     <!-- Header with Back Button -->
     <ElectionsDashboardPresidentialDetailsHeader
       :coalition-name="coalitionName"
-      :list-count="lists.length"
+      :list-count="constituencyCount"
       :type="type"
       :candidate="isPresidential && lists.length > 0 ? lists[0].candidates[0] : null"
       @close="emit('close')"
     />
 
     <!-- Filters & Search (seulement pour législatives et locales) -->
-    <div v-if="!isPresidential" class="flex flex-col gap-4 sticky top-[80px] md:top-[124px] z-40 bg-gray-50/95 backdrop-blur-md pb-4 pt-2 -mx-4 px-4 border-b md:border-none border-gray-200 dark:border-gray-800 dark:bg-gray-950/95 transition-all duration-300">
-      <div class="max-w-3xl mx-auto w-full">
+    <div v-if="!isPresidential" class="flex flex-col gap-4 pb-4 pt-2 border-b border-gray-200 dark:border-gray-800 sm:flex-row sm:items-center sm:gap-6">
+      <div class="w-full sm:flex-1">
         <ElectionsDashboardFiltersCandidateSearchBar v-model="searchQuery" />
       </div>
 
-      <div v-if="!isLocal" class="w-full flex justify-center overflow-x-auto no-scrollbar">
+      <div v-if="!isLocal" class="w-full overflow-x-auto no-scrollbar sm:flex-1">
         <ElectionsDashboardFiltersCandidateFilterTabs
           v-if="!searchQuery"
           v-model="filterType"
@@ -123,6 +161,8 @@ function openCandidateModal(candidate: Candidate) {
       :candidate="lists[0].candidates[0]"
       :coalition-name="coalitionName"
       :coalition-id="coalitionId"
+      :year="year"
+      :type="type"
     />
 
     <!-- Loading State -->
@@ -165,7 +205,7 @@ function openCandidateModal(candidate: Candidate) {
                  v-for="candidate in list.candidates"
                  :key="candidate.id"
                  :candidate="candidate"
-                 @select="openCandidateModal"
+                 @select="openCandidateProfile"
                 />
             </div>
 
@@ -175,7 +215,7 @@ function openCandidateModal(candidate: Candidate) {
                   v-for="candidate in list.candidates"
                   :key="candidate.id"
                   :candidate="candidate"
-                  @select="openCandidateModal"
+                  @select="openCandidateProfile"
                 />
             </div>
           </div>
@@ -185,7 +225,7 @@ function openCandidateModal(candidate: Candidate) {
       <template v-else>
         <div v-for="group in groupedLists" :key="group.name" class="space-y-4">
           <div class="bg-primary-50 dark:bg-primary-900/10 p-4 rounded-xl border border-primary-100 dark:border-primary-900/50">
-            <h3 class="text-xl font-black text-primary-700 dark:text-primary-400 uppercase flex items-center gap-2">
+            <h3 class="text-xl md:text-lg font-bold text-primary-700 dark:text-primary-400 flex items-center gap-2">
               <UIcon name="i-heroicons-map-pin" class="h-5 w-5" />
               {{ group.name }}
             </h3>
@@ -221,7 +261,7 @@ function openCandidateModal(candidate: Candidate) {
                  v-for="candidate in group.titulaires.candidates"
                  :key="candidate.id"
                  :candidate="candidate"
-                 @select="openCandidateModal"
+                 @select="openCandidateProfile"
                 />
               </div>
             </template>
@@ -232,7 +272,7 @@ function openCandidateModal(candidate: Candidate) {
                   v-for="candidate in group.suppleants.candidates"
                   :key="candidate.id"
                   :candidate="candidate"
-                  @select="openCandidateModal"
+                  @select="openCandidateProfile"
                 />
               </div>
             </template>
@@ -247,11 +287,5 @@ function openCandidateModal(candidate: Candidate) {
         <h4 class="text-lg font-bold text-gray-400">Aucun résultat</h4>
         <p class="text-sm text-gray-500 max-w-xs mx-auto">Essayez de changer les filtres ou de modifier votre recherche.</p>
     </div>
-
-    <!-- Candidate Detail Modal -->
-    <ElectionsDashboardModalsCandidateDetailModal
-      v-model="isModalOpen"
-      :candidate="selectedCandidate"
-    />
   </div>
 </template>

@@ -34,6 +34,8 @@ interface DiasporaCountryOptions {
   page?: Ref<number>;
   limit?: number;
   electionId?: Ref<string | undefined> | string | undefined;
+  /** Fichier électoral diaspora explicite (prioritaire sur electionId côté API) */
+  electoralFileId?: Ref<string | number | null> | string | number | null;
 }
 
 /**
@@ -50,7 +52,7 @@ interface DiasporaCountryOptions {
  * ```
  */
 export const useDiasporaCountry = (options: DiasporaCountryOptions) => {
-  const { country, search, page, limit = 1000, electionId } = options;
+  const { country, search, page, limit = 1000, electionId, electoralFileId } = options;
 
   // Computed pour obtenir la valeur de l'election ID
   const currentElectionId = computed(() => {
@@ -59,10 +61,22 @@ export const useDiasporaCountry = (options: DiasporaCountryOptions) => {
     return value || undefined;
   });
 
+  const currentElectoralFileId = computed(() => {
+    if (!electoralFileId) return undefined;
+    const value = isRef(electoralFileId) ? electoralFileId.value : electoralFileId;
+    return value ? String(value) : undefined;
+  });
+
+  const sourceKeySuffix = computed(
+    () => currentElectoralFileId.value ? `file-${currentElectoralFileId.value}` : currentElectionId.value || 'all',
+  );
+
   // Query params pour les statistiques
   const statsQueryParams = computed(() => {
     const params: Record<string, string> = {};
-    if (currentElectionId.value) {
+    if (currentElectoralFileId.value) {
+      params.electoral_file = currentElectoralFileId.value;
+    } else if (currentElectionId.value) {
       params.election = currentElectionId.value;
     }
     return params;
@@ -75,7 +89,9 @@ export const useDiasporaCountry = (options: DiasporaCountryOptions) => {
       page: page?.value || 1,
       limit,
     };
-    if (currentElectionId.value) {
+    if (currentElectoralFileId.value) {
+      params.electoral_file = currentElectoralFileId.value;
+    } else if (currentElectionId.value) {
       params.election = currentElectionId.value;
     }
     return params;
@@ -90,10 +106,10 @@ export const useDiasporaCountry = (options: DiasporaCountryOptions) => {
   } = useFetch<{ data: CountryStats }>(
     `/api/elections/diaspora/country-stats/${encodeURIComponent(country)}`,
     {
-      key: computed(() => `diaspora-stats-${country}-${currentElectionId.value || 'all'}`),
+      key: computed(() => `diaspora-stats-${country}-${sourceKeySuffix.value}`),
       query: statsQueryParams,
       server: true,
-      watch: [currentElectionId],
+      watch: [currentElectionId, currentElectoralFileId],
     },
   );
 
@@ -107,10 +123,12 @@ export const useDiasporaCountry = (options: DiasporaCountryOptions) => {
     data: DiasporaLocation[];
     meta: { total_count: number; page: number; limit: number; total_pages: number };
   }>(`/api/elections/diaspora/country-details/${encodeURIComponent(country)}`, {
-    key: computed(() => `diaspora-details-${country}-${currentElectionId.value || 'all'}`),
+    key: computed(() => `diaspora-details-${country}-${sourceKeySuffix.value}`),
     query: detailsQueryParams,
     server: true,
-    watch: search && page ? [search, page, currentElectionId] : [currentElectionId],
+    watch: search && page
+      ? [search, page, currentElectionId, currentElectoralFileId]
+      : [currentElectionId, currentElectoralFileId],
   });
 
   // Computed pour les stats formatées

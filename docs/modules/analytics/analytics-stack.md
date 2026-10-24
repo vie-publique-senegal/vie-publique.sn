@@ -28,7 +28,7 @@ GTAG_ID=G-XXXXXXXXXX
 
 - Chargé uniquement si `GTAG_ID` est défini (désactivé en local par défaut).
 - Collecte automatiquement : pages vues, scroll, clics sortants, téléchargements.
-- **Événements personnalisés** : voir `app/composables/useAnalytics.ts` (quiz).
+- **Événements personnalisés** : voir `app/composables/useAnalytics.ts` (quiz, page `/liens`).
 
 ### Événements custom actuels
 
@@ -36,6 +36,7 @@ GTAG_ID=G-XXXXXXXXXX
 |---|---|---|
 | `start_quiz` | Page quiz | — |
 | `finish_quiz` | Page quiz | — |
+| `liens_click` | Page `/liens` | `link_id`, `link_section` |
 
 ### Intégration Clarity → GA4
 

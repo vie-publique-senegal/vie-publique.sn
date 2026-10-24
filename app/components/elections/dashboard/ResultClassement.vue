@@ -5,11 +5,13 @@ interface Props {
   coalitions: Coalition[];
   loading?: boolean;
   type?: string;
+  subtitle?: string | null;
 }
 
 const props = withDefaults(defineProps<Props>(), {
   loading: false,
-  type: 'legislative'
+  type: 'legislative',
+  subtitle: null,
 });
 
 const sortConfig = ref({
@@ -82,7 +84,18 @@ const rows = computed(() => {
 <template>
   <div>
     <!-- Header Classement -->
-    <h3 class="text-lg font-black uppercase tracking-tight mb-3">Classement</h3>
+    <div class="flex items-center gap-2 mb-3">
+      <h3 class="text-lg font-bold tracking-tight">Classement</h3>
+      <UBadge
+        v-if="subtitle"
+        color="gray"
+        variant="subtle"
+        size="xs"
+        class="uppercase font-bold tracking-widest"
+      >
+        {{ subtitle }}
+      </UBadge>
+    </div>
 
     <!-- Sort controls -->
     <div class="flex items-center justify-end gap-4 mb-2 text-xs font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400 px-1">
@@ -169,7 +182,7 @@ const rows = computed(() => {
         <div v-if="type === 'legislative'" class="flex-shrink-0 w-10 text-right">
           <span
             v-if="row.totalSieges > 0"
-            class="inline-flex items-center justify-center min-w-[28px] h-7 rounded-lg bg-gray-100 dark:bg-gray-800 text-sm font-black text-gray-900 dark:text-white tabular-nums"
+            class="inline-flex items-center justify-center min-w-[28px] h-7 rounded-lg bg-gray-100 dark:bg-gray-800 text-sm font-bold text-gray-900 dark:text-white tabular-nums"
           >
             {{ row.totalSieges }}
           </span>

@@ -39,6 +39,8 @@ export interface OptionsDictee {
    * lecture choisit le bon moteur. Aucune détection en aval.
    */
   onLangue?: (lang: string) => void;
+  /** Profil vocal du serveur, fixé par la variante. Absent = voix par défaut. */
+  profil?: string;
 }
 
 export function useDicteeVocale(options: OptionsDictee) {
@@ -121,6 +123,7 @@ export function useDicteeVocale(options: OptionsDictee) {
         signal: abandon.signal,
         signalFin: fin.signal,
         onLangue: options.onLangue,
+        profil: options.profil,
         onPartiel: (partiel) => {
           textePartiel.value = partiel;
           if (partiel) etat.value = 'transcription';

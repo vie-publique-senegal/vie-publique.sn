@@ -2,11 +2,12 @@
  * Libellés français des sous-types de documents (`documents.type` Directus).
  * Utilisés comme facette `category` dans l'index Typesense.
  *
- * SOURCE DE VÉRITÉ partagée entre :
- * - scripts/search-reindex.mjs (indexation)
- * - server/api/documents/index.get.ts (filtre type → category, C10)
- * ⚠️ Le node « Transform Document v2 » du workflow n8n RT en a une copie inline :
- *   toute modification ici doit y être répercutée.
+ * Utilisés par server/api/documents/index.get.ts (filtre type → category, C10), qui
+ * doit parler la langue de l'index. Deux autres exemplaires existent, et toute
+ * modification doit y être répercutée :
+ * - vpsn-data-plateform/modules/recherche/scripts/lib/document-type-labels.mjs (indexation) ;
+ * - le node « Transform Document v2 » du workflow n8n RT.
+ * Le contrôle : node modules/recherche/scripts/controler-libelles.mjs (dans vpsn-data-plateform).
  */
 export const DOCUMENT_TYPE_LABELS = {
   official_journal: 'Journal Officiel',

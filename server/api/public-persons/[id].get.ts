@@ -43,8 +43,9 @@ export default defineCachedEventHandler(
         'current_appointment.id',
         'current_appointment.status',
         'current_appointment.position_title',
-        'current_appointment.position_category',
-        'current_appointment.position_category_slug',
+        'current_appointment.category.slug',
+        'current_appointment.category.label',
+        'current_appointment.category.mandate_type',
         'current_appointment.organization_label',
         'current_appointment.appointment_date',
         'current_appointment.end_date',
@@ -86,8 +87,9 @@ export default defineCachedEventHandler(
             fields: [
               'id',
               'position_title',
-              'position_category',
-              'position_category_slug',
+              'category.slug',
+              'category.label',
+              'category.mandate_type',
               'organization_label',
               'appointment_date',
               'end_date',
@@ -121,8 +123,9 @@ export default defineCachedEventHandler(
       const appointments: PublicPersonAppointment[] = appointmentsData.map((apt: any) => ({
         id: apt.id,
         position_title: apt.position_title,
-        position_category: apt.position_category,
-        position_category_slug: apt.position_category_slug || null,
+        position_category: apt.category?.label ?? '',
+        position_category_slug: apt.category?.slug ?? null,
+        category: mapPositionCategory(apt.category),
         organization_label: apt.organization_label,
         appointment_date: apt.appointment_date,
         end_date: apt.end_date || null,
@@ -174,8 +177,9 @@ export default defineCachedEventHandler(
           currentAppointment = {
             id: ca.id,
             position_title: ca.position_title,
-            position_category: ca.position_category,
-            position_category_slug: ca.position_category_slug || null,
+            position_category: ca.category?.label ?? '',
+            position_category_slug: ca.category?.slug ?? null,
+            category: mapPositionCategory(ca.category),
             organization_label: ca.organization_label,
             appointment_date: ca.appointment_date,
             end_date: ca.end_date || null,
@@ -232,7 +236,7 @@ export default defineCachedEventHandler(
   },
   {
     maxAge: process.env.NODE_ENV === 'production' ? 5 * 60 : 0, // 5 min en prod (à augmenter après stabilisation)
-    name: 'public-person-detail-v2',
+    name: 'public-person-detail-v6',
     getKey: (event) => `public-person-${getRouterParam(event, 'id')}`,
   },
 );

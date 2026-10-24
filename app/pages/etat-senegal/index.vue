@@ -1,9 +1,9 @@
 <script setup lang="ts">
 const { siteName, siteUrl, themeColor, keywords } = useSiteMetadata();
 
-const pageTitle = 'État du Sénégal : institutions, organisation et budget';
+const pageTitle = 'État du Sénégal : institutions, présidents, gouvernement et budget';
 const pageDescription =
-  "Comprenez l'État du Sénégal : les institutions de la République, l'organisation administrative (ministères, directions, agences), le gouvernement en place et le budget national. Des données officielles rendues claires et accessibles.";
+  "Comprenez l'État du Sénégal : les institutions de la République, l'historique des présidents et Premiers ministres, l'organisation administrative (ministères, directions, agences), le gouvernement en place et le budget national. Des données officielles rendues claires et accessibles.";
 const pageUrl = `${siteUrl}/etat-senegal`;
 const ogImage = `${siteUrl}/nomination-3.png`;
 
@@ -42,6 +42,22 @@ const documentCategories = [
     display: true,
     color: 'bg-yellow-100 text-yellow-700',
   },
+  {
+    title: 'Présidents du Sénégal',
+    description: 'Historique des présidents depuis 1960',
+    icon: 'i-heroicons-user-circle',
+    to: '/etat-senegal/presidents',
+    display: true,
+    color: 'bg-blue-100 text-blue-700',
+  },
+  {
+    title: 'Premiers ministres',
+    description: 'Historique des Premiers ministres depuis 1960',
+    icon: 'i-heroicons-users',
+    to: '/etat-senegal/premiers-ministres',
+    display: true,
+    color: 'bg-blue-100 text-blue-700',
+  },
 ];
 
 // ── SEO ───────────────────────────────────────────────────────────
@@ -61,10 +77,13 @@ useSeoMeta({
     ...keywords,
     'État du Sénégal',
     'institutions du Sénégal',
+    'présidents du Sénégal',
+    'Premiers ministres Sénégal',
     'organisation administrative Sénégal',
     'gouvernement du Sénégal',
     "budget de l'État Sénégal",
     'République du Sénégal',
+    'histoire politique Sénégal',
   ].join(', '),
 });
 
@@ -117,12 +136,16 @@ useHead({
         Comprendre comment fonctionne l'État du Sénégal : les
         <strong class="font-semibold text-gray-800 dark:text-gray-200"
           >institutions de la République</strong
-        >, l'<strong class="font-semibold text-gray-800 dark:text-gray-200"
+        >, l'historique des
+        <strong class="font-semibold text-gray-800 dark:text-gray-200"
+          >présidents et Premiers ministres</strong
+        >
+        depuis 1960, l'<strong class="font-semibold text-gray-800 dark:text-gray-200"
           >organisation administrative</strong
         >
         (ministères, directions, agences et établissements publics), la composition du
         <strong class="font-semibold text-gray-800 dark:text-gray-200">gouvernement</strong>
-        et le
+        actuel et le
         <strong class="font-semibold text-gray-800 dark:text-gray-200">budget national</strong>. Des
         données officielles rassemblées et rendues lisibles pour tous les citoyens.
       </p>

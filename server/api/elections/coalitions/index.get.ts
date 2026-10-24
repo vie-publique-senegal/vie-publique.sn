@@ -12,11 +12,12 @@ export default defineCachedEventHandler(
     const ranking = query.ranking === "true";
 
     try {
-      const fields: any[] = ["id", "name", "logo", "list_order",
+      // name/acronym/type/description vivent sur l'entité politique (champs coalition supprimés)
+      const fields: any[] = ["id", "logo", "list_order",
         "bulletin",
-        "head_of_list.photo",
-        "head_of_list.first_name",
-        "head_of_list.last_name",];
+        // L'identité de la tête de liste vient de sa person
+        ...PERSON_IDENTITY_FIELDS.map((f) => `head_of_list.person.${f}`),
+        ...ENTITY_IDENTITY_FIELDS.map((f) => `political_entity.${f}`),];
 
       if (ranking) {
         fields.push("voix", "pourcentage", "sieges",
@@ -33,8 +34,13 @@ export default defineCachedEventHandler(
         })
       );
 
+      // Identité de la tête de liste via sa person (fallback legacy)
+      // Identité de la coalition via son entité politique (fallback legacy)
       return {
-        data: coalitions,
+        data: (coalitions as any[]).map((c: any) => ({
+          ...mergeEntityIdentity(c),
+          head_of_list: c.head_of_list ? mergePersonIdentity(c.head_of_list) : c.head_of_list,
+        })),
       };
     } catch (error) {
       console.error("Error fetching coalitions:", error);

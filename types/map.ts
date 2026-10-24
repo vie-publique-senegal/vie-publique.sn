@@ -98,6 +98,19 @@ export interface MapDatasetConfig<T = any> {
    * que les communes du département ouvert plutôt que les 553 d'un coup.
    */
   geoFilter?: (feature: Feature) => boolean;
+  /**
+   * Libellés des features du fond (défaut : toujours affichés, 15 px au-delà du
+   * zoom 8, 13 px en deçà). Un fond dense — les 553 communes d'un coup — les
+   * réserve aux zooms élevés et les rapetisse pour rester lisible.
+   */
+  featureLabels?: { minZoom?: number; size?: number };
+  /**
+   * Trace les limites de département par-dessus le choroplèthe (défaut : false).
+   * Sert aux fonds communaux non filtrés, où l'appartenance d'une commune à son
+   * département ne se lit pas autrement. Exige le fond `departements` dans
+   * `geoSources`.
+   */
+  departementBorders?: boolean;
   /** Fonction qui extrait la valeur numérique pour colorier */
   getValue?: (d: T) => number;
   /** Fonction qui extrait le label textuel */
@@ -153,6 +166,8 @@ export interface PopupFieldConfig<T = any> {
   prefix?: string;
   /** Fonction de formatage custom */
   formatter?: (value: any, item: T) => string;
+  /** N'afficher ce champ que si cette condition est vraie (ex. donnée de second tour absente) */
+  showIf?: (d: T) => boolean;
 }
 
 export interface PopupConfig<T = any> {

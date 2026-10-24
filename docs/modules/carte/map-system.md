@@ -556,8 +556,9 @@ Le systeme charge **3 fichiers GeoJSON** au demarrage :
 | Niveau | Fichier | Contenu | Geometrie |
 |--------|---------|---------|-----------|
 | **Regions** | `senegal-regions.geojson` (509 Ko) | 14 regions | `MultiPolygon` (contours complets) |
-| **Departements** | `senegal-departements.geojson` (885 Ko) | 45 departements | `Polygon` (contours complets) |
-| **Communes** | `senegal-communes.geojson` (10 Ko) | 58 communes | `Point` (coordonnees uniquement) |
+| **Departements** | `senegal-departements.geojson` (953 Ko) | 46 departements | `Polygon` (contours complets) |
+| **Communes** | `senegal-communes.geojson` (1,0 Mo) | 553 communes | `Polygon` (549) et `Point` (4 communes sans limite cartographiee) |
+| **Libelles de communes** | `senegal-communes-labels.geojson` (112 Ko) | 553 points d'etiquetage | `Point` (calque de libelles au zoom >= 9) |
 
 ### Affichage progressif selon le zoom
 

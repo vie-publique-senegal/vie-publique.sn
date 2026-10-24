@@ -45,15 +45,22 @@ const TYPES_CANDIDATS = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'a
 const DUREE_MAX_MS = 90_000;
 
 /**
- * WAV vide de 44 octets, joué DANS le geste utilisateur pour débloquer l'audio.
+ * 50 ms de silence (WAV 8 kHz, 16 bits), joué DANS le geste utilisateur pour
+ * débloquer l'audio.
  *
- * iOS n'autorise la lecture que si le premier `play()` d'un élément part d'une
- * interaction. Le nôtre part après l'appel réseau à `/speak` — trop tard. On
- * déverrouille donc un élément au clic, et on le RÉUTILISE ensuite : une fois
- * autorisé, il le reste.
+ * iOS et Safari n'autorisent la lecture que si le premier `play()` d'un élément
+ * part d'une interaction. Le nôtre part après l'appel réseau à `/speak` — trop
+ * tard. On déverrouille donc un élément au clic, et on le RÉUTILISE ensuite :
+ * une fois autorisé, il le reste.
+ *
+ * ⚠️ **Le silence doit contenir des échantillons.** Jusqu'au 2026-10-11 c'était
+ * un WAV de 44 octets, en-tête seul : Safari ne le jouait pas, l'élément n'était
+ * jamais déverrouillé, et la lecture ne tenait que si `/speak` répondait dans la
+ * seconde d'activation qui suit le clic. D'où un symptôme trompeur — la voix
+ * Kiriku (0,8 s) lisait, la voix par défaut (9 à 13 s sur CPU) échouait, sur
+ * Safari macOS comme iOS ; Chrome, plus permissif, lisait les deux.
  */
-const SILENCE =
-  'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAgD4AAAB9AAACABAAZGF0YQAAAAA=';
+const SILENCE = `data:audio/wav;base64,UklGRkQDAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YSADAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==`;
 
 /** Messages d'erreur de l'API qu'il vaut la peine de distinguer pour l'utilisateur. */
 function codeDepuisStatut(statut: number) {
@@ -134,10 +141,16 @@ export function creerMoteurRagServeur(deps: DependancesMoteurRag = {}): MoteurVo
       void lecteur.play().catch(() => {});
     },
 
-    async parler(texte: string, { lang, signal }: OptionsLecture) {
+    async parler(texte: string, { lang, signal, profil }: OptionsLecture) {
       if (signal.aborted) return;
 
-      const audio = await demander(`${base()}/speak`, { texte, lang, jetons: jetons(), signal });
+      const audio = await demander(`${base()}/speak`, {
+        texte,
+        lang,
+        profil,
+        jetons: jetons(),
+        signal,
+      });
       if (signal.aborted) return;
 
       // Un objet URL plutôt qu'une data-URL : le WAV pèse plusieurs centaines
@@ -160,7 +173,7 @@ export function creerMoteurRagServeur(deps: DependancesMoteurRag = {}): MoteurVo
       }
     },
 
-    async ecouter({ lang, signal, signalFin, onLangue }: OptionsEcoute) {
+    async ecouter({ lang, signal, signalFin, onLangue, profil }: OptionsEcoute) {
       const type = typeSupporte();
       if (!type) throw new ErreurVocale('non-supporte');
 
@@ -185,6 +198,7 @@ export function creerMoteurRagServeur(deps: DependancesMoteurRag = {}): MoteurVo
         const { texte, langue } = await transcrire(audio, {
           base: base(),
           lang,
+          profil,
           jetons: jetons(),
           signal,
         });
@@ -254,6 +268,7 @@ async function transcrire(
   contexte: {
     base: string;
     lang: string;
+    profil?: string;
     jetons: ReturnType<typeof creerGestionnaireJeton>;
     signal: AbortSignal;
   },
@@ -263,6 +278,7 @@ async function transcrire(
   // type déclaré ET sur les octets de tête, jamais sur l'extension.
   corps.append('file', audio, 'dictee');
   if (contexte.lang) corps.append('lang', contexte.lang);
+  if (contexte.profil) corps.append('voice_profile', contexte.profil);
 
   let jeton: string;
   try {
@@ -303,6 +319,7 @@ async function demander(
   contexte: {
     texte: string;
     lang: string;
+    profil?: string;
     jetons: ReturnType<typeof creerGestionnaireJeton>;
     signal: AbortSignal;
   },
@@ -319,7 +336,11 @@ async function demander(
     reponse = await fetch(url, {
       method: 'POST',
       headers: { Authorization: `Bearer ${jeton}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: contexte.texte, lang: contexte.lang || undefined }),
+      body: JSON.stringify({
+        text: contexte.texte,
+        lang: contexte.lang || undefined,
+        voice_profile: contexte.profil || undefined,
+      }),
       signal: contexte.signal,
     });
   } catch (erreur) {

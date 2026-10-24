@@ -1,4 +1,9 @@
 import { readItems } from "@directus/sdk";
+import { normalizeGeoName } from "#shared/geo-name";
+
+// Recherche insensible à la casse ET aux accents (« senegal » trouve « Sénégal ») : faite
+// après lecture, `_icontains` de Directus restant sensible aux accents.
+const searchKey = (value: unknown) => normalizeGeoName(typeof value === "string" ? value : "");
 
 export default defineCachedEventHandler(
   async (event) => {
@@ -7,7 +12,7 @@ export default defineCachedEventHandler(
     const year = query.year ? parseInt(query.year as string) : null;
     const type = query.type as string;
     const constituencyId = query.constituency_id;
-    const search = query.search as string;
+    const search = searchKey(query.search);
 
     if (!year || !type) {
       return {
@@ -24,6 +29,7 @@ export default defineCachedEventHandler(
           filter: {
             year: { _eq: year },
             type: { _eq: type },
+            status: { _nin: ["draft", "archived"] },
           },
           sort: ["-election_date", "-id"],
           limit: 1,
@@ -75,21 +81,10 @@ export default defineCachedEventHandler(
         id: { _in: coalitionIds }
       };
 
-      if (search) {
-        filter._or = [
-          { name: { _icontains: search } },
-          { acronym: { _icontains: search } },
-          { head_of_list: { first_name: { _icontains: search } } },
-          { head_of_list: { last_name: { _icontains: search } } }
-        ];
-      }
-
       const coalitions = await directus.request(
         (readItems as any)("election_coalition", {
           fields: [
             "id",
-            "name",
-            "acronym",
             "logo",
             "color",
             "voix",
@@ -99,23 +94,41 @@ export default defineCachedEventHandler(
             "sieges_national",
             "list_order",
             "bulletin",
+            "round_2_voix",
+            "round_2_pourcentage",
             "head_of_list.id",
-            "head_of_list.first_name",
-            "head_of_list.last_name",
-            "head_of_list.photo",
             "head_of_list.profession",
+            ...PERSON_IDENTITY_FIELDS.map((f) => `head_of_list.person.${f}`),
+            ...ENTITY_IDENTITY_FIELDS.map((f) => `political_entity.${f}`),
           ],
           filter,
-          sort: ["list_order", "name"],
+          sort: ["list_order", "political_entity.name"],
           limit: -1,
         })
       );
 
+      // Identité de la tête de liste via sa person (fallback legacy)
+      // Identité de la coalition via son entité politique (fallback legacy)
+      const mergedCoalitions = (coalitions as any[]).map((c: any) => ({
+        ...mergeEntityIdentity(c),
+        head_of_list: c.head_of_list ? mergePersonIdentity(c.head_of_list) : c.head_of_list,
+      }));
+
+      // Mêmes champs que l'ancien filtre Directus : nom et sigle (entité politique),
+      // prénom et nom de la tête de liste (person)
+      const matchedCoalitions = search
+        ? mergedCoalitions.filter((c) =>
+            [c.name, c.acronym, c.head_of_list?.first_name, c.head_of_list?.last_name].some(
+              (value) => searchKey(value).includes(search)
+            )
+          )
+        : mergedCoalitions;
+
       return {
-        data: coalitions,
+        data: matchedCoalitions,
         meta: {
           electionId,
-          count: coalitions.length
+          count: matchedCoalitions.length
         }
       };
     } catch (error: any) {
@@ -128,10 +141,12 @@ export default defineCachedEventHandler(
   },
   {
     maxAge: 60 * 30,
-    name: "elections-dashboard-coalitions",
+    name: "elections-dashboard-coalitions-v2",
     getKey: (event) => {
       const query = getQuery(event);
-      return `coalitions-${query.year}-${query.type}-${query.constituency_id || 'all'}-${query.search || 'none'}`;
+      // Recherche normalisée (ASCII) : la clé brute était nettoyée par le stockage, si bien
+      // que « guédiawaye » et « guediawaye » partageaient la même entrée de cache.
+      return `coalitions-${query.year}-${query.type}-${query.constituency_id || 'all'}-${searchKey(query.search).replace(/ /g, '_') || 'none'}`;
     },
   }
 );

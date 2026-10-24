@@ -213,16 +213,21 @@ const isGovernmentMember = computed(() => {
   return isActive.value && !!cat && governmentCategories.includes(cat);
 });
 
+// Filtres de la liste mémorisés côté client (sessionStorage) : lus après hydratation
+// pour éviter tout mismatch SSR/client. Les filtres ne transitent plus par l'URL de la fiche.
+const { restore: restoreListQuery } = usePersonsListMemory();
+const listQuery = ref('');
+onMounted(() => {
+  listQuery.value = restoreListQuery();
+});
+
 // URL retour : gouvernement si ref=gouvernement ou si ministre actif sans ref explicite
 const backUrl = computed<string>(() => {
   const referer = route.query.ref as string;
   if (referer === 'gouvernement' || (!referer && isGovernmentMember.value)) {
     return '/gouvernement-senegal';
   }
-  const query = { ...route.query };
-  delete query.ref;
-  const qs = new URLSearchParams(query as Record<string, string>).toString();
-  return qs ? `/personnalites-senegal?${qs}` : '/personnalites-senegal';
+  return listQuery.value ? `/personnalites-senegal?${listQuery.value}` : '/personnalites-senegal';
 });
 
 const backLabel = computed(() => {
@@ -394,6 +399,25 @@ const backLabel = computed(() => {
                     class="bg-primary-50 text-primary-700 ring-primary-200 dark:bg-primary-900/20 dark:text-primary-400 dark:ring-primary-800 inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ring-1"
                   >
                     {{ currentAppointment.position_category }}
+                  </span>
+                  <span
+                    v-if="currentAppointment?.category?.mandate_type"
+                    class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700 ring-1 ring-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:ring-gray-700"
+                    :title="
+                      currentAppointment.category.mandate_type === 'elected'
+                        ? 'Fonction pourvue par élection'
+                        : 'Fonction pourvue par nomination'
+                    "
+                  >
+                    {{
+                      currentAppointment.category.mandate_type === 'elected'
+                        ? person?.sexe === 'female'
+                          ? 'Élue'
+                          : 'Élu'
+                        : person?.sexe === 'female'
+                          ? 'Nommée'
+                          : 'Nommé'
+                    }}
                   </span>
                 </div>
 

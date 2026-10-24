@@ -30,11 +30,11 @@ const emit = defineEmits<{
 
     <!-- Overlay Info -->
     <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent p-3 flex flex-col justify-end">
-      <div class="absolute top-2 right-2 bg-primary-600/90 text-white text-[10px] font-black h-6 w-6 flex items-center justify-center rounded-full backdrop-blur-sm border border-white/20">
+      <div class="absolute top-2 right-2 bg-primary-600/90 text-white text-[10px] font-bold h-6 w-6 flex items-center justify-center rounded-full backdrop-blur-sm border border-white/20">
         {{ candidate.position }}
       </div>
       <div class="transform translate-y-1 group-hover:translate-y-0 transition-transform duration-300">
-        <p class="font-black text-xs leading-tight uppercase text-white tracking-tighter">{{ candidate.last_name }}</p>
+        <p class="font-bold text-xs leading-tight uppercase text-white tracking-tight">{{ candidate.last_name }}</p>
         <p class="text-[11px] text-primary-300 font-bold capitalize">{{ candidate.first_name }}</p>
         <p class="text-[9px] text-gray-400 line-clamp-1 mt-0.5">{{ candidate.profession }}</p>
       </div>

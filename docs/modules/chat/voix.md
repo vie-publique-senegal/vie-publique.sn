@@ -1,6 +1,6 @@
 # Vocal du chat — dictée et lecture (`/chat/**`)
 
-> Entrée et sortie vocales de **Sira**. Doc canonique du sujet ; la vue d'ensemble du module reste
+> Entrée et sortie vocales de **l'assistant Vie Publique**. Doc canonique du sujet ; la vue d'ensemble du module reste
 > [`banc-essai-chat.md`](./banc-essai-chat.md).
 >
 > **Le vocal est ADDITIF** : tout reste utilisable au clavier sans lui. Un moteur absent ne dégrade
@@ -94,6 +94,23 @@ moteurLecture(lang)    →  web-speech en fr, rag-serveur en wo
   n'est **pas envoyé** et l'API répond dans la langue de la question — le
   comportement historique. Envoyer un défaut ferait répondre en français à un
   visiteur qui écrit autrement.
+- **⚠️ Sauf si le son est actif : lire à voix haute IMPOSE la langue** (depuis le
+  2026-10-11). « Auto » est le bon défaut pour **répondre** et n'en est pas un
+  pour **lire** : personne ne connaît alors la langue de la réponse, ni le widget
+  ni l'API, dont la consigne dit seulement « réponds dans la langue de la
+  question ». La lecture retombait donc sur `voiceLang` et une réponse wolof se
+  faisait prononcer par une voix française — du charabia. Dès que le son est
+  actif, `envoyer()` déclare la langue de l'échange depuis le sélecteur : réponse
+  et lecture ne peuvent plus se contredire. La déclaration est **visible**, le
+  sélecteur cessant d'afficher « Auto ».
+  ⚠️ Trois conditions, parce que `actif` est persisté en `localStorage`
+  indépendamment du drapeau `chat_voice` et du moteur : on n'impose la langue que
+  là où la lecture a lieu.
+  ⚠️ **Reste un angle mort, plus étroit** : activer le son **après** une réponse
+  en langue non déclarée en reprend la lecture avec le moteur du défaut. La
+  réponse est déjà écrite, sa langue n'a jamais été constatée, et la reprise la
+  devine — c'est le prix de la reprise ajoutée le 2026-09-05, qu'un bouton muet
+  avait rendue nécessaire.
 - **Le sélecteur affiche `Auto / Français / Wolof`** et la dictée le préremplit
   avec ce qu'elle a entendu.
 - **Aucune détection dans le navigateur.** Redétecter la langue d'un texte que
@@ -447,6 +464,32 @@ aurait jeté l'enregistrement à l'instant précis où l'on voulait le transcrir
 > Effet de bord bienvenu, sur le chemin Web Speech cette fois : l'appui sur le bouton pendant la
 > dictée **jetait** ce qui venait d'être dit, alors que son étiquette annonçait un simple arrêt. Il
 > termine désormais, comme le fait déjà l'arrêt sur silence.
+
+### Profil vocal par variante — même RAG, autre voix (2026-10-11)
+
+Une variante peut demander à l'API une **autre paire de moteurs serveur** que celle par défaut :
+`ChatVariant.voiceProfile`, transmis tel quel comme `voice_profile` à `POST /speak` (JSON) et à
+`POST /transcribe` (formulaire). Absent, rien ne part et l'API sert sa voix par défaut.
+
+- **Seul `rag-serveur` le lit.** Web Speech reste prioritaire là où il sait faire — le français —,
+  donc un profil ne change rien à une conversation française ;
+- **le nom est opaque** (`alt` aujourd'hui) et doit être autorisé dans les `voice_profiles` du
+  tenant côté API (`rag-platform`, `docs/decisions/2026-10-11-profils-vocaux.md`). Sinon, `422` :
+  la lecture échoue avec le message habituel, le texte reste affiché ;
+- **première utilisation : `/chat/gemini-voix-kiriku`**, où `alt` désigne l'API Kiriku d'AI Hub
+  Senegal (ASR M-Kiriku, TTS Kiriku sur GPU). La variante démarre en wolof (`voiceLang: 'wo-SN'`),
+  puisque ce profil ne sert que le wolof.
+- **deuxième : `/chat/gemini-voix-gemini`** (2026-10-16), où `alt2` désigne le **TTS Gemini**.
+  Seule la lecture change : la dictée reste le Gemini par défaut. L'API lui passe le texte **brut**,
+  sans conversion des nombres ni épellation des sigles, qu'il lit mieux tels quels
+  (`rag-platform`, `docs/decisions/2026-10-16-tts-gemini-wolof.md`).
+
+Chaque variante déclare ses moteurs dans `ChatVariant.engines` (dictée, réponse, voix), affichés
+sur `/chat/liste` : trois variantes d'un même RAG ne se distinguent pas autrement.
+
+⚠️ **Gouvernance** : sur cette variante, l'audio et le texte lu partent chez **AI Hub Senegal** et
+non chez Google. La mention du § 5 (« transmise à notre service, qui la fait transcrire par un
+prestataire ») reste exacte, sans nommer le prestataire, comme pour Gemini.
 
 ## 7. Lecture AU FIL du flux — le cœur du sujet
 

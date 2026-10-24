@@ -135,6 +135,11 @@ describe('moteur de dictée serveur', () => {
     m.amorcer!();
     expect(instances).toHaveLength(1);
     expect(instances[0].src).toContain('data:audio/wav');
+    // Le silence doit contenir des échantillons : un WAV réduit à son en-tête
+    // n'est pas joué par Safari, et l'élément n'est alors jamais déverrouillé.
+    const octets = Uint8Array.from(atob(instances[0].src.split(',')[1]!), (c) => c.charCodeAt(0));
+    const vue = new DataView(octets.buffer);
+    expect(vue.getUint32(40, true)).toBeGreaterThan(0); // taille du chunk `data`
 
     await m.parler('Naka nga def.', { lang: 'wo-SN', signal: new AbortController().signal });
 
@@ -165,6 +170,61 @@ describe('moteur de dictée serveur', () => {
     const corps = (appel[1] as RequestInit).body as FormData;
     expect(corps.get('lang')).toBe('wo-SN');
     expect(corps.get('file')).toBeInstanceOf(Blob);
+  });
+
+  it('transmet le profil vocal de la variante à /transcribe, et seulement s’il existe', async () => {
+    const fetchSimule = reponses({});
+    vi.stubGlobal('fetch', fetchSimule);
+
+    for (const profil of ['alt', undefined]) {
+      const fin = new AbortController();
+      bientot(fin);
+      await moteur().ecouter({
+        lang: 'wo-SN',
+        signal: new AbortController().signal,
+        signalFin: fin.signal,
+        profil,
+      });
+    }
+
+    const corps = fetchSimule.mock.calls
+      .filter(([url]) => String(url).endsWith('/transcribe'))
+      .map(([, init]) => (init as RequestInit).body as FormData);
+    expect(corps[0].get('voice_profile')).toBe('alt');
+    // Sans profil, le champ n'existe pas : la voix par défaut reste celle de l'API.
+    expect(corps[1].has('voice_profile')).toBe(false);
+  });
+
+  it('transmet le profil vocal de la variante à /speak', async () => {
+    class FauxAudio {
+      src = '';
+      lang = '';
+      onended: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+      pause = vi.fn();
+      play = vi.fn(async () => {
+        queueMicrotask(() => this.onended?.());
+      });
+    }
+    vi.stubGlobal('Audio', FauxAudio);
+    vi.stubGlobal('URL', { createObjectURL: () => 'blob:x', revokeObjectURL: () => {} });
+    const fetchSimule = vi.fn(async (url: string) =>
+      String(url).endsWith('/session')
+        ? ({ ok: true, json: async () => ({ token: 'j', expires_in: 900 }) } as Response)
+        : ({ ok: true, status: 200, blob: async () => new Blob(['son']) } as Response),
+    );
+    vi.stubGlobal('fetch', fetchSimule);
+
+    const m = moteur();
+    const signal = new AbortController().signal;
+    await m.parler('Naka nga def.', { lang: 'wo-SN', signal, profil: 'alt' });
+    await m.parler('Naka nga def.', { lang: 'wo-SN', signal });
+
+    const corps = fetchSimule.mock.calls
+      .filter(([url]) => String(url).endsWith('/speak'))
+      .map(([, init]) => JSON.parse(String((init as RequestInit).body)));
+    expect(corps[0]).toMatchObject({ text: 'Naka nga def.', voice_profile: 'alt' });
+    expect(corps[1]).not.toHaveProperty('voice_profile');
   });
 
   it('rapporte la langue entendue — c’est elle qui commande toute la suite', async () => {

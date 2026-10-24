@@ -117,8 +117,11 @@ async function handleSubmit() {
       body: payload,
     });
     ticketResult.value = result;
-  } catch (err: any) {
-    submitError.value = err?.data?.statusMessage || err?.message || "Erreur lors de l'envoi.";
+  } catch (err: unknown) {
+    submitError.value = getFriendlyErrorMessage(
+      err,
+      "L'envoi du signalement a échoué. Merci de réessayer dans quelques instants.",
+    );
   } finally {
     submitting.value = false;
   }

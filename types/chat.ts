@@ -79,6 +79,13 @@ export type ChatAdapterFactory = (config: ChatPublicConfig) => ChatAdapter;
 /** `active` = POC en cours, `legacy` = conservé pour comparaison, `retired` = abandonné. */
 export type ChatVariantStatus = 'active' | 'legacy' | 'retired';
 
+/** Moteurs d'une variante : réponse, dictée wolof, lecture wolof. */
+export interface ChatVariantEngines {
+  answer: string;
+  dictation?: string;
+  voice?: string;
+}
+
 export interface ChatVariant {
   /** Identifiant d'URL (`/chat/<id>`) ET de stack. Jamais un numéro de version. */
   id: string;
@@ -105,7 +112,29 @@ export interface ChatVariant {
    * (docs/modules/chat/voix.md § Après Web Speech).
    */
   voiceLang?: string;
+  /**
+   * Profil vocal du serveur (`voice_profile` de l'API RAG) : même RAG, autre
+   * voix. Absent = la voix par défaut. Le nom est opaque et doit figurer dans
+   * les `voice_profiles` du tenant côté API, sinon `/speak` et `/transcribe`
+   * répondent 422. Ne concerne que le moteur serveur : en français, Web Speech
+   * reste prioritaire et n'en tient pas compte.
+   */
+  voiceProfile?: string;
+  /**
+   * Moteurs réellement servis, affichés sur `/chat/liste` et dans le pied de
+   * conversation. Plusieurs variantes partagent le même RAG et ne diffèrent que
+   * par la voix : sans cette ligne, elles se ressemblent à s'y méprendre.
+   * Libellés pour humains, jamais lus par le code.
+   */
+  engines?: ChatVariantEngines;
   starterQuestions?: string[];
+  /**
+   * Exemples en wolof, montrés par l'interface vocale quand le wolof est
+   * choisi (sinon `starterQuestions`). Termes techniques gardés en français
+   * dans la phrase : le corpus est en français, un terme wolof seul (« xiif »)
+   * ne retrouve rien — testé le 2026-10-16.
+   */
+  starterQuestionsWolof?: string[];
   /** Chargement paresseux : le code d'une variante ne pèse pas sur les autres. */
   loadAdapter?: () => Promise<ChatAdapterFactory>;
 }

@@ -4,10 +4,17 @@ const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=sn.viepubl
 
 // Masqué quand le site est affiché dans l'app mobile / PWA standalone
 const { isInApp } = useIsInApp();
+
+// /liens affiche déjà les badges des stores en tête de page : pas de doublon
+const route = useRoute();
+const isLinksPage = computed(() => route.path === '/liens');
 </script>
 
 <template>
-  <div v-if="!isInApp" class="mt-8 border-t border-gray-100 py-6 dark:border-gray-700">
+  <div
+    v-if="!isInApp && !isLinksPage"
+    class="mt-8 border-t border-gray-100 py-6 dark:border-gray-700"
+  >
     <div class="flex flex-col items-center justify-center gap-3 px-4">
       <NuxtLink
         to="/app"

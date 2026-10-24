@@ -34,7 +34,8 @@ export default defineCachedEventHandler(
                 "name",
                 "type",
                 {
-                  coalition: ["name", "color"],
+                  // Le nom de la coalition vit sur l'entité politique
+                  coalition: ["color", { political_entity: ENTITY_IDENTITY_FIELDS }] as any,
                   constituency: ["name"],
                 },
               ],
@@ -48,6 +49,12 @@ export default defineCachedEventHandler(
           },
         })
       );
+
+      // Reconstitue coalition.name depuis l'entité politique
+      const electoralList = (deputy as Record<string, unknown>)?.electoral_list as Record<string, unknown> | null;
+      if (electoralList?.coalition) {
+        electoralList.coalition = mergeEntityIdentity(electoralList.coalition as Record<string, unknown>);
+      }
 
       return {
         deputy,

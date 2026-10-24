@@ -78,6 +78,16 @@ function applyFilters(
   });
 }
 
+/**
+ * Feature enrichie d'une entité sans contour cartographié : géométrie Point et donnée
+ * jointe sous `_mapData`, comme les features de la choroplèthe (c'est cette forme que
+ * useMapPopup et l'émission `region-click` de SenegalMap attendent).
+ */
+interface EnrichedPointFeature {
+  geometry: { coordinates: number[] };
+  properties?: { _mapData?: unknown };
+}
+
 // ─── Calcul du centroïde d'une feature GeoJSON ──────────────────
 
 function computeCentroid(feature: any): [number, number] {
@@ -96,6 +106,9 @@ function computeCentroid(feature: any): [number, number] {
           coords.push(coord);
         }
       }
+    } else if (geometry.type === 'Point') {
+      // Communes sans limite cartographiée : le point EST la position
+      coords.push(geometry.coordinates);
     }
   }
 
@@ -222,15 +235,33 @@ export function useMapLayers(options: UseMapLayersOptions) {
     const enrichedFeatures: any[] = sourceFeatures.map((feature) => {
       const code = feature.properties?.[geoJoinField];
       const itemData = code ? dataMap.get(code) : null;
+      const isPoint = feature.geometry?.type === 'Point';
       return {
         ...feature,
         properties: {
           ...feature.properties,
-          _mapData: itemData,
+          // Les entités sans contour cartographié signalent leur limite jusque dans
+          // l'info-bulle : un point muet se lirait comme une entité oubliée.
+          _mapData: itemData && isPoint ? { ...itemData, contourUnavailable: true } : itemData,
           _hasData: !!itemData,
         },
       };
     });
+
+    // Un GeoJsonLayer de polygones ne rend pas les Point : on les sort du calque de
+    // remplissage et on les sert par un ScatterplotLayer dédié (voir plus bas).
+    const polygonFeatures = enrichedFeatures.filter((f) => f.geometry?.type !== 'Point');
+    const pointFeatures: EnrichedPointFeature[] = enrichedFeatures.filter(
+      (f) => f.geometry?.type === 'Point',
+    );
+
+    /** Couleur d'une entité à partir de sa donnée jointe (mêmes règles que la choroplèthe) */
+    const fillColorFor = (itemData: unknown): RGBAColor => {
+      if (!itemData) return ds.colorScale?.fallback ?? [128, 128, 128, 80];
+      if (ds.getColor) return ds.getColor(itemData);
+      if (ds.getValue && ds.colorScale) return interpolateColor(ds.getValue(itemData), ds.colorScale);
+      return ds.colorScale?.fallback ?? [128, 128, 128, 80];
+    };
 
     const isPickable = ds.pickable ?? true;
 
@@ -238,7 +269,7 @@ export function useMapLayers(options: UseMapLayersOptions) {
       _type: 'choropleth',
       _dsId: ds.id,
       id: `layer-${ds.id}`,
-      data: { ...geoJson, features: enrichedFeatures },
+      data: { ...geoJson, features: polygonFeatures },
       pickable: isPickable,
       autoHighlight: isPickable,
       highlightColor: [255, 255, 255, 50],
@@ -267,39 +298,93 @@ export function useMapLayers(options: UseMapLayersOptions) {
     const currentZoom = viewport.value.zoom;
     const layers: any[] = [choropleth];
 
-    // ─── Labels des régions (toujours visibles) ──────────────────
-    const regionLabelData = (enrichedFeatures as any[])
-      .map((feature: any) => {
-        const centroid = computeCentroid(feature);
-        const name = feature.properties?.name ?? feature.properties?.region ?? '';
-        return { position: centroid, name };
-      })
-      .filter((d: any) => d.name && d.position[0] !== 0);
+    // ─── Entités sans contour cartographié : points cliquables ────────────────
+    // Même comportement de sélection que les polygones (survol, info-bulle, clic) :
+    // les objets gardent la forme `{ properties: { _mapData } }` attendue par
+    // useMapPopup et par l'émission `region-click` de SenegalMap.
+    if (pointFeatures.length > 0) {
+      layers.push({
+        _type: 'scatterplot',
+        _dsId: ds.id,
+        id: `layer-${ds.id}-nogeom-points`,
+        data: pointFeatures,
+        pickable: isPickable,
+        autoHighlight: isPickable,
+        highlightColor: [255, 255, 255, 90],
+        stroked: true,
+        filled: true,
+        radiusUnits: 'pixels',
+        getRadius: 6,
+        radiusMinPixels: 5,
+        radiusMaxPixels: 10,
+        lineWidthMinPixels: 1.5,
+        getPosition: (f: EnrichedPointFeature) => f.geometry.coordinates,
+        getFillColor: (f: EnrichedPointFeature) => fillColorFor(f.properties?._mapData),
+        getLineColor: theme.value === 'dark' ? [255, 255, 255, 200] : [30, 30, 30, 200],
+        updateTriggers: {
+          getFillColor: [data.length, JSON.stringify(Object.keys(activeFilters.value))],
+          getLineColor: [theme.value],
+        },
+      });
+    }
 
-    layers.push({
-      _type: 'text',
-      _dsId: ds.id,
-      id: `layer-${ds.id}-region-labels`,
-      data: regionLabelData,
-      pickable: false,
-      getPosition: (d: any) => d.position,
-      getText: (d: any) => d.name,
-      getSize: currentZoom >= 8 ? 15 : 13,
-      getColor: theme.value === 'dark' ? [255, 255, 255, 230] : [0, 0, 0, 230],
-      getTextAnchor: 'middle',
-      getAlignmentBaseline: 'center',
-      fontFamily: 'Inter, system-ui, sans-serif',
-      characterSet: TEXT_CHARACTER_SET,
-      fontWeight: 700,
-      outlineWidth: 3,
-      outlineColor: theme.value === 'dark' ? [0, 0, 0, 220] : [255, 255, 255, 220],
-      sizeUnits: 'pixels',
-      billboard: false,
-      updateTriggers: {
-        getColor: [theme.value],
-        getSize: [currentZoom],
-      },
-    });
+    // ─── Labels des features du fond ─────────────────────────────
+    // `featureLabels` les réserve aux zooms élevés sur un fond dense (les 553
+    // communes non filtrées) ; par défaut, toujours affichés.
+    const labelMinZoom = ds.featureLabels?.minZoom ?? 0;
+    if (currentZoom >= labelMinZoom) {
+      const regionLabelData = (enrichedFeatures as any[])
+        .map((feature: any) => {
+          const centroid = computeCentroid(feature);
+          const name = feature.properties?.name ?? feature.properties?.region ?? '';
+          return { position: centroid, name };
+        })
+        .filter((d: any) => d.name && d.position[0] !== 0);
+
+      layers.push({
+        _type: 'text',
+        _dsId: ds.id,
+        id: `layer-${ds.id}-region-labels`,
+        data: regionLabelData,
+        pickable: false,
+        getPosition: (d: any) => d.position,
+        getText: (d: any) => d.name,
+        getSize: ds.featureLabels?.size ?? (currentZoom >= 8 ? 15 : 13),
+        getColor: theme.value === 'dark' ? [255, 255, 255, 230] : [0, 0, 0, 230],
+        getTextAnchor: 'middle',
+        getAlignmentBaseline: 'center',
+        fontFamily: 'Inter, system-ui, sans-serif',
+        // Pas de halo (`outlineWidth`) : il exigerait `fontSettings.sdf`, dont le rendu
+        // érode les accents — deck.gl se contentait d'avertir sans rien dessiner.
+        characterSet: TEXT_CHARACTER_SET,
+        fontWeight: 700,
+        sizeUnits: 'pixels',
+        billboard: false,
+        updateTriggers: {
+          getColor: [theme.value],
+          getSize: [currentZoom],
+        },
+      });
+    }
+
+    // ─── Limites de département par-dessus le choroplèthe (opt-in) ─
+    if (ds.departementBorders && geoSource !== 'departements' && geoJsonDepartements?.value) {
+      layers.push({
+        _type: 'geojson',
+        _dsId: ds.id,
+        id: `layer-${ds.id}-dept-overlay`,
+        data: geoJsonDepartements.value,
+        pickable: false,
+        stroked: true,
+        filled: false,
+        lineWidthMinPixels: 1.5,
+        opacity: 0.7,
+        getLineColor: theme.value === 'dark' ? [255, 255, 255, 140] : [0, 0, 0, 110],
+        updateTriggers: {
+          getLineColor: [theme.value],
+        },
+      });
+    }
 
     // ─── Repères de contexte ────────────────────────────────────
     // Uniquement sous un choroplèthe de régions : superposer les contours de
@@ -352,8 +437,6 @@ export function useMapLayers(options: UseMapLayersOptions) {
         fontFamily: 'Inter, system-ui, sans-serif',
         characterSet: TEXT_CHARACTER_SET,
         fontWeight: 500,
-        outlineWidth: 2,
-        outlineColor: theme.value === 'dark' ? [0, 0, 0, 180] : [255, 255, 255, 180],
         sizeUnits: 'pixels',
         billboard: false,
         updateTriggers: {
@@ -395,8 +478,6 @@ export function useMapLayers(options: UseMapLayersOptions) {
         characterSet: TEXT_CHARACTER_SET,
         fontWeight: 400,
         fontStyle: 'italic',
-        outlineWidth: 2,
-        outlineColor: theme.value === 'dark' ? [0, 0, 0, 160] : [255, 255, 255, 160],
         sizeUnits: 'pixels',
         billboard: false,
         updateTriggers: {
@@ -522,8 +603,6 @@ export function useMapLayers(options: UseMapLayersOptions) {
       fontFamily: 'Inter, system-ui, sans-serif',
       characterSet: TEXT_CHARACTER_SET,
       fontWeight: 600,
-      outlineWidth: 2,
-      outlineColor: theme.value === 'dark' ? [0, 0, 0, 200] : [255, 255, 255, 200],
       updateTriggers: {
         getText: [data.length],
         getColor: [theme.value],

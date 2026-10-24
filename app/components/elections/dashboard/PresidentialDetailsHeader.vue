@@ -33,7 +33,7 @@ const genderText = computed(() => {
       >
         <span class="hidden sm:inline">Retour</span>
       </UButton>
-      <h2 class="text-lg md:text-xl font-black text-gray-900 dark:text-white uppercase leading-tight tracking-tighter">
+      <h2 class="text-lg font-bold text-gray-900 dark:text-white leading-tight tracking-tight">
         <template v-if="isPresidential">
           {{ genderText }} de la liste {{ coalitionName }}
         </template>
@@ -43,7 +43,7 @@ const genderText = computed(() => {
       </h2>
     </div>
     <UBadge v-if="listCount && !isPresidential" color="primary" variant="subtle" class="w-fit self-end sm:self-auto text-[10px] uppercase font-bold tracking-widest px-3 py-1 rounded-full">
-      {{ (listCount / 2).toFixed(0) }} circonscriptions
+      {{ listCount }} {{ listCount > 1 ? 'circonscriptions' : 'circonscription' }}
     </UBadge>
   </div>
 </template>

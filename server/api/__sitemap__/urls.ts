@@ -1,4 +1,5 @@
 ﻿import { defineSitemapEventHandler } from '#imports';
+import { isMunicipalConstituencyType } from '#shared/election-constituency';
 import { readItems } from '@directus/sdk';
 import { AUDIT_INSTITUTION_PAGES } from '~~/types/document';
 
@@ -125,15 +126,7 @@ export default defineSitemapEventHandler(async () => {
       });
     }
 
-    // 3. Députés
-    const deputies = await directus.request(
-      readItems('assembly_deputy', {
-        fields: ['id', 'first_name', 'last_name', 'date_updated'],
-        limit: -1,
-        sort: ['last_name'],
-      }),
-    );
-
+    // Hors du `try` des députés : la section Personnalités (6) s'en sert aussi.
     const slugify = (text: string) => {
       return text
         .toString()
@@ -146,43 +139,56 @@ export default defineSitemapEventHandler(async () => {
         .replace(/--+/g, '-');
     };
 
-    // Nombre de questions publiées par député : sert à n'inscrire la sous-page
-    // « questions » que pour les députés qui en ont au moins une (sinon ~165
-    // pages vides indexées = thin content). On réutilise l'index de recherche,
-    // déjà en cache : aucune requête CMS supplémentaire.
-    // Dégradation propre : en cas d'échec, on omet les sous-pages, le reste du
-    // sitemap est servi normalement.
-    const questionsByDeputy = new Map<string, number>();
+    // 3. Députés
     try {
-      for (const entry of await getQuestionsSearchIndex()) {
-        if (entry.deputyId === null || entry.deputyId === undefined) continue;
-        const key = String(entry.deputyId);
-        questionsByDeputy.set(key, (questionsByDeputy.get(key) || 0) + 1);
+      const deputies = await directus.request(
+        readItems('assembly_deputy', {
+          fields: ['id', 'first_name', 'last_name', 'date_updated'],
+          limit: -1,
+          sort: ['last_name'],
+        }),
+      );
+
+      // Nombre de questions publiées par député : sert à n'inscrire la sous-page
+      // « questions » que pour les députés qui en ont au moins une (sinon ~165
+      // pages vides indexées = thin content). On réutilise l'index de recherche,
+      // déjà en cache : aucune requête CMS supplémentaire.
+      // Dégradation propre : en cas d'échec, on omet les sous-pages, le reste du
+      // sitemap est servi normalement.
+      const questionsByDeputy = new Map<string, number>();
+      try {
+        for (const entry of await getQuestionsSearchIndex()) {
+          if (entry.deputyId === null || entry.deputyId === undefined) continue;
+          const key = String(entry.deputyId);
+          questionsByDeputy.set(key, (questionsByDeputy.get(key) || 0) + 1);
+        }
+      } catch (error) {
+        reportServerError(error, 'sitemap/deputy-questions-count');
       }
-    } catch (error) {
-      reportServerError(error, 'sitemap/deputy-questions-count');
-    }
 
-    for (const deputy of deputies) {
-      const fullName = `${deputy.first_name} ${deputy.last_name}`;
-      const slug = slugify(fullName);
-      const lastmod = toISODate(deputy.date_updated);
-      urls.push({
-        loc: `/assemblee-nationale/deputes/${deputy.id}/${slug}`,
-        ...(lastmod && { lastmod }),
-        changefreq: 'monthly',
-        priority: 0.6,
-      });
-
-      // Sous-page dédiée aux questions écrites du député
-      if (questionsByDeputy.get(String(deputy.id))) {
+      for (const deputy of deputies) {
+        const fullName = `${deputy.first_name} ${deputy.last_name}`;
+        const slug = slugify(fullName);
+        const lastmod = toISODate(deputy.date_updated);
         urls.push({
-          loc: `/assemblee-nationale/deputes/${deputy.id}/${slug}/questions`,
+          loc: `/assemblee-nationale/deputes/${deputy.id}/${slug}`,
           ...(lastmod && { lastmod }),
           changefreq: 'monthly',
-          priority: 0.5,
+          priority: 0.6,
         });
+
+        // Sous-page dédiée aux questions écrites du député
+        if (questionsByDeputy.get(String(deputy.id))) {
+          urls.push({
+            loc: `/assemblee-nationale/deputes/${deputy.id}/${slug}/questions`,
+            ...(lastmod && { lastmod }),
+            changefreq: 'monthly',
+            priority: 0.5,
+          });
+        }
       }
+    } catch (sitemapError) {
+      console.warn('Erreur sitemap députés:', sitemapError);
     }
 
     // 3b. Dossiers thématiques
@@ -302,6 +308,185 @@ export default defineSitemapEventHandler(async () => {
       }
     } catch (sitemapError) {
       console.warn('Erreur sitemap archives années:', sitemapError);
+    }
+
+    // 6. Élections — pages par onglet
+    try {
+      const elections = (await directus.request(
+        readItems('elections' as any, {
+          fields: ['id', 'slug', 'type', 'status', 'election_date', 'pv_upload_active'],
+          filter: { status: { _nin: ['draft', 'archived'] } },
+          limit: -1,
+        }),
+      )) as any[];
+
+      for (const election of elections) {
+        const lastmod = toISODate(election.election_date);
+        const base = `/elections-senegal/${election.slug}`;
+        const isCompleted = election.status === 'completed';
+        const isLegislative = String(election.type).includes('legislative');
+
+        const tabs: { tab: string; priority: number }[] = isCompleted
+          ? [
+              { tab: 'resultats', priority: 0.9 },
+              { tab: 'candidats', priority: 0.8 },
+              { tab: 'documents', priority: 0.7 },
+            ]
+          : [
+              { tab: 'candidats', priority: 0.8 },
+              { tab: 'resultats', priority: 0.8 },
+              { tab: 'carte', priority: 0.7 },
+              { tab: 'documents', priority: 0.7 },
+              { tab: 'guide', priority: 0.6 },
+            ];
+
+        if (election.pv_upload_active) tabs.push({ tab: 'pvs', priority: 0.6 });
+        if (isLegislative) tabs.push({ tab: 'statistiques', priority: 0.7 });
+
+        for (const { tab, priority } of tabs) {
+          urls.push({
+            loc: `${base}/${tab}`,
+            ...(lastmod && { lastmod }),
+            changefreq: isCompleted ? 'monthly' : 'weekly',
+            priority,
+          });
+        }
+
+        const changefreq = isCompleted ? 'monthly' : 'weekly';
+        const isLocale = String(election.type) === 'locale';
+
+        // 6b. Présidentielle / législatives : fiches candidat et pages coalition
+        // (routes /candidats/[candidateSlug] et /candidats/coalition/[coalitionSlug]).
+        if (!isLocale) {
+          try {
+            const lists = (await directus.request(
+              readItems('election_electoral_lists' as any, {
+                fields: ['coalition.political_entity.slug', 'candidates.person.slug'],
+                filter: { election: { _eq: election.id }, status: { _eq: 'published' } },
+                limit: -1,
+              }),
+            )) as any[];
+
+            const coalitionSlugs = new Set<string>();
+            const candidateSlugs = new Set<string>();
+            for (const list of lists) {
+              const coalitionSlug = list.coalition?.political_entity?.slug;
+              if (coalitionSlug) coalitionSlugs.add(coalitionSlug);
+              for (const candidate of list.candidates || []) {
+                const personSlug = candidate?.person?.slug;
+                if (personSlug) candidateSlugs.add(personSlug);
+              }
+            }
+
+            for (const slug of coalitionSlugs) {
+              urls.push({
+                loc: `${base}/candidats/coalition/${slug}`,
+                ...(lastmod && { lastmod }),
+                changefreq,
+                priority: 0.6,
+              });
+            }
+            for (const slug of candidateSlugs) {
+              urls.push({
+                loc: `${base}/candidats/${slug}`,
+                ...(lastmod && { lastmod }),
+                changefreq,
+                priority: 0.6,
+              });
+            }
+          } catch (sitemapError) {
+            console.warn(
+              `Erreur sitemap candidats/coalitions (élection ${election.slug}):`,
+              sitemapError,
+            );
+          }
+        }
+
+        // 6c. Locales : les listes sont portées par les communes et villes, rattachées à leur
+        // département via le référentiel géographique (ancêtre de niveau département).
+        // Pages : département (/circonscription/<dept>), coalition × département
+        // (/<dept>/coalition/<coal>), coalition × commune (/<dept>/<commune>/coalition/<coal>)
+        // et profils candidats (/candidats/<person>). Segment coalition = slug de l'entité
+        // politique, sinon id (même règle que la navigation du dashboard).
+        if (isLocale) {
+          try {
+            const [lists, departments, geoSnapshot] = await Promise.all([
+              directus.request(
+                readItems('election_electoral_lists' as any, {
+                  fields: [
+                    'constituency.slug',
+                    'constituency.type',
+                    'constituency.nationale_type',
+                    'constituency.geo_entity',
+                    'coalition.id',
+                    'coalition.political_entity.slug',
+                    'candidates.person.slug',
+                  ],
+                  filter: { election: { _eq: election.id }, status: { _eq: 'published' } },
+                  limit: -1,
+                }),
+              ) as Promise<any[]>,
+              directus.request(
+                readItems('election_constituencies' as any, {
+                  fields: ['slug', 'geo_entity'],
+                  filter: { type: { _eq: 'national' }, nationale_type: { _eq: 'departement' } },
+                  limit: -1,
+                }),
+              ) as Promise<any[]>,
+              getGeoSnapshot(),
+            ]);
+
+            const deptSlugByEntity = new Map<number, string>();
+            for (const dept of departments) {
+              const entityId = geoEntityIdOf(dept);
+              if (entityId !== null && dept.slug) deptSlugByEntity.set(entityId, dept.slug);
+            }
+
+            const locs = new Map<string, number>();
+            for (const list of lists) {
+              const constituency = list.constituency;
+              if (
+                !constituency?.slug ||
+                constituency.type !== 'national' ||
+                !isMunicipalConstituencyType(constituency.nationale_type)
+              ) {
+                continue;
+              }
+              const deptEntity = geoSnapshot.ancestorOfLevel(
+                geoEntityIdOf(constituency),
+                'departement',
+              );
+              const deptSlug = deptEntity ? deptSlugByEntity.get(deptEntity.id) : undefined;
+              if (!deptSlug) continue;
+
+              const deptLoc = `${base}/candidats/circonscription/${deptSlug}`;
+              locs.set(deptLoc, 0.5);
+              const coalitionSegment =
+                list.coalition?.political_entity?.slug ||
+                (list.coalition?.id ? String(list.coalition.id) : null);
+              if (coalitionSegment) {
+                locs.set(`${deptLoc}/coalition/${coalitionSegment}`, 0.4);
+                locs.set(`${deptLoc}/${constituency.slug}/coalition/${coalitionSegment}`, 0.4);
+              }
+              for (const candidate of list.candidates || []) {
+                const personSlug = candidate?.person?.slug;
+                if (personSlug) locs.set(`${base}/candidats/${personSlug}`, 0.4);
+              }
+            }
+
+            for (const [loc, priority] of locs) {
+              urls.push({ loc, ...(lastmod && { lastmod }), changefreq, priority });
+            }
+          } catch (sitemapError) {
+            console.warn(
+              `Erreur sitemap circonscriptions (élection ${election.slug}):`,
+              sitemapError,
+            );
+          }
+        }
+      }
+    } catch (sitemapError) {
+      console.warn('Erreur sitemap élections:', sitemapError);
     }
 
     // 6. Personnalités publiques
@@ -512,7 +697,86 @@ export default defineSitemapEventHandler(async () => {
       console.warn('Erreur sitemap budget entités:', sitemapError);
     }
 
-    // 9. Pages statiques : Laissées à l'auto-découverte de Nuxt Sitemap
+    // 9. Gouvernements (historique des gouvernements du Sénégal)
+    try {
+      // Page historique (frise chronologique)
+      urls.push({
+        loc: '/gouvernement-senegal/historique',
+        changefreq: 'monthly',
+        priority: 0.85,
+      });
+
+      const governments = await directus.request(
+        readItems('governments', {
+          fields: ['slug', 'date_updated', 'end_date'],
+          filter: {
+            status: { _eq: 'published' },
+            slug: { _nnull: true },
+          },
+          limit: -1,
+        }),
+      );
+
+      for (const gov of governments as any[]) {
+        if (!gov.slug) continue;
+        const lastmod = toISODate(gov.date_updated);
+        urls.push({
+          loc: `/gouvernement-senegal/${gov.slug}`,
+          ...(lastmod && { lastmod }),
+          // Le gouvernement en cours (end_date null) change plus souvent
+          changefreq: gov.end_date === null ? 'weekly' : 'yearly',
+          priority: gov.end_date === null ? 0.8 : 0.6,
+        });
+      }
+    } catch (sitemapError) {
+      console.warn('Erreur sitemap gouvernements:', sitemapError);
+    }
+
+    // 10. Présidents & Premiers ministres (dérivés des gouvernements)
+    try {
+      urls.push(
+        { loc: '/etat-senegal/presidents', changefreq: 'monthly', priority: 0.8 },
+        { loc: '/etat-senegal/premiers-ministres', changefreq: 'monthly', priority: 0.8 },
+      );
+
+      const leaderGovs = await directus.request(
+        readItems('governments', {
+          fields: [
+            'president.full_name',
+            'president.slug',
+            'prime_minister.full_name',
+            'prime_minister.slug',
+          ],
+          filter: { status: { _eq: 'published' }, president: { _nnull: true } },
+          limit: -1,
+        }),
+      );
+
+      const presidentSlugs = new Set<string>();
+      const pmSlugs = new Set<string>();
+      for (const g of leaderGovs as any[]) {
+        if (g.president?.full_name) {
+          presidentSlugs.add(g.president.slug || generateSlugFromName(g.president.full_name));
+        }
+        if (g.prime_minister?.full_name) {
+          pmSlugs.add(g.prime_minister.slug || generateSlugFromName(g.prime_minister.full_name));
+        }
+      }
+      for (const slug of presidentSlugs) {
+        urls.push({ loc: `/etat-senegal/presidents/${slug}`, changefreq: 'yearly', priority: 0.7 });
+      }
+      for (const slug of pmSlugs) {
+        urls.push({
+          loc: `/etat-senegal/premiers-ministres/${slug}`,
+          changefreq: 'yearly',
+          priority: 0.7,
+        });
+      }
+    } catch (sitemapError) {
+      console.warn('Erreur sitemap présidents/PM:', sitemapError);
+    }
+
+    // 11. Pages statiques : Laissées à l'auto-découverte de Nuxt Sitemap
     // Le module @nuxtjs/seo va automatiquement inclure toutes les pages du dossier /pages
   } catch (error) {
     console.error('Erreur génération sitemap:', error);

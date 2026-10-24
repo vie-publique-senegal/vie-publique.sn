@@ -61,6 +61,7 @@ export const useAssemblyDeputies = (options: AssemblyDeputiesOptions = {}) => {
     deputies: collection.items,
     loading: collection.loading,
     error: collection.error,
+    refresh: collection.refresh,
 
     // Pagination
     currentPage: state.currentPage,

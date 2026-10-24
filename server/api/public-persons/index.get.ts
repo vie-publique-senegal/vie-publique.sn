@@ -1,5 +1,5 @@
 import { readItems } from '@directus/sdk';
-import type { PublicPerson } from '~/types/public-person';
+import { isMandateFilter, type PublicPerson } from '~~/types/public-person';
 
 export default defineCachedEventHandler(
   async (event) => {
@@ -10,6 +10,7 @@ export default defineCachedEventHandler(
     const sortBy = (query.sortBy as string) || '-current_appointment.appointment_date';
     const filterCategory = query.filterCategory as string;
     const filterGender = query.filterGender as string;
+    const filterMandate = isMandateFilter(query.filterMandate) ? query.filterMandate : 'all';
 
     try {
       const directus = getCmsClient();
@@ -27,12 +28,25 @@ export default defineCachedEventHandler(
         filter.sexe = { _eq: filterGender };
       }
 
-      // Filtre par catégorie de poste (via la nomination actuelle)
+      // Filtre par catégorie de poste (via la nomination actuelle) : sur le référentiel
+      // relationnel `category` (public_position_categories).
+      const categoryFilter: Record<string, unknown> = {};
       if (filterCategory && filterCategory !== 'all') {
-        filter.current_appointment = {
-          ...filter.current_appointment,
-          position_category_slug: { _eq: filterCategory },
-        };
+        categoryFilter.slug = { _eq: filterCategory };
+      }
+
+      // Facette élu / nommé : portée par la catégorie (G19). « Non classé » = catégorie
+      // sans mandate_type (ex. « Autre ») OU mandat sans catégorie — jamais masqué du total.
+      if (filterMandate === 'elected' || filterMandate === 'appointed') {
+        categoryFilter.mandate_type = { _eq: filterMandate };
+      } else if (filterMandate === 'unclassified') {
+        filter.current_appointment._or = [
+          { category: { _null: true } },
+          { category: { mandate_type: { _null: true } } },
+        ];
+      }
+      if (Object.keys(categoryFilter).length) {
+        filter.current_appointment.category = categoryFilter;
       }
 
       // Recherche textuelle
@@ -66,8 +80,9 @@ export default defineCachedEventHandler(
               'photo',
               'current_appointment.id',
               'current_appointment.position_title',
-              'current_appointment.position_category',
-              'current_appointment.position_category_slug',
+              'current_appointment.category.slug',
+              'current_appointment.category.label',
+              'current_appointment.category.mandate_type',
               'current_appointment.organization_label',
               'current_appointment.appointment_date',
               'current_appointment.end_date',
@@ -109,8 +124,9 @@ export default defineCachedEventHandler(
           ? {
               id: person.current_appointment.id,
               position_title: person.current_appointment.position_title,
-              position_category: person.current_appointment.position_category,
-              position_category_slug: person.current_appointment.position_category_slug || null,
+              position_category: person.current_appointment.category?.label ?? '',
+              position_category_slug: person.current_appointment.category?.slug ?? null,
+              category: mapPositionCategory(person.current_appointment.category),
               organization_label: person.current_appointment.organization_label,
               appointment_date: person.current_appointment.appointment_date,
               end_date: person.current_appointment.end_date || null,
@@ -130,6 +146,7 @@ export default defineCachedEventHandler(
         },
       };
     } catch (error) {
+      reportServerError(error, 'public-persons/list');
       throw createError({
         statusCode: 500,
         statusMessage: 'Une erreur est survenue lors de la récupération des personnalités',
@@ -138,7 +155,7 @@ export default defineCachedEventHandler(
   },
   {
     maxAge: process.env.NODE_ENV === 'production' ? 5 * 60 : 0, // 5 min en prod (à augmenter après stabilisation)
-    name: 'public-persons-v2',
+    name: 'public-persons-v6',
     getKey: (event) => buildCacheKey('public-persons', getQuery(event)),
   },
 );
