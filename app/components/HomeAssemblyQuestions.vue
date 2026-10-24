@@ -86,12 +86,16 @@ const { questions, loading, error } = useAssemblyQuestions();
               </div>
             </div>
 
-            <!-- Subject - fixed height with line-clamp -->
-            <p
-              class="mt-2.5 line-clamp-3 min-h-[3.5rem] text-[12px] leading-relaxed text-gray-600 dark:text-gray-300 md:mt-3 md:min-h-[4rem] md:text-sm"
-            >
-              {{ question.subject }}
-            </p>
+            <!-- Subject - ⚠️ hauteur réservée portée par le WRAPPER, jamais par l'élément
+                 `line-clamp-*` : un `min-h` supérieur à la hauteur du clamp réexpose les
+                 lignes tronquées (dernière ligne coupée en deux). -->
+            <div class="mt-2.5 min-h-[3.5rem] md:mt-3 md:min-h-[4rem]">
+              <p
+                class="line-clamp-3 text-[12px] leading-relaxed text-gray-600 dark:text-gray-300 md:text-sm"
+              >
+                {{ question.subject }}
+              </p>
+            </div>
           </NuxtLink>
         </article>
       </div>
