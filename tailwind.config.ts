@@ -4,6 +4,21 @@ import typography from '@tailwindcss/typography';
 export default {
   content: [],
   darkMode: 'class',
+  // ⚠️ Anneaux de `<UBadge variant="subtle" :color="...">` dont la couleur est
+  // DYNAMIQUE. L'extracteur de @nuxt/ui ne lit que les couleurs statiques
+  // (`color="green"`) : sans cette safelist, `ring-<couleur>-500` /
+  // `dark:ring-<couleur>-400` ne sont pas générés, et `--tw-ring-color` retombe sur
+  // le bleu par défaut du reset Tailwind — badge cerclé de bleu au lieu de sa couleur.
+  // Invisible en dev (le CSS y est plus permissif), visible seulement en build de prod.
+  // Concernés : ElectoralDetailsCard (getStatusColor → orange/blue/yellow) et
+  // ConstituencyCard (badgeColorByType → blue). Ajouter ici toute nouvelle couleur
+  // passée dynamiquement à un composant Nuxt UI utilisant un anneau.
+  safelist: [
+    {
+      pattern: /^ring-(orange|blue|yellow)-(400|500)$/,
+      variants: ['dark'],
+    },
+  ],
   theme: {
     extend: {
       // ⚠️ NE PAS SUPPRIMER. @nuxt/ui v2 charge `@tailwindcss/aspect-ratio`, dont la config
