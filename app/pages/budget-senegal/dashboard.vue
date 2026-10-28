@@ -1,5 +1,5 @@
 <script setup lang="ts">
-const { siteName, siteUrl, defaultImage, keywords, themeColor } = useSiteMetadata();
+const { siteName, siteUrl, keywords, themeColor } = useSiteMetadata();
 
 const title = "Budget de l'État du Sénégal | Loi de finances";
 const description =
@@ -148,14 +148,8 @@ const {
   year,
   version,
   availableYears,
-  availableVersions,
-  currentVersionLabel,
-  setYear,
-  setVersion,
   compareYear,
   compareVersion,
-  hasComparison,
-  comparisonYearLabel,
   setCompareYear,
 } = useBudget();
 
