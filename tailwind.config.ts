@@ -10,12 +10,16 @@ export default {
   // `dark:ring-<couleur>-400` ne sont pas générés, et `--tw-ring-color` retombe sur
   // le bleu par défaut du reset Tailwind — badge cerclé de bleu au lieu de sa couleur.
   // Invisible en dev (le CSS y est plus permissif), visible seulement en build de prod.
-  // Concernés : ElectoralDetailsCard (getStatusColor → orange/blue/yellow) et
+  // ⚠️ `gray` est touché AUSSI avec une couleur STATIQUE : la map `color` de Nuxt UI
+  // ne définit `gray`/`white`/`black` que pour la variante `solid`. En `subtle`/`outline`,
+  // gray retombe sur le gabarit générique `ring-{color}-500` — non généré sans cette liste.
+  // Concernés : 10 `<UBadge color="gray" variant="subtle">` (dont les 4 encarts du
+  // dashboard budget), ElectoralDetailsCard (getStatusColor → orange/blue/yellow) et
   // ConstituencyCard (badgeColorByType → blue). Ajouter ici toute nouvelle couleur
-  // passée dynamiquement à un composant Nuxt UI utilisant un anneau.
+  // utilisée par un composant Nuxt UI qui pose un anneau.
   safelist: [
     {
-      pattern: /^ring-(orange|blue|yellow)-(400|500)$/,
+      pattern: /^ring-(gray|orange|blue|yellow)-(400|500)$/,
       variants: ['dark'],
     },
   ],
