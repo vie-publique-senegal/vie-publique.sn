@@ -45,7 +45,12 @@ export interface CampaignBanner {
    * Visuel de campagne, servi depuis `public/` (et non depuis kaddu.org) pour ne
    * pas dépendre d'un autre domaine. Il DOIT être en 16/9 : le cadre l'est aussi,
    * donc l'affiche apparaît entière, sans recadrage.
-   * Source : la couverture de la consultation, convertie en webp (62 Ko).
+   * Visuel retenu parmi trois : c'est le seul dont le fond (#012274) est le bleu
+   * de l'en-tête du site (#010272). Il tient donc dans les DEUX thèmes — il se
+   * fond dans la carte sombre, et sur la carte blanche il répond à l'en-tête et
+   * au bouton. Les variantes à fond clair éblouissaient en mode sombre.
+   * Sources PNG d'origine hors dépôt (1,9 Mo pièce) : elles n'ont rien à faire
+   * dans `public/`, qui est publié tel quel.
    */
   image: string;
   imageWidth: number;
@@ -69,7 +74,7 @@ export const CAMPAIGN_BANNER: CampaignBanner = {
   endsAt: '2026-10-31T23:59:59Z',
   ctaLabel: 'Participez en 2 minutes',
   url: 'https://www.kaddu.org/consultations/la-parole-aux-jeunes',
-  image: '/img/campagne-parole-aux-jeunes.webp',
+  image: '/img/campagne-parole-aux-jeunes-photo.webp',
   imageWidth: 960,
   imageHeight: 540,
   partnerName: 'Kaddu',
