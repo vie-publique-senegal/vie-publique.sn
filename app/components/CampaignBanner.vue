@@ -14,11 +14,18 @@
  * L'affiche porte déjà le titre, donc le texte à côté ne répète que ce qu'elle
  * ne dit pas : qui organise, la question posée, les freins levés, l'échéance.
  *
- * COULEUR — le bouton porte le rouge de Kaddu, en #e8201b (accent-600 de leur
- * palette). PAS leur #fa3a35 d'origine : en blanc dessus il ne donne que 3,7:1,
- * sous le seuil AA. #e8201b est la nuance la plus proche qui passe (4,51:1), et
- * elle appartient à leur propre échelle, donc on reste dans leur charte. Survol
- * en #c31612 (accent-700), la marche suivante.
+ * COULEUR DU BOUTON — rouge de Kaddu, mais pas le même dans les deux thèmes.
+ *  - Mode clair : dégradé #fa3a35 → #d81b16, sur le principe du dégradé de
+ *    l'en-tête. Un aplat de rouge accessible (#e8201b) paraissait lourd et terne
+ *    sur la carte blanche ; le dégradé rend le vrai rouge de marque (#fa3a35).
+ *  - Mode sombre : aplat #e8201b, qui fonctionnait déjà bien sur la carte sombre.
+ *
+ * Pourquoi le libellé est en 19 px gras et non en 14 px : blanc sur #fa3a35 ne
+ * donne que 3,67:1, sous le seuil AA de 4,5 pour du texte courant. Mais le seuil
+ * tombe à 3:1 pour le « texte large » au sens WCAG (≥ 18,66 px en gras) — d'où le
+ * 19 px. Les DEUX extrémités du dégradé passent alors (3,67 et 5,14). Réduire ce
+ * corps de texte sans changer les couleurs ferait repasser le bouton sous le seuil.
+ *
  * Le compte à rebours est volontairement NEUTRE : avec un bouton rouge, un « J-3 »
  * rouge juste à côté donnait deux accents qui se disputaient l'attention.
  *
@@ -135,7 +142,7 @@ const onCtaClick = () => {
             :href="ctaUrl"
             target="_blank"
             rel="noopener"
-            class="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-[#e8201b] px-5 text-sm font-semibold text-white transition hover:bg-[#c31612] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#e8201b]"
+            class="campaign-cta inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-5 text-[19px] font-bold text-white transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#e8201b]"
             @click="onCtaClick"
           >
             {{ campaign.ctaLabel }}
@@ -153,3 +160,24 @@ const onCtaClick = () => {
     </div>
   </section>
 </template>
+
+<style scoped>
+/* Voir l'en-tête du script pour le raisonnement couleur / contraste. */
+.campaign-cta {
+  background-image: linear-gradient(90deg, #fa3a35 0%, #d81b16 100%);
+}
+
+.campaign-cta:hover {
+  background-image: linear-gradient(90deg, #e8201b 0%, #c31612 100%);
+}
+
+/* Sur la carte sombre, l'aplat passe mieux que le dégradé */
+.dark .campaign-cta {
+  background-image: none;
+  background-color: #e8201b;
+}
+
+.dark .campaign-cta:hover {
+  background-color: #c31612;
+}
+</style>
