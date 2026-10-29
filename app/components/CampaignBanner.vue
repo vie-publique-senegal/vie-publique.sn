@@ -14,11 +14,13 @@
  * L'affiche porte déjà le titre, donc le texte à côté ne répète que ce qu'elle
  * ne dit pas : qui organise, la question posée, les freins levés, l'échéance.
  *
- * COULEUR — le bouton est en #0000d3, le bleu du DÉBUT du dégradé de l'en-tête
- * (`.header_top` dans `AppHeader.vue`), celui qu'on lit à l'écran. La fin du
- * dégradé (#010272) paraissait terne à côté. Le rouge de Kaddu est écarté pour le
- * bouton : blanc sur #fa3a35 ne donne que 3,7:1, sous le seuil AA ; il ne sert
- * donc qu'au compte à rebours, sur fond clair.
+ * COULEUR — le bouton porte le rouge de Kaddu, en #e8201b (accent-600 de leur
+ * palette). PAS leur #fa3a35 d'origine : en blanc dessus il ne donne que 3,7:1,
+ * sous le seuil AA. #e8201b est la nuance la plus proche qui passe (4,51:1), et
+ * elle appartient à leur propre échelle, donc on reste dans leur charte. Survol
+ * en #c31612 (accent-700), la marche suivante.
+ * Le compte à rebours est volontairement NEUTRE : avec un bouton rouge, un « J-3 »
+ * rouge juste à côté donnait deux accents qui se disputaient l'attention.
  *
  * Rendu côté serveur de bout en bout. Le visuel est auto-hébergé, en 16/9 comme
  * son cadre (aucun recadrage), avec `width`/`height` : aucun décalage de mise en
@@ -133,7 +135,7 @@ const onCtaClick = () => {
             :href="ctaUrl"
             target="_blank"
             rel="noopener"
-            class="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-[#0000d3] px-5 text-sm font-semibold text-white transition hover:bg-[#010272] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0000d3]"
+            class="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-[#e8201b] px-5 text-sm font-semibold text-white transition hover:bg-[#c31612] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#e8201b]"
             @click="onCtaClick"
           >
             {{ campaign.ctaLabel }}
@@ -141,7 +143,7 @@ const onCtaClick = () => {
           </a>
 
           <p class="text-xs text-gray-500 dark:text-gray-400">
-            <span class="font-semibold tabular-nums text-[#c31612] dark:text-[#ff6b66]">
+            <span class="font-semibold tabular-nums text-gray-700 dark:text-gray-200">
               {{ countdown }}
             </span>
             &middot; {{ campaign.deadlineLabel }}
