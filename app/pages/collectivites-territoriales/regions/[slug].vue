@@ -10,6 +10,8 @@ import { useCollectionPageSeo } from '~/composables/collectivites/useCollectionP
 import { useGeoSearch } from '~/composables/collectivites/useGeoSearch';
 import { useRegionGeo } from '~/composables/collectivites/useRegionsGeo';
 
+useFeatureGuard('menu_collectivites_territoriales');
+
 // Page d'une région : ses départements (le pas suivant) puis toutes ses
 // collectivités (ce que cherche « communes de la région de … »). Au plus 57
 // lignes : tout tient dans le HTML indexé, sans pagination.

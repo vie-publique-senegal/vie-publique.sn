@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { Government, GovernmentMemberFull } from '~~/types/government';
 
+useFeatureGuard('menu_historique_dirigeants');
+
 const route = useRoute();
 const slug = computed(() => route.params.slug as string);
 

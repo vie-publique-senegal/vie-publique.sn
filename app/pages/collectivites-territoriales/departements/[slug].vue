@@ -4,6 +4,8 @@ import { repereCollectivites, reperesPopulation } from '~/composables/collectivi
 import { useCollectionPageSeo } from '~/composables/collectivites/useCollectionPageSeo';
 import { useDepartementGeo } from '~/composables/collectivites/useDepartementsGeo';
 
+useFeatureGuard('menu_collectivites_territoriales');
+
 // Page hub d'un département : liste ses communes et renvoie vers leurs fiches.
 // Pas de filtre ni de pagination - un département compte au plus une trentaine
 // de collectivités, toutes tiennent sur la page (et donc dans le HTML indexé).

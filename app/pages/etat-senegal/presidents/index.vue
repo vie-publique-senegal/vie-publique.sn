@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { PresidentialTerm } from '~~/types/leader-history';
 
+useFeatureGuard('menu_historique_dirigeants');
+
 const { siteName, siteUrl, themeColor, keywords } = useSiteMetadata();
 
 const { terms, total, current, loading: pending, error } = usePresidents();
