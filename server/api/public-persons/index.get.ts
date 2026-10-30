@@ -91,7 +91,10 @@ export default defineCachedEventHandler(
             filter,
             limit,
             offset,
-            sort: [sortBy],
+            // `id` en second critère : beaucoup de mandats partagent la même date (maires,
+            // nominations d'un même Conseil) → sans lui, l'ordre n'est pas stable entre deux
+            // requêtes et une personne peut apparaître sur deux pages consécutives.
+            sort: [sortBy, 'id'],
           }),
         )
         .catch((error) => {
@@ -155,7 +158,7 @@ export default defineCachedEventHandler(
   },
   {
     maxAge: process.env.NODE_ENV === 'production' ? 5 * 60 : 0, // 5 min en prod (à augmenter après stabilisation)
-    name: 'public-persons-v6',
+    name: 'public-persons-v7',
     getKey: (event) => buildCacheKey('public-persons', getQuery(event)),
   },
 );

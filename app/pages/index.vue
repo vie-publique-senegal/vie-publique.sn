@@ -186,7 +186,7 @@ const { isFeatureEnabled } = useFeatureFlags();
 
     <div class="">
       <div class="my-8">
-        <HomeAppPromo />
+        <CampaignBanner />
       </div>
 
       <div class="my-8">
@@ -218,6 +218,9 @@ const { isFeatureEnabled } = useFeatureFlags();
       </div>
       <div class="my-8">
         <HomeNewsletter />
+      </div>
+      <div class="my-8">
+        <HomeAppPromo />
       </div>
       <div class="my-8">
         <HomeSocialNetworks />

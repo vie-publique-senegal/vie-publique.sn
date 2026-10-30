@@ -6,25 +6,33 @@ export const useAnalytics = () => {
   const { gtag } = useGtag();
 
   const trackQuizStart = () => {
-    gtag("event", "start_quiz", {
-      event_category: "Quiz",
-      event_label: "Quiz Started",
+    gtag('event', 'start_quiz', {
+      event_category: 'Quiz',
+      event_label: 'Quiz Started',
     });
   };
 
   const trackQuizFinish = () => {
-    gtag("event", "finish_quiz", {
-      event_category: "Quiz",
-      event_label: "Quiz Finished",
+    gtag('event', 'finish_quiz', {
+      event_category: 'Quiz',
+      event_label: 'Quiz Finished',
     });
   };
 
   // Page /liens (remplaçante du Linktree) : un clic par lien, internes compris
   // (GA4 ne mesure d'office que les clics sortants).
   const trackLinkClick = (linkId: string | number, section: string) => {
-    gtag("event", "liens_click", {
+    gtag('event', 'liens_click', {
       link_id: String(linkId),
       link_section: section,
+    });
+  };
+
+  // Bannière de campagne de la page d'accueil : un clic sortant par campagne.
+  // GA4 compte déjà les clics sortants, mais sans distinguer l'emplacement.
+  const trackCampaignClick = (campaignId: string) => {
+    gtag('event', 'campaign_banner_click', {
+      campaign_id: campaignId,
     });
   };
 
@@ -32,5 +40,6 @@ export const useAnalytics = () => {
     trackQuizStart,
     trackQuizFinish,
     trackLinkClick,
+    trackCampaignClick,
   };
 };

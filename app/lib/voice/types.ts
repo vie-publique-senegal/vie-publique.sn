@@ -72,11 +72,19 @@ export interface OptionsEcoute {
    * fin (silence, plafond de durée).
    */
   signalFin?: AbortSignal;
+  /**
+   * Profil vocal du serveur (`voice_profile` de l'API RAG), porté par la
+   * variante. Absent = la voix par défaut. Seul le moteur serveur le lit : Web
+   * Speech n'a qu'une voix, celle du navigateur.
+   */
+  profil?: string;
 }
 
 export interface OptionsLecture {
   lang: string;
   signal: AbortSignal;
+  /** Cf. `OptionsEcoute.profil`. */
+  profil?: string;
 }
 
 export interface MoteurVocal {

@@ -58,7 +58,7 @@ const {
       <div
         v-for="n in 3"
         :key="n"
-        class="w-36 flex-shrink-0 snap-start rounded-xl bg-white shadow-sm ring-1 ring-gray-100 md:w-auto md:flex-shrink dark:bg-gray-800 dark:ring-gray-700/50"
+        class="w-36 flex-shrink-0 snap-start rounded-xl bg-white shadow-sm ring-1 ring-gray-100 dark:bg-gray-800 dark:ring-gray-700/50 md:w-auto md:flex-shrink"
       >
         <USkeleton class="h-24 w-full rounded-t-xl md:h-36" />
         <div class="space-y-1.5 p-2 md:p-3">
@@ -93,7 +93,7 @@ const {
           <NuxtLink
             :to="formatNewsUrl(article)"
             :aria-label="`Lire : ${article.title}`"
-            class="group block overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-gray-100 transition-all active:scale-[0.98] md:ring-0 md:hover:shadow-md dark:bg-gray-800 dark:ring-gray-700/50"
+            class="group block overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-gray-100 transition-all active:scale-[0.98] dark:bg-gray-800 dark:ring-gray-700/50 md:ring-0 md:hover:shadow-md"
           >
             <!-- Image: compact vertical -->
             <div class="relative h-24 w-full overflow-hidden md:h-36">
@@ -109,14 +109,19 @@ const {
 
             <!-- Content: compact -->
             <div class="p-2 md:p-3">
-              <h3
-                class="line-clamp-2 min-h-[2.25rem] text-[11px] font-medium leading-snug text-gray-900 md:min-h-[3rem] md:text-sm dark:text-white"
-              >
-                {{ article.title }}
-              </h3>
+              <!-- ⚠️ La hauteur réservée (2 lignes) est portée par le WRAPPER, jamais par
+                   l'élément `line-clamp-*` : un `min-h` supérieur à la hauteur du clamp
+                   réexpose les lignes tronquées (dernière ligne coupée en deux). -->
+              <div class="min-h-[2.25rem] md:min-h-[3rem]">
+                <h3
+                  class="line-clamp-2 text-[11px] font-medium leading-snug text-gray-900 dark:text-white md:text-sm"
+                >
+                  {{ article.title }}
+                </h3>
+              </div>
               <p
                 v-if="article.date_published"
-                class="mt-1 text-[10px] text-gray-500 md:text-xs dark:text-gray-400"
+                class="mt-1 text-[10px] text-gray-500 dark:text-gray-400 md:text-xs"
               >
                 {{ $dateformatWithDayName(article.date_published) }}
               </p>
@@ -141,10 +146,7 @@ const {
     </div>
 
     <!-- Empty state -->
-    <div
-      v-else
-      class="py-8 text-center text-sm text-gray-500 dark:text-gray-400"
-    >
+    <div v-else class="py-8 text-center text-sm text-gray-500 dark:text-gray-400">
       Aucune actualité disponible pour le moment
     </div>
   </section>

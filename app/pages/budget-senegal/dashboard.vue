@@ -1,5 +1,5 @@
 <script setup lang="ts">
-const { siteName, siteUrl, defaultImage, keywords, themeColor } = useSiteMetadata();
+const { siteName, siteUrl, keywords, themeColor } = useSiteMetadata();
 
 const title = "Budget de l'État du Sénégal | Loi de finances";
 const description =
@@ -148,14 +148,8 @@ const {
   year,
   version,
   availableYears,
-  availableVersions,
-  currentVersionLabel,
-  setYear,
-  setVersion,
   compareYear,
   compareVersion,
-  hasComparison,
-  comparisonYearLabel,
   setCompareYear,
 } = useBudget();
 
@@ -301,17 +295,14 @@ watch(activeTab, (newTab) => {
     <div class="border-b border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
       <div class="container mx-auto px-4 py-6 sm:py-8">
         <AppBreadcrumb
-          :items="[
-            { label: 'Budget', to: '/budget-senegal' },
-            { label: 'Dashboard' }
-          ]"
+          :items="[{ label: 'Budget', to: '/budget-senegal' }, { label: 'Dashboard' }]"
           class="mb-4"
         />
 
         <!-- Title -->
         <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <h1 class="text-2xl font-bold text-gray-900 sm:text-3xl dark:text-white">
+            <h1 class="text-2xl font-bold text-gray-900 dark:text-white sm:text-3xl">
               Budget du Sénégal
             </h1>
             <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
@@ -349,26 +340,35 @@ watch(activeTab, (newTab) => {
     </div>
 
     <!-- Tabs Navigation -->
-    <div class="sticky top-0 z-40 border-b border-gray-200 bg-white/95 backdrop-blur-sm dark:border-gray-800 dark:bg-gray-900/95">
+    <div
+      class="sticky top-0 z-40 border-b border-gray-200 bg-white/95 backdrop-blur-sm dark:border-gray-800 dark:bg-gray-900/95"
+    >
       <div class="container mx-auto px-4">
         <nav class="-mb-px flex gap-0.5 py-1 sm:gap-2" aria-label="Tabs">
           <button
             v-for="tab in tabs"
             :key="tab.id"
             :class="[
-              'group flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-medium transition-all sm:gap-2 sm:px-4 sm:py-2 sm:text-sm',
+              // Onglet actif NEUTRE : pas d'aplat de couleur, juste le texte mis en évidence
+              // et un fin soulignement. On n'utilise PAS `primary` (= sky) : ce bleu clair ne
+              // fait pas partie de l'identité Vie Publique.
+              // `border-b-2` est dans la base, la COULEUR dans chaque branche : mettre
+              // `border-transparent` dans la base le ferait cohabiter avec la couleur active
+              // sur le même élément, et c'est l'ordre du CSS généré qui trancherait, pas celui
+              // du tableau. L'inactif garde un liseré transparent pour éviter le saut de 2px.
+              'group flex items-center gap-1 rounded-lg border-b-2 px-2 py-1.5 text-xs font-medium transition-all sm:gap-2 sm:px-4 sm:py-2 sm:text-sm',
               activeTab === tab.id
-                ? 'bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400'
-                : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white',
+                ? 'border-gray-900 font-semibold text-gray-900 dark:border-white dark:text-white'
+                : 'border-transparent text-gray-500 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white',
             ]"
             @click="activeTab = tab.id"
           >
             <UIcon
               :name="tab.icon"
               :class="[
-                'h-3.5 w-3.5 sm:h-4 sm:w-4 transition-colors',
+                'h-3.5 w-3.5 transition-colors sm:h-4 sm:w-4',
                 activeTab === tab.id
-                  ? 'text-primary-600 dark:text-primary-400'
+                  ? 'text-gray-900 dark:text-white'
                   : 'text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300',
               ]"
             />
@@ -383,9 +383,11 @@ watch(activeTab, (newTab) => {
       <!-- Loading State -->
       <div v-if="loading" class="flex flex-col items-center justify-center py-20">
         <div class="relative h-12 w-12">
-          <div class="absolute inset-0 animate-ping rounded-full bg-primary-200 opacity-75"></div>
-          <div class="relative flex h-12 w-12 items-center justify-center rounded-full bg-primary-100">
-            <UIcon name="i-heroicons-chart-bar" class="h-6 w-6 animate-pulse text-primary-600" />
+          <div class="bg-primary-200 absolute inset-0 animate-ping rounded-full opacity-75"></div>
+          <div
+            class="bg-primary-100 relative flex h-12 w-12 items-center justify-center rounded-full"
+          >
+            <UIcon name="i-heroicons-chart-bar" class="text-primary-600 h-6 w-6 animate-pulse" />
           </div>
         </div>
         <p class="mt-4 text-sm text-gray-600 dark:text-gray-400">Chargement des données...</p>
@@ -393,9 +395,16 @@ watch(activeTab, (newTab) => {
 
       <!-- Error State -->
       <div v-else-if="error" class="mx-auto max-w-md py-12">
-        <div class="rounded-2xl border border-red-200 bg-red-50 p-6 text-center dark:border-red-800 dark:bg-red-900/20">
-          <div class="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/50">
-            <UIcon name="i-heroicons-exclamation-triangle" class="h-6 w-6 text-red-600 dark:text-red-400" />
+        <div
+          class="rounded-2xl border border-red-200 bg-red-50 p-6 text-center dark:border-red-800 dark:bg-red-900/20"
+        >
+          <div
+            class="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/50"
+          >
+            <UIcon
+              name="i-heroicons-exclamation-triangle"
+              class="h-6 w-6 text-red-600 dark:text-red-400"
+            />
           </div>
           <h3 class="text-lg font-semibold text-red-900 dark:text-red-200">Erreur de chargement</h3>
           <p class="mt-2 text-sm text-red-700 dark:text-red-300">
@@ -434,14 +443,18 @@ watch(activeTab, (newTab) => {
             v-if="revenueChartData.length > 0"
             class="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-800/50"
           >
-            <div class="border-b border-gray-200 bg-gradient-to-r from-emerald-50 to-transparent p-4 sm:p-6 dark:border-gray-700 dark:from-emerald-900/20">
+            <div
+              class="border-b border-gray-200 bg-gradient-to-r from-emerald-50 to-transparent p-4 dark:border-gray-700 dark:from-emerald-900/20 sm:p-6"
+            >
               <div class="flex flex-col gap-4">
                 <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <h2 class="text-lg font-bold text-gray-900 sm:text-xl dark:text-white">
+                  <h2 class="text-lg font-bold text-gray-900 dark:text-white sm:text-xl">
                     Répartition des Recettes
                   </h2>
                   <div class="flex items-baseline gap-2">
-                    <span class="text-2xl font-bold text-emerald-600 sm:text-3xl dark:text-emerald-400">
+                    <span
+                      class="text-2xl font-bold text-emerald-600 dark:text-emerald-400 sm:text-3xl"
+                    >
                       {{ Math.round(revenueTotalWithVariation.total) }}
                     </span>
                     <span class="text-sm text-gray-500">Mrd FCFA</span>
@@ -464,7 +477,11 @@ watch(activeTab, (newTab) => {
               </div>
             </div>
             <div class="p-4 sm:p-6">
-              <BudgetBudget2TableRevenueExpense :budget-data="revenueChartData" title="" color="green" />
+              <BudgetBudget2TableRevenueExpense
+                :budget-data="revenueChartData"
+                title=""
+                color="green"
+              />
             </div>
           </section>
 
@@ -481,14 +498,16 @@ watch(activeTab, (newTab) => {
             v-if="expenseChartData.length > 0"
             class="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-800/50"
           >
-            <div class="border-b border-gray-200 bg-gradient-to-r from-amber-50 to-transparent p-4 sm:p-6 dark:border-gray-700 dark:from-amber-900/20">
+            <div
+              class="border-b border-gray-200 bg-gradient-to-r from-amber-50 to-transparent p-4 dark:border-gray-700 dark:from-amber-900/20 sm:p-6"
+            >
               <div class="flex flex-col gap-4">
                 <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <h2 class="text-lg font-bold text-gray-900 sm:text-xl dark:text-white">
+                  <h2 class="text-lg font-bold text-gray-900 dark:text-white sm:text-xl">
                     Répartition des Dépenses
                   </h2>
                   <div class="flex items-baseline gap-2">
-                    <span class="text-2xl font-bold text-amber-600 sm:text-3xl dark:text-amber-400">
+                    <span class="text-2xl font-bold text-amber-600 dark:text-amber-400 sm:text-3xl">
                       {{ Math.round(expenseTotalWithVariation.total) }}
                     </span>
                     <span class="text-sm text-gray-500">Mrd FCFA</span>
@@ -511,7 +530,11 @@ watch(activeTab, (newTab) => {
               </div>
             </div>
             <div class="p-4 sm:p-6">
-              <BudgetBudget2TableRevenueExpense :budget-data="expenseChartData" title="" color="yellow" />
+              <BudgetBudget2TableRevenueExpense
+                :budget-data="expenseChartData"
+                title=""
+                color="yellow"
+              />
             </div>
           </section>
 
@@ -528,14 +551,18 @@ watch(activeTab, (newTab) => {
             v-if="treasuryOperations.components.length > 0"
             class="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-800/50"
           >
-            <div class="border-b border-gray-200 bg-gradient-to-r from-purple-50 to-transparent p-4 sm:p-6 dark:border-gray-700 dark:from-purple-900/20">
+            <div
+              class="border-b border-gray-200 bg-gradient-to-r from-purple-50 to-transparent p-4 dark:border-gray-700 dark:from-purple-900/20 sm:p-6"
+            >
               <div class="flex flex-col gap-4">
                 <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <h2 class="text-lg font-bold text-gray-900 sm:text-xl dark:text-white">
+                  <h2 class="text-lg font-bold text-gray-900 dark:text-white sm:text-xl">
                     Besoins de financement
                   </h2>
                   <div class="flex items-baseline gap-2">
-                    <span class="text-2xl font-bold text-purple-600 sm:text-3xl dark:text-purple-400">
+                    <span
+                      class="text-2xl font-bold text-purple-600 dark:text-purple-400 sm:text-3xl"
+                    >
                       {{ Math.round(treasuryOperations.total) }}
                     </span>
                     <span class="text-sm text-gray-500">Mrd FCFA</span>
@@ -569,7 +596,11 @@ watch(activeTab, (newTab) => {
                   color-text="purple"
                 />
               </div>
-              <BudgetBudget2TableRevenueExpense :budget-data="treasuryOperations.components" title="" color="purple" />
+              <BudgetBudget2TableRevenueExpense
+                :budget-data="treasuryOperations.components"
+                title=""
+                color="purple"
+              />
             </div>
           </section>
 
@@ -586,14 +617,18 @@ watch(activeTab, (newTab) => {
             v-if="publicDebt.components.length > 0"
             class="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-800/50"
           >
-            <div class="border-b border-gray-200 bg-gradient-to-r from-orange-50 to-transparent p-4 sm:p-6 dark:border-gray-700 dark:from-orange-900/20">
+            <div
+              class="border-b border-gray-200 bg-gradient-to-r from-orange-50 to-transparent p-4 dark:border-gray-700 dark:from-orange-900/20 sm:p-6"
+            >
               <div class="flex flex-col gap-4">
                 <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <h2 class="text-lg font-bold text-gray-900 sm:text-xl dark:text-white">
+                  <h2 class="text-lg font-bold text-gray-900 dark:text-white sm:text-xl">
                     Service de la Dette publique
                   </h2>
                   <div class="flex items-baseline gap-2">
-                    <span class="text-2xl font-bold text-orange-600 sm:text-3xl dark:text-orange-400">
+                    <span
+                      class="text-2xl font-bold text-orange-600 dark:text-orange-400 sm:text-3xl"
+                    >
                       {{ Math.round(publicDebt.total) }}
                     </span>
                     <span class="text-sm text-gray-500">Mrd FCFA</span>
@@ -627,7 +662,11 @@ watch(activeTab, (newTab) => {
                   color-text="yellow"
                 />
               </div>
-              <BudgetBudget2TableRevenueExpense :budget-data="publicDebt.components" title="" color="orange" />
+              <BudgetBudget2TableRevenueExpense
+                :budget-data="publicDebt.components"
+                title=""
+                color="orange"
+              />
             </div>
           </section>
 
@@ -642,9 +681,11 @@ watch(activeTab, (newTab) => {
 
         <!-- Ministries Tab -->
         <div v-show="activeTab === 'ministries'">
-          <section class="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-800/50">
-            <div class="border-b border-gray-200 p-4 sm:p-6 dark:border-gray-700">
-              <h2 class="text-lg font-bold text-gray-900 sm:text-xl dark:text-white">
+          <section
+            class="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-800/50"
+          >
+            <div class="border-b border-gray-200 p-4 dark:border-gray-700 sm:p-6">
+              <h2 class="text-lg font-bold text-gray-900 dark:text-white sm:text-xl">
                 Budgets des Ministères {{ year }}
               </h2>
               <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
@@ -665,9 +706,11 @@ watch(activeTab, (newTab) => {
 
         <!-- Institutions Tab -->
         <div v-show="activeTab === 'institutions'">
-          <section class="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-800/50">
-            <div class="border-b border-gray-200 p-4 sm:p-6 dark:border-gray-700">
-              <h2 class="text-lg font-bold text-gray-900 sm:text-xl dark:text-white">
+          <section
+            class="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-800/50"
+          >
+            <div class="border-b border-gray-200 p-4 dark:border-gray-700 sm:p-6">
+              <h2 class="text-lg font-bold text-gray-900 dark:text-white sm:text-xl">
                 Budgets des Institutions {{ year }}
               </h2>
               <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
@@ -690,7 +733,9 @@ watch(activeTab, (newTab) => {
         <div v-show="activeTab === 'documents'">
           <!-- Empty State -->
           <div v-if="documents.length === 0" class="py-16 text-center">
-            <div class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800">
+            <div
+              class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800"
+            >
               <UIcon name="i-heroicons-document-text" class="h-8 w-8 text-gray-400" />
             </div>
             <h3 class="text-lg font-medium text-gray-900 dark:text-white">Aucun document</h3>
@@ -705,7 +750,7 @@ watch(activeTab, (newTab) => {
               v-for="document in documents"
               :key="document.id"
               :to="`/documents/${document.id}/${document.slug}`"
-              class="group overflow-hidden rounded-xl border border-gray-200 bg-white transition-all hover:border-primary-300 hover:shadow-lg dark:border-gray-700 dark:bg-gray-800 dark:hover:border-primary-600"
+              class="hover:border-primary-300 dark:hover:border-primary-600 group overflow-hidden rounded-xl border border-gray-200 bg-white transition-all hover:shadow-lg dark:border-gray-700 dark:bg-gray-800"
             >
               <div class="aspect-[3/4] overflow-hidden bg-gray-100 dark:bg-gray-900">
                 <CmsImage
@@ -717,11 +762,16 @@ watch(activeTab, (newTab) => {
                   :quality="50"
                 />
                 <div v-else class="flex h-full w-full items-center justify-center">
-                  <UIcon name="i-heroicons-document-text" class="h-12 w-12 text-gray-300 dark:text-gray-600" />
+                  <UIcon
+                    name="i-heroicons-document-text"
+                    class="h-12 w-12 text-gray-300 dark:text-gray-600"
+                  />
                 </div>
               </div>
               <div class="p-3">
-                <p class="line-clamp-2 text-sm font-medium text-gray-900 group-hover:text-primary-600 dark:text-white dark:group-hover:text-primary-400">
+                <p
+                  class="group-hover:text-primary-600 dark:group-hover:text-primary-400 line-clamp-2 text-sm font-medium text-gray-900 dark:text-white"
+                >
                   {{ document.title }}
                 </p>
               </div>

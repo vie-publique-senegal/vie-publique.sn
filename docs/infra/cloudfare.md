@@ -82,6 +82,112 @@ vie-publique.sn
 
 ---
 
+## Certificats d'ORIGINE (ACME / Let's Encrypt) — incident 09/2026
+
+> ⚠️ **Ne pas confondre deux certificats distincts.** L'**Edge Certificate** ci-dessus
+> (navigateur ↔ Cloudflare) est géré et renouvelé par Cloudflare : il est presque toujours
+> « Active ». Le **certificat d'origine** (Cloudflare ↔ serveur), lui, est émis par Let's Encrypt
+> via Traefik sur chaque VPS. En **Full (strict)**, un certificat d'origine expiré = **erreur 526**
+> alors que la page « Edge Certificates » reste verte. **Regarder l'edge ne diagnostique jamais une 526.**
+
+### Règle de diagnostic (faire ceci AVANT toute hypothèse)
+
+Interroger **l'origine en direct**, jamais via Cloudflare : sur un hôte protégé par Access, une
+requête anonyme reçoit un 302 de connexion et n'atteint jamais le serveur — ni 526, ni information
+utile. (IPs d'origine : Vaultwarden « Infra VP », jamais dans le repo.)
+
+```bash
+echo | openssl s_client -connect <IP_ORIGINE>:443 -servername <hote>.vie-publique.sn 2>/dev/null \
+  | openssl x509 -noout -issuer -dates
+```
+
+Balayage de tous les hôtes d'un serveur (à relancer lors du prochain incident) :
+
+```bash
+check() { out=$(echo | openssl s_client -connect $2:443 -servername $1 2>/dev/null \
+  | openssl x509 -noout -enddate -issuer 2>/dev/null)
+  [ -z "$out" ] && { echo "$1 -> PAS DE REPONSE TLS"; return; }
+  end=$(echo "$out" | grep notAfter | cut -d= -f2)
+  echo "$1 -> expire dans $(( ($(date -d "$end" +%s) - $(date +%s)) / 86400 )) j ($end)"; }
+check cms.vie-publique.sn <IP_PROD>
+```
+
+### Incident du 14/09/2026
+
+`n8n.vie-publique.sn` en **526**. Cause : certificat d'origine Let's Encrypt **expiré le 13/09**,
+émis le 15/06 et **jamais renouvelé depuis la mise derrière Cloudflare**. Le balayage du 18/09 a
+révélé que le problème touchait **6 hôtes**, découverts par hasard — aucune alerte n'existait.
+
+| Hôte | Serveur | État au 18/09/2026 |
+| --- | --- | --- |
+| `sign`, `pass` | PROD (Coolify) | ❌ expirés (01/09, 12/09) |
+| `n8n` | VPS n8n | ❌ expiré (13/09) |
+| `test` | PROD (Coolify) | ❌ expiré (06/09) — bloqué au edge (403), invisible |
+| `admin`, `ragflow` | PROD (Coolify) | ❌ **certificat par défaut Traefik** (jamais obtenu / conteneur arrêté) |
+| `changedetection` | VPS n8n | ⚠️ expire le 30/09 |
+| `coolify` | PROD (Coolify) | ⚠️ expire le 11/10 |
+| `cms`, `flowise`, `open-webui`, `search`, `v2`, `vie-publique.sn` | PROD (Coolify) | ✅ 41-63 j, renouvellement actif |
+
+### Causes racines — différentes selon le serveur
+
+1. **Serveur PROD (Coolify) — Cloudflare Access bloque la validation HTTP-01.**
+   Corrélation nette : **tous** les hôtes SANS Access se renouvellent (`cms`, `search`, `v2`,
+   `flowise`, `open-webui`, le site), **tous** ceux AVEC Access échouent (`pass`, `sign`,
+   `coolify`). Access intercepte `/.well-known/acme-challenge/*` et sert sa page de connexion
+   à Let's Encrypt. _(« Always Use HTTPS » n'est PAS en cause : Cloudflare exempte ce chemin
+   de la redirection 301 — c'est bien pourquoi les hôtes sans Access fonctionnent.)_
+
+2. **VPS n8n — `tlschallenge` incompatible avec le proxy.** Le `docker-compose` du template
+   Hostinger utilise `--certificatesresolvers.mytlschallenge.acme.tlschallenge=true`
+   (TLS-ALPN-01), qui exige une connexion TLS directe sur le port 443. Derrière le proxy
+   Cloudflare, c'est Cloudflare qui répond : la validation est **structurellement impossible**,
+   Access ou pas. Concerne `n8n` **et** `changedetection` (même resolver).
+
+### Correctifs
+
+| # | Action | Statut |
+| --- | --- | --- |
+| 1 | **Access → app `ACME challenge`** : destinations `.well-known/acme-challenge/*` sur `sign`, `pass`, `coolify`, `n8n` + politique **Bypass / Everyone**. Débloque HTTP-01 pour tous les hôtes protégés. Sans risque : ce chemin ne porte qu'un jeton temporaire. | ✅ 19/09/2026 |
+| 2 | **VPS n8n → passer en DNS-01** (voir encadré) : répare `n8n` + `changedetection`. | ⏳ **À FAIRE** (échéance `changedetection` : 30/09) |
+| 3 | Redéployer `pass` dans Coolify pour relancer la demande ; `sign` et `coolify` suivront seuls. | ⏳ à vérifier |
+| 4 | `admin` / `ragflow` : lire les journaux ACME du proxy Coolify (`docker logs coolify-proxy 2>&1 \| grep -i acme`) — probablement conteneurs arrêtés. | ⏳ à faire |
+| 5 | **Sondes d'expiration de certificat dans Uptime Kuma** (cf. [`monitoring.md`](./monitoring.md)) — le vrai correctif de fond : 6 certificats cassés découverts par hasard. | ⏳ à faire |
+
+**DNS-01 sur le VPS n8n** — dans le service `traefik` du `docker-compose.yml`, remplacer la ligne
+`tlschallenge` (garder le nom `mytlschallenge` pour ne pas toucher aux labels des services) :
+
+```yaml
+      - --certificatesresolvers.mytlschallenge.acme.dnschallenge=true
+      - --certificatesresolvers.mytlschallenge.acme.dnschallenge.provider=cloudflare
+      - --certificatesresolvers.mytlschallenge.acme.dnschallenge.resolvers=1.1.1.1:53,1.0.0.1:53
+    environment:
+      - CF_DNS_API_TOKEN=${CF_DNS_API_TOKEN}   # token « Edit zone DNS » limité à vie-publique.sn
+```
+
+Avec DNS-01, Traefik prouve la propriété du domaine via l'API Cloudflare : **rien ne transite par
+le serveur**, donc ni le proxy ni Access ne peuvent casser le renouvellement. ⚠️ Figer aussi la
+version de l'image (`image: traefik` sans tag) : les labels n8n utilisent `headers.SSLRedirect` /
+`SSLHost` / `STSPreload`, **supprimés dans Traefik v3** — une montée de version implicite casserait
+le routage.
+
+### Contournement temporaire en place — À RETIRER
+
+**Configuration Rule `n8n ssl`** : `(http.host eq "n8n.vie-publique.sn")` → **SSL: Full**
+(déployée le 18/09/2026). Elle fait accepter un certificat expiré et rétablit le service, mais
+**Cloudflare ne valide plus l'identité de l'origine** pour cet hôte. À supprimer dès le correctif 2
+appliqué. Ne **jamais** régler ce contournement au niveau de la zone : les autres hôtes doivent
+rester en Full (strict).
+
+### Point de sécurité connexe
+
+Les origines répondent **directement sur leur IP publique** (vérifié : `curl --resolve` sur l'IP
+renvoie 200 sans passer par Cloudflare). Conséquence : **Cloudflare Access et le WAF sont
+contournables** par qui connaît l'IP. Correctif : restreindre 80/443 aux
+[plages IP Cloudflare](https://www.cloudflare.com/ips/) dans le pare-feu Hostinger (compatible
+avec HTTP-01 comme avec DNS-01, la validation arrivant via Cloudflare ou par DNS). ⏳ à faire.
+
+---
+
 # Cache
 
 ## Caching Level
@@ -418,6 +524,8 @@ query {
 | Browser Cache TTL | Respect Existing Headers (17/07/2026 — « 4 h » écrasait le no-cache de sw.js) |
 | Development Mode | OFF |
 | Always Online | OFF |
+| Access — app `ACME challenge` | Bypass / Everyone sur `.well-known/acme-challenge/*` (19/09/2026) — sans elle, Access casse le renouvellement Let's Encrypt des hôtes protégés |
+| Configuration Rule `n8n ssl` | SSL **Full** sur `n8n.vie-publique.sn` (18/09/2026) — ⚠️ **contournement temporaire**, à retirer après le passage en DNS-01 |
 
 ---
 

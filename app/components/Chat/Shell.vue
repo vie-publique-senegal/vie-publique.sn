@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useClipboard } from '@vueuse/core';
 import { toast } from 'vue-sonner';
-import { CHAT_ASSISTANT_NAME } from '~/config/chat-variants';
+import { CHAT_ASSISTANT_NAME, CHAT_ASSISTANT_TAGLINE } from '~/config/chat-variants';
 import { construireRetour } from '~/lib/chat/report';
 import { moteurEcoute, moteurLecture } from '~/lib/voice';
 import type { ChatMessageModel } from './Message.vue';
@@ -75,7 +75,7 @@ const LANGUES = [
   { valeur: 'wo-SN', libelle: 'Wolof' },
 ];
 
-const lecture = useLectureVocale({ lang: langueVocale });
+const lecture = useLectureVocale({ lang: langueVocale, profil: props.variant.voiceProfile });
 
 /**
  * Dernière réponse affichée — celle que l'activation du son doit reprendre.
@@ -156,6 +156,18 @@ function demarrerCooldown(secondes: number) {
   }, 1000);
 }
 
+/**
+ * « Arrêter » sur la pastille de lecture : coupe la lecture de CETTE réponse
+ * seulement. Sans le drapeau, les tokens suivants du flux relanceraient la
+ * lecture à la phrase d'après. Remis à zéro à chaque nouvelle question.
+ */
+let lectureInterrompue = false;
+
+function arreterLecture() {
+  lectureInterrompue = true;
+  lecture.arreter();
+}
+
 function arreter() {
   abandon?.abort();
   // Couper la génération coupe aussi la lecture : sinon l'assistant continuerait
@@ -181,8 +193,50 @@ async function envoyer(question: string) {
   enCours.value = true;
   abandon = new AbortController();
   let termine = false;
+  lectureInterrompue = false;
   // Une nouvelle question annule la lecture de la précédente.
   lecture.arreter();
+
+  /**
+   * ⚠️ **Lire à voix haute IMPOSE la langue de l'échange.**
+   *
+   * Sans cette déclaration, « Auto » laissait le modèle choisir la langue de sa
+   * réponse. C'est le bon défaut pour RÉPONDRE — et ce n'en est pas un pour
+   * LIRE : personne ne connaissait alors cette langue, ni le widget ni l'API,
+   * dont la consigne dit seulement « réponds dans la langue de la question »
+   * (`prompts.py` de rag-platform). Le moteur de lecture retombait donc sur
+   * `voiceLang`, et une réponse wolof se faisait prononcer par une voix
+   * française — du charabia, là où l'absence de son aurait été honnête.
+   *
+   * On ne devine donc pas après coup, on décide avant : dès que le son est
+   * actif, la langue de l'échange est celle du sélecteur, et la réponse ne peut
+   * plus être dans une langue que la lecture ne sait pas servir.
+   *
+   * ⚠️ L'autre issue était de **détecter** la langue de la réponse ici même.
+   * Elle est écartée depuis le 2026-09-05, et pas par paresse : le cas central
+   * de ce corpus est du wolof truffé de termes administratifs français, c'est-à-
+   * dire précisément ce sur quoi une détection se trompe.
+   *
+   * La déclaration est **visible** : le sélecteur cesse d'afficher « Auto »,
+   * donc l'utilisateur lit la langue qu'il vient de s'imposer et peut la changer
+   * d'un geste. Une imposition silencieuse aurait fait mentir l'interface.
+   *
+   * ⚠️ **Les trois conditions, et aucune n'est décorative.** `actif` est persisté
+   * en `localStorage`, indépendamment du drapeau Directus et du moteur : sans
+   * `vocalAutorise` ni `disponible`, un visiteur qui a activé le son un jour
+   * verrait sa langue imposée alors que plus rien ne lit — donc une réponse
+   * wolof devenue française, sans bouton pour l'expliquer. On n'impose la langue
+   * que là où la lecture a effectivement lieu, ce sont les mêmes conditions que
+   * l'affichage du bouton.
+   */
+  if (
+    vocalAutorise.value &&
+    lecture.disponible.value &&
+    lecture.actif.value &&
+    langueEchange.value === null
+  ) {
+    langueEchange.value = langueParDefaut.value;
+  }
   await defilerEnBas();
 
   try {
@@ -191,7 +245,8 @@ async function envoyer(question: string) {
     for await (const evenement of client.send(question, {
       conversationId: conversationId.value ?? undefined,
       // Omise tant que rien ne l'a déclarée : l'API répond alors dans la langue
-      // de la question.
+      // de la question. ⚠️ Activer la lecture la déclare — voir ci-dessus, sans
+      // quoi on lirait une réponse dont on ignore la langue.
       lang: langueEchange.value ?? undefined,
       signal: abandon.signal,
     })) {
@@ -202,7 +257,7 @@ async function envoyer(question: string) {
           // dès qu'une phrase est complète. Attendre `done` pour lire ferait
           // entendre le premier mot après la fin de la génération — le streaming
           // ne servirait alors plus à rien.
-          lecture.pousser(evenement.text);
+          if (!lectureInterrompue) lecture.pousser(evenement.text);
           await defilerEnBas();
           break;
         case 'sources':
@@ -215,7 +270,7 @@ async function envoyer(question: string) {
           termine = true;
           // La dernière phrase n'a pas de ponctuation finale garantie : sans ce
           // vidage, elle resterait dans le tampon et ne serait jamais lue.
-          lecture.terminer();
+          if (!lectureInterrompue) lecture.terminer();
           if (evenement.conversationReset) reponse.reset = true;
           if (evenement.conversationId) conversationId.value = evenement.conversationId;
           reponse.meta = evenement.meta;
@@ -411,8 +466,7 @@ onBeforeUnmount(() => {
           {{ CHAT_ASSISTANT_NAME }}
         </h1>
         <p class="mx-auto mt-2 text-gray-600 dark:text-gray-300">
-          L’assistant de Vie Publique Sénégal. Il recherche dans les lois, rapports, décrets,
-          budgets et autres documents publics pour vous fournir une réponse sourcée.
+          {{ CHAT_ASSISTANT_TAGLINE }}
         </p>
 
         <ul v-if="variant.starterQuestions?.length" class="mt-8 space-y-2 text-left">
@@ -445,12 +499,33 @@ onBeforeUnmount(() => {
       </div>
     </div>
 
+    <!-- Lecture en cours : sans ce repère, la voix continuait après la fin du
+         texte sans rien à l'écran pour l'arrêter, sinon la sourdine de l'en-tête
+         — qui coupe aussi les réponses SUIVANTES. Ici on n'arrête que celle-ci. -->
+    <div
+      v-if="lecture.enLecture.value"
+      class="flex justify-center bg-gray-50 px-4 pb-2 dark:bg-gray-900"
+      role="status"
+    >
+      <button
+        type="button"
+        class="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-sm text-gray-700 ring-1 ring-gray-200 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-200 dark:ring-gray-700 dark:hover:bg-gray-700"
+        @click="arreterLecture"
+      >
+        <UIcon name="i-lucide-volume-2" class="text-primary-500 h-4 w-4" aria-hidden="true" />
+        Lecture en cours
+        <span class="text-gray-400" aria-hidden="true">·</span>
+        <span class="font-medium">Arrêter</span>
+      </button>
+    </div>
+
     <ChatComposer
       ref="composer"
       :busy="enCours || chargementAdaptateur"
       :cooldown="cooldown"
       :voix="vocalAutorise"
       :voix-lang="langueVocale"
+      :voix-profil="variant.voiceProfile"
       :erreur-voix="lecture.erreur.value"
       @send="envoyer"
       @langue="langueEchange = $event"

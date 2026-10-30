@@ -21,6 +21,15 @@ export interface FeatureFlag {
  * Utilisée comme fallback si Directus est indisponible
  */
 export const DEFAULT_FEATURES: Record<string, FeatureFlag> = {
+  // Campagnes temporaires. Ce défaut sert de FALLBACK : créer le flag dans
+  // Directus (`vp_feature_flags`) permet de couper la bannière en production
+  // sans redéploiement (cache 5 min). Contenu : app/config/campaign.config.ts
+  campaign_parole_aux_jeunes: {
+    key: 'campaign_parole_aux_jeunes',
+    enabled: true,
+    environments: ['dev', 'test', 'production'],
+    description: "Bannière d'accueil — consultation « La parole aux jeunes » (Kaddu)",
+  },
   // Menu principal
   menu_actualites: {
     key: 'menu_actualites',

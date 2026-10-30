@@ -46,10 +46,19 @@ const textStyles: Record<string, { label: string; value: string; unit: string }>
   },
 };
 
-const badgeColors: Record<string, 'orange' | 'green' | 'red'> = {
-  orange: 'orange',
-  emerald: 'green',
-  rose: 'red',
+// ⚠️ Classes écrites en toutes lettres, PAS de `<UBadge :color="...">` dynamique.
+// L'extracteur de Nuxt UI v2 ne voit que les couleurs passées en statique
+// (`color="green"`) ; avec un `:color` dynamique, les classes de la couleur ne sont
+// pas générées. Résultat vécu : l'anneau orange absent du CSS → il retombait
+// sur la valeur par défaut de Tailwind (`--tw-ring-color: blue-500/50`) → badge
+// « Dépenses » cerclé de BLEU. Alternative globale si besoin ailleurs :
+// `ui.safelistColors` dans nuxt.config.ts (au prix de CSS supplémentaire).
+const badgeStyles: Record<string, string> = {
+  orange:
+    'bg-orange-50 text-orange-500 ring-orange-500/25 dark:bg-orange-400/10 dark:text-orange-400 dark:ring-orange-400/25',
+  emerald:
+    'bg-emerald-50 text-emerald-500 ring-emerald-500/25 dark:bg-emerald-400/10 dark:text-emerald-400 dark:ring-emerald-400/25',
+  rose: 'bg-rose-50 text-rose-500 ring-rose-500/25 dark:bg-rose-400/10 dark:text-rose-400 dark:ring-rose-400/25',
 };
 </script>
 
@@ -63,20 +72,17 @@ const badgeColors: Record<string, 'orange' | 'green' | 'red'> = {
       <div class="mb-4 flex items-center justify-between sm:mb-5">
         <div class="flex items-center gap-2">
           <div
-            class="bg-gray-100 dark:bg-gray-900/50 flex h-8 w-8 items-center justify-center rounded-lg"
+            class="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-900/50"
           >
-            <UIcon
-              name="i-heroicons-chart-pie"
-              class="text-gray-600 dark:text-gray-400 h-4 w-4"
-            />
+            <UIcon name="i-heroicons-chart-pie" class="h-4 w-4 text-gray-600 dark:text-gray-400" />
           </div>
-          <h3 class="text-base font-semibold text-gray-900 sm:text-lg dark:text-white">
+          <h3 class="text-base font-semibold text-gray-900 dark:text-white sm:text-lg">
             Comprendre le Budget 2026 du Sénégal
           </h3>
         </div>
         <NuxtLink
           to="/budget-senegal/dashboard"
-          class="text-gray-600 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 group hidden items-center gap-1 text-sm font-medium sm:inline-flex"
+          class="group hidden items-center gap-1 text-sm font-medium text-gray-600 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 sm:inline-flex"
         >
           Explorer
           <UIcon
@@ -104,14 +110,12 @@ const badgeColors: Record<string, 'orange' | 'green' | 'red'> = {
             >
               {{ stat.value }}
             </span>
-            <UBadge
-              :color="badgeColors[stat.color]"
-              variant="subtle"
-              size="xs"
-              class="hidden sm:inline-flex"
+            <span
+              class="hidden items-center rounded-md px-1.5 py-0.5 text-xs font-medium ring-1 ring-inset sm:inline-flex"
+              :class="badgeStyles[stat.color]"
             >
               {{ stat.change }}
-            </UBadge>
+            </span>
           </div>
           <p class="mt-0.5 text-[10px] sm:text-xs" :class="textStyles[stat.color].unit">
             Mds FCFA
@@ -123,7 +127,7 @@ const badgeColors: Record<string, 'orange' | 'green' | 'red'> = {
       <!-- Mobile CTA -->
       <NuxtLink
         to="/budget-senegal/dashboard"
-        class="bg-primary-50 mt-3 flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-200 sm:hidden dark:bg-gray-700/50 dark:text-gray-300 dark:hover:bg-gray-700"
+        class="bg-primary-50 mt-3 flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-200 dark:bg-gray-700/50 dark:text-gray-300 dark:hover:bg-gray-700 sm:hidden"
       >
         Voir le tableau de bord
         <UIcon name="i-heroicons-arrow-right" class="h-4 w-4" />
