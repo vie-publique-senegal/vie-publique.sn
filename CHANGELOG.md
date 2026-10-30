@@ -8,6 +8,7 @@ l'historique git (`git log --grep="^feat"`, Conventional Commits).
 
 ### Octobre 2026
 
+- **Personnalités publiques : une page par fonction** — Premier ministre, ministres, directeurs généraux, PCA, ambassadeurs, gouverneurs, préfets, maires… ont chacun leur page (`/personnalites-senegal/ministre`, `/personnalites-senegal/directeur-general`…), pour être trouvés directement depuis les moteurs de recherche. Toute nouvelle catégorie créée dans le CMS a automatiquement sa page ; son titre, sa description et son texte « Rôle et attributions » s'y rédigent aussi. Les anciens liens filtrés redirigent vers ces pages.
 - **Élections locales : une page par liste communale** — chaque liste des locales a son adresse propre (`/elections-senegal/<élection>/candidats/circonscription/<département>/<commune>/coalition/<coalition>`), indexable par les moteurs de recherche, avec ses candidats et un lien vers le profil de chacun. Les villes (Dakar, Pikine, Guédiawaye, Rufisque, Thiès) sont traitées comme des communes dans les listes, les résultats et la carte.
 
 ### Septembre 2026
