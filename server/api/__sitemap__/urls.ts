@@ -1,6 +1,7 @@
 ﻿import { defineSitemapEventHandler } from '#imports';
 import { isMunicipalConstituencyType } from '#shared/election-constituency';
 import { readItems } from '@directus/sdk';
+import { getPersonCategoryPath } from '#shared/personnalites-categories';
 import { AUDIT_INSTITUTION_PAGES } from '~~/types/document';
 
 export default defineSitemapEventHandler(async () => {
@@ -490,6 +491,32 @@ export default defineSitemapEventHandler(async () => {
     }
 
     // 6. Personnalités publiques
+    // Sous-pages par catégorie (route dynamique [[categorie]] → non auto-découvertes).
+    // Le référentiel fait foi ; seules les catégories qui comptent au moins une personne
+    // (même base que la liste) sont listées — une catégorie vide est en noindex. Requête isolée.
+    try {
+      const rows = (await directus.request(
+        readItems('public_persons', {
+          fields: ['current_appointment.category.slug'],
+          filter: {
+            status: { _eq: 'published' },
+            current_appointment: { id: { _nnull: true }, status: { _eq: 'published' } },
+          },
+          limit: -1,
+        }),
+      )) as Array<{ current_appointment?: { category?: { slug?: string | null } | null } | null }>;
+      const populated = new Set(rows.map((row) => row.current_appointment?.category?.slug));
+      for (const category of await getPositionCategories()) {
+        if (!populated.has(category.slug)) continue;
+        urls.push({
+          loc: getPersonCategoryPath(category.slug),
+          changefreq: 'weekly',
+          priority: 0.8,
+        });
+      }
+    } catch (sitemapError) {
+      console.warn('Erreur sitemap catégories de personnalités:', sitemapError);
+    }
     try {
       const publicPersons = await directus.request(
         readItems('public_persons', {

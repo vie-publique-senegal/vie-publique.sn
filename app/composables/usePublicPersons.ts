@@ -4,6 +4,11 @@ export interface PublicPersonsOptions {
   sort?: string;
   limit?: number;
   syncUrl?: boolean;
+  /**
+   * Catégorie FIXÉE par la route (sous-page `/personnalites-senegal/<slug>`) : elle ne
+   * transite pas par `?category=` et ne peut pas être changée depuis la page.
+   */
+  category?: string;
 }
 
 /**
@@ -17,7 +22,7 @@ export const usePublicPersons = (options: PublicPersonsOptions = {}) => {
   const route = useRoute();
 
   // Filtres spécifiques — lus depuis l'URL DE FAÇON SYNCHRONE (SSR + client, cf. CLAUDE.md)
-  const filterCategory = ref<string>((route.query.category as string) || 'all');
+  const filterCategory = ref<string>(options.category || (route.query.category as string) || 'all');
   const filterGender = ref<string>((route.query.gender as string) || 'all');
   // Facette élu / nommé (`?mandat=elected|appointed|unclassified`), portée par la catégorie (G19)
   const filterMandate = ref<MandateFilter>(
@@ -42,8 +47,9 @@ export const usePublicPersons = (options: PublicPersonsOptions = {}) => {
     },
   });
 
-  // Sync filtre catégorie avec URL
+  // Sync filtre catégorie avec URL (hub uniquement : sur une sous-page, la catégorie est le chemin)
   watch(filterCategory, () => {
+    if (options.category) return;
     const query: any = { ...route.query };
     if (filterCategory.value !== 'all') {
       query.category = filterCategory.value;
@@ -144,7 +150,7 @@ export const usePublicPersons = (options: PublicPersonsOptions = {}) => {
     setFilterMandate,
     resetFilters: () => {
       state.resetFilters();
-      filterCategory.value = 'all';
+      if (!options.category) filterCategory.value = 'all';
       filterGender.value = 'all';
       filterMandate.value = 'all';
     },
@@ -159,7 +165,7 @@ export const usePublicPersons = (options: PublicPersonsOptions = {}) => {
     hasActiveFilters: computed(
       () =>
         state.hasActiveFilters.value ||
-        filterCategory.value !== 'all' ||
+        (!options.category && filterCategory.value !== 'all') ||
         filterGender.value !== 'all' ||
         filterMandate.value !== 'all',
     ),

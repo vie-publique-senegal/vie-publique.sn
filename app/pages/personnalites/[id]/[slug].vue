@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { NuxtLink } from '#components';
+import { getPersonCategoryPath } from '#shared/personnalites-categories';
+
 const route = useRoute();
 const personId = route.params.id as string;
 
@@ -215,11 +218,16 @@ const isGovernmentMember = computed(() => {
 
 // Filtres de la liste mémorisés côté client (sessionStorage) : lus après hydratation
 // pour éviter tout mismatch SSR/client. Les filtres ne transitent plus par l'URL de la fiche.
-const { restore: restoreListQuery } = usePersonsListMemory();
-const listQuery = ref('');
+const { restore: restoreListUrl } = usePersonsListMemory();
+const listUrl = ref('');
 onMounted(() => {
-  listQuery.value = restoreListQuery();
+  listUrl.value = restoreListUrl();
 });
+
+// Sous-page de l'annuaire correspondant à la catégorie de la fonction actuelle (maillage interne)
+const categoryPath = computed(() =>
+  getPersonCategoryPath(currentAppointment.value?.category?.slug),
+);
 
 // URL retour : gouvernement si ref=gouvernement ou si ministre actif sans ref explicite
 const backUrl = computed<string>(() => {
@@ -227,7 +235,7 @@ const backUrl = computed<string>(() => {
   if (referer === 'gouvernement' || (!referer && isGovernmentMember.value)) {
     return '/gouvernement-senegal';
   }
-  return listQuery.value ? `/personnalites-senegal?${listQuery.value}` : '/personnalites-senegal';
+  return listUrl.value || categoryPath.value || '/personnalites-senegal';
 });
 
 const backLabel = computed(() => {
@@ -391,15 +399,18 @@ const backLabel = computed(() => {
                     />
                     {{ isActive ? 'En fonction' : 'Fin de fonction' }}
                   </span>
-                  <span
+                  <component
+                    :is="categoryPath ? NuxtLink : 'span'"
                     v-if="
                       currentAppointment?.position_category &&
                       currentAppointment.position_category !== 'Autre'
                     "
+                    :to="categoryPath || undefined"
                     class="bg-primary-50 text-primary-700 ring-primary-200 dark:bg-primary-900/20 dark:text-primary-400 dark:ring-primary-800 inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ring-1"
+                    :class="{ 'hover:bg-primary-100 dark:hover:bg-primary-900/40': categoryPath }"
                   >
                     {{ currentAppointment.position_category }}
-                  </span>
+                  </component>
                   <span
                     v-if="currentAppointment?.category?.mandate_type"
                     class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700 ring-1 ring-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:ring-gray-700"
