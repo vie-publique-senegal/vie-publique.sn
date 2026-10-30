@@ -97,7 +97,10 @@ export default defineCachedEventHandler(
             filter,
             limit,
             offset,
-            sort: [sortBy],
+            // `id` en second critère : beaucoup de mandats partagent la même date (maires,
+            // nominations d'un même Conseil) → sans lui, l'ordre n'est pas stable entre deux
+            // requêtes et une personne peut apparaître sur deux pages consécutives.
+            sort: [sortBy, 'id'],
           }),
         )
         .catch((error) => {
