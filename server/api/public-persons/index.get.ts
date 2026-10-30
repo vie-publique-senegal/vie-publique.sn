@@ -1,5 +1,5 @@
 import { readItems } from '@directus/sdk';
-import { isMandateFilter, type PublicPerson } from '~~/types/public-person';
+import { isMandateFilter, isOfficeStatusFilter, type PublicPerson } from '~~/types/public-person';
 
 export default defineCachedEventHandler(
   async (event) => {
@@ -11,6 +11,7 @@ export default defineCachedEventHandler(
     const filterCategory = query.filterCategory as string;
     const filterGender = query.filterGender as string;
     const filterMandate = isMandateFilter(query.filterMandate) ? query.filterMandate : 'all';
+    const filterStatus = isOfficeStatusFilter(query.filterStatus) ? query.filterStatus : null;
 
     try {
       const directus = getCmsClient();
@@ -47,6 +48,11 @@ export default defineCachedEventHandler(
       }
       if (Object.keys(categoryFilter).length) {
         filter.current_appointment.category = categoryFilter;
+      }
+
+      // Facette en poste / plus en poste : la dernière fonction connue est-elle en cours ?
+      if (filterStatus) {
+        filter.current_appointment.is_current = { _eq: filterStatus === 'current' };
       }
 
       // Recherche textuelle
@@ -155,7 +161,7 @@ export default defineCachedEventHandler(
   },
   {
     maxAge: process.env.NODE_ENV === 'production' ? 5 * 60 : 0, // 5 min en prod (à augmenter après stabilisation)
-    name: 'public-persons-v6',
+    name: 'public-persons-v7',
     getKey: (event) => buildCacheKey('public-persons', getQuery(event)),
   },
 );

@@ -78,3 +78,22 @@ export const MANDATE_FILTER_LABELS: Record<Exclude<MandateFilter, 'all'>, string
   appointed: 'Nommés',
   unclassified: 'Non classés',
 };
+
+/**
+ * Facette « en poste / plus en poste » de l'annuaire, sur `current_appointment.is_current`
+ * (la dernière fonction connue est-elle en cours ?). Le modèle garantit la cohérence
+ * `is_current: false` ⇔ `end_date` renseignée (contrôlé par vpsn-data-platform, G26).
+ * La page affiche l'un OU l'autre (défaut : en poste) ; l'API sans filtre renvoie les deux.
+ */
+export type OfficeStatusFilter = 'current' | 'former';
+
+export const OFFICE_STATUS_FILTERS: OfficeStatusFilter[] = ['current', 'former'];
+
+export const isOfficeStatusFilter = (value: unknown): value is OfficeStatusFilter =>
+  typeof value === 'string' && (OFFICE_STATUS_FILTERS as string[]).includes(value);
+
+/** Libellés affichés de la facette (pluriel, pour les filtres) */
+export const OFFICE_STATUS_FILTER_LABELS: Record<OfficeStatusFilter, string> = {
+  current: 'En poste',
+  former: 'Plus en poste',
+};

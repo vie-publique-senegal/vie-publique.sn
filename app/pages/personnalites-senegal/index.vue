@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import {
   MANDATE_FILTER_LABELS,
+  OFFICE_STATUS_FILTER_LABELS,
   type MandateFilter,
+  type OfficeStatusFilter,
   type PublicPerson,
 } from '~~/types/public-person';
 
@@ -22,11 +24,13 @@ const {
   filterCategory,
   filterGender,
   filterMandate,
+  filterStatus,
   totalItems,
   totalPages,
   totalsByCategory,
   totalsByGender,
   totalsByMandate,
+  totalsByStatus,
   totalPersons,
   hasActiveFilters,
   resetFilters,
@@ -35,6 +39,7 @@ const {
   setFilterCategory,
   setFilterGender,
   setFilterMandate,
+  setFilterStatus,
 } = usePublicPersons();
 
 // SEO
@@ -164,6 +169,11 @@ watch(
   { immediate: true, deep: true },
 );
 
+// Le total affiché porte sur le statut sélectionné (par défaut : en poste)
+const totalCountSuffix = computed(() =>
+  filterStatus.value === 'current' ? ' en poste' : ' plus en poste',
+);
+
 // Total : pas la somme hommes + femmes (les personnes sans `sexe`, ex. maires, en seraient exclues)
 const totalCount = totalPersons;
 
@@ -174,15 +184,36 @@ watch(searchQuery, () => {
   currentPage.value = 1;
 });
 
-watch([filterCategory, filterGender, filterMandate], () => {
+watch([filterCategory, filterGender, filterMandate, filterStatus], () => {
   currentPage.value = 1;
+  scrollToTop();
 });
+
+// Changer de filtre depuis le milieu de la liste ramène en haut, en douceur (instantané si
+// l'utilisateur a demandé à réduire les animations)
+function scrollToTop() {
+  if (!import.meta.client || window.scrollY === 0) return;
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  window.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' });
+}
 
 // Liste déroulante genre (libellé + compteur)
 const genderOptions = computed(() => [
   { value: 'all', label: 'Hommes et femmes' },
   { value: 'male', label: `Hommes (${totalsByGender.value.maleCount})` },
   { value: 'female', label: `Femmes (${totalsByGender.value.femaleCount})` },
+]);
+
+// Liste déroulante en poste / plus en poste (dernière fonction connue en cours ou terminée)
+const statusOptions = computed(() => [
+  {
+    value: 'current' as const,
+    label: `${OFFICE_STATUS_FILTER_LABELS.current} (${totalsByStatus.value.current})`,
+  },
+  {
+    value: 'former' as const,
+    label: `${OFFICE_STATUS_FILTER_LABELS.former} (${totalsByStatus.value.former})`,
+  },
 ]);
 
 // Liste déroulante élu / nommé : « Non classés » n'apparaît que s'il en reste (le total,
@@ -248,7 +279,7 @@ const getAppointmentVerb = (person: PublicPerson) => {
               class="inline-flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400"
             >
               <UIcon name="i-heroicons-user-group-20-solid" class="h-3.5 w-3.5" />
-              {{ totalCount }} personnalités
+              {{ totalCount }} personnalités{{ totalCountSuffix }}
             </span>
           </div>
         </div>
@@ -285,8 +316,32 @@ const getAppointmentVerb = (person: PublicPerson) => {
           </button>
         </div>
 
-        <!-- Genre + Élus / nommés : listes déroulantes (même motif que documents/public.vue) -->
+        <!-- Statut + Genre + Élus / nommés : listes déroulantes (même motif que documents/public.vue) -->
         <div class="scrollbar-hide -mx-4 mt-3 flex items-center gap-2 overflow-x-auto px-4 py-1">
+          <div class="relative shrink-0">
+            <select
+              :value="filterStatus"
+              class="appearance-none rounded-full border-0 bg-gray-100 py-1.5 pl-3 pr-7 text-xs font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-400 dark:bg-gray-800 dark:text-gray-300 dark:focus:ring-gray-500"
+              aria-label="Filtrer par statut : en poste ou plus en poste"
+              @change="
+                setFilterStatus(($event.target as HTMLSelectElement).value as OfficeStatusFilter)
+              "
+            >
+              <option
+                v-for="opt in statusOptions"
+                :key="opt.value"
+                :value="opt.value"
+                :selected="opt.value === filterStatus"
+              >
+                {{ opt.label }}
+              </option>
+            </select>
+            <UIcon
+              name="i-heroicons-chevron-down"
+              class="pointer-events-none absolute right-2 top-1/2 h-3 w-3 -translate-y-1/2 text-gray-400"
+            />
+          </div>
+
           <div class="relative shrink-0">
             <select
               :value="filterGender"
@@ -374,6 +429,10 @@ const getAppointmentVerb = (person: PublicPerson) => {
             :class="filterGender === 'male' ? 'bg-blue-500' : 'bg-purple-500'"
           />
           {{ filterGender === 'male' ? 'Hommes' : 'Femmes' }}
+        </span>
+        <span v-if="filterStatus !== 'current'" class="inline-flex items-center gap-1">
+          <span class="h-2 w-2 rounded-full bg-gray-400" />
+          {{ OFFICE_STATUS_FILTER_LABELS[filterStatus] }}
         </span>
         <span v-if="filterMandate !== 'all'" class="inline-flex items-center gap-1">
           <span class="h-2 w-2 rounded-full bg-gray-900 dark:bg-white" />
@@ -477,13 +536,6 @@ const getAppointmentVerb = (person: PublicPerson) => {
                 class="h-full w-full rounded-full object-cover ring-2 ring-gray-100 transition-shadow group-hover:ring-gray-200 dark:ring-gray-700 dark:group-hover:ring-gray-600"
                 loading="lazy"
               />
-              <span
-                v-if="person.current_appointment && !person.current_appointment.is_current"
-                class="absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 ring-2 ring-white dark:ring-gray-900"
-                title="Fin de fonction"
-              >
-                <UIcon name="i-heroicons-x-mark-20-solid" class="h-2.5 w-2.5 text-white" />
-              </span>
             </div>
 
             <!-- Content -->
@@ -515,7 +567,7 @@ const getAppointmentVerb = (person: PublicPerson) => {
                 </time>
                 <span
                   v-if="person.current_appointment.end_date"
-                  class="text-[11px] text-red-500 dark:text-red-400"
+                  class="text-[11px] text-gray-500 dark:text-gray-400"
                 >
                   Fin de fonction le {{ $dateformat(person.current_appointment.end_date) }}
                 </span>
