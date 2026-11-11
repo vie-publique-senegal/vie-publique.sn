@@ -190,6 +190,9 @@ const { isFeatureEnabled } = useFeatureFlags();
       </div>
 
       <div class="my-8">
+        <HomeBudgetHighlight />
+      </div>
+      <div class="my-8">
         <HomeFeaturedDocuments />
       </div>
       <div class="my-8">
@@ -207,9 +210,6 @@ const { isFeatureEnabled } = useFeatureFlags();
         <HomeEtatOrganisation />
       </div>
 
-      <div class="my-8">
-        <HomeBudgetHighlight />
-      </div>
       <div class="my-8">
         <HomePodcasts />
       </div>

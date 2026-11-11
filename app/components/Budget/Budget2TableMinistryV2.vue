@@ -149,14 +149,12 @@ const hasVariations = computed(() => {
 });
 
 // Récupérer le budget global (expense_total) pour calculer les pourcentages
-const { data: budgetGlobalData } = await useFetch('/api/budget/global', {
-  key: computed(() => `budget-global-${props.year}-${props.version || 'latest'}`),
-  query: computed(() => ({
-    year: props.year,
-    version: props.version,
-  })),
-  watch: [() => props.year, () => props.version],
-});
+// Fabrique partagée : même clé ET mêmes options que `useBudget`, sinon Nuxt
+// avertit (« Incompatible options detected ») et ne déduplique pas la requête.
+const { data: budgetGlobalData } = await useBudgetGlobalFetch(
+  () => props.year,
+  () => props.version,
+);
 
 // Total des dépenses (expense_total) - chercher dans allMetrics
 const totalExpenses = computed(() => {

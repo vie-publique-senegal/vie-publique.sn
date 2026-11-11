@@ -1,5 +1,11 @@
 import { readItems } from '@directus/sdk';
 
+import {
+  resolveLatestBudget,
+  type BudgetYearLike,
+  type LatestBudget,
+} from '#shared/budget-version';
+
 export default defineCachedEventHandler(
   async () => {
     try {
@@ -18,10 +24,12 @@ export default defineCachedEventHandler(
       );
 
       if (!years || years.length === 0) {
+        // Même forme que le retour nominal : une branche avec une clé en plus
+        // (`versions`, que personne ne consomme) casse l'inférence de type côté
+        // client — `data.value.latest` devient inaccessible.
         return {
-          years: [],
-          versions: [],
-          latest: null,
+          years: [] as BudgetYearLike[],
+          latest: null as LatestBudget | null,
         };
       }
 
@@ -55,22 +63,9 @@ export default defineCachedEventHandler(
       // Filtrer les années qui ont au moins une version
       const validYears = yearsWithVersions.filter((y) => y.versions.length > 0);
 
-      // Trouver la version la plus récente (dernière année, dernière version alphabétique)
-      let latest = null;
-      if (validYears.length > 0) {
-        const latestYear = validYears[0]; // Déjà trié par année DESC
-        // LFR > LFI > PLF (ordre alphabétique inversé pour avoir la plus récente)
-        const versionOrder = ['LFR', 'LFI', 'PLF'];
-        const latestVersion =
-          latestYear.versions.find((v: any) => versionOrder.includes(v.label)) ||
-          latestYear.versions[latestYear.versions.length - 1];
-
-        latest = {
-          year: latestYear.year,
-          versionId: latestVersion.id,
-          versionLabel: latestVersion.label,
-        };
-      }
+      // Dernier exercice publié + sa version prioritaire (LFR > LFI > PLF).
+      // Logique partagée avec useBudget.setYear() et ministries.get.ts.
+      const latest = resolveLatestBudget(validYears);
 
       return {
         years: validYears,

@@ -6,6 +6,10 @@ l'historique git (`git log --grep="^feat"`, Conventional Commits).
 
 ## 2026
 
+### Novembre 2026
+
+- **Budget : le site suit désormais le dernier exercice publié** — l'accueil du budget, le tableau de bord et les listes ministères/institutions affichent automatiquement l'exercice le plus récent mis en ligne (aujourd'hui le **projet de loi de finances 2027**), chiffres et variations compris, sans intervention technique à chaque loi de finances. Le **statut du texte est affiché partout** (« Projet de loi de finances · en examen au Parlement » plutôt que le sigle « PLF ») : un projet en cours d'examen n'est pas présenté comme une loi adoptée. Le budget est par ailleurs **remonté en haut de la page d'accueil**.
+
 ### Octobre 2026
 
 - **Élections locales : une page par liste communale** — chaque liste des locales a son adresse propre (`/elections-senegal/<élection>/candidats/circonscription/<département>/<commune>/coalition/<coalition>`), indexable par les moteurs de recherche, avec ses candidats et un lien vers le profil de chacun. Les villes (Dakar, Pikine, Guédiawaye, Rufisque, Thiès) sont traitées comme des communes dans les listes, les résultats et la carte.

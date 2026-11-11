@@ -260,10 +260,12 @@ export default defineNuxtConfig({
     },
     // '/docs/**' : servi par server/routes/docs/[...path].ts (proxy + Link canonical
     // par fichier — une routeRule proxy ne permet que des headers statiques).
-    // Headers pour les API de fallback
-    '/api/**': {
-      headers: { 'cache-control': 'no-cache' },
-    },
+    // ⚠️ Pas de routeRule `cache-control` sur '/api/**' : les routes en
+    // `defineCachedEventHandler` (budget, assemblée, élections…) posent leur
+    // propre `max-age` par-dessus, donc la règle ne tenait pas et laissait
+    // croire à une garantie inexistante. Le TTL d'une API se règle dans son
+    // handler (`maxAge`), pas ici. Mesuré le 11/11/2026 : Cloudflare ne cache
+    // de toute façon rien sur /api/** (cf-cache-status: DYNAMIC).
     // Pages carte : désactiver SSR (WebGL client-only)
     '/carte/**': { ssr: false },
     // Banc d'essai chat : /chat pointe sur la variante par défaut.

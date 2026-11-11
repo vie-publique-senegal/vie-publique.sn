@@ -1,3 +1,5 @@
+import { pickPriorityBudgetVersion } from '#shared/budget-version';
+
 export interface BudgetMetric {
   code: string;
   label: string;
@@ -48,6 +50,53 @@ export interface BudgetYearsData {
   } | null;
 }
 
+/**
+ * Options de `useFetch('/api/budget/years')`, partagées par le composable et
+ * par les pages qui doivent connaître l'exercice courant AVANT le rendu.
+ * Identiques de part et d'autre, sinon Nuxt avertit (« Incompatible options »)
+ * et ne déduplique pas.
+ */
+export const BUDGET_YEARS_FETCH = {
+  key: 'budget-years',
+  default: () => ({ years: [], latest: null }) as BudgetYearsData,
+  server: true,
+} as const;
+
+/** Valeur de repli d'un budget global, identique partout (voir `useBudgetGlobalFetch`). */
+const emptyBudgetGlobal = (): BudgetGlobalData => ({
+  year: 0,
+  versionId: 0,
+  documents: [],
+  keyIndicators: [],
+  revenues: [],
+  expenses: [],
+  financing: [],
+  debt: [],
+  allMetrics: [],
+});
+
+/**
+ * Fetch canonique de `/api/budget/global`.
+ *
+ * ⚠️ À utiliser PARTOUT plutôt que de réécrire un `useFetch` sur cette route :
+ * deux appels qui partagent la clé `budget-global-<année>-<version>` mais pas
+ * les mêmes options déclenchent « [useFetch] Incompatible options detected » et
+ * ne sont pas dédupliqués proprement (c'était le cas entre `useBudget` et
+ * `Budget2TableMinistryV2` sur le tableau de bord).
+ */
+export const useBudgetGlobalFetch = (
+  year: MaybeRefOrGetter<number | undefined>,
+  version: MaybeRefOrGetter<number | null | undefined>,
+) =>
+  useFetch<BudgetGlobalData>('/api/budget/global', {
+    key: computed(() => `budget-global-${toValue(year)}-${toValue(version) || 'latest'}`),
+    query: computed(() => ({ year: toValue(year), version: toValue(version) ?? undefined })),
+    watch: [() => toValue(year), () => toValue(version)],
+    server: true,
+    lazy: false,
+    default: emptyBudgetGlobal,
+  });
+
 export interface UseBudgetOptions {
   year?: number;
   version?: number;
@@ -55,23 +104,75 @@ export interface UseBudgetOptions {
 }
 
 export const useBudget = (options: UseBudgetOptions = {}) => {
-  // Fetch de la liste des années et versions disponibles
-  const { data: yearsData } = useFetch<BudgetYearsData>('/api/budget/years', {
-    key: 'budget-years',
-    default: () => ({ years: [], latest: null }),
-    server: true,
+  // Fetch de la liste des années et versions disponibles. Même clé et mêmes
+  // options que l'appel attendu côté page (cf. `BUDGET_YEARS_FETCH`) : Nuxt
+  // déduplique, il n'y a qu'une requête.
+  const { data: yearsData } = useFetch<BudgetYearsData>('/api/budget/years', BUDGET_YEARS_FETCH);
+
+  // Exercice affiché : fourni par l'appelant, qui a attendu `/api/budget/years`
+  // et passe `latest` (dernier exercice publié, priorité LFR > LFI > PLF).
+  //
+  // ⚠️ NE PAS réintroduire d'année en dur ici (c'était `ref(2026)` recalé par
+  // un `watch` sur `latest`). Conséquences mesurées : le tableau de bord était
+  // rendu côté SERVEUR avec les montants 2026 et aucune option sélectionnée
+  // dans le menu d'exercice, puis sautait sur l'exercice courant après
+  // hydratation — avec un aller-retour `/api/budget/global` inutile au passage.
+  //
+  // ⚠️ NE PAS `await` dans ce composable : l'`await` d'une fonction ordinaire
+  // n'est pas enveloppé par `withAsyncContext` (seuls les `await` de premier
+  // niveau d'un `<script setup>` le sont), donc les `useFetch` qui suivent
+  // perdent l'instance Nuxt → 500 SSR. D'où la résolution côté page.
+  // Années disponibles (déclarées avant la sélection : `versionForYear` en dépend).
+  const availableYears = computed(() => yearsData.value?.years || []);
+
+  /**
+   * Exercice ET version dans UNE SEULE ref.
+   *
+   * ⚠️ NE PAS revenir à deux refs séparées. Avec `year` et `version` écrites
+   * l'une après l'autre (`year.value = 2026; version.value = 5;`), il existe un
+   * instant où le couple est incohérent — année 2026 + version 8, qui est celle
+   * du PLF 2027. Ce couple partait réellement à l'API à CHAQUE changement
+   * d'exercice : `/api/budget/global` répondait **404** et
+   * `/api/budget/compare` **500**, soit une erreur serveur remontée à Sentry à
+   * chaque clic. Une seule écriture = aucun état intermédiaire observable.
+   */
+  const selection = ref<{ year: number; version?: number }>({
+    year: options.year ?? new Date().getFullYear(),
+    version: options.version,
   });
 
-  // Initialiser avec des valeurs stables pour éviter hydration mismatch
-  const year = ref(options.year || 2026);
-  const version = ref<number | undefined>(options.version);
+  /** Version prioritaire d'un exercice (LFR > LFI > PLF), ou `undefined`. */
+  const versionForYear = (targetYear: number): number | undefined => {
+    const yearData = availableYears.value.find((y) => y.year === targetYear);
+    return yearData ? pickPriorityBudgetVersion(yearData.versions)?.id : undefined;
+  };
+
+  /** Change l'exercice ET sa version en une écriture (pas de couple bâtard). */
+  const setYearVersion = (newYear: number, newVersion?: number) => {
+    selection.value = {
+      year: newYear,
+      version: newVersion ?? versionForYear(newYear),
+    };
+  };
+
+  // `year` et `version` restent l'API publique du composable : ce sont des
+  // computed inscriptibles, pour que tout le code existant (`year.value = …`)
+  // continue de fonctionner — mais toute écriture reste atomique.
+  const year = computed<number>({
+    get: () => selection.value.year,
+    set: (newYear) => setYearVersion(newYear),
+  });
+
+  const version = computed<number | undefined>({
+    get: () => selection.value.version,
+    set: (newVersion) => {
+      selection.value = { year: selection.value.year, version: newVersion };
+    },
+  });
 
   // La comparaison est toujours activée, avec l'année N-1 par défaut
   const compareYear = ref<number | undefined>(undefined);
   const compareVersion = ref<number | undefined>(undefined);
-
-  // Computed pour les années disponibles
-  const availableYears = computed(() => yearsData.value?.years || []);
 
   // Computed pour les versions disponibles de l'année sélectionnée
   const availableVersions = computed(() => {
@@ -79,60 +180,45 @@ export const useBudget = (options: UseBudgetOptions = {}) => {
     return yearData?.versions || [];
   });
 
-  // Watcher pour initialiser avec latest quand yearsData est chargé
-  // IMPORTANT: Ne pas utiliser immediate: true pour éviter hydration mismatch
-  watch(
-    () => yearsData.value?.latest,
-    (latest) => {
-      if (latest && !options.year && !options.version) {
-        // Seulement mettre à jour si pas encore défini
-        if (year.value === 2026 || !year.value) {
-          year.value = latest.year;
-        }
-        if (!version.value) {
-          version.value = latest.versionId;
-        }
-      }
-    },
-  );
+  /**
+   * Version réellement envoyée à l'API : `version` n'est retenue que si elle
+   * appartient bien à l'exercice sélectionné.
+   *
+   * ⚠️ `year` et `version` sont deux refs écrites l'une après l'autre quand on
+   * change d'exercice. Entre les deux écritures, le couple est incohérent
+   * (ex. année 2026 + version 8 du PLF 2027) et partait tel quel à l'API :
+   * `/api/budget/global` répondait 404 et `/api/budget/compare` 500 — une
+   * erreur serveur remontée à Sentry à CHAQUE changement d'exercice. En
+   * omettant la version incohérente, le serveur choisit lui-même celle de
+   * l'exercice demandé et la réponse reste valide.
+   */
+  const effectiveVersion = computed(() => {
+    if (!version.value) return undefined;
+    const belongsToYear = availableVersions.value.some((v) => v.id === version.value);
+    return belongsToYear ? version.value : undefined;
+  });
 
   // Construction des query params
   const queryParams = computed(() => {
     const params: Record<string, any> = {
       year: year.value,
     };
-    if (version.value) {
-      params.version = version.value;
+    if (effectiveVersion.value) {
+      params.version = effectiveVersion.value;
     }
     return params;
   });
 
-  // Fetch des données via server API route
-  // On utilise watch: true avec un computed key qui change uniquement quand year ET version sont définis
-  const { data, pending, error, refresh } = useFetch<BudgetGlobalData>('/api/budget/global', {
-    key: computed(() => `budget-global-${year.value}-${version.value || 'latest'}`),
-    query: queryParams,
-    watch: [year, version], // Watch automatique réactivé car on gère l'ordre différemment
-    server: true,
-    lazy: false, // Force le fetch immédiat côté serveur
-    default: () => ({
-      year: year.value,
-      versionId: 0,
-      documents: [],
-      keyIndicators: [],
-      revenues: [],
-      expenses: [],
-      financing: [],
-      debt: [],
-      allMetrics: [],
-    }),
-  });
+  // Fetch des données via server API route (options canoniques partagées).
+  const globalFetch = useBudgetGlobalFetch(year, effectiveVersion);
+
+  const { data, pending, error, refresh } = globalFetch;
 
   // Fetch des données de comparaison (toujours activé)
   const comparisonQueryParams = computed(() => {
     const params: Record<string, any> = {
       currentYear: year.value,
-      currentVersion: version.value,
+      currentVersion: effectiveVersion.value,
     };
 
     if (compareYear.value) {
@@ -146,21 +232,27 @@ export const useBudget = (options: UseBudgetOptions = {}) => {
     return params;
   });
 
-  const { data: comparisonData } = useFetch('/api/budget/compare', {
+  const comparisonFetch = useFetch('/api/budget/compare', {
     key: computed(
       () =>
-        `budget-compare-${year.value}-${version.value || 'latest'}-vs-${compareYear.value || year.value - 1}-${compareVersion.value || 'auto'}`,
+        `budget-compare-${year.value}-${effectiveVersion.value || 'latest'}-vs-${compareYear.value || year.value - 1}-${compareVersion.value || 'auto'}`,
     ),
     query: comparisonQueryParams,
     watch: [year, version, compareYear, compareVersion],
     server: true,
     lazy: false, // Force le fetch immédiat côté serveur
+    // Même forme que toutes les branches de `/api/budget/compare` : un `default`
+    // incomplet suffit à rendre `compare`/`compareYear` inaccessibles en TS.
     default: () => ({
       current: null,
       compare: null,
       hasComparison: false,
+      compareYear: null as number | null,
+      compareVersionId: null as number | null,
     }),
   });
+
+  const { data: comparisonData } = comparisonFetch;
 
   // Fonction utilitaire pour calculer le pourcentage de variation
   const calculateVariation = (current: number, previous: number): string => {
@@ -223,9 +315,10 @@ export const useBudget = (options: UseBudgetOptions = {}) => {
       }
 
       // Pour les indicateurs en %, afficher la valeur de l'année de comparaison au lieu du % de variation
-      const displayValue = indicator.unit === 'mds_fcfa'
-        ? Math.round(indicator.value).toString()
-        : indicator.value.toFixed(1);
+      const displayValue =
+        indicator.unit === 'mds_fcfa'
+          ? Math.round(indicator.value).toString()
+          : indicator.value.toFixed(1);
       let displayVariation = variation;
 
       // Si l'unité est en pourcentage, on affiche la valeur comparative directement
@@ -502,31 +595,10 @@ export const useBudget = (options: UseBudgetOptions = {}) => {
     };
   });
 
-  // Méthode pour changer l'année (sélectionne automatiquement la version prioritaire)
-  const setYear = (newYear: number) => {
-    const yearData = availableYears.value.find((y) => y.year === newYear);
-
-    if (yearData && yearData.versions.length > 0) {
-      // Priorité de sélection : LFR > LFI > PLF > autre
-      const priorityOrder = ['LFR', 'LFI', 'PLF'];
-      let selectedVersion = yearData.versions[0]; // Par défaut la première
-
-      for (const label of priorityOrder) {
-        const found = yearData.versions.find((v) => v.label === label);
-        if (found) {
-          selectedVersion = found;
-          break;
-        }
-      }
-
-      // Changer l'année ET la version en même temps pour éviter le double-fetch
-      year.value = newYear;
-      version.value = selectedVersion.id;
-    } else {
-      year.value = newYear;
-      version.value = undefined;
-    }
-  };
+  // Change l'exercice en sélectionnant sa version prioritaire (LFR > LFI > PLF),
+  // en une seule écriture. La priorité vient de `shared/budget-version.ts`,
+  // comme `/api/budget/years` — une seule définition de la règle.
+  const setYear = (newYear: number) => setYearVersion(newYear);
 
   // Méthode pour changer la version
   const setVersion = (newVersion: number | undefined) => {
@@ -548,7 +620,7 @@ export const useBudget = (options: UseBudgetOptions = {}) => {
   };
 
   // Fetch de l'évolution multi-années (recettes, dépenses, financement, dette)
-  const { data: evolutionData } = useFetch('/api/budget/evolution', {
+  const evolutionFetch = useFetch('/api/budget/evolution', {
     key: 'budget-evolution',
     server: true,
     default: () => ({
@@ -558,6 +630,19 @@ export const useBudget = (options: UseBudgetOptions = {}) => {
       debtEvolution: [],
     }),
   });
+
+  const { data: evolutionData } = evolutionFetch;
+
+  /**
+   * À `await` dans le `<script setup>` appelant.
+   *
+   * ⚠️ Nécessaire parce que la page attend déjà `/api/budget/years` au niveau
+   * supérieur : les `useFetch` enregistrés APRÈS cet `await` ne sont plus
+   * attendus par Nuxt avant le rendu serveur. Leurs données finissent bien dans
+   * le payload, mais le HTML est produit avant — d'où des écarts d'hydratation
+   * (variations rendues « N/A » côté serveur, puis « -2,9 % » côté client).
+   */
+  const ready = () => Promise.all([globalFetch, comparisonFetch, evolutionFetch]);
 
   const revenueEvolution = computed(() => evolutionData.value?.revenueEvolution || []);
   const expenseEvolution = computed(() => evolutionData.value?.expenseEvolution || []);
@@ -611,7 +696,9 @@ export const useBudget = (options: UseBudgetOptions = {}) => {
     debtEvolution,
 
     // Méthodes
+    ready,
     setYear,
+    setYearVersion,
     setVersion,
     setCompareYear,
     refresh,

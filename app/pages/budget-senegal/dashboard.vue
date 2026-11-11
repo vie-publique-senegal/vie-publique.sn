@@ -1,17 +1,39 @@
 <script setup lang="ts">
+import { budgetVersionOf, describeBudgetVersion } from '#shared/budget-version';
+
+// L'exercice par défaut doit être connu AVANT le rendu serveur, sinon le
+// tableau de bord est rendu sur un autre exercice puis « saute » après
+// hydratation. On attend donc la liste des exercices ICI — dans `<script
+// setup>`, le seul endroit où Nuxt restaure le contexte après un `await` — et
+// on passe `latest` au composable. Mêmes options de fetch → une seule requête.
+const { data: budgetYears } = await useFetch('/api/budget/years', BUDGET_YEARS_FETCH);
+
+const latestBudget = computed(() => budgetYears.value?.latest ?? null);
+const budgetYear = computed(() => latestBudget.value?.year ?? null);
+const budgetVersion = computed(() => describeBudgetVersion(latestBudget.value?.versionLabel));
+
 const { siteName, siteUrl, keywords, themeColor } = useSiteMetadata();
 
-const title = "Budget de l'État du Sénégal | Loi de finances";
-const description =
-  "Découvrez le budget de l'État du Sénégal. Répartition des recettes et dépenses, indicateurs clés, dette publique et besoins de financement.";
+// Titre et description suivent l'exercice publié — aucune année en dur.
+const title = computed(() =>
+  budgetYear.value
+    ? `Budget ${budgetYear.value} du Sénégal : tableau de bord`
+    : "Budget de l'État du Sénégal | Loi de finances",
+);
+
+const description = computed(() =>
+  budgetYear.value
+    ? `Recettes, dépenses, déficit et dette ${budgetVersionOf(budgetVersion.value)} ${budgetVersion.value.label.toLowerCase()} ${budgetYear.value} du Sénégal, en graphiques. Données officielles, comparaison avec l'exercice précédent.`
+    : "Découvrez le budget de l'État du Sénégal. Répartition des recettes et dépenses, indicateurs clés, dette publique et besoins de financement.",
+);
 const url = `${siteUrl}/budget-senegal/dashboard`;
 const image = `${siteUrl}/images/vpsn-share-budget.png`;
 
-const budgetSchema = {
+const budgetSchema = computed(() => ({
   '@context': 'https://schema.org',
   '@type': 'GovernmentService',
-  name: "Budget de l'État du Sénégal",
-  description: description,
+  name: title.value,
+  description: description.value,
   url: url,
   image: image,
   provider: {
@@ -31,12 +53,14 @@ const budgetSchema = {
     '@type': 'Audience',
     audienceType: 'Citizens, Researchers, Media',
   },
-};
+}));
 
-const datasetSchema = {
+const datasetSchema = computed(() => ({
   '@context': 'https://schema.org',
   '@type': 'Dataset',
-  name: 'Données budgétaires Sénégal',
+  name: budgetYear.value
+    ? `Données budgétaires Sénégal ${budgetYear.value}`
+    : 'Données budgétaires Sénégal',
   description:
     "Jeu de données complet du budget de l'État sénégalais incluant recettes, dépenses et allocations",
   url: url,
@@ -54,37 +78,18 @@ const datasetSchema = {
   license: 'https://creativecommons.org/licenses/by/4.0/',
   isAccessibleForFree: true,
   inLanguage: 'fr-SN',
-};
-
-const breadcrumbSchema = {
-  '@context': 'https://schema.org',
-  '@type': 'BreadcrumbList',
-  itemListElement: [
-    {
-      '@type': 'ListItem',
-      position: 1,
-      name: 'Accueil',
-      item: siteUrl,
-    },
-    {
-      '@type': 'ListItem',
-      position: 2,
-      name: 'Budget',
-      item: url,
-    },
-  ],
-};
+}));
 
 useSeoMeta({
-  title,
-  ogTitle: title,
-  description,
-  ogDescription: description,
+  title: () => title.value,
+  ogTitle: () => title.value,
+  description: () => description.value,
+  ogDescription: () => description.value,
   ogImage: image,
   ogUrl: url,
   twitterCard: 'summary_large_image',
-  twitterTitle: title,
-  twitterDescription: description,
+  twitterTitle: () => title.value,
+  twitterDescription: () => description.value,
   twitterImage: image,
   keywords: [
     ...keywords,
@@ -115,16 +120,14 @@ useHead({
   ],
   script: [
     {
+      key: 'ld-government-service',
       type: 'application/ld+json',
-      innerHTML: JSON.stringify(budgetSchema),
+      innerHTML: computed(() => JSON.stringify(budgetSchema.value)),
     },
     {
+      key: 'ld-dataset',
       type: 'application/ld+json',
-      innerHTML: JSON.stringify(datasetSchema),
-    },
-    {
-      type: 'application/ld+json',
-      innerHTML: JSON.stringify(breadcrumbSchema),
+      innerHTML: computed(() => JSON.stringify(datasetSchema.value)),
     },
   ],
 });
@@ -151,7 +154,19 @@ const {
   compareYear,
   compareVersion,
   setCompareYear,
-} = useBudget();
+  setYearVersion,
+  ready: budgetReady,
+} = useBudget({
+  year: budgetYears.value?.latest?.year,
+  version: budgetYears.value?.latest?.versionId,
+});
+
+// ⚠️ Indispensable : le `await` plus haut fait que les `useFetch` créés
+// ensuite dans `useBudget` ne sont plus attendus par Nuxt avant le rendu
+// serveur. Sans cette ligne, le HTML SSR sort avec les variations à « N/A »
+// alors que le payload, lui, contient les bonnes valeurs → mismatch
+// d'hydratation sur chaque badge.
+await budgetReady();
 
 // Computed pour créer une liste combinée année + version pour le select unique
 const yearVersionOptions = computed(() => {
@@ -166,7 +181,7 @@ const yearVersionOptions = computed(() => {
   availableYears.value.forEach((yearData) => {
     yearData.versions.forEach((ver) => {
       options.push({
-        label: `${yearData.year} - ${ver.label}`,
+        label: `${yearData.year} — ${describeBudgetVersion(ver.label).label}`,
         value: `${yearData.year}-${ver.id}`,
         year: yearData.year,
         versionId: ver.id,
@@ -187,8 +202,9 @@ const selectedYearVersion = computed(() => `${year.value}-${version.value}`);
 const handleYearVersionChange = (value: string) => {
   const option = yearVersionOptions.value.find((opt) => opt.value === value);
   if (option) {
-    year.value = option.year;
-    version.value = option.versionId;
+    // ⚠️ Une seule écriture pour l'exercice ET la version : les écrire
+    // séparément laissait partir un couple incohérent à l'API (404 + 500).
+    setYearVersion(option.year, option.versionId);
     compareYear.value = undefined;
     compareVersion.value = undefined;
   }

@@ -145,6 +145,37 @@ year  version  section   category                 amount_cp
 
 ---
 
+## 🗓️ Exercice affiché par défaut (invariant)
+
+> Source unique : [`shared/budget-version.ts`](../../../shared/budget-version.ts)
+> (`resolveLatestBudget`, `pickPriorityBudgetVersion`, `describeBudgetVersion`),
+> exposée par `/api/budget/years` dans le champ `latest`.
+
+* **Aucune année n'est écrite en dur dans le code.** Les pages budget (accueil du site,
+  `/budget-senegal`, `dashboard`, `ministeres`, `institutions`) affichent le **dernier
+  exercice publié** au CMS. Publier un nouvel exercice suffit : rien à redéployer.
+* **Priorité de version d'un même exercice : `LFR` > `LFI` > `PLF`.** Le texte le plus
+  avancé dans la navette parlementaire gagne. ⚠️ Ne pas réimplémenter cette règle avec un
+  `versions.find(...)` : `versions` est trié par **date croissante**, un `find` renvoie donc
+  la version la plus *ancienne* au label connu — le jour où la LFI votée est publiée à côté
+  du PLF du même exercice, c'est le **projet** qui s'afficherait. Couvert par
+  `test/unit/budget/budget-version.test.ts`.
+* **L'exercice doit être résolu de façon SYNCHRONE dans le `setup`**, jamais dans un
+  `onMounted` ni dans un `watch` qui recale une valeur par défaut. Sinon le serveur rend un
+  autre exercice et l'affichage « saute » après hydratation (c'était le cas du tableau de
+  bord, de `ministeres` et de `institutions`). Les pages attendent
+  `useFetch('/api/budget/years', BUDGET_YEARS_FETCH)` et passent `latest` au composable.
+  ⚠️ Ne pas `await` **dans** un composable ordinaire : seuls les `await` de premier niveau
+  d'un `<script setup>` sont enveloppés par `withAsyncContext`, sinon les `useFetch`
+  suivants perdent l'instance Nuxt (500 SSR).
+* **Un sigle de version n'est jamais affiché brut.** `describeBudgetVersion()` donne le
+  libellé lisible (`PLF` → « Projet de loi de finances ») et le statut parlementaire
+  (« En examen au Parlement » / « Texte adopté »). **Règle éditoriale non négociable** :
+  partout où l'année s'affiche, le statut du texte s'affiche aussi — annoncer « Budget 2027 »
+  sans dire qu'il s'agit d'un projet encore en débat serait un contresens.
+
+---
+
 ## 🧭 Usages côté interface
 
 ### A) Accueil Budget

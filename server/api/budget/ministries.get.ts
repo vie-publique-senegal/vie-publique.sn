@@ -7,7 +7,10 @@ export default defineCachedEventHandler(
     const directus = getCmsClient();
 
     // Paramètres de requête
-    const year = query.year ? parseInt(query.year as string) : 2025;
+    // Pas d'année en dur (c'était `2025`, figé) : même repli que `global.get.ts`
+    // et `compare.get.ts`. En pratique l'appelant passe toujours `year`, résolu
+    // depuis `/api/budget/years` (`latest`).
+    const year = query.year ? parseInt(query.year as string) : new Date().getFullYear();
     const versionId = query.version ? parseInt(query.version as string) : null;
     const level = (query.level as string) || 'ministry'; // ministry ou institution
     const compareYear = query.compareYear ? parseInt(query.compareYear as string) : null;

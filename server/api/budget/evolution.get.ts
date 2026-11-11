@@ -131,7 +131,9 @@ export default defineCachedEventHandler(
     }
   },
   {
-    maxAge: 60 * 60, // Cache de 1 heure
+    // 1 h en prod, pas de cache en dev (comme les autres routes budget : sans la
+    // garde, la courbe restait figée 1 h en développement).
+    maxAge: process.env.NODE_ENV === 'production' ? 60 * 60 : 0,
     name: 'budget-evolution',
     getKey: () => 'budget-evolution-all',
   },

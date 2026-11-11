@@ -38,6 +38,15 @@
       </div>
     </header>
 
+    <!-- Fil d'ariane : desktop seulement (l'en-tête mobile ci-dessus a déjà
+         sa flèche retour). <AppBreadcrumb> est la source UNIQUE du
+         BreadcrumbList du @graph — ne pas ajouter de JSON-LD breadcrumb ici. -->
+    <div class="container mx-auto hidden px-4 md:block">
+      <AppBreadcrumb
+        :items="[{ label: 'Budget', to: '/budget-senegal' }, { label: 'Institutions' }]"
+      />
+    </div>
+
     <!-- Desktop Layout -->
     <div class="hidden md:block">
       <!-- Top Bar -->
@@ -309,6 +318,8 @@
 </template>
 
 <script setup lang="ts">
+import { describeBudgetVersion } from '#shared/budget-version';
+
 interface Institution {
   id: number;
   year: number;
@@ -329,52 +340,112 @@ interface Institution {
   previous_amount?: number | null;
 }
 
-// SEO
-const title = 'Budgets des Institutions du Sénégal | Répartition par institution';
-const description =
-  'Découvrez la répartition détaillée des budgets par institution au Sénégal : Assemblée nationale, Présidence, Conseil constitutionnel et autres institutions. Transparence totale des finances publiques.';
+// State
+const searchQuery = ref('');
+const selectedCompareYear = ref<number | null>(null);
+const selectedCompareVersion = ref<number | null>(null);
+
+// Fetch available years
+const { data: yearsData, pending: loadingYears } = await useFetch<BudgetYearsData>(
+  '/api/budget/years',
+  BUDGET_YEARS_FETCH,
+);
+
+// ⚠️ Exercice sélectionné initialisé de façon SYNCHRONE au setup, depuis
+// `latest` (dernier exercice publié + version prioritaire LFR > LFI > PLF).
+// Avant : `ref(2026)` corrigé dans `onMounted` — donc le SERVEUR rendait
+// « Budget 2026 » et les montants 2026, puis l'affichage sautait après
+// hydratation (cf. CLAUDE.md § listes paginées & SSR). Aucune année en dur :
+// un nouvel exercice publié au CMS devient le défaut tout seul.
+// ⚠️ Exercice ET version dans UNE SEULE ref, jamais deux. Écrites séparément
+// (`selectedYear.value = …; selectedVersion.value = …;`), il existe un instant
+// où le couple est incohérent — année 2026 + version 8, celle du PLF 2027 — et
+// ce couple partait réellement à `/api/budget/ministries` à chaque changement
+// d'exercice (requête inutile, table momentanément vide). Même correctif que
+// `useBudget`, où le symptôme était plus grave (404 + 500 envoyés à Sentry).
+const selection = ref<{ year: number; version: number | null }>({
+  year: yearsData.value?.latest?.year ?? new Date().getFullYear(),
+  version: yearsData.value?.latest?.versionId ?? null,
+});
+
+const selectedYear = computed(() => selection.value.year);
+const selectedVersion = computed(() => selection.value.version);
+
+/** Change l'exercice et sa version en une écriture (pas de couple bâtard). */
+const setYearVersion = (year: number, version: number | null) => {
+  selection.value = { year, version };
+};
+
+// SEO — le titre et la description suivent l'exercice affiché. Getters
+// réactifs : ils sont évalués au rendu, donc présents dans le HTML SSR.
+// Aucune année en dur (cf. `shared/budget-version.ts`).
+const selectedVersionLabel = computed(() => {
+  const yearData = yearsData.value?.years?.find((y) => y.year === selectedYear.value);
+  const found = yearData?.versions?.find((v) => v.id === selectedVersion.value);
+  return describeBudgetVersion(found?.label);
+});
+
+const title = computed(() =>
+  selectedYear.value
+    ? `Budgets des institutions du Sénégal ${selectedYear.value}`
+    : 'Budgets des institutions du Sénégal',
+);
+
+const description = computed(() =>
+  selectedYear.value
+    ? `Budget ${selectedYear.value} de chaque institution du Sénégal (${selectedVersionLabel.value.label.toLowerCase()}) : montants alloués, évolution et comparaison avec l'exercice précédent.`
+    : 'Répartition détaillée des budgets par institution au Sénégal : Assemblée nationale, Présidence, Conseil constitutionnel, Cour des comptes et autres institutions de la République.',
+);
+
+// ⚠️ `ogUrl` doit être explicite : sans lui, le repli global de @nuxtjs/seo
+// renvoie la RACINE du site, et tout partage de cette page pointait vers
+// l'accueil (vérifié sur le HTML SSR de prod le 11/11/2026).
+const { siteUrl } = useSiteMetadata();
+const url = `${siteUrl}/budget-senegal/institutions`;
+const image = `${siteUrl}/images/vpsn-share-budget.png`;
 
 useSeoMeta({
-  title,
-  description,
-  ogTitle: title,
-  ogDescription: description,
-  twitterTitle: title,
-  twitterDescription: description,
+  title: () => title.value,
+  description: () => description.value,
+  ogTitle: () => title.value,
+  ogDescription: () => description.value,
+  ogUrl: url,
+  ogImage: image,
+  ogType: 'website',
+  twitterCard: 'summary_large_image',
+  twitterTitle: () => title.value,
+  twitterDescription: () => description.value,
+  twitterImage: image,
 });
 
 // Structured Data
 useHead({
   script: [
     {
+      // `key` obligatoire sur toute entrée JSON-LD (CLAUDE.md § SEO) :
+      // sans elle, un `script` réactif duplique le nœud à l'hydratation.
+      key: 'ld-institutions',
       type: 'application/ld+json',
-      innerHTML: JSON.stringify({
-        '@context': 'https://schema.org',
-        '@type': 'GovernmentService',
-        name: 'Budgets des Institutions du Sénégal',
-        description: description,
-        provider: {
-          '@type': 'GovernmentOrganization',
-          name: 'République du Sénégal',
-        },
-        areaServed: {
-          '@type': 'Country',
-          name: 'Sénégal',
-        },
-      }),
+      innerHTML: computed(() =>
+        JSON.stringify({
+          '@context': 'https://schema.org',
+          '@type': 'GovernmentService',
+          name: 'Budgets des Institutions du Sénégal',
+          description: description.value,
+          url,
+          provider: {
+            '@type': 'GovernmentOrganization',
+            name: 'République du Sénégal',
+          },
+          areaServed: {
+            '@type': 'Country',
+            name: 'Sénégal',
+          },
+        }),
+      ),
     },
   ],
 });
-
-// State
-const searchQuery = ref('');
-const selectedYear = ref(2026);
-const selectedVersion = ref<number | null>(null);
-const selectedCompareYear = ref<number | null>(null);
-const selectedCompareVersion = ref<number | null>(null);
-
-// Fetch available years
-const { data: yearsData, pending: loadingYears } = await useFetch('/api/budget/years');
 
 // Créer les options combinées année-version
 const yearVersionOptions = computed(() => {
@@ -392,7 +463,7 @@ const yearVersionOptions = computed(() => {
     if (yearData.versions && yearData.versions.length > 0) {
       yearData.versions.forEach((ver: any) => {
         options.push({
-          label: `${yearData.year} - ${ver.label}`,
+          label: `${yearData.year} — ${describeBudgetVersion(ver.label).label}`,
           value: `${yearData.year}-${ver.id}`,
           year: yearData.year,
           versionId: ver.id,
@@ -442,21 +513,11 @@ const selectedYearVersion = computed(() => {
 // Valeur de comparaison sélectionnée
 const selectedCompareYearVersion = ref<string>('none');
 
-// Initialiser avec la version la plus récente (2026)
-onMounted(() => {
-  if (yearVersionOptions.value.length > 0) {
-    const latest = yearVersionOptions.value[0];
-    selectedYear.value = latest.year;
-    selectedVersion.value = latest.versionId;
-  }
-});
-
 // Gestion du changement de sélection
 const handleYearVersionChange = (value: string) => {
   const option = yearVersionOptions.value.find((opt) => opt.value === value);
   if (option) {
-    selectedYear.value = option.year;
-    selectedVersion.value = option.versionId;
+    setYearVersion(option.year, option.versionId);
     // Réinitialiser la comparaison quand on change la version principale
     selectedCompareYearVersion.value = 'none';
     selectedCompareYear.value = null;

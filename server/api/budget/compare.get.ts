@@ -1,5 +1,10 @@
 import { readItems } from '@directus/sdk';
 
+// ⚠️ TOUTES les branches de ce handler renvoient la MÊME forme
+// (`current`, `compare`, `hasComparison`, `compareYear`, `compareVersionId`).
+// Une branche qui omet une clé crée une union de types côté client dans
+// laquelle `compare` et `compareYear` deviennent inaccessibles — c'était la
+// source de 21 erreurs TypeScript dans `useBudget.ts`.
 export default defineCachedEventHandler(
   async (event) => {
     const query = getQuery(event);
@@ -17,14 +22,18 @@ export default defineCachedEventHandler(
     try {
       const directus = getCmsClient();
 
-      console.log(`[Budget Compare] Comparaison ${currentYear}v${currentVersionId} vs ${compareYear}v${compareVersionId || 'auto'}`);
+      console.log(
+        `[Budget Compare] Comparaison ${currentYear}v${currentVersionId} vs ${compareYear}v${compareVersionId || 'auto'}`,
+      );
 
       // Récupérer les données courantes
       const currentData = await $fetch('/api/budget/global', {
         query: { year: currentYear, version: currentVersionId },
       });
 
-      console.log(`[Budget Compare] Données courantes récupérées: ${currentData?.keyIndicators?.length || 0} indicateurs`);
+      console.log(
+        `[Budget Compare] Données courantes récupérées: ${currentData?.keyIndicators?.length || 0} indicateurs`,
+      );
 
       // Récupérer l'ID de budget_year pour l'année de comparaison
       const compareBudgetYears = await directus.request(
@@ -43,6 +52,8 @@ export default defineCachedEventHandler(
           current: currentData,
           compare: null,
           hasComparison: false,
+          compareYear: null,
+          compareVersionId: null,
         };
       }
 
@@ -71,6 +82,8 @@ export default defineCachedEventHandler(
             current: currentData,
             compare: null,
             hasComparison: false,
+            compareYear: null,
+            compareVersionId: null,
           };
         }
 
@@ -96,15 +109,19 @@ export default defineCachedEventHandler(
         query: { year: compareYear, version: compareVersionIdResolved },
       });
 
-      console.log(`[Budget Compare] Données comparaison récupérées: ${compareData?.keyIndicators?.length || 0} indicateurs`);
-      console.log(`[Budget Compare] hasComparison=true, compareYear=${compareYear}, compareVersion=${compareVersionIdResolved}`);
+      console.log(
+        `[Budget Compare] Données comparaison récupérées: ${compareData?.keyIndicators?.length || 0} indicateurs`,
+      );
+      console.log(
+        `[Budget Compare] hasComparison=true, compareYear=${compareYear}, compareVersion=${compareVersionIdResolved}`,
+      );
 
       return {
         current: currentData,
         compare: compareData,
         hasComparison: true,
-        compareYear,
-        compareVersionId: compareVersionIdResolved,
+        compareYear: compareYear as number | null,
+        compareVersionId: (compareVersionIdResolved ?? null) as number | null,
       };
     } catch (error: any) {
       console.error('Erreur récupération données de comparaison:', error);
@@ -119,6 +136,8 @@ export default defineCachedEventHandler(
           current: currentData,
           compare: null,
           hasComparison: false,
+          compareYear: null,
+          compareVersionId: null,
         };
       } catch (fallbackError) {
         throw createError({

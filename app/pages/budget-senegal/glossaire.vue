@@ -27,6 +27,15 @@
       </div>
     </header>
 
+    <!-- Fil d'ariane : desktop seulement (l'en-tête mobile ci-dessus a déjà
+         sa flèche retour). <AppBreadcrumb> est la source UNIQUE du
+         BreadcrumbList du @graph — ne pas ajouter de JSON-LD breadcrumb ici. -->
+    <div class="container mx-auto hidden px-4 md:block">
+      <AppBreadcrumb
+        :items="[{ label: 'Budget', to: '/budget-senegal' }, { label: 'Glossaire' }]"
+      />
+    </div>
+
     <!-- Desktop Layout -->
     <div class="hidden md:block">
       <!-- Top Bar -->
@@ -311,17 +320,29 @@
 
 <script setup lang="ts">
 // SEO
-const title = 'Glossaire Budgétaire | Budget du Sénégal';
+const title = 'Glossaire du budget du Sénégal';
 const description =
   "Découvrez les termes et définitions essentiels pour comprendre le budget de l'État du Sénégal : déficit budgétaire, crédits de paiement, service de la dette, et bien plus.";
+
+// ⚠️ `ogUrl` doit être explicite : sans lui, le repli global de @nuxtjs/seo
+// renvoie la RACINE du site, et tout partage de cette page pointait vers
+// l'accueil (vérifié sur le HTML SSR de prod le 11/11/2026).
+const { siteUrl } = useSiteMetadata();
+const url = `${siteUrl}/budget-senegal/glossaire`;
+const image = `${siteUrl}/images/vpsn-share-budget.png`;
 
 useSeoMeta({
   title,
   description,
   ogTitle: title,
   ogDescription: description,
+  ogUrl: url,
+  ogImage: image,
+  ogType: 'website',
+  twitterCard: 'summary_large_image',
   twitterTitle: title,
   twitterDescription: description,
+  twitterImage: image,
 });
 
 // Use budget glossary composable

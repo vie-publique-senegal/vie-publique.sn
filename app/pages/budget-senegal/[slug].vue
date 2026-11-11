@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { describeBudgetVersion } from '#shared/budget-version';
+
 const route = useRoute();
 const slug = route.params.slug as string;
 
@@ -16,18 +18,31 @@ const {
   programsTotal,
 } = useBudgetEntity(slug);
 
+// Statut du texte budgétaire affiché. Règle éditoriale : partout où l'année
+// apparaît, le lecteur doit savoir s'il regarde un PROJET en cours d'examen ou
+// une loi votée — « Budget 2027 » seul serait un contresens.
+const budgetVersion = computed(() => describeBudgetVersion(latestYear.value?.version_label));
+
 // SEO
 const { siteName, siteUrl, keywords, themeColor } = useSiteMetadata();
 
-const title = computed(() =>
-  entity.value ? `Budget ${entity.value.name} - Sénégal` : 'Budget - Sénégal',
-);
+// ⚠️ Pas de « - Sénégal » ici : le `titleTemplate` global ajoute déjà la marque,
+// et les noms de ministères sont longs (on dépassait 85 caractères).
+const title = computed(() => {
+  if (!entity.value) return 'Budget - Sénégal';
+  const exercice = latestYear.value?.year;
+  return exercice ? `Budget ${exercice} - ${entity.value.name}` : `Budget - ${entity.value.name}`;
+});
 
-const description = computed(() =>
-  entity.value
-    ? `Découvrez le budget de ${entity.value.name} : montant total, évolution par année et répartition par programmes.`
-    : "Budget de l'État du Sénégal",
-);
+const description = computed(() => {
+  if (!entity.value) return "Budget de l'État du Sénégal";
+  const exercice = latestYear.value?.year;
+  const texte = budgetVersion.value.code ? ` (${budgetVersion.value.label.toLowerCase()})` : '';
+  const details = 'montant total, évolution par année et répartition par programmes.';
+  return exercice
+    ? `Budget ${exercice}${texte} — ${entity.value.name} : ${details}`
+    : `Budget — ${entity.value.name} : ${details}`;
+});
 
 // Pas de logo en base pour les entités budget → image de partage statique dédiée
 const image = computed(() => `${siteUrl}/images/vpsn-share-budget.png`);
@@ -66,6 +81,35 @@ useHead({
     { property: 'og:type', content: 'website' },
     { property: 'og:site_name', content: siteName },
     { name: 'robots', content: 'index, follow' },
+  ],
+});
+
+// Nœud d'entité propre à la page, en JSON-LD brut (pattern majoritaire du
+// projet). `key` obligatoire : sans elle, un `script` réactif duplique le nœud
+// à l'hydratation — invisible en SSR, visible au test Rich Results.
+const entitySchema = computed(() => ({
+  '@context': 'https://schema.org',
+  '@type': 'GovernmentOrganization',
+  name: entity.value?.name,
+  url: url.value,
+  description: description.value,
+  parentOrganization: {
+    '@type': 'GovernmentOrganization',
+    name: 'République du Sénégal',
+  },
+  areaServed: {
+    '@type': 'Country',
+    name: 'Sénégal',
+  },
+}));
+
+useHead({
+  script: [
+    {
+      key: 'ld-budget-entity',
+      type: 'application/ld+json',
+      innerHTML: computed(() => JSON.stringify(entitySchema.value)),
+    },
   ],
 });
 
@@ -174,6 +218,21 @@ const formatBudget = (value: number) => {
 
               <p v-if="latestYear" class="mt-3 text-lg text-gray-600 dark:text-gray-400">
                 Données budgétaires pour l'exercice {{ latestYear.year }}
+              </p>
+              <p
+                v-if="latestYear && budgetVersion.status"
+                class="mt-2 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium"
+                :class="
+                  budgetVersion.isDraft
+                    ? 'bg-amber-50 text-amber-700 ring-1 ring-amber-200 dark:bg-amber-400/10 dark:text-amber-300 dark:ring-amber-400/25'
+                    : 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-400/10 dark:text-emerald-300 dark:ring-emerald-400/25'
+                "
+              >
+                <UIcon
+                  :name="budgetVersion.isDraft ? 'i-heroicons-clock' : 'i-heroicons-check-badge'"
+                  class="h-3.5 w-3.5 shrink-0"
+                />
+                {{ budgetVersion.label }} · {{ budgetVersion.status }}
               </p>
             </div>
 
@@ -305,8 +364,11 @@ const formatBudget = (value: number) => {
             />
             <span>{{ budgetVariation > 0 ? '+' : '' }}{{ budgetVariation.toFixed(1) }}%</span>
           </div>
-          <span class="text-[11px] text-gray-500 dark:text-gray-400"
-            >vs {{ (latestYear?.year || 2026) - 1 }}</span
+          <!-- Pas d'année de repli en dur : sans exercice connu, on n'affiche
+               rien plutôt qu'une comparaison fausse (comme les autres mentions
+               d'exercice de cette page). -->
+          <span v-if="latestYear" class="text-[11px] text-gray-500 dark:text-gray-400"
+            >vs {{ latestYear.year - 1 }}</span
           >
         </div>
       </div>
