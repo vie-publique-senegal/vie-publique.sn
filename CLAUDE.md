@@ -138,7 +138,11 @@ pour les rédacteurs (pas de JSON brut à saisir).
 
 ### Development Workflow
 
-1. **Branch Strategy**: Work on `develop` branch, create PRs to `develop`
+1. **Branche** : on travaille **directement sur `develop`**, sans branche de feature ni PR.
+   ⚠️ **`develop` EST la branche déployée en production.** Ne pas y commiter de travail
+   non vérifié : tout ce qui y arrive est candidat au prochain déploiement.
+   **Le déploiement en prod n'est PAS automatique au push** — il est déclenché
+   manuellement. Un `git push` ne met donc rien en ligne, mais prépare la mise en ligne.
 2. **Commit Convention**: Use Conventional Commits (feat:, fix:, docs:, etc.)
 3. **Before Committing** : `npm run lint:fix`, puis Prettier **sur les seuls fichiers touchés**
    (`npx prettier --write <fichiers>`). ⚠️ **NE PAS lancer `npm run format`** : il formate tout le
