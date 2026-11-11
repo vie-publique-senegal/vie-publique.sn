@@ -11,11 +11,27 @@ const { isInApp } = useIsInApp();
       Disponible sur mobile
     </h2>
 
-    <NuxtLink
-      to="/app"
-      class="group block overflow-hidden rounded-xl bg-white ring-1 ring-gray-200 transition-shadow hover:shadow-md dark:bg-gray-800 dark:ring-gray-700"
+    <!--
+      ⚠️ Carte cliquable en « stretched link », PAS un <NuxtLink> englobant.
+      Les boutons des stores sont des <a> : imbriquer un <a> dans un <a> est du
+      HTML invalide — le parseur du navigateur referme l'ancre externe et remonte
+      les ancres internes au niveau du dessus. Résultat vécu : deux erreurs
+      d'hydratation Vue symétriques sur cette carte à chaque chargement de
+      l'accueil (« contains fewer/more child nodes than client vdom »).
+      Le lien couvre toute la carte via `absolute inset-0` ; le contenu est en
+      `pointer-events-none` pour laisser passer le clic, et seuls les boutons
+      des stores le réactivent.
+    -->
+    <div
+      class="group relative overflow-hidden rounded-xl bg-white ring-1 ring-gray-200 transition-shadow hover:shadow-md dark:bg-gray-800 dark:ring-gray-700"
     >
-      <div class="flex flex-col items-center gap-4 p-4 sm:flex-row sm:justify-center">
+      <NuxtLink to="/app" class="absolute inset-0 z-0">
+        <span class="sr-only">Découvrir l'application Vie Publique Sénégal</span>
+      </NuxtLink>
+
+      <div
+        class="pointer-events-none relative z-10 flex flex-col items-center gap-4 p-4 sm:flex-row sm:justify-center"
+      >
         <!-- Screenshot light -->
         <img
           src="/mobile/capture%20iphone%20app%20mobile%20light.png"
@@ -45,14 +61,13 @@ const { isInApp } = useIsInApp();
             10 000+ documents officiels dans votre poche. Gratuit, sans pub.
           </p>
 
-          <!-- Store buttons -->
+          <!-- Store buttons : seuls éléments interactifs par-dessus le lien de carte -->
           <div class="mt-3 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
             <a
               :href="PLAY_STORE_URL"
               target="_blank"
               rel="noopener noreferrer"
-              class="transition-transform hover:scale-105"
-              @click.stop
+              class="pointer-events-auto relative transition-transform hover:scale-105"
             >
               <img
                 src="/img/google-store.svg"
@@ -67,8 +82,7 @@ const { isInApp } = useIsInApp();
               :href="APP_STORE_URL"
               target="_blank"
               rel="noopener noreferrer"
-              class="transition-transform hover:scale-105"
-              @click.stop
+              class="pointer-events-auto relative transition-transform hover:scale-105"
             >
               <img
                 src="/img/apple-store.svg"
@@ -82,6 +96,6 @@ const { isInApp } = useIsInApp();
           </div>
         </div>
       </div>
-    </NuxtLink>
+    </div>
   </div>
 </template>
