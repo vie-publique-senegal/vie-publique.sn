@@ -455,10 +455,11 @@ watch(activeTab, (newTab) => {
         <!-- Overview Tab -->
         <div v-show="activeTab === 'overview'" class="space-y-6">
           <!-- Les 3 grandes masses d'abord, en pleine largeur. -->
-          <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
             <BudgetBudget2OverviewCard
-              v-for="indicator in indicateursPrincipaux"
+              v-for="(indicator, index) in indicateursPrincipaux"
               :key="indicator.name"
+              :class="index === 2 ? 'col-span-2 sm:col-span-1' : ''"
               :name="indicator.name"
               :value="indicator.value"
               :unit="indicator.unit"
@@ -468,9 +469,12 @@ watch(activeTab, (newTab) => {
             />
           </div>
 
-          <!-- Indicateurs de cadrage, en grille secondaire de 4 : ils tiennent
-               sur une seule ligne, au lieu de laisser le 7e isolé sur une 3e. -->
-          <div class="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <!-- Indicateurs de cadrage. 3 colonnes DES le mobile : ils sont au
+               nombre de 3 et leurs valeurs sont courtes (« 4.7% », « 2.4% »),
+               donc ils tiennent sur UNE rangée. En 2 colonnes ils en prenaient
+               deux, et repoussaient le premier vrai contenu de la page
+               (« Répartition des Recettes ») sous la ligne de flottaison. -->
+          <div class="grid grid-cols-3 gap-2 sm:gap-3 lg:grid-cols-4">
             <BudgetBudget2OverviewCard
               v-for="indicator in indicateursSecondaires"
               :key="indicator.name"
@@ -486,7 +490,7 @@ watch(activeTab, (newTab) => {
           <!-- Revenue Section -->
           <section
             v-if="revenueChartData.length > 0"
-            class="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-800/50"
+            class="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-gray-100 dark:bg-gray-800 dark:ring-gray-700/50"
           >
             <div class="border-b border-gray-200 p-4 dark:border-gray-700 sm:p-6">
               <div class="flex flex-col gap-4">
@@ -530,7 +534,7 @@ watch(activeTab, (newTab) => {
           <!-- Expense Section -->
           <section
             v-if="expenseChartData.length > 0"
-            class="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-800/50"
+            class="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-gray-100 dark:bg-gray-800 dark:ring-gray-700/50"
           >
             <div class="border-b border-gray-200 p-4 dark:border-gray-700 sm:p-6">
               <div class="flex flex-col gap-4">
@@ -574,7 +578,7 @@ watch(activeTab, (newTab) => {
           <!-- Treasury Operations Section -->
           <section
             v-if="treasuryOperations.components.length > 0"
-            class="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-800/50"
+            class="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-gray-100 dark:bg-gray-800 dark:ring-gray-700/50"
           >
             <div class="border-b border-gray-200 p-4 dark:border-gray-700 sm:p-6">
               <div class="flex flex-col gap-4">
@@ -629,7 +633,7 @@ watch(activeTab, (newTab) => {
           <!-- Public Debt Section -->
           <section
             v-if="publicDebt.components.length > 0"
-            class="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-800/50"
+            class="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-gray-100 dark:bg-gray-800 dark:ring-gray-700/50"
           >
             <div class="border-b border-gray-200 p-4 dark:border-gray-700 sm:p-6">
               <div class="flex flex-col gap-4">
@@ -685,7 +689,7 @@ watch(activeTab, (newTab) => {
         <!-- Ministries Tab -->
         <div v-show="activeTab === 'ministries'">
           <section
-            class="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-800/50"
+            class="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-gray-100 dark:bg-gray-800 dark:ring-gray-700/50"
           >
             <div class="border-b border-gray-200 p-4 dark:border-gray-700 sm:p-6">
               <h2 class="text-lg font-bold text-gray-900 dark:text-white sm:text-xl">
@@ -710,7 +714,7 @@ watch(activeTab, (newTab) => {
         <!-- Institutions Tab -->
         <div v-show="activeTab === 'institutions'">
           <section
-            class="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-800/50"
+            class="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-gray-100 dark:bg-gray-800 dark:ring-gray-700/50"
           >
             <div class="border-b border-gray-200 p-4 dark:border-gray-700 sm:p-6">
               <h2 class="text-lg font-bold text-gray-900 dark:text-white sm:text-xl">
@@ -753,7 +757,7 @@ watch(activeTab, (newTab) => {
               v-for="document in documents"
               :key="document.id"
               :to="`/documents/${document.id}/${document.slug}`"
-              class="hover:border-primary-300 dark:hover:border-primary-600 group overflow-hidden rounded-xl border border-gray-200 bg-white transition-all hover:shadow-lg dark:border-gray-700 dark:bg-gray-800"
+              class="group overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-gray-100 transition-shadow dark:bg-gray-800 dark:ring-gray-700/50 md:hover:shadow-md"
             >
               <div class="aspect-[3/4] overflow-hidden bg-gray-100 dark:bg-gray-900">
                 <CmsImage

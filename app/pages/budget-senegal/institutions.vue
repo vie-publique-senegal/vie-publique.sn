@@ -19,22 +19,28 @@
           </p>
           <p class="truncate text-base font-semibold text-gray-900 dark:text-white">Institutions</p>
         </div>
-        <span
-          class="rounded-md bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 dark:bg-gray-800 dark:text-gray-400"
-        >
-          {{ filteredInstitutions.length }}
-        </span>
       </div>
 
-      <!-- Mobile Stats Bar -->
+      <!--
+        Une phrase explicite, identique au desktop. ⚠️ Ne PAS raccourcir l'unite
+        en « FCFA » : les montants budgetaires sont en MILLIARDS. L'ancienne
+        version mobile affichait « {montant} FCFA », soit 10^9 fois trop peu.
+      -->
       <div
         v-if="totalBudget && !pending"
-        class="flex items-center justify-between border-t border-gray-50 bg-gray-50/50 px-4 py-2 dark:border-gray-800 dark:bg-gray-900/50"
+        class="border-t border-gray-100 px-4 pb-2 dark:border-gray-800"
       >
-        <span class="text-[11px] text-gray-500 dark:text-gray-400">Budget total</span>
-        <span class="text-xs font-semibold text-gray-900 dark:text-white"
-          >{{ formatBudget(totalBudget) }} FCFA</span
-        >
+        <p class="text-xs text-gray-500 dark:text-gray-400">
+          <span class="font-semibold tabular-nums text-gray-900 dark:text-white">
+            {{ filteredInstitutions.length }}
+          </span>
+          institutions
+          <span aria-hidden="true" class="mx-1.5">·</span>
+          <span class="whitespace-nowrap font-semibold tabular-nums text-gray-900 dark:text-white">
+            {{ formatBudget(totalBudget) }}
+          </span>
+          Md FCFA de crédits de paiement
+        </p>
       </div>
     </header>
 
@@ -47,11 +53,18 @@
       />
     </div>
 
-    <!-- Desktop Layout -->
-    <div class="hidden md:block">
-      <!-- Hero Content -->
-      <div>
-        <div class="container mx-auto px-6 pb-6 pt-2">
+    <!--
+      Bande blanche pleine largeur regroupant titre, recherche et filtres,
+      comme le <header> de /actualites et /documents/public.
+      ⚠️ Ne pas ressortir le titre dans un bloc sans fond : il retomberait sur
+      le `bg-gray-50` de la page et redessinerait une bande grise parasite.
+      ⚠️ Les champs `bg-gray-100` ont besoin de ce fond blanc : sur `gray-50`
+      l'écart tombe à 7 points et ils disparaissent.
+    -->
+    <div class="border-b border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
+      <div class="container mx-auto px-4 py-3 md:px-6">
+        <!-- Titre : desktop seulement, l'en-tête mobile sticky l'affiche déjà. -->
+        <div class="mb-4 hidden md:block">
           <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <!-- Left: Title -->
             <div class="max-w-2xl">
@@ -88,82 +101,106 @@
             </dl>
           </div>
         </div>
-      </div>
-    </div>
 
-    <main class="container mx-auto px-4 py-4 md:px-6 md:py-8">
-      <!-- Filtres Card -->
-      <div class="border-b border-gray-200 pb-4 dark:border-gray-700">
-        <div class="flex flex-col gap-3 md:gap-4">
-          <!-- Row 1: Selectors -->
-          <div class="flex flex-col gap-3 md:flex-row md:gap-4">
-            <div class="flex-1">
-              <label
-                class="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 md:mb-2 md:text-sm md:text-gray-700 md:dark:text-gray-300"
-              >
-                <UIcon name="i-heroicons-calendar" class="h-3.5 w-3.5 md:h-4 md:w-4" />
-                Version
-              </label>
-              <USelect
-                v-model="selectedYearVersion"
-                :options="yearVersionOptions"
-                option-attribute="label"
-                value-attribute="value"
-                size="md"
-                :loading="loadingYears"
-                placeholder="Sélectionner"
-                class="w-full"
-                @update:model-value="handleYearVersionChange"
+        <!--
+          Champ de recherche : motif identique à /actualites et
+          /documents/public (fond gris rempli, pas de bordure, loupe à gauche,
+          effacement rond à droite). Ne pas revenir à `UInput` : les défauts
+          @nuxt/ui sortent en blanc bordé, étranger au reste du site.
+        -->
+        <div class="group relative">
+          <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5">
+            <UIcon
+              name="i-heroicons-magnifying-glass-20-solid"
+              class="h-5 w-5 text-gray-400 transition-colors group-focus-within:text-gray-500"
+            />
+          </div>
+          <input
+            v-model="searchQuery"
+            type="search"
+            placeholder="Rechercher une institution..."
+            class="block w-full rounded-xl border-0 bg-gray-100 py-3 pl-11 pr-10 text-sm text-gray-900 ring-1 ring-transparent transition-all placeholder:text-gray-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-gray-400 dark:bg-gray-800 dark:text-white dark:placeholder:text-gray-400 dark:focus:bg-gray-800/80 dark:focus:ring-gray-500 sm:py-2.5"
+          />
+          <button
+            v-if="searchQuery"
+            type="button"
+            class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 transition-colors hover:text-gray-600 dark:hover:text-gray-300"
+            aria-label="Effacer la recherche"
+            @click="searchQuery = ''"
+          >
+            <span
+              class="flex h-5 w-5 items-center justify-center rounded-full bg-gray-300 dark:bg-gray-600"
+            >
+              <UIcon
+                name="i-heroicons-x-mark-20-solid"
+                class="h-3.5 w-3.5 text-gray-600 dark:text-gray-300"
               />
-            </div>
+            </span>
+          </button>
+        </div>
 
-            <div class="flex-1">
-              <label
-                class="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 md:mb-2 md:text-sm md:text-gray-700 md:dark:text-gray-300"
+        <!--
+          Filtres en pastilles dans une rangée scrollable, comme la rangée de
+          filtres de /documents/public. Le libellé de l'option porte le sens
+          (« 2027 — Projet de loi de finances », « vs 2026 — … ») : plus besoin
+          des <label> + icônes au-dessus, qui faisaient « formulaire dashboard ».
+        -->
+        <div class="mt-3 flex flex-wrap items-center gap-2">
+          <div class="relative">
+            <select
+              :value="selectedYearVersion"
+              :disabled="loadingYears"
+              class="appearance-none rounded-full border-0 bg-gray-100 py-1.5 pl-3 pr-7 text-xs font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-400 disabled:opacity-60 dark:bg-gray-800 dark:text-gray-300 dark:focus:ring-gray-500"
+              aria-label="Exercice budgétaire"
+              @change="handleYearVersionChange(($event.target as HTMLSelectElement).value)"
+            >
+              <!--
+                `:selected` explicite : `selectedYearVersion` est un computed en
+                lecture seule, on ne peut pas le binder en v-model, et Vue ne
+                sérialise PAS `:value` d'un <select> en SSR -> sans ça, le HTML
+                serveur affiche la 1re option au lieu de l'exercice choisi.
+              -->
+              <option
+                v-for="opt in yearVersionOptions"
+                :key="opt.value"
+                :value="opt.value"
+                :selected="opt.value === selectedYearVersion"
               >
-                <UIcon name="i-heroicons-arrows-right-left" class="h-3.5 w-3.5 md:h-4 md:w-4" />
-                Comparer
-              </label>
-              <USelect
-                v-model="selectedCompareYearVersion"
-                :options="compareYearVersionOptions"
-                option-attribute="label"
-                value-attribute="value"
-                size="md"
-                placeholder="Comparer avec..."
-                class="w-full"
-                @update:model-value="handleCompareChange"
-              />
-            </div>
+                {{ opt.label }}
+              </option>
+            </select>
+            <UIcon
+              name="i-heroicons-chevron-down"
+              class="pointer-events-none absolute right-2 top-1/2 h-3 w-3 -translate-y-1/2 text-gray-400"
+            />
           </div>
 
-          <!-- Row 2: Search -->
-          <div class="relative">
-            <UInput
-              v-model="searchQuery"
-              icon="i-heroicons-magnifying-glass"
-              placeholder="Rechercher..."
-              size="md"
-              class="w-full"
-              :ui="{ icon: { trailing: { pointer: '' } } }"
+          <div v-if="compareYearVersionOptions.length" class="relative">
+            <select
+              v-model="selectedCompareYearVersion"
+              class="appearance-none rounded-full border-0 bg-gray-100 py-1.5 pl-3 pr-7 text-xs font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-400 dark:bg-gray-800 dark:text-gray-300 dark:focus:ring-gray-500"
+              aria-label="Exercice de comparaison"
+              @change="handleCompareChange(($event.target as HTMLSelectElement).value)"
             >
-              <template v-if="searchQuery" #trailing>
-                <UButton
-                  color="gray"
-                  variant="link"
-                  icon="i-heroicons-x-mark"
-                  :padded="false"
-                  size="xs"
-                  @click="searchQuery = ''"
-                />
-              </template>
-            </UInput>
+              <option v-for="opt in compareYearVersionOptions" :key="opt.value" :value="opt.value">
+                {{ opt.value === 'none' ? opt.label : `vs ${opt.label}` }}
+              </option>
+            </select>
+            <UIcon
+              name="i-heroicons-chevron-down"
+              class="pointer-events-none absolute right-2 top-1/2 h-3 w-3 -translate-y-1/2 text-gray-400"
+            />
           </div>
         </div>
       </div>
+    </div>
 
+    <main class="container mx-auto px-4 py-4 md:px-6 md:py-6">
       <!-- Content Section -->
-      <div class="mt-6">
+      <!-- Pas de `mt-6` ici : le `py-4 md:py-6` de <main> assure deja l'ecart
+           avec la bande d'en-tete. Les deux cumules faisaient 48 px de gris
+           mort entre les filtres et le tableau. -->
+      <div>
         <!-- Loading state -->
         <div v-if="pending" class="flex justify-center py-16">
           <div class="text-center">
@@ -223,7 +260,7 @@
         <!-- Tableau des institutions -->
         <div
           v-else
-          class="rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800"
+          class="rounded-xl bg-white shadow-sm ring-1 ring-gray-100 dark:bg-gray-800 dark:ring-gray-700/50"
         >
           <BudgetBudget2TableMinistryV2
             entity-label="Institution"
