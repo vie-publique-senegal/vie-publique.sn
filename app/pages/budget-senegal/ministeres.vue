@@ -150,6 +150,7 @@
             <select
               :value="selectedYearVersion"
               :disabled="loadingYears"
+              :title="libelleComplet(selectedYearVersion)"
               class="appearance-none rounded-full border-0 bg-gray-100 py-1.5 pl-3 pr-7 text-xs font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-400 disabled:opacity-60 dark:bg-gray-800 dark:text-gray-300 dark:focus:ring-gray-500"
               aria-label="Exercice budgétaire"
               @change="handleYearVersionChange(($event.target as HTMLSelectElement).value)"
@@ -179,6 +180,7 @@
             <select
               class="appearance-none rounded-full border-0 bg-gray-100 py-1.5 pl-3 pr-7 text-xs font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-400 dark:bg-gray-800 dark:text-gray-300 dark:focus:ring-gray-500"
               aria-label="Exercice de comparaison"
+              :title="libelleComplet(selectedCompareYearVersion)"
               @change="handleCompareYearVersionChange(($event.target as HTMLSelectElement).value)"
             >
               <!--
@@ -437,6 +439,7 @@ const yearVersionOptions = computed(() => {
 
   const options: Array<{
     label: string;
+    labelComplet: string;
     value: string;
     year: number;
     versionId: number | null;
@@ -447,7 +450,10 @@ const yearVersionOptions = computed(() => {
     if (yearData.versions && yearData.versions.length > 0) {
       yearData.versions.forEach((ver: any) => {
         options.push({
-          label: `${yearData.year} — ${describeBudgetVersion(ver.label).label}`,
+          // Sigle (PLF / LFI / LFR), comme sur le dashboard : un libelle unique
+          // dans tout le module. Le nom complet reste en infobulle du select.
+          label: `${yearData.year} - ${describeBudgetVersion(ver.label).code}`,
+          labelComplet: `${yearData.year} - ${describeBudgetVersion(ver.label).label}`,
           value: `${yearData.year}-${ver.id}`,
           year: yearData.year,
           versionId: ver.id,
@@ -462,6 +468,11 @@ const yearVersionOptions = computed(() => {
     return new Date(b.date).getTime() - new Date(a.date).getTime();
   });
 });
+
+/** Nom complet de l'exercice, pour l'infobulle des selects : « PLF » seul ne
+ *  parle pas a tout le monde. */
+const libelleComplet = (valeur: string) =>
+  yearVersionOptions.value.find((o) => o.value === valeur)?.labelComplet ?? '';
 
 // Valeur sélectionnée actuelle
 const selectedYearVersion = computed(() => {

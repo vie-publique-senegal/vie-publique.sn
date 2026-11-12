@@ -189,6 +189,7 @@ const indicateursSecondaires = computed(() =>
 const yearVersionOptions = computed(() => {
   const options: Array<{
     label: string;
+    labelComplet: string;
     value: string;
     year: number;
     versionId: number;
@@ -198,7 +199,11 @@ const yearVersionOptions = computed(() => {
   availableYears.value.forEach((yearData) => {
     yearData.versions.forEach((ver) => {
       options.push({
-        label: `${yearData.year} — ${describeBudgetVersion(ver.label).label}`,
+        // Sigle (PLF / LFI / LFR) et NON le nom complet : « 2027 — Projet de
+        // loi de finances » ne tenait dans aucune des deux largeurs et sortait
+        // tronque (« 2027 — Projet d… »). Le nom complet reste en `title`.
+        label: `${yearData.year} - ${describeBudgetVersion(ver.label).code}`,
+        labelComplet: `${yearData.year} - ${describeBudgetVersion(ver.label).label}`,
         value: `${yearData.year}-${ver.id}`,
         year: yearData.year,
         versionId: ver.id,
@@ -211,6 +216,11 @@ const yearVersionOptions = computed(() => {
     return new Date(b.date).getTime() - new Date(a.date).getTime();
   });
 });
+
+/** Nom complet de l'exercice affiche, pour l'infobulle des selects (« PLF »
+ *  seul ne parle pas a tout le monde). */
+const libelleComplet = (valeur: string) =>
+  yearVersionOptions.value.find((o) => o.value === valeur)?.labelComplet ?? '';
 
 // Computed pour la valeur sélectionnée actuelle
 const selectedYearVersion = computed(() => `${year.value}-${version.value}`);
@@ -326,10 +336,10 @@ watch(activeTab, (newTab) => {
   <div class="min-h-screen pb-24">
     <!-- Hero Header -->
     <div class="border-b border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
-      <div class="container mx-auto px-4 py-6 sm:py-8">
+      <div class="container mx-auto px-4 py-4 sm:py-8">
         <AppBreadcrumb
           :items="[{ label: 'Budget', to: '/budget-senegal' }, { label: 'Dashboard' }]"
-          class="mb-4"
+          class="mb-2 sm:mb-4"
         />
 
         <!-- Title -->
@@ -351,7 +361,8 @@ watch(activeTab, (newTab) => {
               value-attribute="value"
               option-attribute="label"
               size="xs"
-              class="w-[130px] sm:w-44"
+              class="w-auto"
+              :title="libelleComplet(selectedYearVersion)"
               :disabled="yearVersionOptions.length === 0"
               @update:model-value="handleYearVersionChange"
             />
@@ -362,7 +373,8 @@ watch(activeTab, (newTab) => {
               value-attribute="value"
               option-attribute="label"
               size="xs"
-              class="w-[130px] sm:w-44"
+              class="w-auto"
+              :title="libelleComplet(selectedCompareYearVersion)"
               placeholder="Comparer..."
               :disabled="compareYearVersionOptions.length === 0"
               @update:model-value="handleCompareYearVersionChange"
@@ -465,6 +477,7 @@ watch(activeTab, (newTab) => {
               :unit="indicator.unit"
               :variation_percentage="indicator.variation_percentage"
               :show-variation-badge="indicator.showVariationBadge"
+              :neutral-variation="indicator.neutralVariation"
               :color="indicator.color"
             />
           </div>
@@ -483,6 +496,7 @@ watch(activeTab, (newTab) => {
               :unit="indicator.unit"
               :variation_percentage="indicator.variation_percentage"
               :show-variation-badge="indicator.showVariationBadge"
+              :neutral-variation="indicator.neutralVariation"
               :color="indicator.color"
             />
           </div>
