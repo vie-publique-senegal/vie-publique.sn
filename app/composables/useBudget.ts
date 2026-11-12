@@ -286,6 +286,14 @@ export const useBudget = (options: UseBudgetOptions = {}) => {
   const formattedKeyIndicators = computed(() => {
     if (!data.value?.keyIndicators) return [];
 
+    // Indicateurs dont la variation NE SE QUALIFIE PAS : vert/rouge y serait lu
+    // comme un jugement (un déficit qui augmente sortait en vert, donc comme
+    // une amélioration ; des dépenses qui baissent sortaient en rouge). Leur
+    // badge passe en gris — la flèche et le chiffre disent toujours le sens.
+    // ⚠️ Ne pas y ajouter un indicateur dont la lecture est univoque
+    // (recettes, PIB, croissance) : on reperdrait l'information de sens.
+    const CODES_VARIATION_NEUTRE = ['deficit_total', 'deficit_pct_gdp', 'expense_total'];
+
     // Map des couleurs thématiques par code d'indicateur
     // Seuls les 3 indicateurs PRINCIPAUX portent une couleur de catégorie
     // (recettes / dépenses / déficit). Tous les autres restent neutres : c'est ce
@@ -339,6 +347,7 @@ export const useBudget = (options: UseBudgetOptions = {}) => {
         value: displayValue,
         unit: indicator.unit === 'mds_fcfa' ? 'Md FCFA' : '%',
         color: colorMap[indicator.code] || 'gray',
+        neutralVariation: CODES_VARIATION_NEUTRE.includes(indicator.code),
         variation_percentage: displayVariation,
         variation_color: variationColor,
         showVariationBadge: true,

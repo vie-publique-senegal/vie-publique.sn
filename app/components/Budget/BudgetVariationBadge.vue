@@ -9,7 +9,13 @@
     ailleurs dans le projet, pour rester cohérent.
 
     La couleur indique le SENS (vert = hausse, rouge = baisse, gris = stable),
-    jamais un jugement : une baisse des dépenses n'est ni bonne ni mauvaise.
+    jamais un jugement.
+
+    ⚠️ EXCEPTION `neutral` : sur certains indicateurs, vert/rouge est lu comme
+    un jugement quoi qu'on en dise — un déficit qui AUGMENTE sortait en vert,
+    donc comme une amélioration. Ces indicateurs passent en gris : la flèche et
+    le chiffre disent toujours le sens, la couleur ne qualifie plus rien.
+    La liste est tenue dans `useBudget.ts` (`CODES_VARIATION_NEUTRE`), pas ici.
     Variation indisponible → aucun badge.
   -->
   <span
@@ -17,11 +23,13 @@
     class="inline-flex shrink-0 items-center gap-0.5 rounded-full px-1.5 py-0.5 font-medium"
     :class="[
       sizeClass,
-      variation.direction === 'up'
-        ? 'bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-        : variation.direction === 'down'
-          ? 'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-          : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',
+      neutral
+        ? 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
+        : variation.direction === 'up'
+          ? 'bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+          : variation.direction === 'down'
+            ? 'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+            : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400',
     ]"
     :title="title"
   >
@@ -36,6 +44,8 @@ interface Props {
   value: string | number | null | undefined;
   size?: 'xs' | 'sm';
   title?: string;
+  /** Force le gris : la hausse/baisse de cet indicateur ne se qualifie pas. */
+  neutral?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), { size: 'sm', title: undefined });

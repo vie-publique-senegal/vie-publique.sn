@@ -21,8 +21,14 @@
         {{ formattedValue }}{{ isPercentage ? '%' : '' }}
       </span>
 
-      <!-- Variation : la couleur indique le SENS, elle ne juge pas. -->
-      <BudgetVariationBadge v-if="showVariationBadge" :value="variation_percentage" />
+      <!-- Variation : la couleur indique le SENS, elle ne juge pas.
+           `neutralVariation` coupe la couleur quand même ce sens serait lu
+           comme un jugement (déficit, dépenses). -->
+      <BudgetVariationBadge
+        v-if="showVariationBadge"
+        :value="variation_percentage"
+        :neutral="neutralVariation"
+      />
     </div>
 
     <div v-if="!isPercentage" class="text-xs text-gray-500 dark:text-gray-300">
@@ -46,6 +52,8 @@ interface Props {
   variation_percentage: string;
   color?: 'green' | 'red' | 'gray' | 'orange' | 'purple' | 'yellow';
   showVariationBadge?: boolean;
+  /** Badge de variation en gris : la hausse/baisse ne se qualifie pas. */
+  neutralVariation?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
