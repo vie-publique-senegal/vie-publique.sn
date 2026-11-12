@@ -49,104 +49,43 @@
 
     <!-- Desktop Layout -->
     <div class="hidden md:block">
-      <!-- Top Bar -->
-      <div class="border-b border-gray-100 bg-white dark:border-gray-800 dark:bg-transparent">
-        <div class="container mx-auto px-6 py-4">
-          <div class="flex items-center gap-4">
-            <NuxtLink
-              to="/budget-senegal"
-              class="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 transition-colors hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700"
-            >
-              <UIcon
-                name="i-heroicons-arrow-left"
-                class="h-5 w-5 text-gray-700 dark:text-gray-300"
-              />
-            </NuxtLink>
-            <nav class="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-              <NuxtLink to="/budget-senegal" class="hover:text-gray-900 dark:hover:text-white"
-                >Budget</NuxtLink
-              >
-              <UIcon name="i-heroicons-chevron-right" class="h-4 w-4" />
-              <span class="font-medium text-gray-900 dark:text-white">Institutions</span>
-            </nav>
-          </div>
-        </div>
-      </div>
-
       <!-- Hero Content -->
-      <div class="bg-gradient-to-b from-gray-50 to-white dark:bg-transparent dark:bg-none">
-        <div class="container mx-auto px-6 py-12">
-          <div class="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
+      <div>
+        <div class="container mx-auto px-6 pb-6 pt-2">
+          <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <!-- Left: Title -->
             <div class="max-w-2xl">
-              <div
-                class="mb-4 inline-flex items-center gap-2 rounded-full bg-gray-100 px-3 py-1.5 dark:bg-gray-800"
-              >
-                <div
-                  class="flex h-6 w-6 items-center justify-center rounded-full bg-gray-600 dark:bg-gray-500"
-                >
-                  <UIcon name="i-heroicons-building-library" class="h-3.5 w-3.5 text-white" />
-                </div>
-                <span class="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Exercice {{ selectedYear }}
-                </span>
-              </div>
+              <p class="mb-2 text-sm font-medium text-gray-500 dark:text-gray-400">
+                Exercice {{ selectedYear }}
+              </p>
 
               <h1
-                class="text-3xl font-bold tracking-tight text-gray-900 dark:text-white lg:text-4xl"
+                class="text-2xl font-bold tracking-tight text-gray-900 dark:text-white lg:text-3xl"
               >
                 Budgets des Institutions
               </h1>
 
-              <p class="mt-3 text-lg text-gray-600 dark:text-gray-400">
+              <p class="mt-2 text-base text-gray-600 dark:text-gray-300">
                 Assemblée nationale, Présidence et autres institutions
               </p>
             </div>
-
-            <!-- Right: Stats -->
-            <div class="flex gap-4">
-              <div
-                class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800/50"
-              >
-                <div class="flex items-center gap-4">
-                  <div
-                    class="flex h-12 w-12 items-center justify-center rounded-xl bg-gray-100 dark:bg-gray-800"
-                  >
-                    <UIcon
-                      name="i-heroicons-building-library"
-                      class="h-6 w-6 text-gray-600 dark:text-gray-400"
-                    />
-                  </div>
-                  <div>
-                    <p class="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
-                      {{ filteredInstitutions.length }}
-                    </p>
-                    <p class="text-sm text-gray-500 dark:text-gray-400">Institutions</p>
-                  </div>
-                </div>
+            <!-- Compteurs discrets : une ligne de texte, pas deux cartes. -->
+            <dl class="flex flex-wrap items-baseline gap-x-6 gap-y-1 text-sm">
+              <div class="flex items-baseline gap-1.5">
+                <dd class="font-semibold tabular-nums text-gray-900 dark:text-white">
+                  {{ filteredInstitutions.length }}
+                </dd>
+                <dt class="text-gray-500 dark:text-gray-400">institutions</dt>
               </div>
-              <div
-                v-if="totalBudget"
-                class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800/50"
-              >
-                <div class="flex items-center gap-4">
-                  <div
-                    class="flex h-12 w-12 items-center justify-center rounded-xl bg-gray-100 dark:bg-gray-800"
-                  >
-                    <UIcon
-                      name="i-heroicons-banknotes"
-                      class="h-6 w-6 text-gray-600 dark:text-gray-400"
-                    />
-                  </div>
-                  <div>
-                    <p class="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
-                      {{ formatBudget(totalBudget) }}
-                    </p>
-                    <p class="text-sm text-gray-500 dark:text-gray-400">Total CP</p>
-                  </div>
-                </div>
+              <div v-if="totalBudget" class="flex items-baseline gap-1.5">
+                <dd
+                  class="whitespace-nowrap font-semibold tabular-nums text-gray-900 dark:text-white"
+                >
+                  {{ formatBudget(totalBudget) }}
+                </dd>
+                <dt class="text-gray-500 dark:text-gray-400">Md FCFA de crédits de paiement</dt>
               </div>
-            </div>
+            </dl>
           </div>
         </div>
       </div>
@@ -154,9 +93,7 @@
 
     <main class="container mx-auto px-4 py-4 md:px-6 md:py-8">
       <!-- Filtres Card -->
-      <div
-        class="rounded-xl border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-800/50 md:rounded-2xl md:p-5"
-      >
+      <div class="border-b border-gray-200 pb-4 dark:border-gray-700">
         <div class="flex flex-col gap-3 md:gap-4">
           <!-- Row 1: Selectors -->
           <div class="flex flex-col gap-3 md:flex-row md:gap-4">
@@ -259,7 +196,7 @@
         <!-- No results -->
         <div
           v-else-if="filteredInstitutions.length === 0"
-          class="rounded-2xl border border-dashed border-gray-300 bg-gray-50 p-12 text-center dark:border-gray-700 dark:bg-gray-800/50"
+          class="rounded-2xl border border-dashed border-gray-300 bg-gray-50 p-12 text-center dark:border-gray-700 dark:bg-gray-800"
         >
           <div
             class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800"
@@ -286,9 +223,10 @@
         <!-- Tableau des institutions -->
         <div
           v-else
-          class="rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800/50"
+          class="rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800"
         >
           <BudgetBudget2TableMinistryV2
+            entity-label="Institution"
             :ministries="filteredInstitutions"
             :year="selectedYear"
             :version="selectedVersion"
@@ -582,10 +520,12 @@ const totalBudget = computed(() => {
 });
 
 // Format budget for display
+// Les montants arrivent DÉJÀ en milliards : une décimale suffit. Sans cela,
+// `toLocaleString` rendait « 296,615 », qui se lit « 296 615 » et trompe.
 const formatBudget = (value: number) => {
   if (value >= 1e12) return `${(value / 1e12).toFixed(1)}T`;
   if (value >= 1e9) return `${(value / 1e9).toFixed(1)}Md`;
   if (value >= 1e6) return `${(value / 1e6).toFixed(0)}M`;
-  return value.toLocaleString('fr-FR');
+  return new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 1 }).format(value);
 };
 </script>

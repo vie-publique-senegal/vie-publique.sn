@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-gray-50 pb-20 dark:bg-gray-900">
+  <div class="min-h-screen bg-gray-50 pb-24 dark:bg-gray-900">
     <!-- Breadcrumb -->
     <div class="container mx-auto px-4 pt-4">
       <AppBreadcrumb :items="[{ label: 'Budget' }]" />
@@ -13,7 +13,7 @@
         <h1 class="text-lg font-bold text-gray-900 dark:text-white sm:text-xl">
           Budget du Sénégal
         </h1>
-        <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400 md:mt-1 md:text-sm">
+        <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-300 md:mt-1 md:text-sm">
           Finances publiques et documents officiels
         </p>
       </div>
@@ -23,43 +23,28 @@
       <!-- Dashboard Hero Card -->
       <NuxtLink
         to="/budget-senegal/dashboard"
-        class="group mb-6 block rounded-2xl bg-white p-4 ring-1 ring-gray-200 transition-all active:scale-[0.99] dark:bg-gray-800 dark:ring-gray-700 md:p-6 md:hover:shadow-lg md:hover:ring-emerald-300"
+        class="group mb-6 block rounded-2xl bg-white p-4 ring-1 ring-gray-200 transition-all active:scale-[0.99] dark:bg-gray-800 dark:ring-gray-700 md:p-6 md:hover:shadow-lg md:hover:ring-gray-300 dark:md:hover:ring-gray-600"
       >
-        <!-- Header -->
-        <div class="mb-4 flex items-center justify-between">
-          <div class="flex items-center gap-3">
-            <div
-              class="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 dark:bg-emerald-900/30"
-            >
-              <UIcon
-                name="i-heroicons-chart-bar"
-                class="h-5 w-5 text-emerald-600 dark:text-emerald-400"
-              />
-            </div>
-            <div>
-              <h2 class="text-sm font-semibold text-gray-900 dark:text-white md:text-base">
-                {{ dashboardTitle }}
-              </h2>
-              <p class="text-xs text-gray-500 dark:text-gray-400">
-                {{ versionLabel }}
-              </p>
-            </div>
+        <div class="mb-3 flex items-start justify-between gap-3">
+          <div class="min-w-0">
+            <h2 class="text-lg font-bold text-gray-900 dark:text-white md:text-xl">
+              {{ dashboardTitle }}
+            </h2>
+            <p class="mt-0.5 text-sm text-gray-500 dark:text-gray-300">
+              {{ versionLabel }}
+            </p>
           </div>
           <UIcon
             name="i-heroicons-arrow-right"
-            class="h-5 w-5 text-gray-400 transition-transform group-hover:translate-x-1 dark:text-gray-500"
+            class="mt-1 h-5 w-5 shrink-0 text-gray-400 transition-transform motion-safe:group-hover:translate-x-1 dark:text-gray-500"
+            aria-hidden="true"
           />
         </div>
 
         <!-- Statut du texte : un projet de loi n'est pas une loi adoptée. -->
         <p
           v-if="version?.status"
-          class="mb-3 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium md:text-xs"
-          :class="
-            version.isDraft
-              ? 'bg-amber-50 text-amber-700 ring-1 ring-amber-200 dark:bg-amber-400/10 dark:text-amber-300 dark:ring-amber-400/25'
-              : 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-400/10 dark:text-emerald-300 dark:ring-emerald-400/25'
-          "
+          class="mb-3 inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-2.5 py-1 text-[11px] font-medium text-gray-600 ring-1 ring-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:ring-gray-600 md:text-xs"
         >
           <UIcon
             :name="version.isDraft ? 'i-heroicons-clock' : 'i-heroicons-check-badge'"
@@ -69,36 +54,47 @@
         </p>
 
         <!-- Description -->
-        <p class="mb-4 text-xs leading-relaxed text-gray-600 dark:text-gray-400 md:text-sm">
+        <p class="mb-4 text-xs leading-relaxed text-gray-600 dark:text-gray-300 md:text-sm">
           {{ dashboardDescription }}
         </p>
 
-        <!-- KPIs Grid : montants du dernier exercice publié (jamais en dur) -->
+        <!-- Montants du dernier exercice publié (jamais en dur).
+             Surface neutre + filet de catégorie : la couleur identifie la ligne
+             budgétaire, elle ne décore pas et ne juge pas la variation. -->
         <div v-if="stats.length" class="grid grid-cols-3 gap-2 md:gap-4">
           <div
             v-for="stat in stats"
             :key="stat.code"
-            class="rounded-xl p-3"
-            :class="kpiStyles[stat.code]?.card"
+            class="relative overflow-hidden rounded-xl p-3 dark:bg-gray-700"
+            :class="kpiStyles[stat.code]?.surface"
           >
-            <p class="text-[10px] font-medium md:text-xs" :class="kpiStyles[stat.code]?.label">
-              {{ stat.label }}
-            </p>
-            <p class="mt-1 text-lg font-bold md:text-2xl" :class="kpiStyles[stat.code]?.value">
-              {{ stat.formattedValue }}
-            </p>
-            <div class="mt-1 flex items-center gap-1">
-              <span class="text-[10px] md:text-xs" :class="kpiStyles[stat.code]?.unit">
-                Mrd FCFA
-              </span>
-              <span
-                v-if="stat.change"
-                class="rounded px-1 py-0.5 text-[9px] font-medium md:text-[10px]"
-                :class="kpiStyles[stat.code]?.badge"
-                :title="compareYear ? `Variation par rapport à ${compareYear}` : undefined"
+            <span
+              class="absolute inset-y-0 left-0 w-1"
+              :class="kpiStyles[stat.code]?.bar"
+              aria-hidden="true"
+            />
+            <div class="pl-2">
+              <p
+                class="text-[10px] font-medium uppercase tracking-wide md:text-xs"
+                :class="kpiStyles[stat.code]?.label"
               >
-                {{ stat.change }}
-              </span>
+                {{ stat.label }}
+              </p>
+              <p
+                class="mt-1 whitespace-nowrap text-lg font-bold tabular-nums text-gray-900 dark:text-white md:text-2xl"
+              >
+                {{ stat.formattedValue }}
+              </p>
+              <div class="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
+                <span class="text-[10px] text-gray-500 dark:text-gray-300 md:text-xs">
+                  Md FCFA
+                </span>
+                <BudgetVariationBadge
+                  :value="stat.change"
+                  size="xs"
+                  :title="compareYear ? `Variation par rapport à ${compareYear}` : undefined"
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -109,19 +105,21 @@
         <!-- Ministères -->
         <NuxtLink
           to="/budget-senegal/ministeres"
-          class="group flex items-center gap-3 rounded-xl bg-white p-3 ring-1 ring-gray-100 transition-all active:scale-[0.98] dark:bg-gray-800 dark:ring-gray-700 md:flex-col md:items-start md:gap-0 md:p-4 md:hover:shadow-md md:hover:ring-blue-200"
+          class="group flex items-center gap-3 rounded-xl bg-white p-3 ring-1 ring-gray-200 transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500 motion-safe:active:scale-[0.98] dark:bg-gray-800 dark:ring-gray-700 md:flex-col md:items-start md:gap-0 md:p-4 md:hover:shadow-sm md:hover:ring-gray-300 dark:md:hover:ring-gray-600"
         >
           <div
-            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/30 md:mb-3"
+            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-50 dark:bg-blue-950 md:mb-3"
           >
             <UIcon
               name="i-heroicons-building-office"
-              class="h-5 w-5 text-blue-600 dark:text-blue-400"
+              class="h-5 w-5 text-blue-600 dark:text-blue-300"
             />
           </div>
           <div class="min-w-0 flex-1">
-            <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Ministères</h3>
-            <p class="truncate text-xs text-gray-500 dark:text-gray-400">Budgets et programmes</p>
+            <h3 class="text-sm font-semibold text-gray-900 dark:text-white md:text-base">
+              Ministères
+            </h3>
+            <p class="truncate text-xs text-gray-500 dark:text-gray-300">Budgets et programmes</p>
           </div>
           <UIcon
             name="i-heroicons-chevron-right"
@@ -132,19 +130,21 @@
         <!-- Institutions -->
         <NuxtLink
           to="/budget-senegal/institutions"
-          class="group flex items-center gap-3 rounded-xl bg-white p-3 ring-1 ring-gray-100 transition-all active:scale-[0.98] dark:bg-gray-800 dark:ring-gray-700 md:flex-col md:items-start md:gap-0 md:p-4 md:hover:shadow-md md:hover:ring-purple-200"
+          class="group flex items-center gap-3 rounded-xl bg-white p-3 ring-1 ring-gray-200 transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500 motion-safe:active:scale-[0.98] dark:bg-gray-800 dark:ring-gray-700 md:flex-col md:items-start md:gap-0 md:p-4 md:hover:shadow-sm md:hover:ring-gray-300 dark:md:hover:ring-gray-600"
         >
           <div
-            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-purple-100 dark:bg-purple-900/30 md:mb-3"
+            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-violet-50 dark:bg-violet-950 md:mb-3"
           >
             <UIcon
               name="i-heroicons-building-library"
-              class="h-5 w-5 text-purple-600 dark:text-purple-400"
+              class="h-5 w-5 text-violet-600 dark:text-violet-300"
             />
           </div>
           <div class="min-w-0 flex-1">
-            <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Institutions</h3>
-            <p class="truncate text-xs text-gray-500 dark:text-gray-400">
+            <h3 class="text-sm font-semibold text-gray-900 dark:text-white md:text-base">
+              Institutions
+            </h3>
+            <p class="truncate text-xs text-gray-500 dark:text-gray-300">
               Assemblée, Présidence...
             </p>
           </div>
@@ -157,19 +157,21 @@
         <!-- Documents -->
         <NuxtLink
           to="/documents/budget"
-          class="group flex items-center gap-3 rounded-xl bg-white p-3 ring-1 ring-gray-100 transition-all active:scale-[0.98] dark:bg-gray-800 dark:ring-gray-700 md:flex-col md:items-start md:gap-0 md:p-4 md:hover:shadow-md md:hover:ring-orange-200"
+          class="group flex items-center gap-3 rounded-xl bg-white p-3 ring-1 ring-gray-200 transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500 motion-safe:active:scale-[0.98] dark:bg-gray-800 dark:ring-gray-700 md:flex-col md:items-start md:gap-0 md:p-4 md:hover:shadow-sm md:hover:ring-gray-300 dark:md:hover:ring-gray-600"
         >
           <div
-            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-orange-100 dark:bg-orange-900/30 md:mb-3"
+            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-orange-50 dark:bg-orange-950 md:mb-3"
           >
             <UIcon
               name="i-heroicons-document-text"
-              class="h-5 w-5 text-orange-600 dark:text-orange-400"
+              class="h-5 w-5 text-orange-600 dark:text-orange-300"
             />
           </div>
           <div class="min-w-0 flex-1">
-            <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Documents</h3>
-            <p class="truncate text-xs text-gray-500 dark:text-gray-400">Loi de finances</p>
+            <h3 class="text-sm font-semibold text-gray-900 dark:text-white md:text-base">
+              Documents
+            </h3>
+            <p class="truncate text-xs text-gray-500 dark:text-gray-300">Loi de finances</p>
           </div>
           <UIcon
             name="i-heroicons-chevron-right"
@@ -180,16 +182,18 @@
         <!-- Glossaire -->
         <NuxtLink
           to="/budget-senegal/glossaire"
-          class="group flex items-center gap-3 rounded-xl bg-white p-3 ring-1 ring-gray-100 transition-all active:scale-[0.98] dark:bg-gray-800 dark:ring-gray-700 md:flex-col md:items-start md:gap-0 md:p-4 md:hover:shadow-md md:hover:ring-teal-200"
+          class="group flex items-center gap-3 rounded-xl bg-white p-3 ring-1 ring-gray-200 transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500 motion-safe:active:scale-[0.98] dark:bg-gray-800 dark:ring-gray-700 md:flex-col md:items-start md:gap-0 md:p-4 md:hover:shadow-sm md:hover:ring-gray-300 dark:md:hover:ring-gray-600"
         >
           <div
-            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-teal-100 dark:bg-teal-900/30 md:mb-3"
+            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-teal-50 dark:bg-teal-950 md:mb-3"
           >
-            <UIcon name="i-heroicons-book-open" class="h-5 w-5 text-teal-600 dark:text-teal-400" />
+            <UIcon name="i-heroicons-book-open" class="h-5 w-5 text-teal-600 dark:text-teal-300" />
           </div>
           <div class="min-w-0 flex-1">
-            <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Glossaire</h3>
-            <p class="truncate text-xs text-gray-500 dark:text-gray-400">Termes et concepts</p>
+            <h3 class="text-sm font-semibold text-gray-900 dark:text-white md:text-base">
+              Glossaire
+            </h3>
+            <p class="truncate text-xs text-gray-500 dark:text-gray-300">Termes et concepts</p>
           </div>
           <UIcon
             name="i-heroicons-chevron-right"
@@ -200,11 +204,11 @@
 
       <!-- Section Comprendre le Budget -->
       <section class="mt-6 md:mt-8">
-        <div class="mb-4 flex items-center justify-between">
+        <div class="mb-4">
           <h2 class="text-lg font-bold text-gray-900 dark:text-white">Comprendre le Budget</h2>
         </div>
         <div
-          class="rounded-2xl bg-white p-4 ring-1 ring-gray-100 dark:bg-gray-800 dark:ring-gray-700 md:p-6"
+          class="rounded-2xl bg-white p-4 ring-1 ring-gray-200 dark:bg-gray-800 dark:ring-gray-700 md:p-6"
         >
           <BudgetArticles />
         </div>
@@ -212,11 +216,11 @@
 
       <!-- Section Documents Budget -->
       <section class="mt-6 md:mt-8">
-        <div class="mb-4 flex items-center justify-between">
+        <div class="mb-4">
           <h2 class="text-lg font-bold text-gray-900 dark:text-white">Documents officiels</h2>
         </div>
         <div
-          class="rounded-2xl bg-white p-4 ring-1 ring-gray-100 dark:bg-gray-800 dark:ring-gray-700 md:p-6"
+          class="rounded-2xl bg-white p-4 ring-1 ring-gray-200 dark:bg-gray-800 dark:ring-gray-700 md:p-6"
         >
           <BudgetDocuments />
         </div>
@@ -260,27 +264,25 @@ const dashboardDescription = computed(() => {
 
 // ⚠️ Classes écrites en toutes lettres : l'extracteur Tailwind ne voit pas les
 // couleurs construites dynamiquement (même piège que HomeBudgetHighlight).
-const kpiStyles: Record<string, Record<'card' | 'label' | 'value' | 'unit' | 'badge', string>> = {
+// ⚠️ Classes écrites en toutes lettres : l'extracteur Tailwind ne voit pas les
+// couleurs construites dynamiquement.
+// La couleur se limite au filet et au libellé — pas de fond teinté, et surtout
+// pas d'opacité en dark (`dark:bg-<x>-900/20` rendait un bleu délavé, cf. guide).
+const kpiStyles: Record<string, Record<'surface' | 'bar' | 'label', string>> = {
   expense_total: {
-    card: 'bg-orange-50 dark:bg-orange-900/20',
-    label: 'text-orange-600 dark:text-orange-400',
-    value: 'text-orange-700 dark:text-orange-300',
-    unit: 'text-orange-500',
-    badge: 'bg-orange-200 text-orange-700 dark:bg-orange-800 dark:text-orange-200',
+    surface: 'bg-orange-50',
+    bar: 'bg-orange-500',
+    label: 'text-orange-700 dark:text-orange-300',
   },
   revenue_total: {
-    card: 'bg-emerald-50 dark:bg-emerald-900/20',
-    label: 'text-emerald-600 dark:text-emerald-400',
-    value: 'text-emerald-700 dark:text-emerald-300',
-    unit: 'text-emerald-500',
-    badge: 'bg-emerald-200 text-emerald-700 dark:bg-emerald-800 dark:text-emerald-200',
+    surface: 'bg-emerald-50',
+    bar: 'bg-emerald-500',
+    label: 'text-emerald-700 dark:text-emerald-300',
   },
   deficit_total: {
-    card: 'bg-red-50 dark:bg-red-900/20',
-    label: 'text-red-600 dark:text-red-400',
-    value: 'text-red-700 dark:text-red-300',
-    unit: 'text-red-500',
-    badge: 'bg-red-200 text-red-700 dark:bg-red-800 dark:text-red-200',
+    surface: 'bg-rose-50',
+    bar: 'bg-rose-500',
+    label: 'text-rose-700 dark:text-rose-300',
   },
 };
 

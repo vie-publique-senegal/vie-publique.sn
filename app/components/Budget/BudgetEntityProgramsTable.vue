@@ -6,107 +6,87 @@ interface ProgramData {
   variation_color: string;
 }
 
-interface Props {
-  programs: ProgramData[];
-}
+const props = defineProps<{ programs: ProgramData[] }>();
 
-const props = defineProps<Props>();
+const formatMontant = (n: number) =>
+  new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 1 }).format(n);
 
 const total = computed(() => props.programs.reduce((sum, item) => sum + item.value, 0));
 
-const getPercentage = (value: number, total: number) => ((value / total) * 100).toFixed(1);
+/** Part du programme dans le total, en % (1 décimale, séparateur français). */
+const part = (value: number) => (total.value > 0 ? (value / total.value) * 100 : 0);
 </script>
 
 <template>
-  <div class="mx-auto space-y-4">
-    <div class="mt-2">
-      <div class="overflow-hidden rounded-lg bg-white shadow-lg dark:bg-gray-800">
-        <!-- En-têtes -->
-        <div
-          class="bg-gray-50 px-2 py-3 text-sm font-semibold text-gray-700 dark:bg-gray-700 dark:text-gray-300"
-        >
-          <div class="flex items-center justify-between gap-2">
-            <span class="flex-1">Programme</span>
-            <div class="flex shrink-0 items-center gap-4">
-              <span>Montant</span>
-            </div>
-          </div>
-        </div>
-        <!-- Items -->
-        <div
-          v-for="program in programs"
-          :key="program.label"
-          class="border-b border-gray-100 px-2 py-2 text-sm text-gray-900 last:border-b-0 dark:border-gray-700 dark:text-gray-100"
-        >
-          <div class="flex items-start gap-2">
-            <!-- Pourcentage cercle -->
+  <!--
+    Liste financière : lignes séparées par de fines hairlines, pas de carte dans
+    la carte. ⚠️ Ne pas réintroduire `shadow-lg` + en-tête gris ici : le tableau
+    était enfermé dans un 2ᵉ niveau de surface, à l'intérieur d'une carte qui en
+    est déjà une.
+    Les montants sont en `tabular-nums` et `whitespace-nowrap` : les chiffres
+    s'alignent d'une ligne à l'autre et ne se coupent jamais de leur unité.
+  -->
+  <div>
+    <!-- En-tête de colonnes (desktop seulement : sur mobile la ligne est empilée) -->
+    <div
+      class="hidden items-baseline justify-between border-b border-gray-200 pb-2 text-xs font-medium uppercase tracking-wide text-gray-500 dark:border-gray-700 dark:text-gray-400 sm:flex"
+    >
+      <span>Programme</span>
+      <span>Montant (Md FCFA)</span>
+    </div>
+
+    <ul class="divide-y divide-gray-100 dark:divide-gray-700">
+      <li
+        v-for="program in programs"
+        :key="program.label"
+        class="group py-3 transition-colors hover:bg-gray-50 motion-reduce:transition-none dark:hover:bg-gray-700/40"
+      >
+        <div class="flex items-baseline justify-between gap-3">
+          <span class="min-w-0 flex-1 text-sm text-gray-900 dark:text-gray-100">
+            {{ program.label }}
+          </span>
+
+          <div class="flex shrink-0 items-baseline gap-2">
             <span
-              class="relative inline-flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-gray-100 text-xl dark:bg-gray-800"
+              class="whitespace-nowrap text-sm font-semibold tabular-nums text-gray-900 dark:text-white"
             >
-              <span class="text-xs font-medium leading-none text-gray-900 dark:text-white">
-                {{ getPercentage(program.value, total) }}%
-              </span>
+              {{ formatMontant(program.value) }}
             </span>
-
-            <!-- Contenu principal -->
-            <div class="min-w-0 flex-1">
-              <div class="flex items-center justify-between gap-2">
-                <span class="line-clamp-2 block flex-1 text-sm">{{ program.label }}</span>
-                <div class="flex shrink-0 items-center gap-2">
-                  <span class="text-sm font-medium">{{
-                    program.value.toLocaleString(undefined, { maximumFractionDigits: 2 })
-                  }}</span>
-                  <!-- Zone badge avec largeur fixe pour maintenir l'alignement -->
-                  <div class="w-16">
-                    <UBadge
-                      v-if="program.variation_percentage && program.variation_percentage !== 'N/A'"
-                      variant="solid"
-                      :class="[
-                        'rounded-full border-none px-2 text-xs font-medium',
-                        {
-                          'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400':
-                            program.variation_color === 'green',
-                          'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400':
-                            program.variation_color === 'red',
-                          'bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-300':
-                            program.variation_color === 'gray',
-                        },
-                      ]"
-                    >
-                      {{
-                        program.variation_percentage.startsWith('+')
-                          ? '↑'
-                          : program.variation_percentage.startsWith('-')
-                            ? '↓'
-                            : ''
-                      }}
-                      {{ program.variation_percentage.replace('+', '').replace('-', '') }}
-                    </UBadge>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Barre de progression -->
-              <div class="mt-2 h-2 w-full rounded-full bg-gray-200 dark:bg-gray-700">
-                <div
-                  class="h-2 rounded-full bg-blue-500"
-                  :style="{
-                    width: `${getPercentage(program.value, total)}%`,
-                  }"
-                ></div>
-              </div>
-            </div>
+            <BudgetVariationBadge :value="program.variation_percentage" size="xs" />
           </div>
         </div>
 
-        <!-- Total -->
-        <div class="px-2 py-2 text-sm font-semibold text-blue-800 dark:text-blue-300">
-          <div class="flex items-center justify-between">
-            <span class="pl-1">Total</span>
-            <span>{{ total.toLocaleString(undefined, { maximumFractionDigits: 2 }) }} Mds</span>
+        <!-- Part dans le total : barre + pourcentage sur la même ligne -->
+        <div class="mt-2 flex items-center gap-2">
+          <div
+            class="h-1.5 flex-1 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-700"
+            role="presentation"
+          >
+            <div
+              class="h-full rounded-full bg-sky-500 dark:bg-sky-400"
+              :style="{ width: `${part(program.value)}%` }"
+            />
           </div>
+          <span
+            class="w-12 shrink-0 text-right text-xs tabular-nums text-gray-500 dark:text-gray-400"
+          >
+            {{ formatMontant(part(program.value)) }} %
+          </span>
         </div>
-      </div>
+      </li>
+    </ul>
+
+    <!-- Total -->
+    <div
+      class="flex items-baseline justify-between border-t-2 border-gray-200 pt-3 dark:border-gray-600"
+    >
+      <span class="text-sm font-semibold text-gray-900 dark:text-white">Total</span>
+      <span
+        class="whitespace-nowrap text-sm font-bold tabular-nums text-gray-900 dark:text-white sm:text-base"
+      >
+        {{ formatMontant(total) }}
+        <span class="text-xs font-normal text-gray-500 dark:text-gray-400">Md FCFA</span>
+      </span>
     </div>
   </div>
 </template>

@@ -31,6 +31,14 @@ export interface BudgetHeadlineStat {
   formattedValue: string;
   /** Variation vs exercice comparé (« +13,0% »), `null` si incomparable. */
   change: string | null;
+  /**
+   * Sens de la variation, pour l'afficher par une FLÈCHE et non par une couleur.
+   * Une baisse des dépenses en rouge laisserait entendre « mauvaise nouvelle » ;
+   * sur un budget, c'est au lecteur d'en juger, pas à l'interface.
+   */
+  changeDirection: 'up' | 'down' | 'flat' | null;
+  /** Variation sans le signe (« 13,0% ») : le signe est porté par la flèche. */
+  changeLabel: string | null;
 }
 
 export interface BudgetLatestSummary {
@@ -48,12 +56,24 @@ const findValue = (metrics: BudgetMetric[] | undefined, code: string): number | 
     : undefined;
 };
 
-const formatChange = (current: number, previous: number): string | null => {
-  if (!previous) return null;
+const describeChange = (current: number, previous: number) => {
+  if (!previous) return { change: null, changeDirection: null, changeLabel: null };
+
   const variation = ((current - previous) / previous) * 100;
-  if (!Number.isFinite(variation)) return null;
+  if (!Number.isFinite(variation))
+    return { change: null, changeDirection: null, changeLabel: null };
+
+  const formatted = variation.toFixed(1).replace('.', ',');
   const sign = variation > 0 ? '+' : '';
-  return `${sign}${variation.toFixed(1).replace('.', ',')}%`;
+
+  return {
+    change: `${sign}${formatted}%`,
+    changeDirection: (variation > 0 ? 'up' : variation < 0 ? 'down' : 'flat') as
+      | 'up'
+      | 'down'
+      | 'flat',
+    changeLabel: `${formatted.replace('-', '')}%`,
+  };
 };
 
 export const useBudgetLatest = () => {
@@ -86,6 +106,10 @@ export const useBudgetLatest = () => {
           if (value === undefined) return [];
 
           const previousValue = findValue(previous, code);
+          const variation =
+            previousValue === undefined
+              ? { change: null, changeDirection: null, changeLabel: null }
+              : describeChange(value, previousValue);
 
           return [
             {
@@ -93,7 +117,7 @@ export const useBudgetLatest = () => {
               label,
               value,
               formattedValue: formatNumber(Math.round(value)),
-              change: previousValue === undefined ? null : formatChange(value, previousValue),
+              ...variation,
             },
           ];
         });

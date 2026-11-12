@@ -16,7 +16,10 @@ const props = defineProps({
 
 const total = computed(() => props.budgetData.reduce((sum, item) => sum + item.value, 0));
 
-const getPercentage = (value, total) => ((value / total) * 100).toFixed(1);
+// Part arrondie à l'entier : une décimale (« 20,5 % ») n'apporte rien à la
+// lecture d'une répartition et alourdit la colonne. La valeur exacte reste
+// dans le montant affiché juste à côté.
+const getPercentage = (value, total) => Math.round((value / total) * 100);
 </script>
 
 <template>
@@ -26,17 +29,12 @@ const getPercentage = (value, total) => ((value / total) * 100).toFixed(1);
         {{ title }}
       </h2>
 
-      <div class="overflow-hidden rounded-lg bg-white shadow-lg dark:bg-gray-800">
-        <!-- En-têtes -->
+      <div>
         <div
-          class="bg-gray-200 px-2 py-3 text-sm font-semibold text-gray-700 dark:bg-gray-700 dark:text-gray-300"
+          class="flex items-baseline justify-between gap-2 border-b border-gray-200 px-2 pb-2 text-xs font-medium uppercase tracking-wide text-gray-500 dark:border-gray-700 dark:text-gray-400"
         >
-          <div class="flex items-center justify-between gap-2">
-            <span class="flex-1">Type</span>
-            <div class="flex shrink-0 items-center gap-4">
-              <span>Montant</span>
-            </div>
-          </div>
+          <span class="flex-1">Type</span>
+          <span class="shrink-0">Montant (Md FCFA)</span>
         </div>
         <!-- Items -->
         <div
@@ -60,30 +58,7 @@ const getPercentage = (value, total) => ((value / total) * 100).toFixed(1);
                 <span class="line-clamp-1 block flex-1 text-sm">{{ item.label }}</span>
                 <div class="flex shrink-0 items-center gap-2">
                   <span class="text-sm font-medium">{{ item.value.toLocaleString() }}</span>
-                  <UBadge
-                    v-if="item.variation_percentage && item.variation_percentage !== 'N/A'"
-                    variant="solid"
-                    :class="[
-                      'rounded-full border-none px-2 text-xs font-medium',
-                      {
-                        'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400':
-                          item.variation_color === 'green',
-                        'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400':
-                          item.variation_color === 'red',
-                        'bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-300':
-                          item.variation_color === 'gray',
-                      },
-                    ]"
-                  >
-                    {{
-                      item.variation_percentage.startsWith('+')
-                        ? '↑'
-                        : item.variation_percentage.startsWith('-')
-                          ? '↓'
-                          : ''
-                    }}
-                    {{ item.variation_percentage.replace('+', '').replace('-', '') }}
-                  </UBadge>
+                  <BudgetVariationBadge :value="item.variation_percentage" />
                 </div>
               </div>
 

@@ -1,34 +1,39 @@
 <template>
-  <div :class="['rounded-lg p-2 shadow-md sm:p-4', gradientClasses]">
-    <!-- Titre de l'indicateur -->
-    <h3 :class="['mb-2 text-sm font-semibold', titleColorClass]">{{ name }}</h3>
+  <!--
+    Fond très légèrement teinté pour les 3 indicateurs principaux (recettes,
+    dépenses, déficit), neutre pour les autres. Pas de dégradé, pas d'ombre.
+    ⚠️ En DARK la surface reste celle du site (`gray-800`) : on ne transpose pas
+    les pastels clairs — la catégorie passe par le filet et le libellé.
+  -->
+  <div
+    class="relative overflow-hidden rounded-lg p-3 ring-1 ring-gray-200 dark:bg-gray-800 dark:ring-gray-700 sm:p-4"
+    :class="surfaceClass"
+  >
+    <!-- Filet de catégorie -->
+    <span class="absolute inset-y-0 left-0 w-1" :class="accentBarClass" aria-hidden="true" />
 
-    <!-- Valeur + Variation (côte à côte) -->
-    <div class="mb-1 flex flex-wrap items-baseline gap-2">
-      <!-- Valeur principale -->
-      <span :class="['text-2xl font-bold tracking-tight sm:text-3xl', valueColorClass]">
-        {{ formattedValue }}{{ isPercentage ? '%' : '' }}
-      </span>
+    <div class="pl-2.5">
+      <h3 class="mb-2 text-sm font-medium" :class="accentTextClass">{{ name }}</h3>
 
-      <!-- Badge de variation (toujours à côté) -->
-      <UBadge
-        v-if="showVariationBadge && variation_percentage && !isComparisonText"
-        :color="variation_color"
-        variant="solid"
-        size="xs"
+      <div class="mb-1 flex flex-wrap items-baseline gap-x-2 gap-y-1">
+        <span class="text-2xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-3xl">
+          {{ formattedValue }}{{ isPercentage ? '%' : '' }}
+        </span>
+
+        <!-- Variation : la couleur indique le SENS, elle ne juge pas. -->
+        <BudgetVariationBadge v-if="showVariationBadge" :value="variation_percentage" />
+      </div>
+
+      <div v-if="!isPercentage" class="text-xs text-gray-500 dark:text-gray-300">
+        {{ unit }}
+      </div>
+
+      <div
+        v-if="isComparisonText && variation_percentage"
+        class="mt-1 text-xs text-gray-500 dark:text-gray-300"
       >
         {{ variation_percentage }}
-      </UBadge>
-    </div>
-
-    <!-- Unité (en dessous pour les valeurs en milliards) -->
-    <div v-if="!isPercentage" :class="['text-xs', unitColorClass]">
-      {{ unit }}
-    </div>
-
-    <!-- Comparaison année précédente (petit texte en dessous) -->
-    <div v-if="isComparisonText && variation_percentage" :class="['mt-1 text-xs', unitColorClass]">
-      {{ variation_percentage }}
+      </div>
     </div>
   </div>
 </template>
@@ -40,18 +45,15 @@ interface Props {
   unit?: string;
   variation_percentage: string;
   color?: 'green' | 'red' | 'gray' | 'orange' | 'purple' | 'yellow';
-  variation_color?: 'green' | 'red' | 'gray';
   showVariationBadge?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
   unit: '',
   color: 'gray',
-  variation_color: 'gray',
   showVariationBadge: true,
 });
 
-// Détecter si c'est un pourcentage
 const isPercentage = computed(() => props.unit === '%');
 
 // Formater la valeur : 1 décimale pour les pourcentages
@@ -69,75 +71,29 @@ const isComparisonText = computed(() => {
   return props.variation_percentage && props.variation_percentage.includes('en');
 });
 
-// Classes de dégradé en fonction de la couleur
-const gradientClasses = computed(() => {
-  switch (props.color) {
-    case 'green':
-      return 'bg-gradient-to-br from-emerald-50 via-green-100 to-teal-200 dark:from-emerald-900/30 dark:via-green-800/25 dark:to-teal-900/20';
-    case 'red':
-      return 'bg-gradient-to-br from-red-50 via-rose-100 to-pink-200 dark:from-red-900/30 dark:via-rose-800/25 dark:to-pink-900/20';
-    case 'orange':
-      return 'bg-gradient-to-br from-orange-50 via-orange-100 to-amber-200 dark:from-orange-900/30 dark:via-orange-800/25 dark:to-amber-900/20';
-    case 'yellow':
-      return 'bg-gradient-to-br from-yellow-50 via-amber-100 to-yellow-200 dark:from-yellow-900/30 dark:via-amber-800/25 dark:to-yellow-900/20';
-    case 'purple':
-      return 'bg-gradient-to-br from-purple-50 via-violet-100 to-indigo-200 dark:from-purple-900/30 dark:via-violet-800/25 dark:to-indigo-900/20';
-    default:
-      return 'bg-gradient-to-br from-gray-50 via-gray-100 to-slate-200 dark:from-gray-800/50 dark:via-gray-700/40 dark:to-slate-800/30';
-  }
-});
+// ⚠️ Classes écrites en toutes lettres : l'extracteur Tailwind ne voit pas les
+// couleurs construites dynamiquement.
+const SURFACE: Record<string, string> = {
+  green: 'bg-emerald-50',
+  orange: 'bg-orange-50',
+  red: 'bg-rose-50',
+};
 
-// Classe de couleur du titre
-const titleColorClass = computed(() => {
-  switch (props.color) {
-    case 'green':
-      return 'text-emerald-800 dark:text-white';
-    case 'red':
-      return 'text-red-800 dark:text-white';
-    case 'orange':
-      return 'text-orange-800 dark:text-white';
-    case 'yellow':
-      return 'text-yellow-800 dark:text-white';
-    case 'purple':
-      return 'text-purple-800 dark:text-white';
-    default:
-      return 'text-gray-700 dark:text-white';
-  }
-});
+const ACCENT_BAR: Record<string, string> = {
+  green: 'bg-emerald-500',
+  red: 'bg-rose-500',
+  orange: 'bg-orange-500',
+  gray: 'bg-gray-300 dark:bg-gray-600',
+};
 
-// Classe de couleur de la valeur
-const valueColorClass = computed(() => {
-  switch (props.color) {
-    case 'green':
-      return 'text-emerald-900 dark:text-white';
-    case 'red':
-      return 'text-red-900 dark:text-white';
-    case 'orange':
-      return 'text-orange-900 dark:text-white';
-    case 'yellow':
-      return 'text-yellow-900 dark:text-white';
-    case 'purple':
-      return 'text-purple-900 dark:text-white';
-    default:
-      return 'text-gray-800 dark:text-white';
-  }
-});
+const ACCENT_TEXT: Record<string, string> = {
+  green: 'text-emerald-700 dark:text-emerald-300',
+  red: 'text-rose-700 dark:text-rose-300',
+  orange: 'text-orange-700 dark:text-orange-300',
+  gray: 'text-gray-600 dark:text-gray-300',
+};
 
-// Classe de couleur de l'unité
-const unitColorClass = computed(() => {
-  switch (props.color) {
-    case 'green':
-      return 'text-emerald-700 dark:text-white/80';
-    case 'red':
-      return 'text-red-700 dark:text-white/80';
-    case 'orange':
-      return 'text-orange-700 dark:text-white/80';
-    case 'yellow':
-      return 'text-yellow-700 dark:text-white/80';
-    case 'purple':
-      return 'text-purple-700 dark:text-white/80';
-    default:
-      return 'text-gray-500 dark:text-white/80';
-  }
-});
+const surfaceClass = computed(() => SURFACE[props.color] || 'bg-white');
+const accentBarClass = computed(() => ACCENT_BAR[props.color] || ACCENT_BAR.gray);
+const accentTextClass = computed(() => ACCENT_TEXT[props.color] || ACCENT_TEXT.gray);
 </script>

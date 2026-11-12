@@ -13,8 +13,8 @@ const props = defineProps<Props>();
 </script>
 
 <template>
-  <div class="white:custom-shadow rounded-xl bg-white p-2 shadow-sm sm:p-6 dark:bg-gray-800">
-    <div class="mb-4 text-center font-bold text-gray-900 sm:text-xl dark:text-white">
+  <div class="white:custom-shadow rounded-xl bg-white p-2 shadow-sm dark:bg-gray-800 sm:p-6">
+    <div class="mb-4 text-center font-bold text-gray-900 dark:text-white sm:text-xl">
       Budget total {{ latestYear }}
     </div>
 
@@ -23,7 +23,7 @@ const props = defineProps<Props>();
       <div class="flex items-baseline justify-center gap-2">
         <div class="text-3xl font-bold text-blue-600 sm:text-5xl">
           {{ currentBudget.toLocaleString(undefined, { maximumFractionDigits: 1 }) }}
-          <span class="text-3xl">Mrd FCFA</span>
+          <span class="text-3xl">Md FCFA</span>
         </div>
         <UBadge
           v-if="variation.percentage !== 'N/A'"

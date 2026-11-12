@@ -287,14 +287,13 @@ export const useBudget = (options: UseBudgetOptions = {}) => {
     if (!data.value?.keyIndicators) return [];
 
     // Map des couleurs thématiques par code d'indicateur
+    // Seuls les 3 indicateurs PRINCIPAUX portent une couleur de catégorie
+    // (recettes / dépenses / déficit). Tous les autres restent neutres : c'est ce
+    // qui évite la page arc-en-ciel tout en gardant l'identité des grandes masses.
     const colorMap: Record<string, 'green' | 'red' | 'gray' | 'orange' | 'purple' | 'yellow'> = {
-      budget_total: 'green',
       revenue_total: 'green',
-      expense_total: 'yellow',
+      expense_total: 'orange',
       deficit_total: 'red',
-      deficit_pct_gdp: 'red',
-      gdp_total: 'gray',
-      growth_rate: 'purple',
     };
 
     return data.value.keyIndicators.map((indicator) => {
@@ -315,9 +314,11 @@ export const useBudget = (options: UseBudgetOptions = {}) => {
       }
 
       // Pour les indicateurs en %, afficher la valeur de l'année de comparaison au lieu du % de variation
+      // Séparateur de milliers français : « 6 012 » et non « 6012 », comme
+      // partout ailleurs dans le module.
       const displayValue =
         indicator.unit === 'mds_fcfa'
-          ? Math.round(indicator.value).toString()
+          ? new Intl.NumberFormat('fr-FR').format(Math.round(indicator.value))
           : indicator.value.toFixed(1);
       let displayVariation = variation;
 
@@ -333,9 +334,10 @@ export const useBudget = (options: UseBudgetOptions = {}) => {
       }
 
       return {
+        code: indicator.code,
         name: indicator.label,
         value: displayValue,
-        unit: indicator.unit === 'mds_fcfa' ? 'Millards' : '%',
+        unit: indicator.unit === 'mds_fcfa' ? 'Md FCFA' : '%',
         color: colorMap[indicator.code] || 'gray',
         variation_percentage: displayVariation,
         variation_color: variationColor,

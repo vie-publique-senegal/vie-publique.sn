@@ -4,80 +4,61 @@
 // publié (PLF, puis LFI votée) s'affiche sans retoucher ce composant.
 const { year, version, stats } = useBudgetLatest();
 
-const heading = computed(() =>
-  year.value ? `Budget ${year.value} du Sénégal` : 'Budget du Sénégal',
-);
-
-// Un PLF est un PROJET en cours d'examen, pas une loi adoptée : afficher
-// « Budget 2027 » sans ce statut serait un contresens.
-const statusBadge = computed(() => {
-  const described = version.value;
-  if (!described?.code) return null;
-  return described.status ? `${described.label} · ${described.status}` : described.label;
+// Un seul titre, qui porte DÉJÀ le statut : « Projet de budget 2027 » dit que le
+// texte n'est pas voté. L'ancienne version empilait titre + badge « Projet de loi
+// de finances · En examen au Parlement », ce qui alourdissait pour redire la même
+// chose. Le statut complet reste sur /budget-senegal.
+const heading = computed(() => {
+  if (!year.value) return 'Budget du Sénégal';
+  return version.value?.isDraft
+    ? `Projet de budget ${year.value}`
+    : `Budget ${year.value} du Sénégal`;
 });
 
-/** Couleur de tuile par indicateur (l'ordre d'affichage vient du composable). */
-const statColors: Record<string, string> = {
-  expense_total: 'orange',
-  revenue_total: 'emerald',
-  deficit_total: 'rose',
-};
-
-const cardStyles: Record<string, string> = {
-  orange:
-    'bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-950/50 dark:to-orange-900/30',
-  emerald:
-    'bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-950/50 dark:to-emerald-900/30',
-  rose: 'bg-gradient-to-br from-rose-50 to-rose-100 dark:from-rose-950/50 dark:to-rose-900/30',
-};
-
-const textStyles: Record<string, { label: string; value: string; unit: string }> = {
-  orange: {
+// ⚠️ Classes en toutes lettres : l'extracteur Tailwind ne voit pas les couleurs
+// construites dynamiquement. (C'est ce piège qui avait donné un badge
+// « Dépenses » cerclé de BLEU : sans classe littérale, Tailwind retombait sur
+// `--tw-ring-color` par défaut.)
+//
+// La couleur se limite au filet latéral et au libellé. Plus de dégradé de fond
+// ni d'opacité en dark (`dark:from-<x>-950/50` rendait un aplat délavé).
+const TUILE: Record<string, { surface: string; bar: string; label: string }> = {
+  expense_total: {
+    surface: 'bg-orange-50',
+    bar: 'bg-orange-500',
     label: 'text-orange-700 dark:text-orange-300',
-    value: 'text-orange-900 dark:text-orange-100',
-    unit: 'text-orange-600/70 dark:text-orange-400/70',
   },
-  emerald: {
+  revenue_total: {
+    surface: 'bg-emerald-50',
+    bar: 'bg-emerald-500',
     label: 'text-emerald-700 dark:text-emerald-300',
-    value: 'text-emerald-900 dark:text-emerald-100',
-    unit: 'text-emerald-600/70 dark:text-emerald-400/70',
   },
-  rose: {
+  deficit_total: {
+    surface: 'bg-rose-50',
+    bar: 'bg-rose-500',
     label: 'text-rose-700 dark:text-rose-300',
-    value: 'text-rose-900 dark:text-rose-100',
-    unit: 'text-rose-600/70 dark:text-rose-400/70',
   },
 };
 
-// ⚠️ Classes écrites en toutes lettres, PAS de `<UBadge :color="...">` dynamique.
-// L'extracteur de Nuxt UI v2 ne voit que les couleurs passées en statique
-// (`color="green"`) ; avec un `:color` dynamique, les classes de la couleur ne sont
-// pas générées. Résultat vécu : l'anneau orange absent du CSS → il retombait
-// sur la valeur par défaut de Tailwind (`--tw-ring-color: blue-500/50`) → badge
-// « Dépenses » cerclé de BLEU. Alternative globale si besoin ailleurs :
-// `ui.safelistColors` dans nuxt.config.ts (au prix de CSS supplémentaire).
-const badgeStyles: Record<string, string> = {
-  orange:
-    'bg-orange-50 text-orange-500 ring-orange-500/25 dark:bg-orange-400/10 dark:text-orange-400 dark:ring-orange-400/25',
-  emerald:
-    'bg-emerald-50 text-emerald-500 ring-emerald-500/25 dark:bg-emerald-400/10 dark:text-emerald-400 dark:ring-emerald-400/25',
-  rose: 'bg-rose-50 text-rose-500 ring-rose-500/25 dark:bg-rose-400/10 dark:text-rose-400 dark:ring-rose-400/25',
-};
-
-const styleKey = (code: string) => statColors[code] || 'emerald';
+const tuile = (code: string) =>
+  TUILE[code] || {
+    surface: 'bg-gray-50',
+    bar: 'bg-gray-300 dark:bg-gray-600',
+    label: 'text-gray-600 dark:text-gray-300',
+  };
 </script>
 
 <template>
   <div class="my-4">
     <UCard
-      class="overflow-hidden border-0 bg-white shadow-sm transition-shadow hover:shadow-md dark:bg-gray-800"
+      class="overflow-hidden border-0 bg-white ring-1 ring-gray-200 transition-shadow hover:shadow-sm dark:bg-gray-800 dark:ring-gray-700"
       :ui="{ body: { padding: 'p-4 sm:p-6' } }"
     >
       <!-- Header -->
       <div class="mb-4 flex items-start justify-between gap-3 sm:mb-5">
         <div class="flex min-w-0 items-start gap-2">
           <div
-            class="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-900/50"
+            class="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-700"
           >
             <UIcon name="i-heroicons-chart-pie" class="h-4 w-4 text-gray-600 dark:text-gray-400" />
           </div>
@@ -85,22 +66,6 @@ const styleKey = (code: string) => statColors[code] || 'emerald';
             <h3 class="text-base font-semibold text-gray-900 dark:text-white sm:text-lg">
               {{ heading }}
             </h3>
-            <!-- Statut du texte budgétaire : projet en examen vs texte adopté. -->
-            <p
-              v-if="statusBadge"
-              class="mt-1.5 inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-medium sm:text-xs"
-              :class="
-                version?.isDraft
-                  ? 'bg-amber-50 text-amber-700 ring-1 ring-amber-200 dark:bg-amber-400/10 dark:text-amber-300 dark:ring-amber-400/25'
-                  : 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200 dark:bg-emerald-400/10 dark:text-emerald-300 dark:ring-emerald-400/25'
-              "
-            >
-              <UIcon
-                :name="version?.isDraft ? 'i-heroicons-clock' : 'i-heroicons-check-badge'"
-                class="h-3.5 w-3.5 shrink-0"
-              />
-              {{ statusBadge }}
-            </p>
           </div>
         </div>
         <NuxtLink
@@ -115,36 +80,35 @@ const styleKey = (code: string) => statColors[code] || 'emerald';
         </NuxtLink>
       </div>
 
-      <!-- Stats Grid -->
+      <!-- Chiffres : surface neutre + filet de catégorie. La variation est en gris
+           avec une flèche — une baisse des dépenses ne doit pas s'afficher en rouge. -->
       <div v-if="stats.length" class="grid grid-cols-3 gap-2 sm:gap-4">
         <div
           v-for="stat in stats"
           :key="stat.code"
-          class="rounded-xl p-3 transition-transform hover:scale-[1.02] sm:p-4"
-          :class="cardStyles[styleKey(stat.code)]"
+          class="relative overflow-hidden rounded-xl bg-gray-50 p-3 dark:bg-gray-700 sm:p-4"
         >
-          <p class="text-xs font-medium sm:text-sm" :class="textStyles[styleKey(stat.code)].label">
-            {{ stat.label }}
-          </p>
-          <div class="mt-1 flex items-baseline gap-1 sm:gap-2">
-            <span
-              class="text-lg font-bold tracking-tight sm:text-2xl"
-              :class="textStyles[styleKey(stat.code)].value"
+          <span
+            class="absolute inset-y-0 left-0 w-1"
+            :class="tuile(stat.code).bar"
+            aria-hidden="true"
+          />
+          <div class="pl-2">
+            <p class="text-xs font-medium sm:text-sm" :class="tuile(stat.code).label">
+              {{ stat.label }}
+            </p>
+            <p
+              class="mt-1 text-lg font-bold tracking-tight text-gray-900 dark:text-white sm:text-2xl"
             >
               {{ stat.formattedValue }}
-            </span>
-            <span
-              v-if="stat.change"
-              class="hidden items-center rounded-md px-1.5 py-0.5 text-xs font-medium ring-1 ring-inset sm:inline-flex"
-              :class="badgeStyles[styleKey(stat.code)]"
+            </p>
+            <p
+              class="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-[10px] text-gray-500 dark:text-gray-300 sm:text-xs"
             >
-              {{ stat.change }}
-            </span>
+              <span>Md FCFA</span>
+              <BudgetVariationBadge :value="stat.change" size="xs" />
+            </p>
           </div>
-          <p class="mt-0.5 text-[10px] sm:text-xs" :class="textStyles[styleKey(stat.code)].unit">
-            Mds FCFA
-            <span v-if="stat.change" class="inline sm:hidden">({{ stat.change }})</span>
-          </p>
         </div>
       </div>
 

@@ -168,6 +168,23 @@ const {
 // d'hydratation sur chaque badge.
 await budgetReady();
 
+// Séparateur de milliers français, partagé par les totaux de section.
+const formatMontant = (v: number) =>
+  new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 }).format(v);
+
+// Répartition d'AFFICHAGE uniquement : les 3 grandes masses budgétaires d'un
+// côté, les indicateurs de cadrage de l'autre. Aucun indicateur n'est retiré et
+// aucune valeur n'est recalculée — c'est la mise en page qui change.
+const CODES_PRINCIPAUX = ['revenue_total', 'expense_total', 'deficit_total'];
+
+const indicateursPrincipaux = computed(() =>
+  formattedKeyIndicators.value.filter((i) => CODES_PRINCIPAUX.includes(i.code)),
+);
+
+const indicateursSecondaires = computed(() =>
+  formattedKeyIndicators.value.filter((i) => !CODES_PRINCIPAUX.includes(i.code)),
+);
+
 // Computed pour créer une liste combinée année + version pour le select unique
 const yearVersionOptions = computed(() => {
   const options: Array<{
@@ -306,7 +323,7 @@ watch(activeTab, (newTab) => {
 </script>
 
 <template>
-  <div class="min-h-screen pb-16">
+  <div class="min-h-screen pb-24">
     <!-- Hero Header -->
     <div class="border-b border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
       <div class="container mx-auto px-4 py-6 sm:py-8">
@@ -364,18 +381,16 @@ watch(activeTab, (newTab) => {
           <button
             v-for="tab in tabs"
             :key="tab.id"
+            :aria-selected="activeTab === tab.id"
+            role="tab"
             :class="[
-              // Onglet actif NEUTRE : pas d'aplat de couleur, juste le texte mis en évidence
-              // et un fin soulignement. On n'utilise PAS `primary` (= sky) : ce bleu clair ne
-              // fait pas partie de l'identité Vie Publique.
-              // `border-b-2` est dans la base, la COULEUR dans chaque branche : mettre
-              // `border-transparent` dans la base le ferait cohabiter avec la couleur active
-              // sur le même élément, et c'est l'ordre du CSS généré qui trancherait, pas celui
-              // du tableau. L'inactif garde un liseré transparent pour éviter le saut de 2px.
-              'group flex items-center gap-1 rounded-lg border-b-2 px-2 py-1.5 text-xs font-medium transition-all sm:gap-2 sm:px-4 sm:py-2 sm:text-sm',
+              // Onglet actif = contraste et graisse du TEXTE, sans soulignement ni
+              // pastille. L'état reste annoncé aux lecteurs d'écran par
+              // `aria-selected`, qui ne dépend pas de la couleur.
+              'group flex items-center gap-1 px-2 py-1.5 text-xs transition-colors sm:gap-2 sm:px-4 sm:py-2 sm:text-sm',
               activeTab === tab.id
-                ? 'border-gray-900 font-semibold text-gray-900 dark:border-white dark:text-white'
-                : 'border-transparent text-gray-500 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white',
+                ? 'font-semibold text-gray-900 dark:text-white'
+                : 'font-medium text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white',
             ]"
             @click="activeTab = tab.id"
           >
@@ -439,16 +454,30 @@ watch(activeTab, (newTab) => {
       <div v-else-if="isDataReady">
         <!-- Overview Tab -->
         <div v-show="activeTab === 'overview'" class="space-y-6">
-          <!-- KPIs Grid -->
-          <div class="grid grid-cols-2 gap-3 lg:grid-cols-3">
+          <!-- Les 3 grandes masses d'abord, en pleine largeur. -->
+          <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <BudgetBudget2OverviewCard
-              v-for="indicator in formattedKeyIndicators"
+              v-for="indicator in indicateursPrincipaux"
               :key="indicator.name"
               :name="indicator.name"
               :value="indicator.value"
               :unit="indicator.unit"
               :variation_percentage="indicator.variation_percentage"
-              :variation_color="indicator.variation_color"
+              :show-variation-badge="indicator.showVariationBadge"
+              :color="indicator.color"
+            />
+          </div>
+
+          <!-- Indicateurs de cadrage, en grille secondaire de 4 : ils tiennent
+               sur une seule ligne, au lieu de laisser le 7e isolé sur une 3e. -->
+          <div class="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <BudgetBudget2OverviewCard
+              v-for="indicator in indicateursSecondaires"
+              :key="indicator.name"
+              :name="indicator.name"
+              :value="indicator.value"
+              :unit="indicator.unit"
+              :variation_percentage="indicator.variation_percentage"
               :show-variation-badge="indicator.showVariationBadge"
               :color="indicator.color"
             />
@@ -459,29 +488,18 @@ watch(activeTab, (newTab) => {
             v-if="revenueChartData.length > 0"
             class="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-800/50"
           >
-            <div
-              class="border-b border-gray-200 bg-gradient-to-r from-emerald-50 to-transparent p-4 dark:border-gray-700 dark:from-emerald-900/20 sm:p-6"
-            >
+            <div class="border-b border-gray-200 p-4 dark:border-gray-700 sm:p-6">
               <div class="flex flex-col gap-4">
                 <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <h2 class="text-lg font-bold text-gray-900 dark:text-white sm:text-xl">
                     Répartition des Recettes
                   </h2>
                   <div class="flex items-baseline gap-2">
-                    <span
-                      class="text-2xl font-bold text-emerald-600 dark:text-emerald-400 sm:text-3xl"
-                    >
-                      {{ Math.round(revenueTotalWithVariation.total) }}
+                    <span class="text-2xl font-bold text-gray-900 dark:text-white sm:text-3xl">
+                      {{ formatMontant(revenueTotalWithVariation.total) }}
                     </span>
-                    <span class="text-sm text-gray-500">Mrd FCFA</span>
-                    <UBadge
-                      v-if="revenueTotalWithVariation.variation_percentage !== 'N/A'"
-                      color="gray"
-                      variant="subtle"
-                      size="xs"
-                    >
-                      {{ revenueTotalWithVariation.variation_percentage }}
-                    </UBadge>
+                    <span class="text-sm text-gray-500">Md FCFA</span>
+                    <BudgetVariationBadge :value="revenueTotalWithVariation.variation_percentage" />
                   </div>
                 </div>
                 <p class="text-sm leading-relaxed text-gray-600 dark:text-gray-400">
@@ -514,27 +532,18 @@ watch(activeTab, (newTab) => {
             v-if="expenseChartData.length > 0"
             class="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-800/50"
           >
-            <div
-              class="border-b border-gray-200 bg-gradient-to-r from-amber-50 to-transparent p-4 dark:border-gray-700 dark:from-amber-900/20 sm:p-6"
-            >
+            <div class="border-b border-gray-200 p-4 dark:border-gray-700 sm:p-6">
               <div class="flex flex-col gap-4">
                 <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <h2 class="text-lg font-bold text-gray-900 dark:text-white sm:text-xl">
                     Répartition des Dépenses
                   </h2>
                   <div class="flex items-baseline gap-2">
-                    <span class="text-2xl font-bold text-amber-600 dark:text-amber-400 sm:text-3xl">
-                      {{ Math.round(expenseTotalWithVariation.total) }}
+                    <span class="text-2xl font-bold text-gray-900 dark:text-white sm:text-3xl">
+                      {{ formatMontant(expenseTotalWithVariation.total) }}
                     </span>
-                    <span class="text-sm text-gray-500">Mrd FCFA</span>
-                    <UBadge
-                      v-if="expenseTotalWithVariation.variation_percentage !== 'N/A'"
-                      color="gray"
-                      variant="subtle"
-                      size="xs"
-                    >
-                      {{ expenseTotalWithVariation.variation_percentage }}
-                    </UBadge>
+                    <span class="text-sm text-gray-500">Md FCFA</span>
+                    <BudgetVariationBadge :value="expenseTotalWithVariation.variation_percentage" />
                   </div>
                 </div>
                 <p class="text-sm leading-relaxed text-gray-600 dark:text-gray-400">
@@ -567,29 +576,18 @@ watch(activeTab, (newTab) => {
             v-if="treasuryOperations.components.length > 0"
             class="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-800/50"
           >
-            <div
-              class="border-b border-gray-200 bg-gradient-to-r from-purple-50 to-transparent p-4 dark:border-gray-700 dark:from-purple-900/20 sm:p-6"
-            >
+            <div class="border-b border-gray-200 p-4 dark:border-gray-700 sm:p-6">
               <div class="flex flex-col gap-4">
                 <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <h2 class="text-lg font-bold text-gray-900 dark:text-white sm:text-xl">
                     Besoins de financement
                   </h2>
                   <div class="flex items-baseline gap-2">
-                    <span
-                      class="text-2xl font-bold text-purple-600 dark:text-purple-400 sm:text-3xl"
-                    >
-                      {{ Math.round(treasuryOperations.total) }}
+                    <span class="text-2xl font-bold text-gray-900 dark:text-white sm:text-3xl">
+                      {{ formatMontant(treasuryOperations.total) }}
                     </span>
-                    <span class="text-sm text-gray-500">Mrd FCFA</span>
-                    <UBadge
-                      v-if="treasuryOperations.variation_percentage !== 'N/A'"
-                      color="gray"
-                      variant="subtle"
-                      size="xs"
-                    >
-                      {{ treasuryOperations.variation_percentage }}
-                    </UBadge>
+                    <span class="text-sm text-gray-500">Md FCFA</span>
+                    <BudgetVariationBadge :value="treasuryOperations.variation_percentage" />
                   </div>
                 </div>
                 <p class="text-sm leading-relaxed text-gray-600 dark:text-gray-400">
@@ -633,29 +631,18 @@ watch(activeTab, (newTab) => {
             v-if="publicDebt.components.length > 0"
             class="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-800/50"
           >
-            <div
-              class="border-b border-gray-200 bg-gradient-to-r from-orange-50 to-transparent p-4 dark:border-gray-700 dark:from-orange-900/20 sm:p-6"
-            >
+            <div class="border-b border-gray-200 p-4 dark:border-gray-700 sm:p-6">
               <div class="flex flex-col gap-4">
                 <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <h2 class="text-lg font-bold text-gray-900 dark:text-white sm:text-xl">
                     Service de la Dette publique
                   </h2>
                   <div class="flex items-baseline gap-2">
-                    <span
-                      class="text-2xl font-bold text-orange-600 dark:text-orange-400 sm:text-3xl"
-                    >
-                      {{ Math.round(publicDebt.total) }}
+                    <span class="text-2xl font-bold text-gray-900 dark:text-white sm:text-3xl">
+                      {{ formatMontant(publicDebt.total) }}
                     </span>
-                    <span class="text-sm text-gray-500">Mrd FCFA</span>
-                    <UBadge
-                      v-if="publicDebt.variation_percentage !== 'N/A'"
-                      color="gray"
-                      variant="subtle"
-                      size="xs"
-                    >
-                      {{ publicDebt.variation_percentage }}
-                    </UBadge>
+                    <span class="text-sm text-gray-500">Md FCFA</span>
+                    <BudgetVariationBadge :value="publicDebt.variation_percentage" />
                   </div>
                 </div>
                 <p class="text-sm leading-relaxed text-gray-600 dark:text-gray-400">

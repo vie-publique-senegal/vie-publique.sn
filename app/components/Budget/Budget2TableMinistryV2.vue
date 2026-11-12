@@ -1,14 +1,13 @@
 <template>
   <div>
-    <div class="text-center">
-      <p class="mb-2 text-sm text-gray-500 dark:text-gray-400">Montant en Milliards FCFA</p>
-    </div>
-    <div class="overflow-hidden rounded-lg bg-white shadow-lg dark:bg-gray-800">
+    <div
+      class="overflow-hidden rounded-xl bg-white ring-1 ring-gray-200 dark:bg-gray-800 dark:ring-gray-700"
+    >
       <!-- En-têtes -->
       <div
         class="flex items-center justify-between gap-2 bg-gray-200 px-2 py-3 text-sm font-semibold text-gray-700 dark:bg-gray-700 dark:text-gray-300"
       >
-        <span class="flex-1">Ministère</span>
+        <span class="flex-1">{{ entityLabel }}</span>
         <div class="flex shrink-0 items-center gap-4">
           <span class="hidden cursor-pointer sm:inline" @click="toggleSort">
             Budget {{ year }} {{ sortDirection === 'asc' ? '↑' : '↓' }}
@@ -28,7 +27,10 @@
       >
         <div class="flex items-start gap-2">
           <!-- Logo + Pourcentage cercle -->
-          <div class="flex flex-col items-center gap-1">
+          <div
+            class="flex flex-col items-center gap-1"
+            title="Part dans les dépenses totales de l'État"
+          >
             <!--   <CmsImage
               v-if="ministry.entity?.logo"
               :src="ministry.entity.logo"
@@ -44,7 +46,7 @@
               <UIcon name="i-heroicons-building-office" class="h-5 w-5 text-gray-400" />
             </div>
             <span class="text-xs font-medium leading-none text-gray-600 dark:text-gray-400">
-              {{ ministry.budget_percentage.toFixed(1) }}%
+              {{ ministry.budget_percentage.toFixed(1).replace('.', ',') }} %
             </span>
           </div>
 
@@ -70,10 +72,10 @@
               </div>
 
               <!-- Montant -->
-              <span class="shrink-0 text-sm font-semibold">{{
-                parseFloat(ministry.amount_cp).toLocaleString(undefined, {
-                  maximumFractionDigits: 1,
-                })
+              <span class="shrink-0 whitespace-nowrap text-sm font-semibold tabular-nums">{{
+                new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 1 }).format(
+                  parseFloat(ministry.amount_cp),
+                )
               }}</span>
             </div>
 
@@ -92,29 +94,7 @@
               v-if="hasVariations && ministry.variation_percentage"
               class="mt-1 flex justify-end"
             >
-              <UBadge
-                variant="solid"
-                :class="[
-                  'shrink-0 rounded-full border-none px-2 text-xs font-medium',
-                  {
-                    'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400':
-                      ministry.variation_color === 'green',
-                    'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400':
-                      ministry.variation_color === 'red',
-                    'bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-300':
-                      ministry.variation_color === 'gray',
-                  },
-                ]"
-              >
-                {{
-                  ministry.variation_percentage.startsWith('+')
-                    ? '↑'
-                    : ministry.variation_percentage.startsWith('-')
-                      ? '↓'
-                      : ''
-                }}
-                {{ ministry.variation_percentage.replace('+', '').replace('-', '') }}
-              </UBadge>
+              <BudgetVariationBadge :value="ministry.variation_percentage" />
             </div>
           </div>
         </div>
@@ -128,6 +108,11 @@ const props = defineProps({
   ministries: {
     type: Array,
     required: true,
+  },
+  /** « Ministère » ou « Institution » : le même tableau sert les deux pages. */
+  entityLabel: {
+    type: String,
+    default: 'Ministère',
   },
   year: {
     type: Number,

@@ -38,33 +38,9 @@
 
     <!-- Desktop Layout -->
     <div class="hidden md:block">
-      <!-- Top Bar -->
-      <div class="border-b border-gray-100 bg-white dark:border-gray-800 dark:bg-transparent">
-        <div class="container mx-auto px-6 py-4">
-          <div class="flex items-center gap-4">
-            <NuxtLink
-              to="/budget-senegal"
-              class="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 transition-colors hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700"
-            >
-              <UIcon
-                name="i-heroicons-arrow-left"
-                class="h-5 w-5 text-gray-700 dark:text-gray-300"
-              />
-            </NuxtLink>
-            <nav class="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-              <NuxtLink to="/budget-senegal" class="hover:text-gray-900 dark:hover:text-white"
-                >Budget</NuxtLink
-              >
-              <UIcon name="i-heroicons-chevron-right" class="h-4 w-4" />
-              <span class="font-medium text-gray-900 dark:text-white">Glossaire</span>
-            </nav>
-          </div>
-        </div>
-      </div>
-
       <!-- Hero Content -->
-      <div class="bg-gradient-to-b from-gray-50 to-white dark:bg-transparent dark:bg-none">
-        <div class="container mx-auto px-6 py-12">
+      <div>
+        <div class="container mx-auto px-6 pb-6 pt-2">
           <div class="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
             <!-- Left: Title -->
             <div class="max-w-2xl">
@@ -82,7 +58,7 @@
               </div>
 
               <h1
-                class="text-3xl font-bold tracking-tight text-gray-900 dark:text-white lg:text-4xl"
+                class="text-2xl font-bold tracking-tight text-gray-900 dark:text-white lg:text-3xl"
               >
                 Glossaire Budgétaire
               </h1>
@@ -90,50 +66,6 @@
               <p class="mt-3 text-lg text-gray-600 dark:text-gray-400">
                 Comprendre les termes essentiels du budget de l'État
               </p>
-            </div>
-
-            <!-- Right: Stats -->
-            <div class="flex gap-4">
-              <div
-                class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800/50"
-              >
-                <div class="flex items-center gap-4">
-                  <div
-                    class="flex h-12 w-12 items-center justify-center rounded-xl bg-gray-100 dark:bg-gray-800"
-                  >
-                    <UIcon
-                      name="i-heroicons-bookmark"
-                      class="h-6 w-6 text-gray-600 dark:text-gray-400"
-                    />
-                  </div>
-                  <div>
-                    <p class="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
-                      {{ allTerms.length }}
-                    </p>
-                    <p class="text-sm text-gray-500 dark:text-gray-400">Définitions</p>
-                  </div>
-                </div>
-              </div>
-              <div
-                class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800/50"
-              >
-                <div class="flex items-center gap-4">
-                  <div
-                    class="flex h-12 w-12 items-center justify-center rounded-xl bg-gray-100 dark:bg-gray-800"
-                  >
-                    <UIcon
-                      name="i-heroicons-folder"
-                      class="h-6 w-6 text-gray-600 dark:text-gray-400"
-                    />
-                  </div>
-                  <div>
-                    <p class="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
-                      {{ categories.length - 1 }}
-                    </p>
-                    <p class="text-sm text-gray-500 dark:text-gray-400">Catégories</p>
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
         </div>
@@ -271,12 +203,7 @@
                     <div class="flex items-center gap-4">
                       <div
                         class="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 dark:bg-gray-800"
-                      >
-                        <UIcon
-                          name="i-heroicons-bookmark"
-                          class="h-5 w-5 text-gray-600 dark:text-gray-400"
-                        />
-                      </div>
+                      ></div>
                       <span class="font-semibold text-gray-900 dark:text-white">{{
                         accordionItem.label
                       }}</span>
@@ -303,15 +230,6 @@
           </div>
 
           <!-- Back to budget button -->
-          <div class="mt-6">
-            <NuxtLink
-              to="/budget-senegal"
-              class="flex w-full items-center justify-center gap-2 rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-medium text-white transition-colors active:bg-gray-800 dark:bg-white dark:text-gray-900 dark:active:bg-gray-100 sm:mx-auto sm:w-auto"
-            >
-              <UIcon name="i-heroicons-arrow-left" class="h-4 w-4" />
-              Retour au budget
-            </NuxtLink>
-          </div>
         </div>
       </div>
     </main>
