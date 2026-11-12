@@ -306,6 +306,7 @@ export const buildLlmsSections = (siteUrl: string, stats: LlmsStats): string => 
 - [Ministères](${siteUrl}/etat-senegal/ministeres) : liste des ministères et leur organisation
 - [Organisation de l'État](${siteUrl}/etat-senegal/organisation) : organigramme et décrets d'organisation, avec historique des changements
 - [Personnalités publiques](${siteUrl}/personnalites-senegal) : fiches biographiques (parcours, nominations, fonctions actuelles et passées)
+  - Par fonction : [ministres](${siteUrl}/personnalites-senegal/ministre), [directeurs généraux](${siteUrl}/personnalites-senegal/directeur-general), [PCA](${siteUrl}/personnalites-senegal/pca), [ambassadeurs](${siteUrl}/personnalites-senegal/ambassadeur), [gouverneurs](${siteUrl}/personnalites-senegal/gouverneur), [préfets](${siteUrl}/personnalites-senegal/prefet), [maires](${siteUrl}/personnalites-senegal/maire)…
 - [Annuaire des sites publics](${siteUrl}/annuaire-sites-publics-senegal) : sites web officiels de l'administration sénégalaise
 
 ## Assemblée nationale

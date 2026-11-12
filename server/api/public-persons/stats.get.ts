@@ -1,8 +1,21 @@
 import { aggregate, readItems } from '@directus/sdk';
-import type { MandateFilter } from '~~/types/public-person';
+import {
+  isOfficeStatusFilter,
+  type MandateFilter,
+  type OfficeStatusFilter,
+} from '~~/types/public-person';
+
+/** Statut demandé ; `null` = pas de filtre (le défaut « en poste » est porté par la page) */
+function getOfficeStatus(value: unknown): OfficeStatusFilter | null {
+  return isOfficeStatusFilter(value) ? value : null;
+}
 
 export default defineCachedEventHandler(
-  async () => {
+  async (event) => {
+    // Facette en poste / plus en poste : les compteurs catégorie / genre / élu-nommé et le total
+    // portent sur la MÊME population que la liste affichée (par défaut : en poste). Les compteurs
+    // de la facette statut, eux, portent toujours sur l'ensemble.
+    const filterStatus = getOfficeStatus(getQuery(event).filterStatus);
     try {
       const directus = getCmsClient();
 
@@ -12,6 +25,16 @@ export default defineCachedEventHandler(
         status: { _eq: 'published' },
         current_appointment: { id: { _nnull: true }, status: { _eq: 'published' } },
       };
+      const scopedFilter =
+        filterStatus === null
+          ? personFilter
+          : {
+              ...personFilter,
+              current_appointment: {
+                ...personFilter.current_appointment,
+                is_current: { _eq: filterStatus === 'current' },
+              },
+            };
 
       // Comptage par catégorie de la DERNIÈRE nomination (current_appointment), en cours ou
       // terminée : c'est ce que renvoie le filtre catégorie de la liste — les compteurs doivent
@@ -26,6 +49,7 @@ export default defineCachedEventHandler(
             'current_appointment.category.label',
             'current_appointment.category.mandate_type',
             'current_appointment.category.sort',
+            'current_appointment.is_current',
           ],
           filter: personFilter,
           limit: -1,
@@ -37,12 +61,13 @@ export default defineCachedEventHandler(
         aggregate('public_persons', {
           aggregate: { count: ['id'] },
           groupBy: ['sexe'],
-          query: { filter: personFilter },
+          query: { filter: scopedFilter },
         }),
       );
 
       type PersonCategoryRow = {
         current_appointment?: {
+          is_current?: boolean | null;
           category?: {
             slug?: string | null;
             label?: string | null;
@@ -61,8 +86,16 @@ export default defineCachedEventHandler(
         appointed: 0,
         unclassified: 0,
       };
+      // Facette en poste / plus en poste (sur la même dernière nomination que la liste)
+      const totalsByStatus: Record<OfficeStatusFilter, number> = {
+        current: 0,
+        former: 0,
+      };
 
       (personsCategories as PersonCategoryRow[]).forEach((person) => {
+        const status = person.current_appointment?.is_current ? 'current' : 'former';
+        totalsByStatus[status]++;
+        if (filterStatus && status !== filterStatus) return;
         const category = person.current_appointment?.category;
         const mandateType = category?.mandate_type;
         if (mandateType === 'elected' || mandateType === 'appointed') {
@@ -96,7 +129,7 @@ export default defineCachedEventHandler(
       const totalResult = await directus.request(
         aggregate('public_persons', {
           aggregate: { count: ['id'] },
-          query: { filter: personFilter },
+          query: { filter: scopedFilter },
         }),
       );
 
@@ -109,6 +142,7 @@ export default defineCachedEventHandler(
             .map(([slug, { label, count }]) => [slug, { label, count }]),
         ),
         totalsByMandate,
+        totalsByStatus,
         totalsByGender: { maleCount, femaleCount },
         total,
       };
@@ -122,7 +156,8 @@ export default defineCachedEventHandler(
   },
   {
     maxAge: process.env.NODE_ENV === 'production' ? 5 * 60 : 0, // 5 min en prod (à augmenter après stabilisation)
-    name: 'public-persons-stats-v6',
-    getKey: () => 'public-persons-stats',
+    name: 'public-persons-stats-v8',
+    getKey: (event) =>
+      `public-persons-stats-${getOfficeStatus(getQuery(event).filterStatus) ?? 'all'}`,
   },
 );

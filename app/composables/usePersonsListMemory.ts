@@ -3,11 +3,12 @@
  * pour que le bouton « Retour » d'une fiche ramène à la liste filtrée, SANS propager
  * les filtres dans l'URL des fiches (URL propres, une seule URL crawlable par fiche).
  */
-const STORAGE_KEY = 'vp:personnalites:list-query';
+const STORAGE_KEY = 'vp:personnalites:list-url';
+const LIST_PREFIX = '/personnalites-senegal';
 
 export const usePersonsListMemory = () => {
-  /** Enregistre la query string courante de la liste (vide → efface). */
-  const save = (query: Record<string, unknown>) => {
+  /** Enregistre le chemin (hub ou sous-page catégorie) + la query string courante de la liste. */
+  const save = (path: string, query: Record<string, unknown>) => {
     if (!import.meta.client) return;
     try {
       const params = new URLSearchParams();
@@ -15,18 +16,18 @@ export const usePersonsListMemory = () => {
         if (typeof value === 'string' && value !== '') params.set(key, value);
       }
       const qs = params.toString();
-      if (qs) sessionStorage.setItem(STORAGE_KEY, qs);
-      else sessionStorage.removeItem(STORAGE_KEY);
+      sessionStorage.setItem(STORAGE_KEY, qs ? `${path}?${qs}` : path);
     } catch {
       // sessionStorage indisponible (navigation privée stricte…) — on continue sans mémoire
     }
   };
 
-  /** Query string mémorisée (sans `?`), ou chaîne vide. */
+  /** URL de liste mémorisée (`/personnalites-senegal/...?...`), ou chaîne vide. */
   const restore = (): string => {
     if (!import.meta.client) return '';
     try {
-      return sessionStorage.getItem(STORAGE_KEY) || '';
+      const url = sessionStorage.getItem(STORAGE_KEY) || '';
+      return url.startsWith(LIST_PREFIX) ? url : '';
     } catch {
       return '';
     }

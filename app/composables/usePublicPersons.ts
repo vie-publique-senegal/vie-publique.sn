@@ -1,9 +1,23 @@
-import { isMandateFilter, type MandateFilter, type PublicPerson } from '~~/types/public-person';
+import {
+  isMandateFilter,
+  isOfficeStatusFilter,
+  type MandateFilter,
+  type OfficeStatusFilter,
+  type PublicPerson,
+} from '~~/types/public-person';
+
+/** L'annuaire affiche par défaut les personnalités en poste */
+const DEFAULT_OFFICE_STATUS: OfficeStatusFilter = 'current';
 
 export interface PublicPersonsOptions {
   sort?: string;
   limit?: number;
   syncUrl?: boolean;
+  /**
+   * Catégorie FIXÉE par la route (sous-page `/personnalites-senegal/<slug>`) : elle ne
+   * transite pas par `?category=` et ne peut pas être changée depuis la page.
+   */
+  category?: string;
 }
 
 /**
@@ -17,11 +31,16 @@ export const usePublicPersons = (options: PublicPersonsOptions = {}) => {
   const route = useRoute();
 
   // Filtres spécifiques — lus depuis l'URL DE FAÇON SYNCHRONE (SSR + client, cf. CLAUDE.md)
-  const filterCategory = ref<string>((route.query.category as string) || 'all');
+  const filterCategory = ref<string>(options.category || (route.query.category as string) || 'all');
   const filterGender = ref<string>((route.query.gender as string) || 'all');
   // Facette élu / nommé (`?mandat=elected|appointed|unclassified`), portée par la catégorie (G19)
   const filterMandate = ref<MandateFilter>(
     isMandateFilter(route.query.mandat) ? route.query.mandat : 'all',
+  );
+  // Facette en poste / plus en poste. Par défaut : en poste (paramètre absent de l'URL) ;
+  // `?statut=former` ou `?statut=all` pour les autres vues.
+  const filterStatus = ref<OfficeStatusFilter>(
+    isOfficeStatusFilter(route.query.statut) ? route.query.statut : DEFAULT_OFFICE_STATUS,
   );
 
   // État UI avec sync URL
@@ -42,13 +61,26 @@ export const usePublicPersons = (options: PublicPersonsOptions = {}) => {
     },
   });
 
-  // Sync filtre catégorie avec URL
+  // Sync filtre catégorie avec URL (hub uniquement : sur une sous-page, la catégorie est le chemin)
   watch(filterCategory, () => {
+    if (options.category) return;
     const query: any = { ...route.query };
     if (filterCategory.value !== 'all') {
       query.category = filterCategory.value;
     } else {
       delete query.category;
+    }
+    useRouter().replace({ query });
+  });
+
+  // Sync filtre statut avec URL — hors `additionalFilters`, qui omet `all` de l'URL : ici
+  // c'est le défaut (`current`) qu'on omet, et `all` doit rester explicite
+  watch(filterStatus, () => {
+    const query = { ...route.query };
+    if (filterStatus.value !== DEFAULT_OFFICE_STATUS) {
+      query.statut = filterStatus.value;
+    } else {
+      delete query.statut;
     }
     useRouter().replace({ query });
   });
@@ -65,6 +97,7 @@ export const usePublicPersons = (options: PublicPersonsOptions = {}) => {
     if (filterMandate.value !== 'all') {
       f.filterMandate = filterMandate.value;
     }
+    f.filterStatus = filterStatus.value;
     return f;
   });
 
@@ -96,9 +129,15 @@ export const usePublicPersons = (options: PublicPersonsOptions = {}) => {
     state.currentPage.value = 1;
   };
 
-  // Stats globales
+  const setFilterStatus = (status: OfficeStatusFilter) => {
+    filterStatus.value = status;
+    state.currentPage.value = 1;
+  };
+
+  // Stats globales, sur la population du statut sélectionné
   const { data: stats } = useFetch('/api/public-persons/stats', {
-    key: 'public-persons-stats',
+    key: computed(() => `public-persons-stats-${filterStatus.value}`),
+    query: { filterStatus },
   });
 
   const totalsByCategory = computed(() => {
@@ -112,6 +151,11 @@ export const usePublicPersons = (options: PublicPersonsOptions = {}) => {
   // Élus / nommés / non classés — les non classés restent comptés (G19)
   const totalsByMandate = computed(() => {
     return stats.value?.totalsByMandate || { elected: 0, appointed: 0, unclassified: 0 };
+  });
+
+  // En poste / plus en poste (dernière fonction connue en cours ou terminée)
+  const totalsByStatus = computed(() => {
+    return stats.value?.totalsByStatus || { current: 0, former: 0 };
   });
 
   // Total global (toutes personnes, genre renseigné ou non — ex. maires sans `sexe`)
@@ -133,6 +177,7 @@ export const usePublicPersons = (options: PublicPersonsOptions = {}) => {
     filterCategory,
     filterGender,
     filterMandate,
+    filterStatus,
 
     // Méthodes
     setCurrentPage: state.setCurrentPage,
@@ -142,11 +187,13 @@ export const usePublicPersons = (options: PublicPersonsOptions = {}) => {
     setFilterCategory,
     setFilterGender,
     setFilterMandate,
+    setFilterStatus,
     resetFilters: () => {
       state.resetFilters();
-      filterCategory.value = 'all';
+      if (!options.category) filterCategory.value = 'all';
       filterGender.value = 'all';
       filterMandate.value = 'all';
+      filterStatus.value = DEFAULT_OFFICE_STATUS;
     },
 
     // Computed
@@ -155,13 +202,15 @@ export const usePublicPersons = (options: PublicPersonsOptions = {}) => {
     totalsByCategory,
     totalsByGender,
     totalsByMandate,
+    totalsByStatus,
     totalPersons,
     hasActiveFilters: computed(
       () =>
         state.hasActiveFilters.value ||
-        filterCategory.value !== 'all' ||
+        (!options.category && filterCategory.value !== 'all') ||
         filterGender.value !== 'all' ||
-        filterMandate.value !== 'all',
+        filterMandate.value !== 'all' ||
+        filterStatus.value !== DEFAULT_OFFICE_STATUS,
     ),
   };
 };
