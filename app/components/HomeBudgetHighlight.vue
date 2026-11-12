@@ -22,20 +22,17 @@ const heading = computed(() => {
 //
 // La couleur se limite au filet latéral et au libellé. Plus de dégradé de fond
 // ni d'opacité en dark (`dark:from-<x>-950/50` rendait un aplat délavé).
-const TUILE: Record<string, { surface: string; bar: string; label: string }> = {
+const TUILE: Record<string, { surface: string; label: string }> = {
   expense_total: {
     surface: 'bg-orange-50',
-    bar: 'bg-orange-500',
     label: 'text-orange-700 dark:text-orange-300',
   },
   revenue_total: {
     surface: 'bg-emerald-50',
-    bar: 'bg-emerald-500',
     label: 'text-emerald-700 dark:text-emerald-300',
   },
   deficit_total: {
     surface: 'bg-rose-50',
-    bar: 'bg-rose-500',
     label: 'text-rose-700 dark:text-rose-300',
   },
 };
@@ -43,7 +40,6 @@ const TUILE: Record<string, { surface: string; bar: string; label: string }> = {
 const tuile = (code: string) =>
   TUILE[code] || {
     surface: 'bg-gray-50',
-    bar: 'bg-gray-300 dark:bg-gray-600',
     label: 'text-gray-600 dark:text-gray-300',
   };
 </script>
@@ -80,20 +76,17 @@ const tuile = (code: string) =>
         </NuxtLink>
       </div>
 
-      <!-- Chiffres : surface neutre + filet de catégorie. La variation est en gris
-           avec une flèche — une baisse des dépenses ne doit pas s'afficher en rouge. -->
+      <!-- Chiffres : fond légèrement teinté et libellé coloré pour distinguer la
+           catégorie, sans filet ni autre ornement. En dark la surface reste celle
+           du site, la couleur ne passe que par le libellé. -->
       <div v-if="stats.length" class="grid grid-cols-3 gap-2 sm:gap-4">
         <div
           v-for="stat in stats"
           :key="stat.code"
-          class="relative overflow-hidden rounded-xl bg-gray-50 p-3 dark:bg-gray-700 sm:p-4"
+          class="rounded-xl p-3 dark:bg-gray-700 sm:p-4"
+          :class="tuile(stat.code).surface"
         >
-          <span
-            class="absolute inset-y-0 left-0 w-1"
-            :class="tuile(stat.code).bar"
-            aria-hidden="true"
-          />
-          <div class="pl-2">
+          <div>
             <p class="text-xs font-medium sm:text-sm" :class="tuile(stat.code).label">
               {{ stat.label }}
             </p>

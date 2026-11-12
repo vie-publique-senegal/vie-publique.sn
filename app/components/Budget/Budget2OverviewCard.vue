@@ -3,37 +3,33 @@
     Fond très légèrement teinté pour les 3 indicateurs principaux (recettes,
     dépenses, déficit), neutre pour les autres. Pas de dégradé, pas d'ombre.
     ⚠️ En DARK la surface reste celle du site (`gray-800`) : on ne transpose pas
-    les pastels clairs — la catégorie passe par le filet et le libellé.
+    les pastels clairs — la catégorie passe alors par la couleur du libellé.
+    Pas de filet vertical coloré : décoratif, et il faisait « template ».
   -->
   <div
-    class="relative overflow-hidden rounded-lg p-3 ring-1 ring-gray-200 dark:bg-gray-800 dark:ring-gray-700 sm:p-4"
+    class="rounded-lg p-3 ring-1 ring-gray-200 dark:bg-gray-800 dark:ring-gray-700 sm:p-4"
     :class="surfaceClass"
   >
-    <!-- Filet de catégorie -->
-    <span class="absolute inset-y-0 left-0 w-1" :class="accentBarClass" aria-hidden="true" />
+    <h3 class="mb-2 text-sm font-medium" :class="accentTextClass">{{ name }}</h3>
 
-    <div class="pl-2.5">
-      <h3 class="mb-2 text-sm font-medium" :class="accentTextClass">{{ name }}</h3>
+    <div class="mb-1 flex flex-wrap items-baseline gap-x-2 gap-y-1">
+      <span class="text-2xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-3xl">
+        {{ formattedValue }}{{ isPercentage ? '%' : '' }}
+      </span>
 
-      <div class="mb-1 flex flex-wrap items-baseline gap-x-2 gap-y-1">
-        <span class="text-2xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-3xl">
-          {{ formattedValue }}{{ isPercentage ? '%' : '' }}
-        </span>
+      <!-- Variation : la couleur indique le SENS, elle ne juge pas. -->
+      <BudgetVariationBadge v-if="showVariationBadge" :value="variation_percentage" />
+    </div>
 
-        <!-- Variation : la couleur indique le SENS, elle ne juge pas. -->
-        <BudgetVariationBadge v-if="showVariationBadge" :value="variation_percentage" />
-      </div>
+    <div v-if="!isPercentage" class="text-xs text-gray-500 dark:text-gray-300">
+      {{ unit }}
+    </div>
 
-      <div v-if="!isPercentage" class="text-xs text-gray-500 dark:text-gray-300">
-        {{ unit }}
-      </div>
-
-      <div
-        v-if="isComparisonText && variation_percentage"
-        class="mt-1 text-xs text-gray-500 dark:text-gray-300"
-      >
-        {{ variation_percentage }}
-      </div>
+    <div
+      v-if="isComparisonText && variation_percentage"
+      class="mt-1 text-xs text-gray-500 dark:text-gray-300"
+    >
+      {{ variation_percentage }}
     </div>
   </div>
 </template>
@@ -79,13 +75,6 @@ const SURFACE: Record<string, string> = {
   red: 'bg-rose-50',
 };
 
-const ACCENT_BAR: Record<string, string> = {
-  green: 'bg-emerald-500',
-  red: 'bg-rose-500',
-  orange: 'bg-orange-500',
-  gray: 'bg-gray-300 dark:bg-gray-600',
-};
-
 const ACCENT_TEXT: Record<string, string> = {
   green: 'text-emerald-700 dark:text-emerald-300',
   red: 'text-rose-700 dark:text-rose-300',
@@ -94,6 +83,5 @@ const ACCENT_TEXT: Record<string, string> = {
 };
 
 const surfaceClass = computed(() => SURFACE[props.color] || 'bg-white');
-const accentBarClass = computed(() => ACCENT_BAR[props.color] || ACCENT_BAR.gray);
 const accentTextClass = computed(() => ACCENT_TEXT[props.color] || ACCENT_TEXT.gray);
 </script>

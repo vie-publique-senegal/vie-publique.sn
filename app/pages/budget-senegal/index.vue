@@ -65,15 +65,10 @@
           <div
             v-for="stat in stats"
             :key="stat.code"
-            class="relative overflow-hidden rounded-xl p-3 dark:bg-gray-700"
+            class="rounded-xl p-3 dark:bg-gray-700"
             :class="kpiStyles[stat.code]?.surface"
           >
-            <span
-              class="absolute inset-y-0 left-0 w-1"
-              :class="kpiStyles[stat.code]?.bar"
-              aria-hidden="true"
-            />
-            <div class="pl-2">
+            <div>
               <p
                 class="text-[10px] font-medium uppercase tracking-wide md:text-xs"
                 :class="kpiStyles[stat.code]?.label"
@@ -268,20 +263,17 @@ const dashboardDescription = computed(() => {
 // couleurs construites dynamiquement.
 // La couleur se limite au filet et au libellé — pas de fond teinté, et surtout
 // pas d'opacité en dark (`dark:bg-<x>-900/20` rendait un bleu délavé, cf. guide).
-const kpiStyles: Record<string, Record<'surface' | 'bar' | 'label', string>> = {
+const kpiStyles: Record<string, Record<'surface' | 'label', string>> = {
   expense_total: {
     surface: 'bg-orange-50',
-    bar: 'bg-orange-500',
     label: 'text-orange-700 dark:text-orange-300',
   },
   revenue_total: {
     surface: 'bg-emerald-50',
-    bar: 'bg-emerald-500',
     label: 'text-emerald-700 dark:text-emerald-300',
   },
   deficit_total: {
     surface: 'bg-rose-50',
-    bar: 'bg-rose-500',
     label: 'text-rose-700 dark:text-rose-300',
   },
 };
