@@ -3,6 +3,8 @@ import { getCommuneTabPath, getVisibleCommuneTabs } from '~/composables/collecti
 import { useCommuneGeo } from '~/composables/collectivites/useCommunesGeo';
 import type { CommuneTab } from '~/composables/collectivites/communeTabs';
 
+useFeatureGuard('menu_collectivites_territoriales');
+
 const route = useRoute();
 const { siteUrl } = useSiteMetadata();
 

@@ -30,7 +30,8 @@ const documentCategories = [
     icon: 'i-heroicons-building-office',
     to: '/gouvernement-senegal',
     display: true,
-    featureKey: 'menu_gouvernement',
+    // Pas de featureKey `menu_gouvernement` : il n'était pas lu ici et, filtré,
+    // masquerait en prod une carte visible aujourd'hui (flag dev + test).
     color: 'bg-green-100 text-green-700',
   },
   {
@@ -48,6 +49,7 @@ const documentCategories = [
     icon: 'i-heroicons-user-circle',
     to: '/etat-senegal/presidents',
     display: true,
+    featureKey: 'menu_historique_dirigeants',
     color: 'bg-blue-100 text-blue-700',
   },
   {
@@ -56,9 +58,16 @@ const documentCategories = [
     icon: 'i-heroicons-users',
     to: '/etat-senegal/premiers-ministres',
     display: true,
+    featureKey: 'menu_historique_dirigeants',
     color: 'bg-blue-100 text-blue-700',
   },
 ];
+
+// Filtrer les cartes en fonction des feature flags
+const { isFeatureEnabled } = useFeatureFlags();
+const visibleCategories = computed(() =>
+  documentCategories.filter((menu) => !menu.featureKey || isFeatureEnabled(menu.featureKey)),
+);
 
 // ── SEO ───────────────────────────────────────────────────────────
 useSeoMeta({
@@ -155,7 +164,7 @@ useHead({
     <section class="mx-auto mt-8 max-w-3xl px-4">
       <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
         <UCard
-          v-for="menu in documentCategories"
+          v-for="menu in visibleCategories"
           :key="menu.title"
           class="custom-shadow p-0 hover:shadow-xl sm:p-0"
         >

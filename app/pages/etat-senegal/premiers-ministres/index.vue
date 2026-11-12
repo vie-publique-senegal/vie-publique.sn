@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { LeaderBrief, PrimeMinisterGap, PrimeMinisterialTerm } from '~~/types/leader-history';
 
+useFeatureGuard('menu_historique_dirigeants');
+
 const { siteName, siteUrl, themeColor, keywords } = useSiteMetadata();
 
 const { terms, gaps, total, current, loading: pending, error } = usePrimeMinisters();

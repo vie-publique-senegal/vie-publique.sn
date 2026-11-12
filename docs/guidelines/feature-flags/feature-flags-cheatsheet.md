@@ -72,6 +72,18 @@ const { isEnabled } = useFeatureFlags();
 </template>
 ```
 
+## 🚧 Protéger une page (404 si désactivée)
+
+```vue
+<script setup lang="ts">
+// En tête du script, avant les chargements de données
+useFeatureGuard('menu_collectivites_territoriales');
+</script>
+```
+
+Une page parente qui contient `<NuxtPage />` couvre aussi ses pages enfants.
+Penser à conditionner aussi les points d'entrée (cartes de menu, liens).
+
 ## 🎨 Menu conditionnel
 
 ```typescript
