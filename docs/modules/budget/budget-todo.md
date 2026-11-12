@@ -135,3 +135,64 @@ Une série de cartes pour les chiffres clés avec variations
 Un graphique circulaire montrant la répartition du budget
 Un graphique linéaire montrant l'évolution de la dette
 Un tableau détaillé des variations par institution
+
+## 🐛 Défauts connus non corrigés — constatés le 2026-11-12
+
+> Relevés pendant la passe d'harmonisation visuelle du module (commits à venir).
+> Chaque point a été **vérifié dans le navigateur** à cette date, pas déduit du code.
+
+### 1. Quatre graphiques d'évolution du dashboard rendent VIDE
+
+Sur `/budget-senegal/dashboard`, ces quatre sections affichent un `<svg>` de
+801×150 contenant **0 forme** (`rect`/`path`/`circle`/`line`) :
+
+- « Évolution des recettes par année »
+- « Évolution des dépenses par année »
+- « Évolution des besoins de financement par année »
+- « Évolution du service de la dette par année »
+
+Composant : [`app/components/Budget/BudgetEvolutionLineChart.vue`](../../../app/components/Budget/BudgetEvolutionLineChart.vue) (D3).
+
+⚠️ **La cause n'est PAS celle de `BudgetEntityEvolutionChart.vue`** (largeur de
+conteneur nulle au montage, corrigée en `5e29d642`) : émettre un événement
+`resize` sur la page ne les remplit pas. Les petits donuts 128×128 des mêmes
+sections, eux, se dessinent correctement — le problème est propre à ce composant.
+**Cause racine non identifiée** : à chercher du côté de la forme des données
+passées en `props.data` (`drawChart()` sort en début de fonction si `data` est
+vide) plutôt que du dimensionnement.
+
+Vérification : ouvrir le dashboard et compter les formes —
+`[...document.querySelectorAll('svg')].filter(s => s.clientWidth > 400).map(s => s.querySelectorAll('rect,path,circle,line').length)`
+doit donner des valeurs **> 0**.
+
+### 2. Champs de recherche/filtres encore aux défauts @nuxt/ui
+
+`/budget-senegal/ministeres` et `/institutions` utilisent désormais le motif du
+site (`<input type="search">` + `<select>` en pastilles, cf. `/actualites` et
+`/documents/public`). **Pas encore migrés** :
+
+- [ ] [`app/pages/budget-senegal/glossaire.vue`](../../../app/pages/budget-senegal/glossaire.vue) — 1 `UInput` + 1 `USelect`
+- [ ] [`app/pages/budget-senegal/dashboard.vue`](../../../app/pages/budget-senegal/dashboard.vue) — 2 `USelect`
+
+Le dashboard conserve aussi l'ancienne structure d'en-tête (titre sur le fond
+`bg-gray-50` de la page) que Ministères/Institutions n'ont plus : chez elles,
+titre + recherche + filtres sont réunis dans une bande blanche bordée, comme le
+`<header>` de `/documents/public`.
+
+### 3. Divergence d'utilitaire pour masquer la scrollbar
+
+Les pages Ministères/Institutions emploient `.no-scrollbar` (utilitaire **global**,
+[`app/assets/css/app.css`](../../../app/assets/css/app.css) ~l.135), alors que les
+13 autres fichiers du site emploient `scrollbar-hide` **avec son `<style scoped>`
+déclaré dans chaque page** — convention documentée dans
+[`guidelines/design.md`](../../guidelines/design.md) (§ Scroll horizontal masqué).
+
+Les deux fonctionnent. À arbitrer : soit aligner le Budget sur la convention
+documentée, soit généraliser `.no-scrollbar` et mettre `design.md` à jour (il
+affirme que « `scrollbar-hide` n'est pas un utilitaire global », ce qui reste vrai,
+mais ne mentionne pas que `.no-scrollbar`, lui, l'est).
+
+### 4. Titres d'articles CMS encore en « Budget 2026 »
+
+Contenu éditorial Directus, pas du code. Reporté explicitement par l'utilisateur
+(« on corrigera plus tard »). Le module, lui, suit bien le dernier exercice publié.

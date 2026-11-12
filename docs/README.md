@@ -35,6 +35,7 @@
 | **Statut HTTP des pages dynamiques (404)** | [`guidelines/todo-404-pages-dynamiques.md`](./guidelines/todo-404-pages-dynamiques.md) (chantier : 20 routes sur 33 répondent 200 sur une ressource absente) | [`seo/todo-seo.md`](./seo/todo-seo.md) |
 | **UI / Design** | [`guidelines/design.md`](./guidelines/design.md) | [`/CLAUDE.md`](../CLAUDE.md) (§ UI & Design), [`guidelines/skeleton-loaders.md`](./guidelines/skeleton-loaders.md) |
 | **Charte — couleur `primary` vs brand** | [`guidelines/todo-charte-couleur-primary.md`](./guidelines/todo-charte-couleur-primary.md) (à arbitrer : `primary` = `sky` sur 359 usages, `brand-navy`/`brand-gold` jamais utilisés) | [`guidelines/design.md`](./guidelines/design.md) (§ Couleurs) |
+| **Dark mode absent en dev (`app.css`)** | [`guidelines/todo-app-css-dev.md`](./guidelines/todo-app-css-dev.md) (bug dev : feuille servie en `text/javascript`, palette Dim non appliquée — prod saine) | [`guidelines/design.md`](./guidelines/design.md) (§ Dark mode) |
 | **Performance / temps de build** | [`infra/build-optimization.md`](./infra/build-optimization.md) | [`infra/docker-optimization.md`](./infra/docker-optimization.md) |
 | **Mesure perf / Web Vitals** | [`infra/mesure-performance.md`](./infra/mesure-performance.md) (protocole + journal des relevés) | baseline [`audits/audit-web-vitals-2026-07.md`](./audits/audit-web-vitals-2026-07.md), pistes = items PERF de [`audits/audit-complet-2026-07.md`](./audits/audit-complet-2026-07.md) |
 | **Cache (HTML SWR + API)** | [`guidelines/cache-strategy.md`](./guidelines/cache-strategy.md) (valeurs actuelles + précos P1-P7) | [`guidelines/todo-cache-optimization.md`](./guidelines/todo-cache-optimization.md) (chantier dev/prod) |
@@ -62,7 +63,8 @@
 - [`guidelines/todo-cache-optimization.md`](./guidelines/todo-cache-optimization.md) — migration des routes API vers `getCacheMaxAge()`
 - [`seo/todo-seo.md`](./seo/todo-seo.md) — chantiers SEO restants
 - [`modules/etat/todo-supprimer-systeme-a.md`](./modules/etat/todo-supprimer-systeme-a.md) — retrait de l'ancien système « état »
-- [`modules/budget/budget-todo.md`](./modules/budget/budget-todo.md) — checklist module budget
+- [`modules/budget/budget-todo.md`](./modules/budget/budget-todo.md) — checklist module budget (+ § Défauts connus non corrigés : graphiques d'évolution vides, champs @nuxt/ui restants)
+- [`guidelines/todo-app-css-dev.md`](./guidelines/todo-app-css-dev.md) — `app.css` non injecté en dev (mode sombre invérifiable en local)
 - [`modules/a-propos/refonte-section-association.md`](./modules/a-propos/refonte-section-association.md) — refonte section association
 - [`modules/dashboard/`](./modules/dashboard/) — dashboards RAC et projets publics
 - [`audits/audit-recherche-2026-07.md`](./audits/audit-recherche-2026-07.md) — checklist recherche Typesense
