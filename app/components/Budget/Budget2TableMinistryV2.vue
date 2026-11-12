@@ -1,11 +1,16 @@
 <template>
   <div>
-    <div
-      class="overflow-hidden rounded-xl bg-white ring-1 ring-gray-200 dark:bg-gray-800 dark:ring-gray-700"
-    >
-      <!-- En-têtes -->
+    <!--
+      ⚠️ PAS de carte ici : les trois points d'appel (dashboard, /ministeres,
+      /institutions) enveloppent déjà ce tableau dans une carte. Y remettre
+      `rounded-xl bg-white ring-1` recrée une carte dans la carte, soit deux
+      bordures superposées.
+      En-tête = hairline `border-b`, comme Budget2TableRevenueExpense. Pas de
+      barre grise pleine : elle a déjà été retirée du tableau frère.
+    -->
+    <div>
       <div
-        class="flex items-center justify-between gap-2 bg-gray-200 px-2 py-3 text-sm font-semibold text-gray-700 dark:bg-gray-700 dark:text-gray-300"
+        class="flex items-center justify-between gap-2 border-b border-gray-200 px-2 pb-2 text-xs font-medium uppercase tracking-wide text-gray-500 dark:border-gray-700 dark:text-gray-400"
       >
         <span class="flex-1">{{ entityLabel }}</span>
         <div class="flex shrink-0 items-center gap-4">

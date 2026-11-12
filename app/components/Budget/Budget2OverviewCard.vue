@@ -1,13 +1,17 @@
 <template>
   <!--
     Fond très légèrement teinté pour les 3 indicateurs principaux (recettes,
-    dépenses, déficit), neutre pour les autres. Pas de dégradé, pas d'ombre.
+    dépenses, déficit), neutre pour les autres. Pas de dégradé.
     ⚠️ En DARK la surface reste celle du site (`gray-800`) : on ne transpose pas
     les pastels clairs — la catégorie passe alors par la couleur du libellé.
     Pas de filet vertical coloré : décoratif, et il faisait « template ».
+
+    Habillage = celui des cartes d'Actualités / Accueil : ombre douce + anneau
+    hairline `gray-100`. ⚠️ Ne pas revenir à `ring-gray-200` sans ombre : c'est
+    l'inverse de la convention du site (bordure qui se voit, aucun relief).
   -->
   <div
-    class="rounded-lg p-3 ring-1 ring-gray-200 dark:bg-gray-800 dark:ring-gray-700 sm:p-4"
+    class="rounded-xl p-3 shadow-sm ring-1 ring-gray-100 dark:bg-gray-800 dark:ring-gray-700/50 sm:p-4"
     :class="surfaceClass"
   >
     <h3 class="mb-2 text-sm font-medium" :class="accentTextClass">{{ name }}</h3>

@@ -47,7 +47,7 @@ const tuile = (code: string) =>
 <template>
   <div class="my-4">
     <UCard
-      class="overflow-hidden border-0 bg-white ring-1 ring-gray-200 transition-shadow hover:shadow-sm dark:bg-gray-800 dark:ring-gray-700"
+      class="overflow-hidden rounded-xl border-0 bg-white shadow-sm ring-1 ring-gray-100 transition-shadow dark:bg-gray-800 dark:ring-gray-700/50 md:hover:shadow-md"
       :ui="{ body: { padding: 'p-4 sm:p-6' } }"
     >
       <!-- Header -->

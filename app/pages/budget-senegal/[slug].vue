@@ -269,7 +269,7 @@ const formatBudget = (value: number) => {
                 aplat délavé) — couleur pleine, cf. guide design.
               -->
               <div
-                class="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800"
+                class="rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-100 dark:bg-gray-800 dark:ring-gray-700/50"
               >
                 <p class="text-sm font-medium text-gray-500 dark:text-gray-300">Budget total</p>
 
@@ -311,7 +311,7 @@ const formatBudget = (value: number) => {
               <USkeleton class="h-12 w-96" />
               <USkeleton class="mt-3 h-6 w-64" />
             </div>
-            <USkeleton class="h-40 w-80 rounded-2xl" />
+            <USkeleton class="h-40 w-80 rounded-xl" />
           </div>
         </div>
       </div>
@@ -320,7 +320,7 @@ const formatBudget = (value: number) => {
     <!-- Mobile Budget Card -->
     <div v-if="entity && currentBudget && !loading" class="px-4 pt-4 md:hidden">
       <div
-        class="overflow-hidden rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800"
+        class="overflow-hidden rounded-xl bg-white p-4 shadow-sm ring-1 ring-gray-100 dark:bg-gray-800 dark:ring-gray-700/50"
       >
         <div class="flex items-start justify-between gap-3">
           <div class="min-w-0 flex-1">
@@ -362,8 +362,8 @@ const formatBudget = (value: number) => {
     <main class="container mx-auto px-4 py-4 md:px-6 md:py-6">
       <!-- Loading State -->
       <div v-if="loading" class="space-y-6">
-        <USkeleton class="h-64 w-full rounded-2xl" />
-        <USkeleton class="h-48 w-full rounded-2xl" />
+        <USkeleton class="h-64 w-full rounded-xl" />
+        <USkeleton class="h-48 w-full rounded-xl" />
       </div>
 
       <!-- Error State -->
@@ -391,7 +391,7 @@ const formatBudget = (value: number) => {
         <!-- Evolution Chart -->
         <section
           v-if="evolutionChartData.length > 0"
-          class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800 md:p-6"
+          class="rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-100 dark:bg-gray-800 dark:ring-gray-700/50 md:p-6"
         >
           <div class="mb-5">
             <div>
@@ -405,7 +405,7 @@ const formatBudget = (value: number) => {
         <!-- Programs Table -->
         <section
           v-if="formattedPrograms.length > 0"
-          class="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800 md:p-6"
+          class="rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-100 dark:bg-gray-800 dark:ring-gray-700/50 md:p-6"
         >
           <div class="mb-5">
             <div>
@@ -421,7 +421,7 @@ const formatBudget = (value: number) => {
         <!-- Empty Programs -->
         <div
           v-else
-          class="rounded-2xl border border-dashed border-gray-300 bg-gray-50 p-12 text-center dark:border-gray-700 dark:bg-gray-800"
+          class="rounded-xl border border-dashed border-gray-300 bg-gray-50 p-12 text-center dark:border-gray-700 dark:bg-gray-800"
         >
           <div
             class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800"

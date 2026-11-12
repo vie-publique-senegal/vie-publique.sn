@@ -20,7 +20,7 @@ const getPortraitUrl = (member: { id?: string; slug?: string }) => {
     </h2>
 
     <UCard
-      class="overflow-hidden border-0 bg-white shadow-sm transition-shadow hover:shadow-md dark:bg-gray-800"
+      class="overflow-hidden rounded-xl border-0 bg-white shadow-sm ring-1 ring-gray-100 transition-shadow dark:bg-gray-800 dark:ring-gray-700/50 md:hover:shadow-md"
       :ui="{ body: { padding: 'p-4 sm:p-6' } }"
     >
       <!-- Loading -->

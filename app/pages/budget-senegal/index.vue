@@ -23,7 +23,7 @@
       <!-- Dashboard Hero Card -->
       <NuxtLink
         to="/budget-senegal/dashboard"
-        class="group mb-6 block rounded-2xl bg-white p-4 ring-1 ring-gray-200 transition-all active:scale-[0.99] dark:bg-gray-800 dark:ring-gray-700 md:p-6 md:hover:shadow-lg md:hover:ring-gray-300 dark:md:hover:ring-gray-600"
+        class="group mb-6 block rounded-xl bg-white p-4 shadow-sm ring-1 ring-gray-100 transition-shadow motion-safe:active:scale-[0.99] dark:bg-gray-800 dark:ring-gray-700/50 md:p-6 md:hover:shadow-md"
       >
         <div class="mb-3 flex items-start justify-between gap-3">
           <div class="min-w-0">
@@ -100,7 +100,7 @@
         <!-- Ministères -->
         <NuxtLink
           to="/budget-senegal/ministeres"
-          class="group flex items-center gap-3 rounded-xl bg-white p-3 ring-1 ring-gray-200 transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500 motion-safe:active:scale-[0.98] dark:bg-gray-800 dark:ring-gray-700 md:flex-col md:items-start md:gap-0 md:p-4 md:hover:shadow-sm md:hover:ring-gray-300 dark:md:hover:ring-gray-600"
+          class="group flex items-center gap-3 rounded-xl bg-white p-3 shadow-sm ring-1 ring-gray-100 transition-shadow focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500 motion-safe:active:scale-[0.98] dark:bg-gray-800 dark:ring-gray-700/50 md:flex-col md:items-start md:gap-0 md:p-4 md:hover:shadow-md"
         >
           <div
             class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-50 dark:bg-blue-950 md:mb-3"
@@ -125,7 +125,7 @@
         <!-- Institutions -->
         <NuxtLink
           to="/budget-senegal/institutions"
-          class="group flex items-center gap-3 rounded-xl bg-white p-3 ring-1 ring-gray-200 transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500 motion-safe:active:scale-[0.98] dark:bg-gray-800 dark:ring-gray-700 md:flex-col md:items-start md:gap-0 md:p-4 md:hover:shadow-sm md:hover:ring-gray-300 dark:md:hover:ring-gray-600"
+          class="group flex items-center gap-3 rounded-xl bg-white p-3 shadow-sm ring-1 ring-gray-100 transition-shadow focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500 motion-safe:active:scale-[0.98] dark:bg-gray-800 dark:ring-gray-700/50 md:flex-col md:items-start md:gap-0 md:p-4 md:hover:shadow-md"
         >
           <div
             class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-violet-50 dark:bg-violet-950 md:mb-3"
@@ -152,7 +152,7 @@
         <!-- Documents -->
         <NuxtLink
           to="/documents/budget"
-          class="group flex items-center gap-3 rounded-xl bg-white p-3 ring-1 ring-gray-200 transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500 motion-safe:active:scale-[0.98] dark:bg-gray-800 dark:ring-gray-700 md:flex-col md:items-start md:gap-0 md:p-4 md:hover:shadow-sm md:hover:ring-gray-300 dark:md:hover:ring-gray-600"
+          class="group flex items-center gap-3 rounded-xl bg-white p-3 shadow-sm ring-1 ring-gray-100 transition-shadow focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500 motion-safe:active:scale-[0.98] dark:bg-gray-800 dark:ring-gray-700/50 md:flex-col md:items-start md:gap-0 md:p-4 md:hover:shadow-md"
         >
           <div
             class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-orange-50 dark:bg-orange-950 md:mb-3"
@@ -177,7 +177,7 @@
         <!-- Glossaire -->
         <NuxtLink
           to="/budget-senegal/glossaire"
-          class="group flex items-center gap-3 rounded-xl bg-white p-3 ring-1 ring-gray-200 transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500 motion-safe:active:scale-[0.98] dark:bg-gray-800 dark:ring-gray-700 md:flex-col md:items-start md:gap-0 md:p-4 md:hover:shadow-sm md:hover:ring-gray-300 dark:md:hover:ring-gray-600"
+          class="group flex items-center gap-3 rounded-xl bg-white p-3 shadow-sm ring-1 ring-gray-100 transition-shadow focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500 motion-safe:active:scale-[0.98] dark:bg-gray-800 dark:ring-gray-700/50 md:flex-col md:items-start md:gap-0 md:p-4 md:hover:shadow-md"
         >
           <div
             class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-teal-50 dark:bg-teal-950 md:mb-3"
@@ -203,7 +203,7 @@
           <h2 class="text-lg font-bold text-gray-900 dark:text-white">Comprendre le Budget</h2>
         </div>
         <div
-          class="rounded-2xl bg-white p-4 ring-1 ring-gray-200 dark:bg-gray-800 dark:ring-gray-700 md:p-6"
+          class="rounded-xl bg-white p-4 shadow-sm ring-1 ring-gray-100 dark:bg-gray-800 dark:ring-gray-700/50 md:p-6"
         >
           <BudgetArticles />
         </div>
@@ -215,7 +215,7 @@
           <h2 class="text-lg font-bold text-gray-900 dark:text-white">Documents officiels</h2>
         </div>
         <div
-          class="rounded-2xl bg-white p-4 ring-1 ring-gray-200 dark:bg-gray-800 dark:ring-gray-700 md:p-6"
+          class="rounded-xl bg-white p-4 shadow-sm ring-1 ring-gray-100 dark:bg-gray-800 dark:ring-gray-700/50 md:p-6"
         >
           <BudgetDocuments />
         </div>

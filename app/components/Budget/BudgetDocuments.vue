@@ -1,7 +1,11 @@
 <script setup lang="ts">
 import type { Document } from '~~/types/document';
 
-const { items: budgetDocuments, loading, error } = useCmsCollection<Document>({
+const {
+  items: budgetDocuments,
+  loading,
+  error,
+} = useCmsCollection<Document>({
   collection: 'documents',
   filters: { family: 'budget' },
   sort: '-publish_date',
@@ -45,12 +49,9 @@ const { items: budgetDocuments, loading, error } = useCmsCollection<Document>({
       <UCard
         v-for="doc in budgetDocuments"
         :key="doc.id"
-        class="border-primary/20 hover:border-primary/30 border-1 cursor-pointer overflow-hidden bg-white transition hover:shadow-lg dark:bg-gray-800"
+        class="cursor-pointer overflow-hidden rounded-xl border-0 bg-white shadow-sm ring-1 ring-gray-100 transition-shadow dark:bg-gray-800 dark:ring-gray-700/50 md:hover:shadow-md"
       >
-        <NuxtLink
-          :to="`/documents/${doc.id}/${doc.slug}`"
-          class="flex flex-row sm:flex-col"
-        >
+        <NuxtLink :to="`/documents/${doc.id}/${doc.slug}`" class="flex flex-row sm:flex-col">
           <!-- Cover image -->
           <div class="mb-0 mr-4 w-1/3 flex-shrink-0 sm:mb-4 sm:mr-0 sm:w-full">
             <CmsImage
@@ -65,16 +66,19 @@ const { items: budgetDocuments, loading, error } = useCmsCollection<Document>({
             />
             <div
               v-else
-              class="flex h-20 w-full items-center justify-center rounded-md bg-gray-200 sm:h-48 dark:bg-gray-700"
+              class="flex h-20 w-full items-center justify-center rounded-md bg-gray-200 dark:bg-gray-700 sm:h-48"
             >
-              <UIcon name="i-heroicons-document-text" class="h-8 w-8 text-gray-400 sm:h-12 sm:w-12" />
+              <UIcon
+                name="i-heroicons-document-text"
+                class="h-8 w-8 text-gray-400 sm:h-12 sm:w-12"
+              />
             </div>
           </div>
 
           <!-- Title -->
           <div class="flex flex-1 flex-col">
             <p
-              class="line-clamp-2 text-sm font-semibold text-gray-900 sm:text-base dark:text-white"
+              class="line-clamp-2 text-sm font-semibold text-gray-900 dark:text-white sm:text-base"
             >
               {{ doc.title }}
             </p>

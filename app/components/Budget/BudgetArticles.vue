@@ -50,7 +50,7 @@ const {
       <UCard
         v-for="article in budgetArticles.slice(0, 3)"
         :key="article.id"
-        class="border-primary/20 hover:border-primary/30 border-1 cursor-pointer overflow-hidden bg-white transition hover:shadow-lg dark:bg-gray-800"
+        class="cursor-pointer overflow-hidden rounded-xl border-0 bg-white shadow-sm ring-1 ring-gray-100 transition-shadow dark:bg-gray-800 dark:ring-gray-700/50 md:hover:shadow-md"
       >
         <NuxtLink
           :to="`/actualites/${article.id}/${article.slug}`"
@@ -70,7 +70,7 @@ const {
             />
             <div
               v-else
-              class="flex h-20 w-full items-center justify-center rounded-md bg-gray-200 sm:h-48 dark:bg-gray-700"
+              class="flex h-20 w-full items-center justify-center rounded-md bg-gray-200 dark:bg-gray-700 sm:h-48"
             >
               <UIcon name="i-heroicons-newspaper" class="h-8 w-8 text-gray-400 sm:h-12 sm:w-12" />
             </div>
@@ -79,7 +79,7 @@ const {
           <!-- Content -->
           <div class="flex flex-1 flex-col">
             <p
-              class="line-clamp-2 text-sm font-semibold text-gray-900 sm:text-base dark:text-white"
+              class="line-clamp-2 text-sm font-semibold text-gray-900 dark:text-white sm:text-base"
             >
               {{ article.title }}
             </p>
