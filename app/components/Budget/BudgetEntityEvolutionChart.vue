@@ -1,155 +1,113 @@
 <script setup lang="ts">
-import * as d3 from 'd3';
+import { describeBudgetVersion } from '#shared/budget-version';
 
+/**
+ * Évolution pluriannuelle du budget d'une entité.
+ *
+ * ⚠️ Rendu en HTML/CSS, PAS en D3. La version D3 ne dessinait RIEN (SVG présent,
+ * 0 `<rect>` : conteneur de largeur 0 au montage) et codait les couleurs de
+ * labels en dur (`#6B7280`, `#2563EB`), donc illisibles en mode sombre.
+ *
+ * ⚠️ Chaque barre est positionnée en ABSOLU dans un rail de hauteur fixe.
+ * Un `height: X%` sur un enfant flex ne se résout pas : toutes les barres
+ * sortaient à la même hauteur (156 px), ce qui vidait le graphique de son sens.
+ *
+ * ⚠️ N'utiliser que des nuances DÉJÀ présentes dans le dépôt : une classe
+ * inédite n'est pas générée par l'extracteur et la barre sort TRANSPARENTE
+ * (vécu avec `bg-sky-200`, et avec `dark:bg-sky-900` NU : le dépôt ne l'emploie
+ * qu'avec opacité, donc seule `dark:bg-sky-900/40` existe). Vérifier la forme
+ * EXACTE avec `grep -rhoE 'dark:bg-sky-900[^ "]*' app/`.
+ *
+ * ⚠️ ORDRE : helpers avant les `computed` qui les appellent (cf. CLAUDE.md).
+ *
+ * L'échelle part de ZÉRO, volontairement : tronquer l'axe exagérerait
+ * optiquement des écarts de quelques pour cent sur des montants publics.
+ * Les montants exacts sont imprimés au-dessus de chaque barre.
+ */
 interface EvolutionData {
   year: string;
   amount: number;
+  /** Ex. « 2027 (PLF) » */
   label: string;
 }
 
-interface Props {
-  data: EvolutionData[];
-}
+const props = defineProps<{ data: EvolutionData[] }>();
 
-const props = defineProps<Props>();
+const formatMontant = (n: number) =>
+  new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 1 }).format(n);
 
-const chartContainer = ref<HTMLDivElement | null>(null);
-const chartSvg = ref<SVGElement | null>(null);
+/** Extrait le sigle de version (LFI / LFR / PLF) du libellé. */
+const versionOf = (label: string) => label.match(/\(([^)]+)\)/)?.[1] ?? '';
 
-const drawChart = () => {
-  if (!chartContainer.value || !chartSvg.value || !props.data || props.data.length === 0) return;
+const maxAmount = computed(() => Math.max(...props.data.map((d) => d.amount), 0));
 
-  // Nettoyer le SVG existant
-  d3.select(chartSvg.value).selectAll('*').remove();
+const bars = computed(() =>
+  props.data.map((d, index) => {
+    const version = versionOf(d.label);
+    const described = describeBudgetVersion(version);
 
-  const containerWidth = chartContainer.value.offsetWidth;
-  const margin = { top: 20, right: 30, bottom: 40, left: 30 };
-  const width = containerWidth - margin.left - margin.right;
-  const height = Math.min(containerWidth * 0.6, 400) - margin.top - margin.bottom;
-
-  const svg = d3
-    .select(chartSvg.value)
-    .attr('width', containerWidth)
-    .attr('height', height + margin.top + margin.bottom);
-
-  const g = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
-
-  // Échelles - utiliser le label complet (année + version)
-  const x = d3
-    .scaleBand()
-    .domain(props.data.map((d) => d.label))
-    .range([0, width])
-    .padding(0.3);
-
-  const y = d3
-    .scaleLinear()
-    .domain([0, d3.max(props.data, (d) => d.amount) || 0])
-    .nice()
-    .range([height, 0]);
-
-  // Dégradé pour les barres
-  const defs = svg.append('defs');
-
-  const gradient = defs
-    .append('linearGradient')
-    .attr('id', 'barGradient')
-    .attr('x1', '0%')
-    .attr('y1', '0%')
-    .attr('x2', '0%')
-    .attr('y2', '100%');
-
-  gradient.append('stop').attr('offset', '0%').attr('stop-color', '#60A5FA');
-  gradient.append('stop').attr('offset', '100%').attr('stop-color', '#2563EB');
-
-  // Filtre pour l'ombre
-  const filter = defs.append('filter').attr('id', 'shadow').attr('height', '130%');
-
-  filter
-    .append('feGaussianBlur')
-    .attr('in', 'SourceAlpha')
-    .attr('stdDeviation', 3)
-    .attr('result', 'blur');
-
-  filter.append('feOffset').attr('in', 'blur').attr('dx', 2).attr('dy', 2).attr('result', 'offsetBlur');
-
-  const feMerge = filter.append('feMerge');
-  feMerge.append('feMergeNode').attr('in', 'offsetBlur');
-  feMerge.append('feMergeNode').attr('in', 'SourceGraphic');
-
-  // Axe X horizontal (sans rotation)
-  g.append('g')
-    .attr('transform', `translate(0,${height})`)
-    .call(d3.axisBottom(x))
-    .selectAll('text')
-    .style('text-anchor', 'middle')
-    .style('font-size', '13px')
-    .style('font-weight', '500')
-    .style('fill', '#6B7280');
-
-  // Barres avec animation
-  g.selectAll('.bar')
-    .data(props.data)
-    .enter()
-    .append('rect')
-    .attr('class', 'bar')
-    .attr('x', (d) => x(d.label)!)
-    .attr('width', x.bandwidth())
-    .attr('y', height)
-    .attr('height', 0)
-    .attr('fill', 'url(#barGradient)')
-    .attr('rx', 4)
-    .attr('filter', 'url(#shadow)')
-    .transition()
-    .duration(800)
-    .attr('y', (d) => y(d.amount))
-    .attr('height', (d) => height - y(d.amount));
-
-  // Labels au-dessus des barres (montants arrondis)
-  g.selectAll('.label')
-    .data(props.data)
-    .enter()
-    .append('text')
-    .attr('class', 'label')
-    .attr('x', (d) => x(d.label)! + x.bandwidth() / 2)
-    .attr('y', (d) => y(d.amount) - 5)
-    .attr('text-anchor', 'middle')
-    .style('font-size', '12px')
-    .style('font-weight', 'bold')
-    .style('fill', '#2563EB')
-    .style('opacity', 0)
-    .text((d) => Math.round(d.amount).toLocaleString())
-    .transition()
-    .delay(800)
-    .duration(400)
-    .style('opacity', 1);
-};
-
-// Redessiner le graphique lors du redimensionnement
-const handleResize = () => {
-  drawChart();
-};
-
-// Watcher pour redessiner quand les données changent
-watch(
-  () => props.data,
-  () => {
-    drawChart();
-  },
-  { deep: true }
+    return {
+      ...d,
+      version,
+      titre: `${d.year} - ${described.label} : ${formatMontant(d.amount)} Md FCFA`,
+      estDernier: index === props.data.length - 1,
+      hauteur: maxAmount.value > 0 ? Math.max((d.amount / maxAmount.value) * 100, 2) : 0,
+    };
+  }),
 );
-
-onMounted(() => {
-  drawChart();
-  window.addEventListener('resize', handleResize);
-});
-
-onUnmounted(() => {
-  window.removeEventListener('resize', handleResize);
-});
 </script>
 
 <template>
-  <div ref="chartContainer" class="w-full">
-    <svg ref="chartSvg" class="w-full"></svg>
+  <div class="w-full">
+    <!-- Montants -->
+    <div class="flex items-end gap-2 sm:gap-4">
+      <div
+        v-for="bar in bars"
+        :key="bar.label"
+        class="min-w-0 flex-1 text-center text-[11px] font-semibold tabular-nums text-gray-700 dark:text-gray-200 sm:text-xs"
+      >
+        {{ formatMontant(bar.amount) }}
+      </div>
+    </div>
+
+    <!-- Rails : hauteur fixe, barre en absolu -> le pourcentage se résout -->
+    <div class="mt-1 flex items-end gap-2 sm:gap-4" style="height: 150px">
+      <div
+        v-for="bar in bars"
+        :key="bar.label"
+        class="group relative h-full min-w-0 flex-1 rounded-t-md transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/40"
+        :title="bar.titre"
+      >
+        <div
+          class="absolute inset-x-0 bottom-0 rounded-t-md transition-[height] duration-500 motion-reduce:transition-none"
+          :class="
+            bar.estDernier
+              ? 'bg-sky-500 dark:bg-sky-600'
+              : 'bg-sky-100 group-hover:bg-sky-200 dark:bg-sky-900/40'
+          "
+          :style="{ height: `${bar.hauteur}%` }"
+        />
+      </div>
+    </div>
+
+    <!-- Axe des exercices : l'année et le type de texte budgétaire -->
+    <div
+      class="mt-2 flex gap-2 border-t border-gray-200 pt-2 dark:border-gray-700 sm:gap-4"
+      aria-hidden="true"
+    >
+      <div v-for="bar in bars" :key="bar.label" class="min-w-0 flex-1 text-center">
+        <div class="text-xs font-medium tabular-nums text-gray-900 dark:text-white">
+          {{ bar.year }}
+        </div>
+        <div class="text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-400">
+          {{ bar.version }}
+        </div>
+      </div>
+    </div>
+
+    <!-- Équivalent textuel : le graphique seul n'est pas accessible -->
+    <ul class="sr-only">
+      <li v-for="bar in bars" :key="bar.label">{{ bar.titre }}</li>
+    </ul>
   </div>
 </template>
